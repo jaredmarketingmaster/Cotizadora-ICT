@@ -1,10 +1,11 @@
 // =============================================================================
-// Inventario: lista con filtros y edición rápida (precio, stock sí/no, publicado),
+// Inventario: lista con filtros y edición rápida (precio, stock sí/no,
+// publicado y más vendido),
 // formulario por pasos para agregar, edición completa, duplicar y borrar.
 // =============================================================================
 
 import { formatearCOP, formatearMiles, leerPrecio, CAPACIDADES_SUGERIDAS, capacidadEnGB } from "../utils.js";
-import { rutaMiniatura, ESTADOS_ESTETICOS, nombreColor } from "../datos/comun.js";
+import { rutaMiniatura, ESTADOS_ESTETICOS, nombreColor, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS } from "../datos/comun.js";
 import { telefonoSVG } from "../ilustracion.js";
 import { etiquetaGeneracion } from "../sitio/catalogo.js";
 import { $, $$, esc, avisar, confirmar, conBoton, campoTexto, interruptor, marcarError, enfocarPrimerError } from "./ui.js";
@@ -103,6 +104,7 @@ async function lista(vista, ctx, params) {
         <div class="campo"><label for="p-${q.id}">Precio</label><input class="entrada cifras" id="p-${q.id}" data-campo="precio" inputmode="numeric" value="${formatearMiles(q.precio)}"></div>
         ${interruptor({ id: `s-${q.id}`, etiqueta: "Stock", marcado: q.en_stock, atributos: 'data-campo="en_stock"', estados: ["Con stock", "Sin stock"] })}
         ${interruptor({ id: `v-${q.id}`, etiqueta: "Publicado", marcado: q.publicado, atributos: 'data-campo="publicado"' })}
+        ${interruptor({ id: `mv-${q.id}`, etiqueta: "Más vendido", marcado: q.mas_vendido, atributos: 'data-campo="mas_vendido"' })}
       </div>
       <div class="fila-acciones">
         <a class="boton boton--suave boton--chico" href="#/inventario/${q.id}">Editar</a>
@@ -145,6 +147,12 @@ async function lista(vista, ctx, params) {
       if (valor === q.precio) { input.value = formatearMiles(q.precio); return; }
     } else {
       valor = input.checked;
+      // Hasta 3 "más vendidos": se avisa antes de ir a la base (que igual lo exige).
+      if (campo === "mas_vendido" && valor && equipos.filter((x) => x.mas_vendido && x.id !== q.id).length >= MAX_MAS_VENDIDOS) {
+        error.textContent = MENSAJE_MAS_VENDIDOS;
+        input.checked = false;
+        return;
+      }
     }
     error.textContent = "";
     input.removeAttribute("aria-invalid");
@@ -214,6 +222,8 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     video: modo === "editar" ? fuente?.video || "" : "",
     publicado: modo === "editar" ? fuente.publicado : false,
     destacado: fuente?.destacado ?? false, descripcion_extra: fuente?.descripcion_extra ?? "",
+    // Duplicar no copia "Más vendido": es otra variante y el máximo es 3.
+    mas_vendido: modo === "editar" ? Boolean(fuente?.mas_vendido) : false,
     bateria_porcentaje: fuente?.bateria_porcentaje ?? null, estado_estetico: fuente?.estado_estetico ?? null,
     detalles: fuente?.detalles ?? "", incluye: fuente?.incluye ?? ""
   };
@@ -340,6 +350,8 @@ async function formulario(vista, ctx, { modo, id, desde }) {
         <legend>Publicar</legend>
         ${interruptor({ id: "e-publicado", etiqueta: "Publicado (se ve en el sitio si tiene stock)", marcado: q.publicado })}
         ${interruptor({ id: "e-destacado", etiqueta: "Destacado (sale primero en la galería)", marcado: q.destacado })}
+        ${interruptor({ id: "e-mas-vendido", etiqueta: `Más vendido (hasta ${MAX_MAS_VENDIDOS} equipos)`, marcado: q.mas_vendido, atributos: 'aria-describedby="e-mas-vendido-error"' })}
+        <p class="error-campo" id="e-mas-vendido-error" role="alert"></p>
         ${campoTexto({ id: "e-descripcion", etiqueta: "Descripción extra (opcional)", valor: q.descripcion_extra, ayuda: "Se muestra en la ficha, debajo de la descripción del modelo.", multilinea: true, atributos: 'rows="3" maxlength="800"' })}
         <div id="resumen-equipo" class="ayuda"></div>
       </fieldset>
@@ -445,7 +457,10 @@ async function formulario(vista, ctx, { modo, id, desde }) {
       const c = marcarError(form, "e-estado", valor("#e-estado") ? "" : "Elija el estado estético.");
       return a && c;
     },
-    publicar: () => true
+    publicar: () => {
+      const otros = equipos.filter((x) => x.mas_vendido && x.id !== original?.id).length;
+      return marcarError(form, "e-mas-vendido", $("#e-mas-vendido").checked && otros >= MAX_MAS_VENDIDOS ? MENSAJE_MAS_VENDIDOS : "");
+    }
   };
 
   // --- Fotos ---
@@ -637,6 +652,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
       video,
       publicado: $("#e-publicado").checked,
       destacado: $("#e-destacado").checked,
+      mas_vendido: $("#e-mas-vendido").checked,
       descripcion_extra: valor("#e-descripcion"),
       bateria_porcentaje: usado ? Number(valor("#e-bateria")) : null,
       estado_estetico: usado ? valor("#e-estado") : null,

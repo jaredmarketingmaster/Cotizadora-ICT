@@ -53,7 +53,7 @@ export const CAMPOS_TIENDA = [
 
 export const CAMPOS_EQUIPO = [
   "modelo_id", "condicion", "capacidad", "color_id", "color_nombre_mostrar", "precio", "en_stock",
-  "fotos", "video", "publicado", "destacado", "descripcion_extra", "es_demo",
+  "fotos", "video", "publicado", "destacado", "mas_vendido", "descripcion_extra", "es_demo",
   "bateria_porcentaje", "estado_estetico", "detalles", "incluye"
 ];
 
@@ -66,6 +66,10 @@ export const CAMPOS_COLOR = ["modelo_id", "nombre_es", "nombre_en", "hex", "orde
 export function nombreColor(color, mostrar = "") {
   return String(mostrar || "").trim() || color?.nombre_en || color?.nombre_es || "";
 }
+
+// "Más vendido": hasta 3 equipos (igual que limitar_mas_vendidos en 0010).
+export const MAX_MAS_VENDIDOS = 3;
+export const MENSAJE_MAS_VENDIDOS = "Ya tiene 3 equipos marcados como más vendidos. Desmarque uno para marcar este.";
 
 export const TAMANOS_TEXTO = ["compacto", "normal", "grande"];
 

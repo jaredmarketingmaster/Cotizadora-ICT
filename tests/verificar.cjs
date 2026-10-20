@@ -565,6 +565,61 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  await caso("más vendido: hasta 3 en la lista y en el formulario; el cuarto se rechaza; no se ve en el sitio", async () => {
+    const p = await nueva(1280, 900);
+    await entrarPanel(p, "gestor@demo.co");
+    await p.goto(`${BASE}/admin/#/inventario`);
+    await p.waitForSelector(".fila-equipo");
+    const marcados = () => p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).equipos.filter((q) => q.mas_vendido).length, CLAVE_DEMO);
+    const filas = p.locator(".fila-equipo");
+    for (let i = 0; i < 3; i++) {
+      await filas.nth(i).locator('[data-campo="mas_vendido"]').check();
+      await p.waitForFunction(([clave, n]) => JSON.parse(localStorage.getItem(clave)).equipos.filter((q) => q.mas_vendido).length === n, [CLAVE_DEMO, i + 1]);
+    }
+    // El cuarto: aviso, el interruptor vuelve a apagado y no se guarda.
+    const cuarta = filas.nth(3);
+    await cuarta.locator('[data-campo="mas_vendido"]').click();
+    assert.equal((await cuarta.locator(".fila-error").textContent()).trim(), "Ya tiene 3 equipos marcados como más vendidos. Desmarque uno para marcar este.");
+    assert.equal(await cuarta.locator('[data-campo="mas_vendido"]').isChecked(), false);
+    assert.equal(await marcados(), 3);
+    // La capa de datos también lo impide.
+    const error = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      const q = (await a.listarEquipos()).find((x) => !x.mas_vendido);
+      try { await a.actualizarEquipo(q.id, { mas_vendido: true }); return ""; } catch (e) { return e.message; }
+    });
+    assert.equal(error, "Ya tiene 3 equipos marcados como más vendidos. Desmarque uno para marcar este.");
+    // En el formulario: no deja guardar el cuarto; desmarcando uno, sí.
+    const libre = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).equipos.find((q) => !q.mas_vendido).id, CLAVE_DEMO);
+    await p.goto(`${BASE}/admin/#/inventario/${libre}`);
+    await p.waitForSelector("#form-equipo");
+    await p.check("#e-mas-vendido");
+    await p.click("#guardar");
+    assert.equal(await p.textContent("#e-mas-vendido-error"), "Ya tiene 3 equipos marcados como más vendidos. Desmarque uno para marcar este.");
+    assert.equal(await p.evaluate(() => document.activeElement.id), "e-mas-vendido");
+    await p.goto(`${BASE}/admin/#/inventario`);
+    await p.click('#confirmar [value="si"]');
+    await p.waitForSelector(".fila-equipo");
+    await filas.nth(0).locator('[data-campo="mas_vendido"]').uncheck();
+    await p.waitForFunction((clave) => JSON.parse(localStorage.getItem(clave)).equipos.filter((q) => q.mas_vendido).length === 2, CLAVE_DEMO);
+    await p.goto(`${BASE}/admin/#/inventario/${libre}`);
+    await p.waitForSelector("#form-equipo");
+    await p.check("#e-mas-vendido");
+    await p.click("#guardar");
+    await p.waitForURL(/#\/inventario$/);
+    assert.equal(await marcados(), 3);
+    // Duplicar no copia "Más vendido".
+    await p.goto(`${BASE}/admin/#/inventario/nuevo?desde=${libre}`);
+    await p.waitForSelector("#form-equipo");
+    assert.equal(await p.isChecked("#e-mas-vendido"), false);
+    // Todavía no se muestra en el sitio.
+    await ir(p);
+    assert.ok(!/más vendido/i.test(await p.textContent("body")));
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("roles: el administrador solo ve Usuarios; la capa de datos le impide lo demás", async () => {
     const p = await nueva(390, 844);
     await entrarPanel(p, "administrador@demo.co");

@@ -70,7 +70,7 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
 node tests/documentacion.mjs                               # DOCUMENTACION.md cubre todos los archivos
 bash tests/sql/probar.sh                                   # SQL y RLS (Postgres local)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 33 casos, modo demo
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 34 casos, modo demo
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 ```
 

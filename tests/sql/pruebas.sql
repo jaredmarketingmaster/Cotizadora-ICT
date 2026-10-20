@@ -205,6 +205,29 @@ do $$ begin
   update public.equipos set video = '' where color_nombre_mostrar = 'Borrador';
   delete from storage.objects where bucket_id = 'videos';
 end $$;
+-- Más vendido (0010): hasta 3
+do $$ begin
+  update public.equipos set mas_vendido = true where es_demo and modelo_id = (select id from public.modelos where slug = 'iphone-18-pro-max');
+  assert (select count(*) from public.equipos where mas_vendido) = 3, 'gestor marca 3 más vendidos';
+end $$;
+do $$ begin
+  update public.equipos set mas_vendido = true where color_nombre_mostrar = 'Glacier';
+  raise exception 'un cuarto más vendido no vale';
+exception when check_violation then
+  assert sqlerrm = 'Ya tiene 3 equipos marcados como más vendidos. Desmarque uno para marcar este.', sqlerrm;
+end $$;
+do $$ begin
+  insert into public.equipos (modelo_id, condicion, capacidad, precio, mas_vendido) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'nuevo', '1 TB', 5, true);
+  raise exception 'un equipo nuevo marcado como cuarto más vendido no vale';
+exception when check_violation then null; end $$;
+do $$ begin
+  -- Desmarcar uno deja marcar otro; volver a guardar uno marcado no cuenta doble
+  update public.equipos set mas_vendido = false where es_demo and capacidad = '512 GB';
+  update public.equipos set mas_vendido = true where color_nombre_mostrar = 'Glacier';
+  update public.equipos set mas_vendido = true where color_nombre_mostrar = 'Glacier';
+  assert (select count(*) from public.equipos where mas_vendido) = 3, 'siguen 3';
+  update public.equipos set mas_vendido = false;
+end $$;
 do $$ begin
   update public.equipos set video = 'equipos/v1.mov' where color_nombre_mostrar = 'Borrador';
   raise exception 'un video .mov no vale';

@@ -299,7 +299,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | Archivo | Qué es |
 |---|---|
 | `assets/js/datos/api.js` (≈17) | `api()`: devuelve, una sola vez, el adaptador `demo` o `supabase` según `config.js`. Si se pide Supabase sin URL o clave, usa demo y avisa en la consola. |
-| `assets/js/datos/comun.js` (≈62) | Reglas compartidas por los dos adaptadores: <ul><li>`ErrorDatos`.</li><li>`equipoEsPublico`: publicado, con stock (`en_stock`) y de un modelo activo.</li><li>`LADO_GRANDE` = 1600 y `LADO_MINIATURA` = 640.</li><li>`rutaMiniatura`: `x.webp` → `x-640.webp`.</li><li>`CAMPOS_TIENDA`, `CAMPOS_EQUIPO`, `CAMPOS_COLOR`, `nombreColor(color, mostrar)` (nombre que ve el cliente: el elegido por la tienda o el oficial en inglés, o el de la fuente), `TAMANOS_TEXTO`, `ESTADOS_ESTETICOS` y `elegir`.</li><li>`mensajeDeError`: traduce los errores de Postgres al español; los mensajes de los disparadores (ya en español) pasan tal cual.</li></ul> |
+| `assets/js/datos/comun.js` (≈62) | Reglas compartidas por los dos adaptadores: <ul><li>`ErrorDatos`.</li><li>`equipoEsPublico`: publicado, con stock (`en_stock`) y de un modelo activo.</li><li>`LADO_GRANDE` = 1600 y `LADO_MINIATURA` = 640.</li><li>`rutaMiniatura`: `x.webp` → `x-640.webp`.</li><li>`CAMPOS_TIENDA`, `CAMPOS_EQUIPO`, `CAMPOS_COLOR`, `MAX_MAS_VENDIDOS` y `MENSAJE_MAS_VENDIDOS`, `nombreColor(color, mostrar)` (nombre que ve el cliente: el elegido por la tienda o el oficial en inglés, o el de la fuente), `TAMANOS_TEXTO`, `ESTADOS_ESTETICOS` y `elegir`.</li><li>`mensajeDeError`: traduce los errores de Postgres al español; los mensajes de los disparadores (ya en español) pasan tal cual.</li></ul> |
 | `assets/js/datos/semilla.js` (≈115) | `CATALOGO`: los **42 modelos** desde el iPhone 7, con slug, generación y orden de 10 en 10 por fecha de lanzamiento. `COLORES`: los 183 colores oficiales por slug (`[nombre_es, nombre_en, hex]`, vacío si la fuente no lo da). `DEMO_EQUIPOS`: los 6 equipos demo. `slugDe`. **Debe coincidir** con `0006_catalogo_colores.sql` y `0003_demo.sql`; la prueba SQL lo revisa. |
 | `assets/js/datos/demo.js` (≈436) | Back-end de demostración. Ver sección 7.2. |
 | `assets/js/datos/supabase.js` (≈304) | Back-end Supabase. Ver sección 7.3. |
@@ -325,7 +325,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 |---|---|
 | `assets/js/panel/panel.js` (≈283) | Arranque, acceso y rutas. <ul><li>**Acceso:** vistas de login, recuperación y "Cree su contraseña" o "Contraseña nueva", según `tipoDeEnlace()`.</li><li>`entrar()` y el router `enrutar()` por hash, que pregunta si hay cambios sin guardar (`ctx.sucio`) y llama `ctx.alSalir`.</li><li>La vista **Inicio**: estadísticas, fecha de precios, avisos de "Lo que falta" y modo demo (gestor).</li><li>Rutas por rol: el administrador solo llega a Usuarios; el gestor, a todo lo demás. La navegación muestra solo los enlaces de su rol (`data-rol`).</li><li>Define `ctx`, que tiene: `api`, `usuario`, `tienda`, `sucio`, `alSalir`, `esAdministrador()`, `esGestor()`, `inicio()`, `recargarTienda()` e `ir()`.</li></ul> |
 | `assets/js/panel/ui.js` (≈82) | Piezas de interfaz: `$`, `$$`, `esc`, `avisar` ("Guardado" o error), `confirmar` (promesa sobre `<dialog>`), `conBoton` (botón en espera más aviso), `campoTexto`, `interruptor`, `marcarError` y `enfocarPrimerError`. |
-| `assets/js/panel/inventario.js` (≈605) | Inventario. <ul><li>**Lista** con buscador y filtros (modelo, condición, publicado y los especiales "sin stock" y "sin foto").</li><li>**Edición rápida** de precio, el interruptor **Stock** ("Con stock" / "Sin stock") y publicado: se guarda al salir del campo, con Enter o al mover el interruptor.</li><li>Borrar con confirmación (borra también las fotos).</li><li>**Formulario** por pasos para agregar, completo para editar y duplicar, con validaciones.</li><li>**Fotos:** subir, cámara, arrastrar y soltar, reordenar, quitar y máximo 6.</li><li>**Color:** el paso Color muestra solo los colores oficiales del modelo (muestra y nombre en inglés, o el de la fuente) y el campo opcional "Nombre que verá el cliente". No se crean colores ni se escribe un hexadecimal desde el equipo. Cambiar el modelo borra el color elegido. Si el modelo no tiene colores, se puede guardar sin color.</li><li>Opción de activar el modelo si estaba inactivo.</li><li>Limpia las fotos subidas si se sale sin guardar.</li></ul> |
+| `assets/js/panel/inventario.js` (≈605) | Inventario. <ul><li>**Lista** con buscador y filtros (modelo, condición, publicado y los especiales "sin stock" y "sin foto").</li><li>**Edición rápida** de precio, el interruptor **Stock** ("Con stock" / "Sin stock"), publicado y **Más vendido** (máximo 3; el cuarto avisa sin llamar a la base): se guarda al salir del campo, con Enter o al mover el interruptor.</li><li>Borrar con confirmación (borra también las fotos).</li><li>**Formulario** por pasos para agregar, completo para editar y duplicar, con validaciones.</li><li>**Fotos:** subir, cámara, arrastrar y soltar, reordenar, quitar y máximo 6.</li><li>**Color:** el paso Color muestra solo los colores oficiales del modelo (muestra y nombre en inglés, o el de la fuente) y el campo opcional "Nombre que verá el cliente". No se crean colores ni se escribe un hexadecimal desde el equipo. Cambiar el modelo borra el color elegido. Si el modelo no tiene colores, se puede guardar sin color.</li><li>Opción de activar el modelo si estaba inactivo.</li><li>Limpia las fotos subidas si se sale sin guardar.</li></ul> |
 | `assets/js/panel/tienda.js` (≈359) | Mi tienda: <ul><li>Datos de la tienda y redes.</li><li>Marca: logo con **recorte** (horizontal 3:1 o cuadrado, arrastrar, zoom y teclado), favicon de 128 px, colores con selector y hexadecimal, tema, **tamaño del texto** (Compacto, Normal o Grande) y **vista previa en vivo** con el contraste calculado.</li><li>Venta: etiqueta del precio, **lista editable** de formas de pago, entrega y garantías.</li></ul> |
 | `assets/js/panel/fichas.js` (≈120) | Fichas técnicas: lista de modelos activos y editor por modelo. Tiene descripción, filas etiqueta/valor (agregar, editar, subir, bajar y borrar, con etiquetas sugeridas) y "Copiar ficha de otro modelo". |
 | `assets/js/panel/catalogo.js` (≈215) | Catálogo (gestor) agrupado por generación con interruptor activo/inactivo; renombra (el slug no cambia), reordena (intercambia el `orden`) y agrega modelos al final. **Colores** de cada modelo (desplegable): muestra, nombre en español y en inglés (solo lectura), hexadecimal de la fuente fijo y campo para completar el que falta; en modelos sin colores oficiales, el gestor agrega y borra colores de la tienda. |
@@ -341,6 +341,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `supabase/migrations/0001_esquema.sql` (≈351) | Tablas, funciones de rol, disparadores, RLS, `datos_publicos()`, `borrar_datos_demo()`, buckets y reglas de almacenamiento. Ver sección 6. |
 | `supabase/migrations/0002_catalogo.sql` (≈42) | Inserta los **32 modelos** del catálogo maestro, en el orden del prompt, todos inactivos (`orden` 10, 20, …, 320). Cada modelo recibe su ficha vacía por disparador. |
 | `supabase/migrations/0003_demo.sql` (≈36) | Pone el nombre "Tienda de demostración" y `modo_demo = true`, activa los 4 modelos que usa la demo (con `activo_por_demo = true`) e inserta los 6 equipos demo. |
+| `supabase/migrations/0010_mas_vendido.sql` (≈30) | `equipos.mas_vendido` y el disparador `equipos_mas_vendido` (`limitar_mas_vendidos`): no deja marcar un cuarto, con un candado por transacción para que dos marcas a la vez no pasen de 3. Todavía no se muestra en el sitio. |
 | `supabase/migrations/0009_video.sql` (≈40) | Un video opcional por equipo: `equipos.video` (ruta con check) y bucket propio `videos` (público, 20 MB, `video/mp4` y `video/webm`); las reglas de Storage suman ese bucket (lee todo el mundo; sube, cambia y borra el gestor). |
 | `supabase/migrations/0008_color_oficial.sql` (≈85) | Cada equipo usa un color oficial de su modelo: `equipos.color_id` (FK a `colores`) y `color_nombre_mostrar`; migra los equipos existentes por nombre (español o inglés; "Glacier" → Glaciar) conservando el nombre que veía el cliente; borra `color_nombre` y `color_hex`; disparador `equipos_color` (`validar_color_equipo`). |
 | `supabase/migrations/0007_roles.sql` (≈200) | Roles **administrador** y **gestor** en lugar de agencia y tienda: convierte los perfiles, crea `es_administrador()` y `es_gestor()`, rehace todas las políticas (tablas y Storage), `proteger_catalogo`, `proteger_tienda`, `proteger_perfil` (siempre un administrador activo) y `borrar_datos_demo`, y borra `es_agencia()` y `es_staff()`. |
@@ -358,7 +359,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈1100) | Suite de aceptación en **modo demo** con Playwright: **33 casos**. Ver sección 14. |
+| `tests/verificar.cjs` (≈1150) | Suite de aceptación en **modo demo** con Playwright: **34 casos**. Ver sección 14. |
 | `tests/verificar-supabase.cjs` (≈311) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **9 casos**. Reemplaza `config.js` en el navegador y puede servir un supabase-js local (`ICT_SUPABASE_JS`). |
 | `tests/documentacion.mjs` | Verificador de este documento: falla si algún archivo versionado no aparece en la sección 5. |
 | `tests/sql/probar.sh` | Crea un Postgres temporal, carga la imitación de Supabase y todas las migraciones en orden, compara la semilla con `semilla.js` y corre `pruebas.sql`. Antes de cada migración corre `tests/sql/antes_<migración>.sql` si existe. |
@@ -448,6 +449,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 - `en_stock`: sí/no, verdadero por defecto (desde `0004`; antes era un entero `stock`).
 - `fotos`: `text[]` de hasta 6 rutas.
 - `video` (desde `0009`): ruta en el bucket `videos` o vacío.
+- `mas_vendido` (desde `0010`): sí/no; como mucho 3 equipos marcados. Todavía no se muestra en el sitio.
 - `publicado`, `destacado`, `descripcion_extra`, `es_demo`.
 - **Solo usados:**
   - `bateria_porcentaje`: de 0 a 100.
@@ -480,6 +482,7 @@ Son `security definer`:
 | `modelos_proteger` | Con sesión, solo el gestor cambia el catálogo (todo: nombre, slug, generación, orden y activo). Si alguien cambia `activo`, pone `activo_por_demo = false`. |
 | `tienda_proteger` | Solo el gestor cambia `modo_demo`. |
 | `perfiles_proteger` | Con sesión, nadie cambia su propio rol ni se desactiva a sí mismo. **Siempre** (también con la clave de servicio) debe quedar al menos un administrador activo; bloquea con `for update` las filas de los otros administradores para que dos cambios a la vez no dejen cero. |
+| `equipos_mas_vendido` | `limitar_mas_vendidos`: al marcar un equipo, si ya hay 3 marcados, error "Ya tiene 3 equipos marcados como más vendidos. Desmarque uno para marcar este." (`23514`). Usa `pg_advisory_xact_lock`. |
 | `equipos_color` | `validar_color_equipo`: el color es del modelo del equipo; si el modelo tiene colores, es obligatorio al crear o al cambiar el modelo o el color (un equipo viejo sin color puede seguir editándose); recorta `color_nombre_mostrar`. |
 | `colores_proteger` | Con sesión: no se crean colores oficiales; los de la tienda solo en modelos sin colores oficiales; un oficial no cambia de nombre, modelo ni orden y no se borra (salvo en cascada al borrar el modelo); el hexadecimal de la fuente no cambia. |
 
@@ -775,6 +778,7 @@ Son las mismas que exige el SQL:
 - **Precio:** entero mayor que 0. Acepta "5.299.000".
 - **Stock:** interruptor "Stock" con "Con stock" / "Sin stock" (por defecto, con stock). Duplicar copia el estado. Sin stock, el equipo no se ve en el sitio.
 - **Usados:** batería obligatoria de 0 a 100 y estado estético obligatorio.
+- **Más vendido:** como mucho 3. En la lista y en el paso Publicar se avisa "Ya tiene 3 equipos marcados como más vendidos. Desmarque uno para marcar este." antes de guardar. Duplicar no lo copia.
 - **Color:** uno de los colores oficiales del modelo (obligatorio si el modelo tiene colores; mensaje "Elija el color."). El nombre a mostrar es opcional, hasta 40 caracteres.
 - **Tienda:** WhatsApp de 12 dígitos que empiece por 57; correo válido; redes con `https://`.
 
@@ -917,7 +921,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 ```bash
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 33 casos en modo demo (Playwright + Chromium)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 34 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (10 casos) + tipos
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
@@ -929,7 +933,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `ICT_BASE=URL`: por ejemplo `http://localhost:8081/Cotizadora-ICT`, para simular GitHub Pages.
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (33 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (34 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
@@ -941,7 +945,7 @@ node tests/documentacion.mjs                               # este documento cubr
 8. Pop-up: errores, foco, formato del celular, reintento y "Abrir WhatsApp" tras dos fallos.
 9. `/admin` sin sesión pide login. La tienda no ve Usuarios, no renombra, y la capa de datos también se lo impide.
 10. Roles: el gestor no ve Usuarios y la capa de datos le niega gestionarlos; el administrador solo ve Usuarios y la capa de datos le niega lo demás; invita con rol, asigna roles, desactiva y no puede quitarse a sí mismo. Catálogo: 42 modelos y generaciones en orden; colores (hex de la fuente fijo, completar el que falta, colores de la tienda solo en el 17 Pro). Datos demo guardados de una versión vieja se migran (stock, tamaño, catálogo y colores).
-11. Validaciones del panel. **Video:** .mov, MP4 en HEVC, 16 s y más de 20 MB se rechazan antes de subir (no queda nada guardado); MP4 de 3 s y WebM se aceptan; quitar el video, reemplazarlo o borrar el equipo borra el archivo; la capa de datos repite los límites de Storage. **Color oficial:** el paso Color ofrece solo los colores del modelo (sin crear colores ni escribir hexadecimales), cambiar el modelo borra el color, la capa de datos rechaza un color de otro modelo, y el nombre a mostrar ("Lila") llega a la tarjeta, el detalle, el texto alternativo, el mensaje de WhatsApp y el `content_name` del píxel; sin nombre a mostrar se ve el oficial ("Lavender").
+11. Validaciones del panel. **Más vendido:** tres se marcan en la lista; el cuarto avisa y no se guarda (también en la capa de datos y en el formulario); desmarcando uno, se puede; Duplicar no lo copia; el sitio no lo muestra. **Video:** .mov, MP4 en HEVC, 16 s y más de 20 MB se rechazan antes de subir (no queda nada guardado); MP4 de 3 s y WebM se aceptan; quitar el video, reemplazarlo o borrar el equipo borra el archivo; la capa de datos repite los límites de Storage. **Color oficial:** el paso Color ofrece solo los colores del modelo (sin crear colores ni escribir hexadecimales), cambiar el modelo borra el color, la capa de datos rechaza un color de otro modelo, y el nombre a mostrar ("Lila") llega a la tarjeta, el detalle, el texto alternativo, el mensaje de WhatsApp y el `content_name` del píxel; sin nombre a mostrar se ve el oficial ("Lavender").
 12. A 320, 360, 768 y 1440 px: sin scroll horizontal, un `h1` y sin errores en sitio, legales y todo el panel.
 13. Carrusel: dedo, flechas, puntos, muestras, teclado y Escape.
 14. Gesto táctil real en el carrusel y cierre de la hoja con el gesto.
@@ -1048,6 +1052,7 @@ bash tests/supabase-local/levantar.sh detener
 | `nombre_es` además de `nombre_en` | La fuente da casi siempre el nombre en español y a veces no el inglés: sin `nombre_es` habría colores sin nombre. |
 | Hexadecimales del "iPhone 16 / 16e" también en el 16 Plus | La tabla de la fuente es por serie y el 16 Plus tiene exactamente los mismos colores. |
 | Colores de la tienda solo en modelos sin colores oficiales | El 17 Pro y el 17 Pro Max no tienen colores en la fuente; sin esto no se podrían cargar. Los oficiales no se mezclan con inventados. |
+| Duplicar no copia "Más vendido" | El duplicado es otra variante y el máximo es 3: copiarlo haría fallar el guardado. El stock sí se copia (pedido de A2). |
 | Bucket propio para videos | Límite (20 MB) y tipos (MP4 y WebM) propios, sin aflojar las reglas de `fotos`. |
 | Duración del MP4 desde la caja `mvhd` | Funciona aunque el navegador no sepa reproducir el video (por ejemplo, Chromium sin códecs propietarios) y no descarga nada extra. |
 | MP4 en HEVC rechazado | El pedido es "MP4 (H.264)": HEVC no se ve en todos los navegadores. Se usa el mismo mensaje que para .mov. |
@@ -1135,6 +1140,13 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 20/10/2026 · A8: "Más vendido" (hasta 3)
+
+- **Pedido de Jared (fase A, punto A8):** `equipos.mas_vendido`, interruptor "Más vendido" en la lista del inventario y en el formulario, máximo 3 (disparador en la base y aviso en el panel) con el mensaje "Ya tiene 3 equipos marcados como más vendidos. Desmarque uno para marcar este."; todavía no se muestra en el sitio.
+- **Hecho:** `supabase/migrations/0010_mas_vendido.sql`; `comun.js` (`MAX_MAS_VENDIDOS`, `MENSAJE_MAS_VENDIDOS`, campo en `CAMPOS_EQUIPO`); `demo.js` versión 8 con la misma regla; `inventario.js` (interruptor en la lista y en Publicar, aviso previo, Duplicar no lo copia); `panel.css`: la fila del inventario en escritorio pasa a dos líneas (datos y acciones arriba; precio e interruptores abajo) para que entren los tres interruptores.
+- **Pruebas:** `pruebas.sql` (tres sí, el cuarto no, también al insertar; desmarcar y volver a marcar) y caso nuevo en `verificar.cjs`. Ninguna prueba se debilitó.
+- **Verificación:** `tests/sql/probar.sh` OK, `tests/verificar.cjs` 34/34 y `tests/verificar-supabase.cjs` 9/9.
 
 ### 20/10/2026 · A7: un video corto opcional por equipo
 

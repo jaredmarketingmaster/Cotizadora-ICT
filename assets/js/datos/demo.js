@@ -9,7 +9,7 @@
 // =============================================================================
 
 import { CATALOGO, COLORES, DEMO_EQUIPOS } from "./semilla.js";
-import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, elegir } from "./comun.js";
+import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, elegir } from "./comun.js";
 import { hexValido, whatsappTiendaValido, sesion, esperar } from "../utils.js";
 
 const CLAVE = "cotizadora-demo:v1";
@@ -40,7 +40,7 @@ function estadoInicial() {
     id: uuid(), modelo_id: porSlug.get(d.slug).id, condicion: d.condicion, capacidad: d.capacidad,
     color_id: colorDe(porSlug.get(d.slug).id, d.color), color_nombre_mostrar: d.color_nombre_mostrar,
     precio: d.precio, en_stock: d.en_stock, fotos: [], video: "",
-    publicado: true, destacado: d.destacado, descripcion_extra: "", es_demo: true,
+    publicado: true, destacado: d.destacado, mas_vendido: false, descripcion_extra: "", es_demo: true,
     bateria_porcentaje: d.bateria_porcentaje ?? null, estado_estetico: d.estado_estetico ?? null,
     detalles: d.detalles ?? "", incluye: d.incluye ?? "", creado_en: t, actualizado_en: t
   }));
@@ -64,7 +64,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 7;
+const VERSION = 8;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -120,6 +120,10 @@ const MIGRACIONES = {
   // 0009_video.sql: un video opcional por equipo.
   6(e) {
     for (const q of e.equipos) q.video = q.video || "";
+  },
+  // 0010_mas_vendido.sql
+  7(e) {
+    for (const q of e.equipos) q.mas_vendido = Boolean(q.mas_vendido);
   }
 };
 
@@ -270,12 +274,20 @@ function validarColorEquipo(q, e, anterior = null) {
   }
 }
 
+// Como limitar_mas_vendidos (0010): no más de 3 marcados.
+function validarMasVendido(q, e, anterior = null) {
+  if (q.mas_vendido && !anterior?.mas_vendido && e.equipos.filter((x) => x.mas_vendido && x.id !== q.id).length >= MAX_MAS_VENDIDOS) {
+    throw new ErrorDatos(MENSAJE_MAS_VENDIDOS);
+  }
+}
+
 function validarEquipo(q, e) {
   if (!e.modelos.some((m) => m.id === q.modelo_id)) throw new ErrorDatos("Elija un modelo.");
   if (!["nuevo", "usado"].includes(q.condicion)) throw new ErrorDatos("Elija si es nuevo o usado.");
   if (!String(q.capacidad || "").trim()) throw new ErrorDatos("Elija la capacidad.");
   if (!Number.isSafeInteger(q.precio) || q.precio <= 0) throw new ErrorDatos("El precio debe ser un número entero mayor que 0.");
   if (typeof q.en_stock !== "boolean") throw new ErrorDatos("Indique si el equipo tiene stock.");
+  if (typeof q.mas_vendido !== "boolean") throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
   if ((q.fotos || []).length > 6) throw new ErrorDatos("Máximo 6 fotos por equipo.");
   if ((q.video ?? "") !== "" && !RUTA_VIDEO.test(q.video)) throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
   if (q.bateria_porcentaje != null && !(Number.isInteger(q.bateria_porcentaje) && q.bateria_porcentaje >= 0 && q.bateria_porcentaje <= 100)) {
@@ -518,12 +530,13 @@ export const demo = {
     const e = leer();
     exigirGestor(e);
     const q = {
-      id: uuid(), color_id: null, color_nombre_mostrar: "", en_stock: true, fotos: [], video: "", publicado: false, destacado: false,
+      id: uuid(), color_id: null, color_nombre_mostrar: "", en_stock: true, fotos: [], video: "", publicado: false, destacado: false, mas_vendido: false,
       descripcion_extra: "", es_demo: false, bateria_porcentaje: null, estado_estetico: null, detalles: "", incluye: "",
       ...elegir(datos, CAMPOS_EQUIPO), creado_en: ahora(), actualizado_en: ahora()
     };
     validarEquipo(q, e);
     validarColorEquipo(q, e);
+    validarMasVendido(q, e);
     e.equipos.push(q);
     e.tienda.precios_actualizados_en = ahora();
     escribir(e);
@@ -539,6 +552,7 @@ export const demo = {
     const nuevo = { ...q, ...elegir(cambios, CAMPOS_EQUIPO), actualizado_en: ahora() };
     validarEquipo(nuevo, e);
     if (["modelo_id", "color_id", "color_nombre_mostrar"].some((k) => k in cambios)) validarColorEquipo(nuevo, e, q);
+    if ("mas_vendido" in cambios) validarMasVendido(nuevo, e, q);
     if (nuevo.precio !== q.precio) e.tienda.precios_actualizados_en = ahora();
     Object.assign(q, nuevo);
     escribir(e);
