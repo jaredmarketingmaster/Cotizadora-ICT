@@ -1,11 +1,11 @@
 // =============================================================================
-// Catálogo: interruptor activo/inactivo para todos. La agencia además agrega,
-// renombra y reordena. El slug (lo que va en la URL de los anuncios) no cambia
+// Catálogo (gestor): interruptor activo/inactivo, agregar, renombrar y
+// reordenar. El slug (lo que va en la URL de los anuncios) no cambia
 // al renombrar, para no romper enlaces ya publicados.
 //
 // Colores de cada modelo: los oficiales vienen de la fuente (nombre de solo
 // lectura); el hexadecimal se completa donde falta. En modelos sin colores
-// oficiales, la agencia agrega y borra los de la tienda.
+// oficiales, el gestor agrega y borra los de la tienda.
 // =============================================================================
 
 import { slugDe } from "../datos/semilla.js";
@@ -15,7 +15,8 @@ import { $, esc, conBoton, campoTexto, marcarError, enfocarPrimerError, avisar, 
 
 export async function dibujar(vista, ctx) {
   const { api } = ctx;
-  const agencia = ctx.esAgencia();
+  // Solo el gestor llega aquí; la base lo exige igual (políticas de 0007).
+  const completo = ctx.esGestor();
   let [modelos, colores] = await Promise.all([api.listarModelos(), api.listarColores()]);
   const abiertos = new Set();
 
@@ -37,11 +38,11 @@ export async function dibujar(vista, ctx) {
       ${g.modelos.map((m) => {
         const i = ordenados.indexOf(m);
         return `<div class="modelo-fila" data-id="${m.id}">
-          ${agencia
+          ${completo
             ? `<label class="oculto-visual" for="n-${m.id}">Nombre</label><input class="entrada nombre" id="n-${m.id}" data-renombrar value="${esc(m.nombre)}" maxlength="60">`
             : `<span class="nombre">${esc(m.nombre)}</span>`}
           <div class="botones">
-            ${agencia ? `<button type="button" class="boton-icono" data-mover="-1" aria-label="Mover ${esc(m.nombre)} antes" ${i === 0 ? "disabled" : ""}>↑</button>
+            ${completo ? `<button type="button" class="boton-icono" data-mover="-1" aria-label="Mover ${esc(m.nombre)} antes" ${i === 0 ? "disabled" : ""}>↑</button>
             <button type="button" class="boton-icono" data-mover="1" aria-label="Mover ${esc(m.nombre)} después" ${i === ordenados.length - 1 ? "disabled" : ""}>↓</button>` : ""}
             <label class="interruptor" for="a-${m.id}"><input type="checkbox" role="switch" id="a-${m.id}" data-activar ${m.activo ? "checked" : ""}><span class="oculto-visual">${esc(m.nombre)}: </span><span>${m.activo ? "Activo" : "Inactivo"}</span></label>
           </div>
@@ -66,9 +67,9 @@ export async function dibujar(vista, ctx) {
         ${c.hex_de_fuente
           ? `<span class="cifras color-hex">${esc(c.hex)}</span>`
           : `<span class="campo color-campo"><label class="oculto-visual" for="hex-${c.id}">Hexadecimal de ${esc(c.nombre_es)} (${esc(m.nombre)})</label><input class="entrada cifras" id="hex-${c.id}" data-hex value="${esc(c.hex)}" maxlength="7" placeholder="#RRGGBB" spellcheck="false" aria-describedby="hex-${c.id}-error"><span class="error-campo" id="hex-${c.id}-error"></span></span>`}
-        ${agencia && !c.oficial ? `<button type="button" class="boton boton--peligro boton--chico" data-borrar-color>Borrar</button>` : ""}
+        ${completo && !c.oficial ? `<button type="button" class="boton boton--peligro boton--chico" data-borrar-color>Borrar</button>` : ""}
       </li>`).join("")}</ul>` : ""}
-      ${agencia && !oficiales ? `<form class="agregar-color" data-agregar-color novalidate>
+      ${completo && !oficiales ? `<form class="agregar-color" data-agregar-color novalidate>
         ${campoTexto({ id: `cn-${m.id}`, etiqueta: "Nombre del color", atributos: 'maxlength="40" data-nombre-color' })}
         ${campoTexto({ id: `ch-${m.id}`, etiqueta: "Hexadecimal (opcional)", atributos: 'maxlength="7" placeholder="#RRGGBB" spellcheck="false" data-hex-nuevo' })}
         <div><button type="submit" class="boton boton--secundario">Agregar color</button></div>
@@ -77,9 +78,9 @@ export async function dibujar(vista, ctx) {
   }
 
   vista.innerHTML = `
-    <div class="vista-cabecera"><h1>Catálogo</h1><p>Active solo los modelos que vende. Un modelo inactivo y sus equipos no se ven en el sitio.${agencia ? " El orden define qué generación es más nueva." : ""}</p>
+    <div class="vista-cabecera"><h1>Catálogo</h1><p>Active solo los modelos que vende. Un modelo inactivo y sus equipos no se ven en el sitio.${completo ? " El orden define qué generación es más nueva." : ""}</p>
       <p class="ayuda">Los colores oficiales vienen de la fuente y su nombre no se cambia. Si a un color le falta la muestra (el hexadecimal), puede completarla.</p></div>
-    ${agencia ? `<details class="bloque">
+    ${completo ? `<details class="bloque">
       <summary style="font-weight:700;cursor:pointer;min-height:44px;display:flex;align-items:center">Agregar modelo</summary>
       <form id="form-modelo" novalidate class="grilla-2">
         ${campoTexto({ id: "m-nombre", etiqueta: "Nombre", ayuda: "Tal como lo nombra el fabricante.", atributos: 'maxlength="60"' })}

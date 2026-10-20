@@ -63,7 +63,7 @@ function traducirAuth(error) {
   const t = String(error?.message || "");
   if (/invalid login credentials/i.test(t)) return "El correo o la contraseña no coinciden.";
   if (/email not confirmed/i.test(t)) return "Ese correo todavía no está confirmado. Revise su bandeja de entrada.";
-  if (/banned|user is banned/i.test(t)) return "Este usuario está desactivado. Hable con la agencia.";
+  if (/banned|user is banned/i.test(t)) return "Este usuario está desactivado. Hable con el administrador.";
   if (/password should be at least/i.test(t)) return "La contraseña debe tener al menos 8 caracteres.";
   if (/rate limit|too many/i.test(t)) return "Demasiados intentos. Espere unos minutos e inténtelo de nuevo.";
   if (/same password|different from the old/i.test(t)) return "La contraseña nueva debe ser distinta de la anterior.";
@@ -138,7 +138,7 @@ export const supabase = {
     const perfil = await perfilDe(c, data.user);
     if (!perfil) {
       await c.auth.signOut();
-      throw new ErrorDatos("Su usuario no tiene acceso al panel o está desactivado. Hable con la agencia.");
+      throw new ErrorDatos("Su usuario no tiene acceso al panel o está desactivado. Hable con el administrador.");
     }
     return perfil;
   },
@@ -314,7 +314,10 @@ export const supabase = {
     fallo(error);
   },
 
-  // ---------------- Usuarios (función "usuarios", solo agencia) ----------------
+  // ---------------- Usuarios (solo administrador) ----------------
+  // Invitar, desactivar y reactivar van por la función "usuarios" (necesitan la
+  // clave de servicio). El rol se cambia directo en perfiles (perfiles_editar);
+  // la base exige que quede al menos un administrador activo.
   async listarUsuarios() {
     const c = await cliente();
     const { data, error } = await c.from("perfiles").select("*").order("creado_en");
@@ -328,5 +331,13 @@ export const supabase = {
 
   async cambiarEstadoUsuario(userId, activo) {
     return funcion("usuarios", { accion: activo ? "reactivar" : "desactivar", user_id: userId });
+  },
+
+  async cambiarRolUsuario(userId, rol) {
+    const c = await cliente();
+    const { data, error } = await c.from("perfiles").update({ rol }).eq("user_id", userId).select();
+    fallo(error);
+    if (!data?.length) throw new ErrorDatos("Su usuario no tiene permiso para hacer este cambio.", "42501");
+    return data[0];
   }
 };

@@ -129,18 +129,34 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.context().close();
   });
 
-  await caso("panel: sin sesión pide login; la tienda no ve Usuarios ni renombra; colores del catálogo", async () => {
+  await caso("panel: sin sesión pide login; el gestor no ve Usuarios y el servidor le niega gestionarlos; colores del catálogo", async () => {
     const p = await pagina(390);
     await p.goto(`${BASE}/admin/#/inventario`);
     await p.waitForSelector("#form-login");
-    await entrar(p, "tienda@local.co");
+    await entrar(p, "gestor@local.co");
     assert.equal(await p.isVisible('[data-ruta="usuarios"]'), false);
+    // Intento directo contra el servidor: la función "usuarios" y la tabla
+    // perfiles rechazan al gestor.
+    const directo = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      const r = [];
+      try { await a.invitarUsuario("intruso@local.co", "administrador"); r.push("invitó"); } catch (e) { r.push(e.message); }
+      const yo = await a.sesionActual();
+      const otros = (await a.listarUsuarios()).filter((u) => u.user_id !== yo.id);
+      r.push(otros.length);
+      try { await a.cambiarRolUsuario(yo.id, "administrador"); r.push("cambió"); } catch (e) { r.push(e.message); }
+      return r;
+    });
+    assert.equal(directo[0], "Solo el administrador puede gestionar usuarios.");
+    assert.equal(directo[1], 0, "el gestor no ve a los demás usuarios");
+    assert.match(directo[2], /permiso|propio rol/);
     await p.goto(`${BASE}/admin/#/catalogo`);
     await p.waitForSelector(".modelo-fila");
-    assert.equal(await p.locator("[data-renombrar]").count(), 0);
+    assert.equal(await p.locator("[data-renombrar]").count(), 42);
     // Colores: completa la muestra que falta en el panel; el servidor rechaza
     // cambiar un hexadecimal de la fuente y agregar colores (rol tienda).
-    const fila = p.locator('.modelo-fila:has(.nombre:text-is("iPhone 18 Pro"))');
+    const fila = p.locator('.modelo-fila:has(input[value="iPhone 18 Pro"])');
     await fila.locator(".colores-modelo > summary").click();
     await fila.locator('li:has-text("Visón") input[data-hex]').fill("#8B7765");
     await fila.locator('li:has-text("Visón") input[data-hex]').press("Enter");
@@ -158,7 +174,7 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     });
     assert.equal(r.vison, "#8B7765");
     assert.match(r.fuente, /viene de la fuente/);
-    assert.match(r.agregar, /colores oficiales|permiso/);
+    assert.match(r.agregar, /colores oficiales/);
     await p.goto(`${BASE}/admin/#/usuarios`);
     await p.waitForSelector(".estadisticas");
     assert.deepEqual(p.errores, []);
@@ -167,7 +183,7 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
 
   await caso("panel → sitio: cambiar un precio lo cambia en el sitio y actualiza la fecha", async () => {
     const p = await pagina(1280);
-    await entrar(p, "tienda@local.co");
+    await entrar(p, "gestor@local.co");
     await p.goto(`${BASE}/admin/#/inventario`);
     const fila = p.locator(".fila-equipo", { hasText: "Glacier" });
     await fila.locator('[data-campo="precio"]').fill("5.123.000");
@@ -185,7 +201,7 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
 
   await caso("panel: agregar un equipo con foto (Storage simulado) y verlo en el sitio", async () => {
     const p = await pagina(390);
-    await entrar(p, "tienda@local.co");
+    await entrar(p, "gestor@local.co");
     await p.goto(`${BASE}/admin/#/inventario/nuevo`);
     await p.selectOption("#e-modelo", { label: "iPhone 17 Pro (inactivo)" });
     await p.click("#siguiente");
@@ -211,11 +227,11 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.context().close();
   });
 
-  await caso("agencia: borrar los datos de demostración quita la franja y DEMO del sitio", async () => {
+  await caso("gestor: borrar los datos de demostración quita la franja y DEMO del sitio", async () => {
     const p = await pagina(1280);
-    await entrar(p, "agencia@local.co");
+    await entrar(p, "gestor@local.co");
     await p.waitForSelector(".estadisticas");
-    assert.ok(await p.isVisible('[data-ruta="usuarios"]'));
+    assert.equal(await p.isVisible('[data-ruta="usuarios"]'), false);
     p.once("dialog", (d) => d.accept());
     await p.click("#borrar-demo");
     await p.click('#confirmar [value="si"]');
@@ -228,9 +244,17 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.context().close();
   });
 
-  await caso("invitación: la agencia invita, el enlace del correo pide crear la contraseña y entra", async () => {
+  await caso("invitación: el administrador invita, el enlace del correo pide crear la contraseña y entra", async () => {
     const p = await pagina(390);
-    await entrar(p, "agencia@local.co");
+    await entrar(p, "administrador@local.co");
+    // El administrador solo ve Usuarios, y el servidor le niega lo demás.
+    assert.deepEqual(await p.locator(".navegacion a:visible").allTextContents(), ["Usuarios"]);
+    const negado = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      try { await a.guardarTienda({ nombre: "x" }); return "guardó"; } catch (e) { return e.message; }
+    });
+    assert.notEqual(negado, "guardó");
     await p.goto(`${BASE}/admin/#/usuarios`);
     await p.waitForSelector("#form-invitar");
     const antes = contarCorreos();
@@ -258,7 +282,7 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await q.fill("#c-clave2", "clave-invitado-1");
     await q.click("#form-clave [type=submit]");
     await q.waitForSelector("#app:not([hidden]) .estadisticas", { timeout: 15000 });
-    assert.match(await q.textContent("#barra-usuario"), /invitado@local\.co · Tienda/);
+    assert.match(await q.textContent("#barra-usuario"), /invitado@local\.co · Gestor/);
     assert.ok(!/access_token/.test(q.url()), "el token quedó en la URL");
     // Sale y vuelve a entrar con la contraseña que creó.
     await q.click("#salir");
@@ -301,11 +325,16 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await r.context().close();
   });
 
-  await caso("usuarios: la agencia desactiva (no puede entrar) y reactiva (vuelve a entrar)", async () => {
+  await caso("usuarios: el administrador asigna roles, desactiva (no puede entrar) y reactiva (vuelve a entrar)", async () => {
     const p = await pagina(1280);
-    await entrar(p, "agencia@local.co");
+    await entrar(p, "administrador@local.co");
     await p.goto(`${BASE}/admin/#/usuarios`);
     const fila = '.usuario-fila:has-text("invitado@local.co")';
+    // Asignar rol: a administrador y de vuelta a gestor (directo en perfiles).
+    await p.locator(`${fila} [data-rol]`).selectOption("administrador");
+    await p.waitForFunction(() => [...document.querySelectorAll(".usuario-fila")].some((f) => f.textContent.includes("invitado@local.co") && f.querySelector(".rol").textContent.trim() === "Administrador"), null, { timeout: 15000 });
+    await p.locator(`${fila} [data-rol]`).selectOption("gestor");
+    await p.waitForFunction(() => [...document.querySelectorAll(".usuario-fila")].some((f) => f.textContent.includes("invitado@local.co") && f.querySelector(".rol").textContent.trim() === "Gestor"), null, { timeout: 15000 });
     await p.click(`${fila} [data-estado]`);
     await p.click('#confirmar [value="si"]');
     await p.waitForSelector(`${fila} .estado-inactivo`, { timeout: 15000 });
@@ -316,7 +345,7 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await q.fill("#l-clave", "clave-invitado-2");
     await q.click("#form-login [type=submit]");
     await q.waitForSelector("#l-alerta:not([hidden])", { timeout: 15000 });
-    assert.equal(await q.textContent("#l-alerta"), "Este usuario está desactivado. Hable con la agencia.");
+    assert.equal(await q.textContent("#l-alerta"), "Este usuario está desactivado. Hable con el administrador.");
 
     await p.click(`${fila} [data-estado]`);
     await p.locator(`${fila} .estado-inactivo`).waitFor({ state: "detached", timeout: 15000 });

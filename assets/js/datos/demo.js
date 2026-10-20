@@ -2,7 +2,7 @@
 // Back-end de demostración: todo vive en este navegador.
 // - Datos en localStorage (se comparten entre pestañas del mismo navegador).
 // - Fotos en IndexedDB.
-// - Usuarios de prueba: agencia@demo.co y tienda@demo.co, clave demo1234.
+// - Usuarios de prueba: administrador@demo.co y gestor@demo.co, clave demo1234.
 // Repite las reglas del SQL (permisos por rol, validaciones y la fecha de
 // precios) para que el sitio y el panel se comporten igual que con Supabase.
 // No sirve para producción: cada navegador tiene su propia copia.
@@ -15,8 +15,8 @@ import { hexValido, whatsappTiendaValido, sesion, esperar } from "../utils.js";
 const CLAVE = "cotizadora-demo:v1";
 const CLAVE_SESION = "cotizadora-demo:sesion";
 export const USUARIOS_DEMO = [
-  { correo: "agencia@demo.co", rol: "agencia" },
-  { correo: "tienda@demo.co", rol: "tienda" }
+  { correo: "administrador@demo.co", rol: "administrador" },
+  { correo: "gestor@demo.co", rol: "gestor" }
 ];
 export const CLAVE_DEMO = "demo1234";
 
@@ -61,7 +61,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 4;
+const VERSION = 5;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -85,6 +85,15 @@ const MIGRACIONES = {
       e.fichas.push({ modelo_id: id, descripcion: "", especificaciones: [], actualizado_en: t });
     }
     e.colores = coloresOficiales(e.modelos);
+  },
+  // 0007_roles.sql: agencia → administrador, tienda → gestor. Los usuarios de
+  // prueba cambian también de correo.
+  4(e) {
+    const correos = { "agencia@demo.co": "administrador@demo.co", "tienda@demo.co": "gestor@demo.co" };
+    for (const p of e.perfiles) {
+      p.rol = { agencia: "administrador", tienda: "gestor" }[p.rol] || p.rol;
+      p.correo = correos[p.correo] || p.correo;
+    }
   }
 };
 
@@ -180,16 +189,38 @@ function perfilActual(e) {
   return e.perfiles.find((p) => p.user_id === id && p.activo) || null;
 }
 
-function exigirStaff(e) {
+// Roles (igual que 0007_roles.sql): el administrador solo gestiona accesos;
+// el gestor, todo lo demás.
+function exigirSesion(e) {
   const p = perfilActual(e);
   if (!p) throw new ErrorDatos("Su sesión terminó. Vuelva a iniciar sesión.", "sin-sesion");
   return p;
 }
 
-function exigirAgencia(e, que) {
-  const p = exigirStaff(e);
-  if (p.rol !== "agencia") throw new ErrorDatos(`Solo la agencia puede ${que}.`, "42501");
+function exigirGestor(e, que = "hacer este cambio") {
+  const p = exigirSesion(e);
+  if (p.rol !== "gestor") throw new ErrorDatos(`Solo el gestor puede ${que}.`, "42501");
   return p;
+}
+
+function exigirAdministrador(e, que) {
+  const p = exigirSesion(e);
+  if (p.rol !== "administrador") throw new ErrorDatos(`Solo el administrador puede ${que}.`, "42501");
+  return p;
+}
+
+function esGestor(e) { return perfilActual(e)?.rol === "gestor"; }
+
+// Como perfiles_proteger: siempre queda al menos un administrador activo.
+function cambiarPerfil(e, userId, cambios) {
+  const p = e.perfiles.find((x) => x.user_id === userId);
+  if (!p) throw new ErrorDatos("Ese usuario ya no existe.");
+  const nuevo = { ...p, ...cambios };
+  const otros = e.perfiles.some((x) => x.user_id !== userId && x.rol === "administrador" && x.activo);
+  if (p.rol === "administrador" && p.activo && (nuevo.rol !== "administrador" || !nuevo.activo) && !otros) {
+    throw new ErrorDatos("Debe quedar al menos un administrador activo.", "42501");
+  }
+  Object.assign(p, nuevo);
 }
 
 // --- Validaciones (las mismas restricciones CHECK del SQL) -------------------
@@ -283,7 +314,7 @@ export const demo = {
     const e = leer();
     const p = e.perfiles.find((x) => x.correo.toLowerCase() === String(correo).trim().toLowerCase());
     if (!p || p.clave !== clave) throw new ErrorDatos("El correo o la contraseña no coinciden.");
-    if (!p.activo) throw new ErrorDatos("Este usuario está desactivado. Hable con la agencia.");
+    if (!p.activo) throw new ErrorDatos("Este usuario está desactivado. Hable con el administrador.");
     sesion.guardar(CLAVE_SESION, p.user_id);
     avisarSesion();
     return { id: p.user_id, correo: p.correo, rol: p.rol };
@@ -299,7 +330,7 @@ export const demo = {
 
   async cambiarClave(nueva) {
     const e = leer();
-    const p = exigirStaff(e);
+    const p = exigirSesion(e);
     if (String(nueva).length < 8) throw new ErrorDatos("La contraseña debe tener al menos 8 caracteres.");
     e.perfiles.find((x) => x.user_id === p.user_id).clave = nueva;
     escribir(e);
@@ -316,10 +347,10 @@ export const demo = {
   async guardarTienda(cambios) {
     await red();
     const e = leer();
-    const p = exigirStaff(e);
+    const p = exigirGestor(e, "cambiar la tienda");
     const datos = elegir(cambios, CAMPOS_TIENDA);
-    if ("modo_demo" in datos && datos.modo_demo !== e.tienda.modo_demo && p.rol !== "agencia") {
-      throw new ErrorDatos("Solo la agencia puede cambiar el modo demo.", "42501");
+    if ("modo_demo" in datos && datos.modo_demo !== e.tienda.modo_demo && p.rol !== "gestor") {
+      throw new ErrorDatos("Solo el gestor puede cambiar el modo demo.", "42501");
     }
     const nueva = { ...e.tienda, ...datos, actualizado_en: ahora() };
     validarTienda(nueva);
@@ -331,19 +362,16 @@ export const demo = {
   // ---------------- Catálogo ----------------
   async listarModelos() {
     await red();
-    return copia(leer().modelos.sort((a, b) => a.orden - b.orden));
+    const e = leer();
+    return copia(e.modelos.filter((m) => esGestor(e) || m.activo).sort((a, b) => a.orden - b.orden));
   },
 
   async guardarModelo(id, cambios) {
     await red();
     const e = leer();
-    const p = exigirStaff(e);
+    exigirGestor(e, "cambiar el catálogo");
     const m = e.modelos.find((x) => x.id === id);
     if (!m) throw new ErrorDatos("Ese modelo ya no existe.");
-    const protegidos = ["nombre", "slug", "generacion", "orden"].filter((c) => c in cambios && cambios[c] !== m[c]);
-    if (protegidos.length && p.rol !== "agencia") {
-      throw new ErrorDatos("Solo la agencia puede cambiar el nombre, la generación o el orden del catálogo.", "42501");
-    }
     if ("nombre" in cambios && e.modelos.some((x) => x.id !== id && x.nombre === cambios.nombre)) throw new ErrorDatos("Ya existe un modelo con ese nombre.");
     if ("slug" in cambios && e.modelos.some((x) => x.id !== id && x.slug === cambios.slug)) throw new ErrorDatos("Ya existe un modelo con ese nombre.");
     if ("activo" in cambios && cambios.activo !== m.activo) m.activo_por_demo = false;
@@ -355,7 +383,7 @@ export const demo = {
   async agregarModelo(datos) {
     await red();
     const e = leer();
-    exigirAgencia(e, "agregar modelos");
+    exigirGestor(e, "cambiar el catálogo");
     if (e.modelos.some((x) => x.nombre === datos.nombre || x.slug === datos.slug)) throw new ErrorDatos("Ya existe un modelo con ese nombre.");
     const id = Math.max(0, ...e.modelos.map((m) => m.id)) + 1;
     const m = { id, nombre: datos.nombre, slug: datos.slug, generacion: datos.generacion, orden: datos.orden, activo: Boolean(datos.activo), activo_por_demo: false, creado_en: ahora() };
@@ -368,13 +396,15 @@ export const demo = {
   // ---------------- Colores (mismas reglas que proteger_color) ----------------
   async listarColores() {
     await red();
-    return copia(leer().colores.sort((a, b) => a.modelo_id - b.modelo_id || a.orden - b.orden));
+    const e = leer();
+    const activos = new Set(e.modelos.filter((m) => m.activo).map((m) => m.id));
+    return copia(e.colores.filter((c) => esGestor(e) || activos.has(c.modelo_id)).sort((a, b) => a.modelo_id - b.modelo_id || a.orden - b.orden));
   },
 
   async guardarColor(id, cambios) {
     await red();
     const e = leer();
-    exigirStaff(e);
+    exigirGestor(e);
     const c = e.colores.find((x) => x.id === id);
     if (!c) throw new ErrorDatos("Ese color ya no existe.");
     const nuevo = { ...c, ...elegir(cambios, CAMPOS_COLOR) };
@@ -391,7 +421,7 @@ export const demo = {
   async agregarColor(datos) {
     await red();
     const e = leer();
-    exigirAgencia(e, "agregar colores");
+    exigirGestor(e, "cambiar el catálogo");
     if (e.colores.some((c) => c.modelo_id === datos.modelo_id && c.oficial)) {
       throw new ErrorDatos("Este modelo tiene colores oficiales: no se le pueden agregar otros.", "42501");
     }
@@ -408,7 +438,7 @@ export const demo = {
   async borrarColor(id) {
     await red();
     const e = leer();
-    exigirAgencia(e, "borrar colores");
+    exigirGestor(e, "cambiar el catálogo");
     const c = e.colores.find((x) => x.id === id);
     if (!c) return;
     if (c.oficial) throw new ErrorDatos("Un color oficial no se puede borrar.", "42501");
@@ -417,12 +447,17 @@ export const demo = {
   },
 
   // ---------------- Fichas ----------------
-  async listarFichas() { await red(); return copia(leer().fichas); },
+  async listarFichas() {
+    await red();
+    const e = leer();
+    const activos = new Set(e.modelos.filter((m) => m.activo).map((m) => m.id));
+    return copia(e.fichas.filter((f) => esGestor(e) || activos.has(f.modelo_id)));
+  },
 
   async guardarFicha(modeloId, { descripcion, especificaciones }) {
     await red();
     const e = leer();
-    exigirStaff(e);
+    exigirGestor(e);
     let f = e.fichas.find((x) => x.modelo_id === modeloId);
     if (!f) { f = { modelo_id: modeloId }; e.fichas.push(f); }
     Object.assign(f, { descripcion: descripcion ?? "", especificaciones: especificaciones ?? [], actualizado_en: ahora() });
@@ -434,14 +469,15 @@ export const demo = {
   async listarEquipos() {
     await red();
     const e = leer();
-    exigirStaff(e);
-    return copia(e.equipos);
+    exigirSesion(e);
+    const porId = new Map(e.modelos.map((m) => [m.id, m]));
+    return copia(e.equipos.filter((q) => esGestor(e) || equipoEsPublico(q, porId)));
   },
 
   async crearEquipo(datos) {
     await red();
     const e = leer();
-    exigirStaff(e);
+    exigirGestor(e);
     const q = {
       id: uuid(), color_nombre: "", color_hex: "#8E8E93", en_stock: true, fotos: [], publicado: false, destacado: false,
       descripcion_extra: "", es_demo: false, bateria_porcentaje: null, estado_estetico: null, detalles: "", incluye: "",
@@ -457,7 +493,7 @@ export const demo = {
   async actualizarEquipo(id, cambios) {
     await red();
     const e = leer();
-    exigirStaff(e);
+    exigirGestor(e);
     const q = e.equipos.find((x) => x.id === id);
     if (!q) throw new ErrorDatos("Ese equipo ya no existe.");
     const nuevo = { ...q, ...elegir(cambios, CAMPOS_EQUIPO), actualizado_en: ahora() };
@@ -471,7 +507,7 @@ export const demo = {
   async borrarEquipo(id) {
     await red();
     const e = leer();
-    exigirStaff(e);
+    exigirGestor(e);
     e.equipos = e.equipos.filter((x) => x.id !== id);
     escribir(e);
   },
@@ -479,7 +515,7 @@ export const demo = {
   // ---------------- Archivos ----------------
   async subirArchivo(_bucket, ruta, blob) {
     const e = leer();
-    exigirStaff(e);
+    exigirGestor(e);
     await idb("readwrite", (s) => s.put(blob, ruta));
     urls.set(ruta, URL.createObjectURL(blob));
     return ruta;
@@ -497,7 +533,7 @@ export const demo = {
   async borrarDatosDemo() {
     await red();
     const e = leer();
-    exigirAgencia(e, "borrar los datos de demostración");
+    exigirGestor(e, "borrar los datos de demostración");
     e.equipos = e.equipos.filter((q) => !q.es_demo);
     for (const m of e.modelos) if (m.activo_por_demo) Object.assign(m, { activo: false, activo_por_demo: false });
     e.tienda.modo_demo = false;
@@ -515,14 +551,16 @@ export const demo = {
   async listarUsuarios() {
     await red();
     const e = leer();
-    exigirAgencia(e, "ver los usuarios");
-    return e.perfiles.map(({ clave: _c, ...p }) => p);
+    const yo = exigirSesion(e);
+    // Como perfiles_leer: cada uno ve el suyo; el administrador, todos.
+    return e.perfiles.filter((p) => yo.rol === "administrador" || p.user_id === yo.user_id).map(({ clave: _c, ...p }) => p);
   },
 
   async invitarUsuario(correo, rol) {
     await red();
     const e = leer();
-    exigirAgencia(e, "invitar usuarios");
+    exigirAdministrador(e, "gestionar usuarios");
+    if (!["administrador", "gestor"].includes(rol)) throw new ErrorDatos("Elija el rol.");
     const c = String(correo).trim().toLowerCase();
     if (e.perfiles.some((p) => p.correo === c)) throw new ErrorDatos("Ese correo ya tiene usuario.");
     // En demo el invitado entra con la clave de prueba.
@@ -534,11 +572,19 @@ export const demo = {
   async cambiarEstadoUsuario(userId, activo) {
     await red();
     const e = leer();
-    const yo = exigirAgencia(e, "desactivar usuarios");
+    const yo = exigirAdministrador(e, "gestionar usuarios");
     if (yo.user_id === userId) throw new ErrorDatos("No puede desactivarse a sí mismo.");
-    const p = e.perfiles.find((x) => x.user_id === userId);
-    if (!p) throw new ErrorDatos("Ese usuario ya no existe.");
-    p.activo = activo;
+    cambiarPerfil(e, userId, { activo });
+    escribir(e);
+  },
+
+  async cambiarRolUsuario(userId, rol) {
+    await red();
+    const e = leer();
+    const yo = exigirAdministrador(e, "gestionar usuarios");
+    if (yo.user_id === userId) throw new ErrorDatos("No puede cambiar su propio rol ni desactivarse.", "42501");
+    if (!["administrador", "gestor"].includes(rol)) throw new ErrorDatos("Elija el rol.");
+    cambiarPerfil(e, userId, { rol });
     escribir(e);
   }
 };

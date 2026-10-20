@@ -323,14 +323,14 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `assets/js/panel/panel.js` (≈283) | Arranque, acceso y rutas. <ul><li>**Acceso:** vistas de login, recuperación y "Cree su contraseña" o "Contraseña nueva", según `tipoDeEnlace()`.</li><li>`entrar()` y el router `enrutar()` por hash, que pregunta si hay cambios sin guardar (`ctx.sucio`) y llama `ctx.alSalir`.</li><li>La vista **Inicio**: estadísticas, fecha de precios, avisos de "Lo que falta" y modo demo para la agencia.</li><li>Define `ctx`, que tiene: `api`, `usuario`, `tienda`, `sucio`, `alSalir`, `esAgencia()`, `recargarTienda()` e `ir()`.</li></ul> |
+| `assets/js/panel/panel.js` (≈283) | Arranque, acceso y rutas. <ul><li>**Acceso:** vistas de login, recuperación y "Cree su contraseña" o "Contraseña nueva", según `tipoDeEnlace()`.</li><li>`entrar()` y el router `enrutar()` por hash, que pregunta si hay cambios sin guardar (`ctx.sucio`) y llama `ctx.alSalir`.</li><li>La vista **Inicio**: estadísticas, fecha de precios, avisos de "Lo que falta" y modo demo (gestor).</li><li>Rutas por rol: el administrador solo llega a Usuarios; el gestor, a todo lo demás. La navegación muestra solo los enlaces de su rol (`data-rol`).</li><li>Define `ctx`, que tiene: `api`, `usuario`, `tienda`, `sucio`, `alSalir`, `esAdministrador()`, `esGestor()`, `inicio()`, `recargarTienda()` e `ir()`.</li></ul> |
 | `assets/js/panel/ui.js` (≈82) | Piezas de interfaz: `$`, `$$`, `esc`, `avisar` ("Guardado" o error), `confirmar` (promesa sobre `<dialog>`), `conBoton` (botón en espera más aviso), `campoTexto`, `interruptor`, `marcarError` y `enfocarPrimerError`. |
 | `assets/js/panel/inventario.js` (≈605) | Inventario. <ul><li>**Lista** con buscador y filtros (modelo, condición, publicado y los especiales "sin stock" y "sin foto").</li><li>**Edición rápida** de precio, el interruptor **Stock** ("Con stock" / "Sin stock") y publicado: se guarda al salir del campo, con Enter o al mover el interruptor.</li><li>Borrar con confirmación (borra también las fotos).</li><li>**Formulario** por pasos para agregar, completo para editar y duplicar, con validaciones.</li><li>**Fotos:** subir, cámara, arrastrar y soltar, reordenar, quitar y máximo 6.</li><li>Opción de activar el modelo si estaba inactivo.</li><li>Limpia las fotos subidas si se sale sin guardar.</li></ul> |
 | `assets/js/panel/tienda.js` (≈359) | Mi tienda: <ul><li>Datos de la tienda y redes.</li><li>Marca: logo con **recorte** (horizontal 3:1 o cuadrado, arrastrar, zoom y teclado), favicon de 128 px, colores con selector y hexadecimal, tema, **tamaño del texto** (Compacto, Normal o Grande) y **vista previa en vivo** con el contraste calculado.</li><li>Venta: etiqueta del precio, **lista editable** de formas de pago, entrega y garantías.</li></ul> |
 | `assets/js/panel/fichas.js` (≈120) | Fichas técnicas: lista de modelos activos y editor por modelo. Tiene descripción, filas etiqueta/valor (agregar, editar, subir, bajar y borrar, con etiquetas sugeridas) y "Copiar ficha de otro modelo". |
-| `assets/js/panel/catalogo.js` (≈215) | Catálogo agrupado por generación con interruptor activo/inactivo. La **agencia** además renombra (el slug no cambia), reordena (intercambia el `orden`) y agrega modelos al final. **Colores** de cada modelo (desplegable): muestra, nombre en español y en inglés (solo lectura), hexadecimal de la fuente fijo y campo para completar el que falta; en modelos sin colores oficiales, la agencia agrega y borra colores de la tienda. |
+| `assets/js/panel/catalogo.js` (≈215) | Catálogo (gestor) agrupado por generación con interruptor activo/inactivo; renombra (el slug no cambia), reordena (intercambia el `orden`) y agrega modelos al final. **Colores** de cada modelo (desplegable): muestra, nombre en español y en inglés (solo lectura), hexadecimal de la fuente fijo y campo para completar el que falta; en modelos sin colores oficiales, el gestor agrega y borra colores de la tienda. |
 | `assets/js/panel/legales.js` (≈52) | Editores de privacidad, términos, autorización de datos y aviso de marca, con aviso si están vacíos y vista previa del formato básico. |
-| `assets/js/panel/usuarios.js` (≈66) | Solo agencia: invitar (correo y rol), desactivar con confirmación y reactivar. |
+| `assets/js/panel/usuarios.js` (≈100) | Solo administrador: invitar (correo y rol), **asignar rol** (selector por usuario), desactivar con confirmación y reactivar. Su propia fila no tiene controles. |
 | `assets/js/panel/imagenes.js` (≈85) | Fotos en el navegador, sin librerías: <ul><li>`validarArchivo`: jpg, png, webp o heic de hasta 10 MB.</li><li>`comprimirFoto`: devuelve `{grande ≤1600px, miniatura ≤640px, ext}` en WebP, o JPEG si el navegador no codifica WebP.</li><li>`codificar`, `cargarImagen` y `MAX_BYTES`.</li></ul>El HEIC se rechaza con un aviso claro si el navegador no lo lee. |
 
 ### 5.8 Supabase (`supabase/`)
@@ -340,12 +340,13 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `supabase/migrations/0001_esquema.sql` (≈351) | Tablas, funciones de rol, disparadores, RLS, `datos_publicos()`, `borrar_datos_demo()`, buckets y reglas de almacenamiento. Ver sección 6. |
 | `supabase/migrations/0002_catalogo.sql` (≈42) | Inserta los **32 modelos** del catálogo maestro, en el orden del prompt, todos inactivos (`orden` 10, 20, …, 320). Cada modelo recibe su ficha vacía por disparador. |
 | `supabase/migrations/0003_demo.sql` (≈36) | Pone el nombre "Tienda de demostración" y `modo_demo = true`, activa los 4 modelos que usa la demo (con `activo_por_demo = true`) e inserta los 6 equipos demo. |
+| `supabase/migrations/0007_roles.sql` (≈200) | Roles **administrador** y **gestor** en lugar de agencia y tienda: convierte los perfiles, crea `es_administrador()` y `es_gestor()`, rehace todas las políticas (tablas y Storage), `proteger_catalogo`, `proteger_tienda`, `proteger_perfil` (siempre un administrador activo) y `borrar_datos_demo`, y borra `es_agencia()` y `es_staff()`. |
 | `supabase/migrations/0006_catalogo_colores.sql` (≈415) | Catálogo desde el iPhone 7: agrega los 10 modelos que faltaban (por slug), renumera el `orden` de los 42 por fecha de lanzamiento (los de la agencia quedan al final) y crea `colores` con los 183 colores oficiales, el disparador `colores_proteger`, su RLS y `datos_publicos()` con colores. Ver sección 6. |
 | `supabase/migrations/0005_tamano_texto.sql` (≈13) | Agrega `tienda.tamano_texto`: `compacto`, `normal` (por defecto) o `grande`. |
 | `supabase/migrations/0004_en_stock.sql` (≈40) | El stock pasa de número a sí/no: agrega `equipos.en_stock` (verdadero por defecto), convierte `stock > 0` en verdadero y 0 en falso, rehace `equipos_leer` y `datos_publicos()` con `en_stock`, y quita `stock` y `usado_es_una_unidad`. |
 | `supabase/functions/_compartido/lead.ts` (≈53) | `armarLead(datos)`: valida y arma el pedido que va a GHL. Exporta también `CAMPOS_ATRIBUCION` y `CAMPOS_OCULTOS`. No depende de Deno. |
 | `supabase/functions/enviar-lead/index.ts` (≈73) | Función pública, sin JWT: valida y reenvía al Inbound Webhook de GHL. Ver sección 11.1. |
-| `supabase/functions/usuarios/index.ts` (≈72) | Función solo para agencia: invitar, desactivar y reactivar con la clave de servicio. Ver sección 11.2. |
+| `supabase/functions/usuarios/index.ts` (≈75) | Función solo para administradores activos: invitar (con rol), desactivar y reactivar con la clave de servicio. Ver sección 11.2. |
 | `supabase/correos/invitacion.html` | Plantilla en español del correo de invitación. Usa `{{ .ConfirmationURL }}`. |
 | `supabase/correos/recuperacion.html` | Plantilla en español del correo de recuperación. Usa `{{ .ConfirmationURL }}` y `{{ .Email }}`. |
 | `supabase/correos/LEAME.md` | Dónde pegar cada plantilla y con qué asunto. |
@@ -354,14 +355,15 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈870) | Suite de aceptación en **modo demo** con Playwright: **30 casos**. Ver sección 14. |
+| `tests/verificar.cjs` (≈950) | Suite de aceptación en **modo demo** con Playwright: **31 casos**. Ver sección 14. |
 | `tests/verificar-supabase.cjs` (≈311) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **9 casos**. Reemplaza `config.js` en el navegador y puede servir un supabase-js local (`ICT_SUPABASE_JS`). |
 | `tests/documentacion.mjs` | Verificador de este documento: falla si algún archivo versionado no aparece en la sección 5. |
 | `tests/sql/probar.sh` | Crea un Postgres temporal, carga la imitación de Supabase y todas las migraciones en orden, compara la semilla con `semilla.js` y corre `pruebas.sql`. Antes de cada migración corre `tests/sql/antes_<migración>.sql` si existe. |
+| `tests/sql/antes_0007_roles.sql` | Los usuarios de prueba con los roles viejos (agencia y tienda), para probar que `0007` los convierte. `pruebas.sql` los sigue usando. |
 | `tests/sql/antes_0006_catalogo_colores.sql` | Un modelo de la agencia (orden 330) antes de `0006`, para probar que queda al final. |
 | `tests/sql/antes_0004_en_stock.sql` | Datos con el esquema viejo (stock 4 y stock 0) para probar que `0004` los convierte bien. `pruebas.sql` los revisa y los borra. |
 | `tests/sql/supabase_simulado.sql` | Roles `anon`, `authenticated` y `service_role`, esquema `auth` con `auth.uid()`, y `storage.buckets` y `storage.objects` mínimos. |
-| `tests/sql/pruebas.sql` | Asserts de catálogo y semilla, y de RLS por rol (anon, sin perfil, inactivo, tienda, agencia). También validaciones, fecha de precios, protecciones de catálogo, modo demo y perfiles, y borrar demo. |
+| `tests/sql/pruebas.sql` | Asserts de catálogo y semilla, y de RLS por rol (anon, sin perfil, inactivo, gestor, administrador). También validaciones, fecha de precios, colores, modo demo, perfiles (nadie se quita a sí mismo; siempre un administrador activo, también sin sesión) y borrar demo. |
 | `tests/sql/comparar-semilla.mjs` | Compara el JSON de la semilla del SQL con `semilla.js`. |
 | `tests/funciones/probar.sh` | Revisa los tipos de las dos funciones y prueba `enviar-lead` contra webhooks simulados: 10 casos. |
 | `tests/funciones/servir.ts` | Corre una función de Supabase en un puerto fijo (`Deno.serve` no lee `PORT`). |
@@ -451,16 +453,15 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 - `user_id`: PK y FK a `auth.users`.
 - `correo`.
-- `rol`: `agencia` o `tienda`.
+- `rol`: `administrador` o `gestor` (desde `0007`; antes `agencia` o `tienda`).
 - `activo`, `creado_en`.
 
 ### 6.2 Funciones de rol
 
-Las tres son `security definer`:
+Son `security definer`:
 
 - `rol_actual()`: devuelve el rol del perfil **activo** de `auth.uid()`.
-- `es_staff()`: tiene un perfil activo.
-- `es_agencia()`: tiene rol agencia.
+- `es_administrador()` y `es_gestor()` (desde `0007`): tiene ese rol y el perfil activo. `es_agencia()` y `es_staff()` se borraron en `0007`.
 
 ### 6.3 Disparadores
 
@@ -469,29 +470,31 @@ Las tres son `security definer`:
 | `tienda_actualizado`, `fichas_actualizado`, `equipos_actualizado` | Ponen `actualizado_en = now()`. |
 | `equipos_precio` | Al insertar o cambiar el `precio` de un equipo, actualiza `tienda.precios_actualizados_en`. Cambiar el stock no la toca. |
 | `modelos_ficha` | Cada modelo nuevo nace con su ficha vacía. |
-| `modelos_proteger` | Si hay sesión y no es agencia, bloquea los cambios de `nombre`, `slug`, `generacion` y `orden` (error 42501). Si alguien cambia `activo`, pone `activo_por_demo = false`. |
-| `tienda_proteger` | Solo la agencia cambia `modo_demo`. |
-| `perfiles_proteger` | Nadie cambia su propio rol ni se desactiva a sí mismo. |
+| `modelos_proteger` | Con sesión, solo el gestor cambia el catálogo (todo: nombre, slug, generación, orden y activo). Si alguien cambia `activo`, pone `activo_por_demo = false`. |
+| `tienda_proteger` | Solo el gestor cambia `modo_demo`. |
+| `perfiles_proteger` | Con sesión, nadie cambia su propio rol ni se desactiva a sí mismo. **Siempre** (también con la clave de servicio) debe quedar al menos un administrador activo; bloquea con `for update` las filas de los otros administradores para que dos cambios a la vez no dejen cero. |
 | `colores_proteger` | Con sesión: no se crean colores oficiales; los de la tienda solo en modelos sin colores oficiales; un oficial no cambia de nombre, modelo ni orden y no se borra (salvo en cascada al borrar el modelo); el hexadecimal de la fuente no cambia. |
 
 ### 6.4 Seguridad a nivel de fila (RLS) por rol
 
-| Tabla | Público (`anon`) | Tienda | Agencia |
+Desde `0007`:
+
+| Tabla | Público (`anon`) | Gestor | Administrador |
 |---|---|---|---|
-| `tienda` | lee | lee y edita (no `modo_demo`) | lee y edita todo |
-| `modelos` | lee **solo activos** | lee todos; cambia `activo` | lee, edita, agrega y borra |
-| `fichas` | lee las de modelos activos | lee y edita | lee y edita |
-| `colores` | lee los de modelos activos | lee todos; completa el hexadecimal que falta | además agrega y borra los de la tienda |
-| `equipos` | lee solo **publicados, con stock (`en_stock`) y de modelo activo** | todo | todo |
-| `perfiles` | sin acceso (permiso revocado) | lee el suyo | lee y edita todos |
-| `storage.objects` (`fotos` y `marca`) | lee | sube, cambia y borra | sube, cambia y borra |
+| `tienda` | lee | lee y edita todo, incluido `modo_demo` | lee (como el público) |
+| `modelos` | lee **solo activos** | lee, edita, agrega y borra | como el público |
+| `fichas` | lee las de modelos activos | lee y edita | como el público |
+| `colores` | lee los de modelos activos | lee todos; completa el hexadecimal que falta; agrega y borra los de la tienda | como el público |
+| `equipos` | lee solo **publicados, con stock (`en_stock`) y de modelo activo** | todo | como el público |
+| `perfiles` | sin acceso (permiso revocado) | lee el suyo | lee todos y cambia rol y estado |
+| `storage.objects` (`fotos` y `marca`) | lee | sube, cambia y borra | lee |
 
 Un usuario autenticado **sin perfil o con el perfil inactivo** ve lo mismo que el público y no escribe nada.
 
 ### 6.5 Funciones SQL de la API
 
 - **`datos_publicos()`** (`security invoker`, respeta la RLS): devuelve en **una sola llamada** `{tienda, modelos activos, fichas y colores de modelos activos, equipos publicados con stock}`. El sitio público la usa por `POST /rest/v1/rpc/datos_publicos`.
-- **`borrar_datos_demo()`** (solo agencia):
+- **`borrar_datos_demo()`** (solo gestor):
   1. Borra los equipos con `es_demo`.
   2. Apaga los modelos con `activo_por_demo`.
   3. Pone `modo_demo = false`.
@@ -525,15 +528,15 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 | `listarFichas()`, `guardarFicha(modeloId, {descripcion, especificaciones})` | Las fichas. |
 | `listarEquipos()`, `crearEquipo(datos)`, `actualizarEquipo(id, cambios)`, `borrarEquipo(id)` | El inventario. |
 | `subirArchivo(bucket, ruta, blob)`, `borrarArchivos(bucket, rutas)` | Los archivos. |
-| `borrarDatosDemo()` | Solo agencia. |
-| `listarUsuarios()`, `invitarUsuario(correo, rol)`, `cambiarEstadoUsuario(userId, activo)` | Solo agencia. |
+| `borrarDatosDemo()` | Solo gestor. |
+| `listarUsuarios()`, `invitarUsuario(correo, rol)`, `cambiarEstadoUsuario(userId, activo)`, `cambiarRolUsuario(userId, rol)` | Solo administrador (`listarUsuarios` devuelve a los demás solo su propio perfil). El rol se cambia directo en `perfiles`; invitar y el estado van por la función `usuarios`. |
 | `reiniciarDemo()` | **Solo en demo:** vuelve a los datos iniciales. |
 
 ### 7.2 `demo.js` — todo en el navegador
 
 - **Estado:** `localStorage["cotizadora-demo:v1"]`, un JSON con `tienda`, `modelos`, `fichas`, `equipos` y `perfiles`. Se comparte entre pestañas del mismo navegador.
 - **Fotos:** IndexedDB, base `cotizadora-demo`, almacén `archivos`. Se exponen como `blob:` URLs.
-- **Usuarios de prueba:** `agencia@demo.co` y `tienda@demo.co`, clave `demo1234`. La sesión va en `sessionStorage["cotizadora-demo:sesion"]`.
+- **Usuarios de prueba:** `gestor@demo.co` y `administrador@demo.co`, clave `demo1234` (desde la versión 5 de los datos; antes `tienda@demo.co` y `agencia@demo.co`, que `migrar()` convierte). La sesión va en `sessionStorage["cotizadora-demo:sesion"]`.
 - **Versión de los datos:** el JSON lleva `version` (hoy 2). Si el navegador tiene una versión vieja, `migrar()` repite la migración SQL del mismo número (por ejemplo `stock` → `en_stock`) sin perder lo cargado.
 - **Repite las reglas del SQL:**
   - Permisos por rol.
@@ -735,15 +738,16 @@ La búsqueda se arma con `describirBusqueda`: el modelo o "iPhone", la condició
 - **Invitación por correo:** el enlace (`type=invite`) lleva a "Cree su contraseña", con mínimo 8 caracteres y confirmación.
 - Después de guardar la contraseña, entra al panel y **limpia el token de la URL**.
 - **Roles:**
-  - **Agencia:** todo, incluidos Usuarios, renombrar, reordenar y agregar modelos, y el modo demo.
-  - **Tienda:** Mi tienda, Inventario, Fichas, Legales y activar modelos.
+  - **Administrador:** solo Usuarios (invitar, asignar roles, desactivar y reactivar). Entra directo a Usuarios; cualquier otra ruta lo devuelve ahí.
+  - **Gestor:** Inicio, Mi tienda, Inventario, Fichas, Catálogo completo, Legales y el modo demo. No ve Usuarios.
+  - Siempre queda al menos un administrador activo. Nadie se cambia su propio rol ni se desactiva.
 - Si se cierra la sesión mientras se navega, vuelve al login con un aviso.
 
 ### 10.2 Rutas (hash)
 
 | Ruta | Vista |
 |---|---|
-| `#/inicio` | Inicio, con estas partes:<ul><li>**Estadísticas:** publicados visibles y en borrador. Cada una es un enlace al inventario filtrado.</li><li>**Fecha** de la última actualización de precios.</li><li>**"Lo que falta":** falta el logo, falta el WhatsApp, faltan los textos legales, hay equipos sin foto, equipos ocultos por modelo inactivo. Si no falta nada: "Todo está completo.".</li><li>**Botón** "Ver mi sitio".</li><li>**Solo agencia:** interruptor del modo demo, "Borrar datos de demostración" y, en demo, "Volver a los datos iniciales".</li></ul> |
+| `#/inicio` | Inicio, con estas partes:<ul><li>**Estadísticas:** publicados visibles y en borrador. Cada una es un enlace al inventario filtrado.</li><li>**Fecha** de la última actualización de precios.</li><li>**"Lo que falta":** falta el logo, falta el WhatsApp, faltan los textos legales, hay equipos sin foto, equipos ocultos por modelo inactivo. Si no falta nada: "Todo está completo.".</li><li>**Botón** "Ver mi sitio".</li><li>**Gestor:** interruptor del modo demo, "Borrar datos de demostración" y, en demo, "Volver a los datos iniciales".</li></ul> |
 | `#/inventario` | Lista, filtros y edición rápida. Acepta `?publicado=si|no`, `?stock=0` y `?fotos=sin`. |
 | `#/inventario/nuevo` | Formulario **por pasos**: modelo → condición → capacidad → color → precio y stock (interruptor) → fotos → datos del usado (solo si es usado) → publicar (con resumen). |
 | `#/inventario/nuevo?desde=<id>` | **Duplicar**: copia todo menos las fotos. |
@@ -752,7 +756,7 @@ La búsqueda se arma con `describirBusqueda`: el modelo o "iPhone", la condició
 | `#/fichas` y `#/fichas/<modeloId>` | Fichas técnicas. |
 | `#/catalogo` | Catálogo. |
 | `#/legales` | Textos legales. |
-| `#/usuarios` | Usuarios (solo agencia; si no, va a Inicio). |
+| `#/usuarios` | Usuarios (solo administrador; el gestor vuelve a Inicio). |
 
 ### 10.3 Validaciones del panel
 
@@ -815,13 +819,15 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 
 **Funcionamiento:**
 
-1. Identifica a quien llama con su token. Si no es una **agencia activa**, responde 403.
+1. Identifica a quien llama con su token. Si no es un **administrador activo**, responde 403 "Solo el administrador puede gestionar usuarios.".
 2. **`invitar {correo, rol, redirectTo}`:**
    1. Si el correo ya tiene perfil, responde 400 "Ese correo ya tiene usuario." (corrección de la sesión 2).
    2. Si no, llama `inviteUserByEmail` y crea el perfil.
 3. **`desactivar` y `reactivar {user_id}`:**
    - No se puede aplicar a sí mismo.
    - Cambia `perfiles.activo` y bloquea o desbloquea el inicio de sesión (`ban_duration` de `876000h` o `none`).
+   - Si el cambio dejaría sin administradores activos, la base lo rechaza y la función responde 400 con ese mensaje.
+4. **El rol** no pasa por la función: el panel lo cambia directo en `perfiles` (política `perfiles_editar`, solo administrador).
 
 ---
 
@@ -894,7 +900,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 ```bash
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 30 casos en modo demo (Playwright + Chromium)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 31 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (10 casos) + tipos
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
@@ -906,7 +912,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `ICT_BASE=URL`: por ejemplo `http://localhost:8081/Cotizadora-ICT`, para simular GitHub Pages.
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (30 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (31 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
@@ -917,7 +923,7 @@ node tests/documentacion.mjs                               # este documento cubr
 7. WhatsApp abre con el mensaje exacto. Un usado lleva batería y estado (casos 7 y 8). La consulta sin stock lleva su mensaje (7b).
 8. Pop-up: errores, foco, formato del celular, reintento y "Abrir WhatsApp" tras dos fallos.
 9. `/admin` sin sesión pide login. La tienda no ve Usuarios, no renombra, y la capa de datos también se lo impide.
-10. La agencia invita y desactiva usuarios. Catálogo: 42 modelos y generaciones en orden; colores (hex de la fuente fijo, completar el que falta, colores de la tienda solo en el 17 Pro). Datos demo guardados de una versión vieja se migran (stock, tamaño, catálogo y colores).
+10. Roles: el gestor no ve Usuarios y la capa de datos le niega gestionarlos; el administrador solo ve Usuarios y la capa de datos le niega lo demás; invita con rol, asigna roles, desactiva y no puede quitarse a sí mismo. Catálogo: 42 modelos y generaciones en orden; colores (hex de la fuente fijo, completar el que falta, colores de la tienda solo en el 17 Pro). Datos demo guardados de una versión vieja se migran (stock, tamaño, catálogo y colores).
 11. Validaciones del panel.
 12. A 320, 360, 768 y 1440 px: sin scroll horizontal, un `h1` y sin errores en sitio, legales y todo el panel.
 13. Carrusel: dedo, flechas, puntos, muestras, teclado y Escape.
@@ -958,13 +964,13 @@ bash tests/supabase-local/levantar.sh detener
 
 1. El sitio carga con la RPC.
 2. El pop-up pasa por la función y llega al webhook con todos los campos.
-3. Permisos del panel.
+3. Permisos del panel: el gestor no ve Usuarios y el servidor (función y tabla) le niega gestionarlos; colores.
 4. Un precio cambiado en el panel se ve en el sitio, con la fecha.
 5. Crear un equipo con foto (Storage simulado).
-6. La agencia borra la demo.
-7. **Invitación:** el correo en español, el enlace, "Cree su contraseña" y el ingreso.
+6. El gestor borra la demo.
+7. **Invitación:** el administrador (que solo ve Usuarios y al que el servidor le niega lo demás) invita; el correo en español, el enlace, "Cree su contraseña" y el ingreso como gestor.
 8. **Recuperación:** el enlace y la contraseña nueva.
-9. **Desactivar** (no puede entrar) y **reactivar**.
+9. **Asignar rol**, **desactivar** (no puede entrar) y **reactivar**.
 
 ### 14.4 Lo que no se pudo probar
 
@@ -988,7 +994,7 @@ bash tests/supabase-local/levantar.sh detener
 **URLs:**
 
 - Sitio: `https://jaredmarketingmaster.github.io/Cotizadora-ICT/`
-- Panel: `…/admin/`, con `agencia@demo.co` o `tienda@demo.co` y la clave `demo1234`.
+- Panel: `…/admin/`, con `gestor@demo.co` o `administrador@demo.co` y la clave `demo1234`.
 
 **Ojo:**
 
@@ -1002,7 +1008,7 @@ bash tests/supabase-local/levantar.sh detener
 3. **Registro:** apagar "Allow new users to sign up".
 4. **Direcciones:** Site URL y Redirect URLs apuntando a `/admin/`.
 5. **Correo:** SMTP propio y las plantillas de `supabase/correos/`.
-6. **Primer usuario de agencia:** crearlo en Authentication y luego `insert into perfiles …`. El SQL exacto está en el README.
+6. **Primer administrador:** crearlo en Authentication y luego `insert into perfiles … 'administrador'`. El SQL exacto está en el README. Para cargar datos hace falta además un gestor (se invita desde Usuarios).
 7. **Funciones:**
    - `supabase functions deploy enviar-lead --no-verify-jwt` y `supabase functions deploy usuarios`.
    - `supabase secrets set GHL_WEBHOOK_URL=… ORIGENES_PERMITIDOS=https://dominio`.
@@ -1010,7 +1016,7 @@ bash tests/supabase-local/levantar.sh detener
 9. **Publicar** en cualquier hosting estático.
 10. **Antes de abrir al público:**
     1. Cargar logo, WhatsApp, legales e inventario, y activar los modelos.
-    2. Con el usuario de agencia, tocar "Borrar datos de demostración".
+    2. Con el usuario gestor, tocar "Borrar datos de demostración".
 
 ---
 
@@ -1025,6 +1031,9 @@ bash tests/supabase-local/levantar.sh detener
 | `nombre_es` además de `nombre_en` | La fuente da casi siempre el nombre en español y a veces no el inglés: sin `nombre_es` habría colores sin nombre. |
 | Hexadecimales del "iPhone 16 / 16e" también en el 16 Plus | La tabla de la fuente es por serie y el 16 Plus tiene exactamente los mismos colores. |
 | Colores de la tienda solo en modelos sin colores oficiales | El 17 Pro y el 17 Pro Max no tienen colores en la fuente; sin esto no se podrían cargar. Los oficiales no se mezclan con inventados. |
+| El administrador no edita contenido | Pedido de Jared: el administrador solo gestiona accesos. Si una persona necesita las dos cosas, usa dos usuarios. Los perfiles viejos pasan agencia → administrador y tienda → gestor. |
+| El rol se cambia directo en `perfiles` | No necesita la clave de servicio; la RLS (solo administrador) y `perfiles_proteger` lo protegen. |
+| "Siempre un administrador" en el disparador | Así vale también para la clave de servicio (función `usuarios`) y para dos cambios simultáneos. |
 | Modelos de la agencia al final al renumerar | `0006` no conoce su fecha de lanzamiento; quedan después del Duo en el orden que tenían. |
 | "Cantidad disponible" = cantidad de equipos | Desde `0004` el stock es sí/no (pedido de Jared), así que se cuentan equipos. Antes era la suma de stock. |
 | El detalle se abre solo con los **tres** filtros y una tarjeta | Lectura literal del prompt. |
@@ -1104,6 +1113,22 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 20/10/2026 · A5: roles administrador y gestor
+
+- **Pedido de Jared (fase A, punto A5):** roles administrador y gestor en lugar de agencia y tienda (renombrar `es_agencia` y lo que depende de ella); el administrador solo gestiona accesos (Usuarios: invitar, desactivar, reactivar y asignar roles); el gestor todo lo demás, incluidos el Catálogo completo, el modo demo y borrar la demo; exigido en el SQL (RLS, `modelos_proteger`, `tienda_proteger`, `perfiles_proteger`, `borrar_datos_demo`) y en la función `usuarios` (solo administrador activo); el modo demo repite las reglas; siempre al menos un administrador activo; usuarios demo `administrador@demo.co` y `gestor@demo.co`.
+- **Hecho:**
+  - `supabase/migrations/0007_roles.sql` (ver sección 6).
+  - `supabase/functions/usuarios/index.ts`: solo administradores activos; invita con rol `administrador` o `gestor`; mensaje claro si se intenta dejar sin administradores.
+  - `demo.js` versión 5: `exigirGestor`, `exigirAdministrador`, listados como la RLS, `cambiarRolUsuario` y la regla del último administrador; migra los perfiles y los correos de prueba. `supabase.js`: `cambiarRolUsuario`.
+  - Panel: navegación y rutas por rol (`admin/index.html`, `panel.js`), Usuarios con selector de rol, Catálogo completo para el gestor.
+  - `tests/supabase-local/levantar.sh`: usuarios `administrador@local.co` y `gestor@local.co`.
+- **Pruebas cambiadas y por qué:**
+  - `pruebas.sql`: las pruebas "la tienda no renombra / no agrega modelos / no apaga el modo demo / no borra la demo / no agrega colores" perdieron sentido (el gestor ahora puede todo eso): se reemplazaron por las mismas comprobaciones con el **administrador** (que no puede) y por pruebas de que el gestor sí puede. Nuevas: conversión de roles (`antes_0007_roles.sql`), el administrador asigna roles y no edita contenido, y nunca quedan cero administradores (también sin sesión).
+  - `verificar.cjs`: el caso 9 ya no espera "no renombra" (el gestor tiene el catálogo completo): ahora prueba que el gestor no ve Usuarios y que un intento directo en la capa de datos falla. Caso nuevo del administrador (solo Usuarios). El caso de usuarios agrega asignar roles y no poder quitarse a sí mismo. La migración de datos demo viejos revisa también los roles.
+  - `verificar-supabase.cjs`: los mismos cambios contra el servidor (función `usuarios` y tabla `perfiles` le niegan al gestor; el servidor le niega al administrador editar la tienda; asignar rol).
+  - "No se puede desactivar al último administrador": en el panel, quien actúa es siempre un administrador activo y no puede tocarse a sí mismo, así que la regla solo se puede romper desde SQL o con la clave de servicio: se prueba en `pruebas.sql` (bloque 5b, sin sesión).
+- **Verificación:** `tests/sql/probar.sh` OK, `tests/verificar.cjs` 31/31, `tests/verificar-supabase.cjs` 9/9 y `tests/funciones/probar.sh` OK.
 
 ### 20/10/2026 · A4: catálogo desde el iPhone 7 y colores oficiales
 

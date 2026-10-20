@@ -116,8 +116,8 @@ crear() { # correo, rol
   [ -n "$id" ] || { echo "no se pudo crear $1"; exit 1; }
   "${PSQL[@]}" -c "insert into public.perfiles (user_id, correo, rol) values ('$id', '$1', '$2');"
 }
-crear agencia@local.co agencia
-crear tienda@local.co tienda
+crear administrador@local.co administrador
+crear gestor@local.co gestor
 
 cat > "$DIR/entorno" <<EOT
 URL=http://127.0.0.1:54321
@@ -126,4 +126,4 @@ LEAD=$DIR/ultimo-lead.json
 CORREOS=$DIR/correos
 PSQL_PUERTO=$PGPORT
 EOT
-echo "Supabase local listo en http://127.0.0.1:54321 (usuarios agencia@local.co y tienda@local.co, clave clave-de-prueba-1)"
+echo "Supabase local listo en http://127.0.0.1:54321 (usuarios administrador@local.co y gestor@local.co, clave clave-de-prueba-1)"

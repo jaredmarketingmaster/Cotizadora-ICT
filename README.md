@@ -34,8 +34,9 @@ supabase/
   migrations/0004_en_stock.sql  El stock pasa a sí/no ("Con stock" / "Sin stock")
   migrations/0005_tamano_texto.sql  Tamaño del texto del sitio (Compacto, Normal, Grande)
   migrations/0006_catalogo_colores.sql  Catálogo desde el iPhone 7 (42 modelos) y colores oficiales
+  migrations/0007_roles.sql     Roles administrador (accesos) y gestor (todo lo demás)
   functions/enviar-lead/        Reenvía el pedido a GHL (la URL va en los secretos)
-  functions/usuarios/           Invitar, desactivar y reactivar (solo agencia)
+  functions/usuarios/           Invitar, desactivar y reactivar (solo administrador)
 tests/                     Pruebas (no se usan en producción)
 ```
 
@@ -55,8 +56,17 @@ python3 -m http.server 8080
 
 - Sitio: <http://localhost:8080/?utm_source=meta&utm_campaign=test&ad_id=123&fbclid=prueba>
 - Panel: <http://localhost:8080/admin/>
-  - Agencia: `agencia@demo.co`, clave `demo1234`.
-  - Tienda: `tienda@demo.co`, clave `demo1234`.
+  - Gestor (tienda, inventario, catálogo, modo demo): `gestor@demo.co`, clave `demo1234`.
+  - Administrador (solo Usuarios): `administrador@demo.co`, clave `demo1234`.
+
+### Roles
+
+| Rol | Qué hace |
+|---|---|
+| **Administrador** | Solo gestiona los accesos: invita, asigna roles, desactiva y reactiva usuarios. No ve ni edita la tienda, el inventario ni el catálogo. |
+| **Gestor** | Todo lo demás: Mi tienda, Inventario, Fichas, Catálogo completo, Legales, modo demo y "Borrar datos de demostración". No ve Usuarios. |
+
+Siempre queda al menos un administrador activo, y nadie puede cambiarse su propio rol ni desactivarse. Todo esto lo exige la base de datos (RLS y disparadores), no solo el panel. Si la misma persona necesita las dos cosas, usa dos usuarios.
 
 En demo no sale ningún dato del navegador. El pedido que se mandaría a GHL queda en la consola y en `sessionStorage["cotizadora-demo:ultimo-lead"]`. Cada navegador tiene su propia copia, así que el modo demo no sirve para producción.
 
@@ -75,7 +85,7 @@ Para probar:
 
 - **El paso a WhatsApp:** entrar al panel, poner un WhatsApp propio en **Mi tienda** (ej. `573001234567`) y guardar. Sin número, el pop-up avisa que la tienda no lo tiene configurado.
 - **Que el panel cambia el sitio:** el panel y el sitio comparten los datos solo en el mismo navegador. Un cambio de precio en el panel se ve al recargar el sitio en ese navegador; en otro celular o computador se ven los datos de demostración iniciales.
-- **Volver al inicio:** con el usuario de agencia, ir a **Inicio → Volver a los datos iniciales**.
+- **Volver al inicio:** con el usuario gestor, ir a **Inicio → Volver a los datos iniciales**.
 
 ## Poner una tienda en producción
 
@@ -97,14 +107,14 @@ Para probar:
 5. **Correo:** el correo que trae Supabase tiene un límite de envíos muy bajo y es para pruebas. Para las invitaciones y la recuperación de contraseña, configurar un SMTP propio en **Authentication → Emails → SMTP Settings**.
 
    Supabase trae las plantillas en inglés. Pegar las de `supabase/correos/` (invitación y recuperación, en español y con "usted") en **Authentication → Emails → Templates**. El `LEAME.md` de esa carpeta dice qué asunto y qué archivo va en cada una.
-6. **Primer usuario de la agencia:**
+6. **Primer administrador:**
    1. En **Authentication → Users → Add user**, crearlo con contraseña y "Auto Confirm User".
    2. En el SQL Editor, correr:
       ```sql
       insert into public.perfiles (user_id, correo, rol)
-      select id, email, 'agencia' from auth.users where email = 'correo@agencia.com';
+      select id, email, 'administrador' from auth.users where email = 'correo@agencia.com';
       ```
-   Desde ahí, los demás usuarios se invitan desde el panel, en **Usuarios**.
+   Desde ahí, los demás usuarios (el gestor de la tienda, por ejemplo) se invitan desde el panel, en **Usuarios**. El administrador no edita la tienda: para cargar datos hace falta un usuario gestor.
 7. **Funciones**, con la [CLI de Supabase](https://supabase.com/docs/guides/cli):
    ```bash
    supabase link --project-ref <ref-del-proyecto>
@@ -137,7 +147,7 @@ Las rutas `/privacidad/`, `/terminos/` y `/admin/` son carpetas, así que funcio
 
 1. Cargar el logo, el WhatsApp y los textos legales.
 2. Cargar el inventario y activar los modelos en **Catálogo**.
-3. Con el usuario de agencia, tocar **Inicio → Borrar datos de demostración**.
+3. Con el usuario gestor, tocar **Inicio → Borrar datos de demostración**.
 
 ## Integración con GHL
 
@@ -208,8 +218,8 @@ Todas corren en este repo sin Docker. La última corrida pasó completa.
 
 | Prueba | Qué cubre | Cómo correrla |
 |---|---|---|
-| `tests/sql/probar.sh` | Migraciones en un Postgres local:<br>- Seguridad a nivel de fila por rol (público, sin perfil, inactivo, tienda, agencia)<br>- Validaciones<br>- Fecha de precios<br>- Borrar demo<br>- La semilla del SQL coincide con la del modo demo | `bash tests/sql/probar.sh` |
-| `tests/verificar.cjs` | 30 casos en modo demo:<br>- Las 11 pruebas de aceptación de la sección 12<br>- Pop-up: errores, reintento y fallo doble<br>- Panel: validaciones<br>- Ancho de 320 a 1440 px<br>- Carrusel con dedo, flechas, puntos y teclado<br>- Contraste AA en 4 combinaciones de colores<br>- Textos de 16 px o más y zonas táctiles de 44 px<br>- Teclado en la lista<br>- `prefers-reduced-motion`<br>- Píxel y formatos | `python3 -m http.server 8080 &`<br>`NODE_PATH="$(npm root -g)" node tests/verificar.cjs` |
+| `tests/sql/probar.sh` | Migraciones en un Postgres local:<br>- Seguridad a nivel de fila por rol (público, sin perfil, inactivo, gestor, administrador), siempre un administrador activo, catálogo y colores<br>- Validaciones<br>- Fecha de precios<br>- Borrar demo<br>- La semilla del SQL coincide con la del modo demo | `bash tests/sql/probar.sh` |
+| `tests/verificar.cjs` | 31 casos en modo demo:<br>- Las 11 pruebas de aceptación de la sección 12<br>- Pop-up: errores, reintento y fallo doble<br>- Panel: validaciones<br>- Ancho de 320 a 1440 px<br>- Carrusel con dedo, flechas, puntos y teclado<br>- Contraste AA en 4 combinaciones de colores<br>- Textos de 16 px o más y zonas táctiles de 44 px<br>- Teclado en la lista<br>- `prefers-reduced-motion`<br>- Píxel y formatos | `python3 -m http.server 8080 &`<br>`NODE_PATH="$(npm root -g)" node tests/verificar.cjs` |
 | `tests/funciones/probar.sh` | `enviar-lead` con Deno contra un webhook de GHL simulado:<br>- Campos<br>- Validaciones<br>- GHL caído<br>- Falta de secreto<br>- Orígenes | `DENO=/ruta/deno bash tests/funciones/probar.sh` |
 | `tests/verificar-supabase.cjs` | 9 casos del modo Supabase de punta a punta contra un "Supabase local": Postgres, el servidor de auth oficial (GoTrue v2.180.0), PostgREST 12.2.3, las dos funciones en Deno, un SMTP simulado que guarda los correos y Storage **simulado**. Cubre:<br>- Sitio y pop-up → función → webhook<br>- Permisos del panel<br>- Precio → sitio, foto y borrar demo<br>- Invitar por el panel → correo en español → enlace → "Cree su contraseña" → entra<br>- Recuperar la contraseña con el enlace del correo<br>- Desactivar (no puede entrar) y reactivar | `BIN=/carpeta/con/postgrest,auth,deno bash tests/supabase-local/levantar.sh`<br>`NODE_PATH=… node tests/verificar-supabase.cjs` |
 

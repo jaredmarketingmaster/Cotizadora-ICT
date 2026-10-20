@@ -1,5 +1,7 @@
 // =============================================================================
-// Función "usuarios" (solo agencia): invitar por correo, desactivar y reactivar.
+// Función "usuarios" (solo administrador activo): invitar por correo con su
+// rol, desactivar y reactivar. El cambio de rol va directo a la tabla perfiles
+// (política perfiles_editar). La base exige que quede un administrador activo.
 // Usa la clave de servicio, que Supabase ya pone en las variables de entorno de
 // las funciones (SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY).
 // Nunca llega al navegador.
@@ -32,14 +34,14 @@ Deno.serve(async (req) => {
   const { data: quien, error: errorQuien } = await servicio.auth.getUser(token);
   if (errorQuien || !quien.user) return responder({ error: "Su sesión terminó. Vuelva a iniciar sesión." }, 401);
   const { data: perfil } = await servicio.from("perfiles").select("rol, activo").eq("user_id", quien.user.id).maybeSingle();
-  if (!perfil?.activo || perfil.rol !== "agencia") return responder({ error: "Solo la agencia puede gestionar usuarios." }, 403);
+  if (!perfil?.activo || perfil.rol !== "administrador") return responder({ error: "Solo el administrador puede gestionar usuarios." }, 403);
 
   let datos: Record<string, string>;
   try { datos = await req.json(); } catch { return responder({ error: "Pedido inválido." }, 400); }
 
   if (datos.accion === "invitar") {
     const correo = String(datos.correo || "").trim().toLowerCase();
-    const rol = datos.rol === "agencia" ? "agencia" : "tienda";
+    const rol = datos.rol === "administrador" ? "administrador" : "gestor";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) return responder({ error: "Revise el correo." }, 400);
     // Si ya tiene perfil no se invita de nuevo: GoTrue reenviaría la
     // invitación a un usuario que todavía no la aceptó.
@@ -62,6 +64,8 @@ Deno.serve(async (req) => {
     if (id === quien.user.id) return responder({ error: "No puede desactivarse a sí mismo." }, 400);
     const activo = datos.accion === "reactivar";
     const { error } = await servicio.from("perfiles").update({ activo }).eq("user_id", id);
+    // perfiles_proteger: siempre debe quedar un administrador activo.
+    if (error && /al menos un administrador/i.test(error.message)) return responder({ error: error.message }, 400);
     if (error) return responder({ error: "No se pudo cambiar el usuario." }, 500);
     // Además se bloquea (o desbloquea) el inicio de sesión.
     await servicio.auth.admin.updateUserById(id, { ban_duration: activo ? "none" : "876000h" });

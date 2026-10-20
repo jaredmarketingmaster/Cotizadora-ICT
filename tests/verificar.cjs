@@ -67,12 +67,13 @@ async function captura(p, nombre) {
   await p.screenshot({ path: path.join(CAPTURAS, `${nombre}.png`), fullPage: true });
 }
 
+// El gestor entra a Inicio; el administrador, a Usuarios.
 async function entrarPanel(p, correo) {
   await p.goto(`${BASE}/admin/`);
   await p.fill("#l-correo", correo);
   await p.fill("#l-clave", "demo1234");
   await p.click("#form-login [type=submit]");
-  await p.waitForSelector(".estadisticas");
+  await p.waitForSelector(correo.startsWith("administrador") ? "#form-invitar" : ".estadisticas");
 }
 
 async function llenarPopup(p) {
@@ -95,7 +96,7 @@ async function llenarPopup(p) {
     assert.ok(await p.isVisible("#franja-demo"));
     assert.equal(await p.textContent("#franja-demo").then((t) => t.trim()), "Sitio en preparación: los equipos y precios son de demostración.");
     assert.equal(await p.locator(".tarjeta .etiqueta-demo").count(), 5);
-    await entrarPanel(p, "agencia@demo.co");
+    await entrarPanel(p, "gestor@demo.co");
     await p.click("#borrar-demo");
     await p.click('#confirmar [value="si"]');
     await p.waitForSelector("text=Datos de demostración borrados");
@@ -174,7 +175,7 @@ async function llenarPopup(p) {
 
   await caso("stock: el interruptor de la lista oculta y vuelve a mostrar el equipo en el sitio", async () => {
     const p = await nueva();
-    await entrarPanel(p, "tienda@demo.co");
+    await entrarPanel(p, "gestor@demo.co");
     await p.goto(`${BASE}/admin/#/inventario`);
     await p.waitForSelector(".fila-equipo");
     const fila = p.locator('.fila-equipo:has-text("Glacier")');
@@ -208,7 +209,7 @@ async function llenarPopup(p) {
     await editarDemo(p, (e) => { e.tienda.precios_actualizados_en = "2026-01-02T15:00:00Z"; });
     await ir(p);
     assert.equal(await p.textContent("#pie-precios"), "Precios actualizados al 2/1/2026");
-    await entrarPanel(p, "tienda@demo.co");
+    await entrarPanel(p, "gestor@demo.co");
     await p.goto(`${BASE}/admin/#/inventario`);
     const fila = p.locator(".fila-equipo", { hasText: "Medianoche" });
     await fila.locator('[data-campo="precio"]').fill("1.750.000");
@@ -336,45 +337,53 @@ async function llenarPopup(p) {
   });
 
   // ---------------------------------------------------------------- 12.9
-  await caso("9. /admin sin sesión pide login; el rol tienda no ve Usuarios ni renombra", async () => {
+  await caso("9. /admin sin sesión pide login; el gestor no ve Usuarios (ni por la interfaz ni en la capa de datos)", async () => {
     const p = await nueva(390, 844);
     await p.goto(`${BASE}/admin/#/usuarios`);
     await p.waitForSelector("#form-login");
-    await p.fill("#l-correo", "tienda@demo.co");
+    await p.fill("#l-correo", "gestor@demo.co");
     await p.fill("#l-clave", "mala");
     await p.click("#form-login [type=submit]");
     await p.waitForSelector("#l-alerta:not([hidden])");
     assert.equal(await p.textContent("#l-alerta"), "El correo o la contraseña no coinciden.");
-    await entrarPanel(p, "tienda@demo.co");
+    await entrarPanel(p, "gestor@demo.co");
     // Inicio: la tarjeta de inventario muestra solo Publicados y En borrador.
     assert.deepEqual(await p.locator(".estadistica span").allTextContents(), ["Publicados", "En borrador"]);
     assert.equal(await p.isVisible('[data-ruta="usuarios"]'), false);
     await p.goto(`${BASE}/admin/#/usuarios`);
     await p.waitForSelector(".estadisticas"); // vuelve a Inicio
+    // El gestor tiene el modo demo y el catálogo completo (renombrar y ordenar).
+    assert.equal(await p.isVisible("#borrar-demo"), true);
+    assert.equal(await p.textContent("#barra-usuario"), "gestor@demo.co · Gestor");
     await p.goto(`${BASE}/admin/#/catalogo`);
     await p.waitForSelector(".modelo-fila");
-    assert.equal(await p.locator("[data-renombrar]").count(), 0);
-    assert.equal(await p.isVisible("#borrar-demo"), false);
-    // La capa de datos también lo impide (no solo la interfaz)
-    const error = await p.evaluate(async () => {
+    assert.equal(await p.locator("[data-renombrar]").count(), 42);
+    // La capa de datos también lo impide (no solo la interfaz): un intento
+    // directo de gestionar usuarios falla.
+    const errores = await p.evaluate(async () => {
       const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
       const a = await api();
-      try { await a.guardarModelo(1, { nombre: "x" }); return ""; } catch (e) { return e.message; }
+      const r = [];
+      try { await a.invitarUsuario("otro@tienda.co", "administrador"); r.push(""); } catch (e) { r.push(e.message); }
+      try { await a.cambiarEstadoUsuario("demo-1", false); r.push(""); } catch (e) { r.push(e.message); }
+      try { await a.cambiarRolUsuario("demo-2", "administrador"); r.push(""); } catch (e) { r.push(e.message); }
+      r.push((await a.listarUsuarios()).length);
+      return r;
     });
-    assert.match(error, /Solo la agencia/);
+    assert.deepEqual(errores, ["Solo el administrador puede gestionar usuarios.", "Solo el administrador puede gestionar usuarios.", "Solo el administrador puede gestionar usuarios.", 1]);
     await captura(p, "09-panel-catalogo-360");
     await p.context().close();
   });
 
   await caso("catálogo: 42 modelos desde el iPhone 7 y sus colores oficiales (completar la muestra, colores de la tienda)", async () => {
     const p = await nueva();
-    await entrarPanel(p, "tienda@demo.co");
+    await entrarPanel(p, "gestor@demo.co");
     await p.goto(`${BASE}/admin/#/catalogo`);
     await p.waitForSelector(".modelo-fila");
     assert.equal(await p.locator(".modelo-fila").count(), 42);
     const h2 = await p.locator(".grupo-catalogo h2").allTextContents();
     assert.deepEqual(h2, ["Plegable", "Generación 18", "Generación 17", "Generación 16", "Generación 15", "Generación 14", "Generación 13", "Generación 12", "Generación 11", "Generación XS y XR", "Generación 8", "Generación 7"]);
-    const fila = p.locator('.modelo-fila:has(.nombre:text-is("iPhone 18 Pro"))');
+    const fila = p.locator('.modelo-fila:has(input[value="iPhone 18 Pro"])');
     await fila.locator(".colores-modelo > summary").click();
     // El hexadecimal de la fuente es de solo lectura; el que falta se completa.
     const burdeos = fila.locator('li:has-text("Borgoña")');
@@ -389,8 +398,9 @@ async function llenarPopup(p) {
     await oliva.locator("input[data-hex]").press("Enter");
     await p.waitForFunction(() => [...document.querySelectorAll("[data-color]")].some((li) => li.textContent.includes("Oliva") && li.querySelector(".muestra-color")?.style.background));
     assert.equal(await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).colores.find((c) => c.nombre_es === "Oliva").hex, CLAVE_DEMO), "#5A5D3C");
-    // La tienda no agrega colores, y la capa de datos tampoco deja cambiar un hex de la fuente.
-    assert.equal(await p.locator("[data-agregar-color]").count(), 0);
+    // En un modelo con colores oficiales no se agregan otros, y la capa de
+    // datos tampoco deja cambiar un hex de la fuente.
+    assert.equal(await fila.locator("[data-agregar-color]").count(), 0);
     const error = await p.evaluate(async () => {
       const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
       const a = await api();
@@ -398,13 +408,9 @@ async function llenarPopup(p) {
       try { await a.guardarColor(c.id, { hex: "#000000" }); return ""; } catch (e) { return e.message; }
     });
     assert.match(error, /viene de la fuente/);
-    await p.context().close();
 
-    // Agencia: colores de la tienda solo en modelos sin colores oficiales (17 Pro)
-    const q = await nueva();
-    await entrarPanel(q, "agencia@demo.co");
-    await q.goto(`${BASE}/admin/#/catalogo`);
-    await q.waitForSelector(".modelo-fila");
+    // Colores de la tienda: solo en modelos sin colores oficiales (17 Pro)
+    const q = p;
     const pro = q.locator('.modelo-fila:has(.nombre:text-is("iPhone 17 Pro")), .modelo-fila:has(input[value="iPhone 17 Pro"])');
     assert.match(await pro.locator(".colores-modelo > summary").textContent(), /no tiene colores oficiales/);
     await pro.locator(".colores-modelo > summary").click();
@@ -418,7 +424,35 @@ async function llenarPopup(p) {
     await q.context().close();
   });
 
-  await caso("demo: los datos guardados de una versión vieja se migran (stock, tamaño, catálogo y colores)", async () => {
+  await caso("roles: el administrador solo ve Usuarios; la capa de datos le impide lo demás", async () => {
+    const p = await nueva(390, 844);
+    await entrarPanel(p, "administrador@demo.co");
+    assert.equal(await p.textContent("#barra-usuario"), "administrador@demo.co · Administrador");
+    const visibles = await p.locator(".navegacion a:visible").allTextContents();
+    assert.deepEqual(visibles, ["Usuarios"]);
+    for (const r of ["inicio", "inventario", "tienda", "catalogo", "fichas", "legales"]) {
+      await p.goto(`${BASE}/admin/#/${r}`);
+      await p.waitForSelector("#form-invitar");
+      assert.equal(new URL(p.url()).hash, "#/usuarios", r);
+    }
+    const errores = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      const r = [];
+      for (const f of [() => a.guardarModelo(1, { nombre: "x" }), () => a.guardarTienda({ nombre: "x" }), () => a.borrarDatosDemo(), () => a.agregarColor({ modelo_id: 1, nombre_es: "x" })]) {
+        try { await f(); r.push(""); } catch (e) { r.push(e.message); }
+      }
+      r.push((await a.listarEquipos()).length, (await a.listarModelos()).length);
+      return r;
+    });
+    assert.deepEqual(errores.slice(0, 4).map((m) => /^Solo el gestor puede/.test(m)), [true, true, true, true], JSON.stringify(errores));
+    // Ve inventario y catálogo como el público: solo lo publicado y lo activo.
+    assert.deepEqual(errores.slice(4), [6, 4]);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("demo: los datos guardados de una versión vieja se migran (stock, tamaño, catálogo, colores y roles)", async () => {
     const p = await nueva();
     await ir(p);
     // Arma un estado como el de la versión 1: 32 modelos, stock numérico, sin colores.
@@ -431,11 +465,14 @@ async function llenarPopup(p) {
       e.equipos.forEach((q, i) => { q.stock = i === 0 ? 0 : 2; delete q.en_stock; });
       delete e.colores;
       delete e.tienda.tamano_texto;
+      e.perfiles[0].rol = "agencia"; e.perfiles[0].correo = "agencia@demo.co";
+      e.perfiles[1].rol = "tienda"; e.perfiles[1].correo = "tienda@demo.co";
       e.version = 1;
     });
     await ir(p);
     const e = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)), CLAVE_DEMO);
-    assert.equal(e.version >= 4, true);
+    assert.equal(e.version >= 5, true);
+    assert.deepEqual(e.perfiles.map((x) => `${x.correo}:${x.rol}`), ["administrador@demo.co:administrador", "gestor@demo.co:gestor"]);
     assert.equal(e.modelos.length, 42);
     assert.equal(e.colores.length, 183);
     assert.equal(e.tienda.tamano_texto, "normal");
@@ -449,24 +486,42 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
-  await caso("panel: agencia ve Usuarios, invita y desactiva", async () => {
+  await caso("panel: el administrador invita con rol, asigna roles, desactiva y no puede quitarse a sí mismo", async () => {
     const p = await nueva();
-    await entrarPanel(p, "agencia@demo.co");
-    await p.click('[data-ruta="usuarios"]');
-    await p.waitForSelector("#form-invitar");
+    await entrarPanel(p, "administrador@demo.co");
     await p.fill("#u-correo", "nuevo@tienda.co");
+    assert.equal(await p.inputValue("#u-rol"), "gestor");
     await p.click("#form-invitar [type=submit]");
     await p.waitForSelector(".usuario-fila >> text=nuevo@tienda.co");
-    await p.click('.usuario-fila:has-text("nuevo@tienda.co") [data-estado]');
+    const fila = p.locator('.usuario-fila:has-text("nuevo@tienda.co")');
+    assert.equal((await fila.locator(".rol").textContent()).trim(), "Gestor");
+    // Asignar el rol de administrador y volver a gestor
+    await fila.locator("[data-rol]").selectOption("administrador");
+    await p.waitForFunction(() => document.querySelector('.usuario-fila:has([data-rol]) .rol')?.textContent.includes("Administrador") || [...document.querySelectorAll(".usuario-fila")].some((f) => f.textContent.includes("nuevo@tienda.co") && f.querySelector(".rol").textContent.trim() === "Administrador"));
+    await fila.locator("[data-rol]").selectOption("gestor");
+    await p.waitForFunction(() => [...document.querySelectorAll(".usuario-fila")].some((f) => f.textContent.includes("nuevo@tienda.co") && f.querySelector(".rol").textContent.trim() === "Gestor"));
+    await fila.locator("[data-estado]").click();
     await p.click('#confirmar [value="si"]');
     await p.waitForSelector('.usuario-fila:has-text("nuevo@tienda.co") .estado-inactivo');
+    // Su propia fila no tiene controles, y la capa de datos tampoco lo deja.
+    assert.equal(await p.locator('.usuario-fila:has-text("administrador@demo.co") [data-estado], .usuario-fila:has-text("administrador@demo.co") [data-rol]').count(), 0);
+    const r = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      const yo = await a.sesionActual();
+      const salida = [];
+      try { await a.cambiarEstadoUsuario(yo.id, false); salida.push(""); } catch (e) { salida.push(e.message); }
+      try { await a.cambiarRolUsuario(yo.id, "gestor"); salida.push(""); } catch (e) { salida.push(e.message); }
+      return salida;
+    });
+    assert.deepEqual(r, ["No puede desactivarse a sí mismo.", "No puede cambiar su propio rol ni desactivarse."]);
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
 
   await caso("panel: validaciones (precio, batería, WhatsApp de la tienda, color)", async () => {
     const p = await nueva(390, 844);
-    await entrarPanel(p, "tienda@demo.co");
+    await entrarPanel(p, "gestor@demo.co");
     await p.goto(`${BASE}/admin/#/tienda`);
     await p.waitForSelector("#form-tienda");
     await p.fill("#whatsapp", "3001234567");
@@ -511,14 +566,17 @@ async function llenarPopup(p) {
       await p.waitForTimeout(500);
       await captura(p, `10-detalle-${ancho}`);
       await p.click("#cerrar-detalle");
-      await entrarPanel(p, "agencia@demo.co");
-      for (const r of ["inicio", "inventario", "inventario/nuevo", "tienda", "fichas", "catalogo", "legales", "usuarios"]) {
-        await p.goto(`${BASE}/admin/#/${r}`);
-        await p.waitForTimeout(350);
-        const desborde = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-        assert.ok(desborde <= 0, `panel ${r}: desborda ${desborde}px`);
-        assert.equal(await p.locator("h1").count(), 1, `panel ${r}: h1`);
-        if (ancho === 360) await captura(p, `10-panel-${r.replace("/", "-")}-360`);
+      for (const [correo, rutas] of [["gestor@demo.co", ["inicio", "inventario", "inventario/nuevo", "tienda", "fichas", "catalogo", "legales"]], ["administrador@demo.co", ["usuarios"]]]) {
+        await p.evaluate(() => sessionStorage.removeItem("cotizadora-demo:sesion"));
+        await entrarPanel(p, correo);
+        for (const r of rutas) {
+          await p.goto(`${BASE}/admin/#/${r}`);
+          await p.waitForTimeout(350);
+          const desborde = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+          assert.ok(desborde <= 0, `panel ${r}: desborda ${desborde}px`);
+          assert.equal(await p.locator("h1").count(), 1, `panel ${r}: h1`);
+          if (ancho === 360) await captura(p, `10-panel-${r.replace("/", "-")}-360`);
+        }
       }
       assert.deepEqual(p.errores, []);
       await p.context().close();
@@ -691,7 +749,7 @@ async function llenarPopup(p) {
 
   await caso("tamaño del texto: elegirlo en Mi tienda lo cambia en el sitio (el panel no cambia)", async () => {
     const p = await nueva();
-    await entrarPanel(p, "tienda@demo.co");
+    await entrarPanel(p, "gestor@demo.co");
     await p.goto(`${BASE}/admin/#/tienda`);
     await p.waitForSelector("#form-tienda");
     assert.equal(await p.isChecked('input[name="tamano_texto"][value="normal"]'), true);

@@ -3,16 +3,17 @@
 -- una excepción si algo no se cumple.
 \set ON_ERROR_STOP on
 
--- Usuarios de prueba
-insert into auth.users (id, email) values
-  ('00000000-0000-0000-0000-00000000000a', 'agencia@prueba.co'),
-  ('00000000-0000-0000-0000-00000000000b', 'tienda@prueba.co'),
-  ('00000000-0000-0000-0000-00000000000c', 'inactivo@prueba.co'),
-  ('00000000-0000-0000-0000-00000000000d', 'sinperfil@prueba.co');
-insert into public.perfiles (user_id, correo, rol, activo) values
-  ('00000000-0000-0000-0000-00000000000a', 'agencia@prueba.co', 'agencia', true),
-  ('00000000-0000-0000-0000-00000000000b', 'tienda@prueba.co', 'tienda', true),
-  ('00000000-0000-0000-0000-00000000000c', 'inactivo@prueba.co', 'tienda', false);
+-- Los usuarios de prueba los carga antes_0007_roles.sql con los roles viejos:
+--   ...0a admin@prueba.co (agencia), ...0b gestor@prueba.co (tienda),
+--   ...0c inactivo@prueba.co (tienda, inactivo), ...0d sin perfil.
+
+-- 0c. Migración 0007: agencia → administrador y tienda → gestor.
+do $$
+begin
+  assert (select string_agg(correo || ':' || rol, ',' order by correo) from public.perfiles)
+    = 'admin@prueba.co:administrador,gestor@prueba.co:gestor,inactivo@prueba.co:gestor', 'roles convertidos';
+  assert not exists (select 1 from pg_proc where proname in ('es_agencia', 'es_staff')), 'funciones viejas borradas';
+end $$;
 
 -- 0. Migración 0004: stock > 0 pasó a en_stock verdadero y 0 a falso
 -- (datos de tests/sql/antes_0004_en_stock.sql).
@@ -127,18 +128,18 @@ do $$ begin
   assert (select count(*) from public.equipos where precio = 1) = 0, 'inactivo no edita';
 end $$;
 
--- 4. Rol tienda
+-- 4. Rol gestor: todo menos los accesos
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 do $$
 declare antes timestamptz; despues timestamptz;
 begin
-  assert (select count(*) from public.equipos) = 9, 'tienda ve todo el inventario';
-  assert (select count(*) from public.modelos) = 42, 'tienda ve todo el catálogo';
-  assert (select count(*) from public.colores) = 183, 'tienda ve todos los colores';
-  assert (select count(*) from public.perfiles) = 1, 'tienda ve solo su perfil';
+  assert (select count(*) from public.equipos) = 9, 'gestor ve todo el inventario';
+  assert (select count(*) from public.modelos) = 42, 'gestor ve todo el catálogo';
+  assert (select count(*) from public.colores) = 183, 'gestor ve todos los colores';
+  assert (select count(*) from public.perfiles) = 1, 'gestor ve solo su perfil';
 
   update public.tienda set nombre = 'Mi tienda', whatsapp = '573001234567';
-  assert (select nombre from public.tienda) = 'Mi tienda', 'tienda edita su información';
+  assert (select nombre from public.tienda) = 'Mi tienda', 'gestor edita la tienda';
 
   -- Cambiar un precio actualiza la fecha del pie
   select precios_actualizados_en into antes from public.tienda;
@@ -151,39 +152,32 @@ begin
   update public.equipos set en_stock = not en_stock where color_nombre = 'Negro';
   assert (select precios_actualizados_en from public.tienda) = despues, 'stock no toca la fecha';
 
-  -- Activar modelos sí; renombrar no
+  -- Catálogo completo: activar, renombrar, reordenar y agregar
   update public.modelos set activo = true where slug = 'iphone-16';
-  assert (select activo from public.modelos where slug = 'iphone-16'), 'tienda activa modelos';
+  assert (select activo from public.modelos where slug = 'iphone-16'), 'gestor activa modelos';
   update public.modelos set activo = false where slug = 'iphone-18-pro';
   update public.modelos set activo = true where slug = 'iphone-18-pro';
   assert not (select activo_por_demo from public.modelos where slug = 'iphone-18-pro'), 'tocar un modelo lo saca de demo';
+  update public.modelos set nombre = 'iPhone 16 (renombrado)' where slug = 'iphone-16';
+  assert (select nombre from public.modelos where slug = 'iphone-16') = 'iPhone 16 (renombrado)', 'gestor renombra';
+  insert into public.modelos (nombre, slug, generacion, orden) values ('iPhone 19', 'iphone-19', '19', 999);
+  assert (select count(*) from public.fichas f join public.modelos m on m.id = f.modelo_id where m.slug = 'iphone-19') = 1, 'modelo nuevo con ficha';
 
   update public.fichas set descripcion = 'Prueba' where modelo_id = (select id from public.modelos where slug = 'iphone-16');
-  assert (select descripcion from public.fichas f join public.modelos m on m.id = f.modelo_id where m.slug = 'iphone-16') = 'Prueba', 'tienda edita fichas';
+  assert (select descripcion from public.fichas f join public.modelos m on m.id = f.modelo_id where m.slug = 'iphone-16') = 'Prueba', 'gestor edita fichas';
+
+  -- Modo demo
+  update public.tienda set modo_demo = false;
+  update public.tienda set modo_demo = true;
+  assert (select modo_demo from public.tienda), 'gestor cambia el modo demo';
 end $$;
 do $$ begin
-  update public.modelos set nombre = 'iPhone X' where slug = 'iphone-16';
-  raise exception 'tienda no debería renombrar';
-exception when insufficient_privilege then null; end $$;
-do $$ begin
-  insert into public.modelos (nombre, slug, generacion, orden) values ('iPhone 19', 'iphone-19', '19', 999);
-  raise exception 'tienda no debería agregar modelos';
-exception when insufficient_privilege then null; end $$;
-do $$ begin
-  update public.tienda set modo_demo = false;
-  raise exception 'tienda no debería apagar el modo demo';
-exception when insufficient_privilege then null; end $$;
-do $$ begin
-  perform public.borrar_datos_demo();
-  raise exception 'tienda no debería borrar demo';
-exception when insufficient_privilege then null; end $$;
-do $$ begin
-  update public.perfiles set rol = 'agencia';
-  assert (select rol from public.perfiles) = 'tienda', 'tienda no se sube de rol';
+  update public.perfiles set rol = 'administrador';
+  assert (select rol from public.perfiles) = 'gestor', 'gestor no se sube de rol';
 end $$;
 do $$ begin
   insert into storage.objects (bucket_id, name) values ('fotos', 'equipo/1.webp');
-  assert (select count(*) from storage.objects) = 1, 'tienda sube fotos';
+  assert (select count(*) from storage.objects) = 1, 'gestor sube fotos';
 end $$;
 do $$ begin
   insert into public.equipos (modelo_id, condicion, capacidad, precio, en_stock)
@@ -202,14 +196,19 @@ exception when check_violation then null; end $$;
 do $$ begin
   assert (select tamano_texto from public.tienda) = 'normal', 'tamaño del texto normal por defecto';
   update public.tienda set tamano_texto = 'grande';
-  assert (select tamano_texto from public.tienda) = 'grande', 'tienda elige el tamaño del texto';
+  assert (select tamano_texto from public.tienda) = 'grande', 'gestor elige el tamaño del texto';
   update public.tienda set tamano_texto = 'normal';
 end $$;
--- Colores con el rol tienda: completa el hexadecimal que falta; no toca lo
--- que vino de la fuente; no agrega ni borra.
+-- Colores con el gestor: completa el hexadecimal que falta; no toca lo que vino
+-- de la fuente; agrega y borra colores de la tienda solo donde no hay oficiales.
 do $$ begin
   update public.colores set hex = '#5A5D3C' where nombre_es = 'Oliva' and modelo_id = (select id from public.modelos where slug = 'iphone-18-pro');
-  assert (select hex from public.colores where nombre_es = 'Oliva' and modelo_id = (select id from public.modelos where slug = 'iphone-18-pro')) = '#5A5D3C', 'tienda completa el hex que falta';
+  assert (select hex from public.colores where nombre_es = 'Oliva' and modelo_id = (select id from public.modelos where slug = 'iphone-18-pro')) = '#5A5D3C', 'gestor completa el hex que falta';
+  insert into public.colores (modelo_id, nombre_es, hex) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'Naranja', '#E8772E');
+  assert (select count(*) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-17-pro' and not c.oficial) = 1, 'gestor agrega un color al 17 Pro';
+  update public.colores set hex = '#E87730', nombre_es = 'Naranja cósmico' where nombre_es = 'Naranja';
+  delete from public.colores where nombre_es = 'Naranja cósmico';
+  assert (select count(*) from public.colores where nombre_es like 'Naranja%') = 0, 'gestor borra un color de la tienda';
 end $$;
 do $$ begin
   update public.colores set hex = '#000000' where nombre_en = 'Burgundy' and modelo_id = (select id from public.modelos where slug = 'iphone-18-pro');
@@ -220,8 +219,16 @@ do $$ begin
   raise exception 'el nombre de un color oficial no se cambia';
 exception when insufficient_privilege then null; end $$;
 do $$ begin
-  insert into public.colores (modelo_id, nombre_es) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'Prueba');
-  raise exception 'la tienda no agrega colores (permisos del catálogo)';
+  insert into public.colores (modelo_id, nombre_es) values ((select id from public.modelos where slug = 'iphone-16'), 'Otro');
+  raise exception 'no se agregan colores a un modelo con colores oficiales';
+exception when insufficient_privilege then null; end $$;
+do $$ begin
+  insert into public.colores (modelo_id, nombre_es, oficial) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'Falso', true);
+  raise exception 'no se crean colores oficiales desde el panel';
+exception when insufficient_privilege then null; end $$;
+do $$ begin
+  delete from public.colores where nombre_es = 'Visón';
+  raise exception 'un color oficial no se borra';
 exception when insufficient_privilege then null; end $$;
 do $$ begin
   update public.tienda set tamano_texto = 'enorme';
@@ -236,44 +243,82 @@ do $$ begin
   raise exception 'color no hex no vale';
 exception when check_violation then null; end $$;
 
--- 5. Rol agencia
+-- 5. Rol administrador: solo los accesos
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 do $$ begin
-  assert (select count(*) from public.perfiles) = 3, 'agencia ve todos los perfiles';
-  update public.modelos set nombre = 'iPhone 16 (renombrado)' where slug = 'iphone-16';
-  assert (select nombre from public.modelos where slug = 'iphone-16') = 'iPhone 16 (renombrado)', 'agencia renombra';
-  insert into public.modelos (nombre, slug, generacion, orden) values ('iPhone 19', 'iphone-19', '19', 999);
-  assert (select count(*) from public.fichas f join public.modelos m on m.id = f.modelo_id where m.slug = 'iphone-19') = 1, 'modelo nuevo con ficha';
-  -- Colores de la tienda: solo en modelos sin colores oficiales
-  insert into public.colores (modelo_id, nombre_es, hex) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'Naranja', '#E8772E');
-  assert (select count(*) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-17-pro' and not c.oficial) = 1, 'agencia agrega un color al 17 Pro';
-  update public.colores set hex = '#E87730', nombre_es = 'Naranja cósmico' where nombre_es = 'Naranja';
-  delete from public.colores where nombre_es = 'Naranja cósmico';
-  assert (select count(*) from public.colores where nombre_es like 'Naranja%') = 0, 'agencia borra un color de la tienda';
-  update public.perfiles set activo = false where correo = 'tienda@prueba.co';
-  assert not (select activo from public.perfiles where correo = 'tienda@prueba.co'), 'agencia desactiva';
+  assert (select count(*) from public.perfiles) = 3, 'administrador ve todos los perfiles';
+  -- Ve lo mismo que el público
+  assert (select count(*) from public.modelos) = 5, 'administrador ve el catálogo como el público';
+  assert (select count(*) from public.equipos where not publicado) = 0, 'administrador no ve borradores';
+  -- No edita nada fuera de los accesos (las políticas filtran: 0 filas)
+  update public.tienda set nombre = 'x';
+  assert (select nombre from public.tienda) = 'Mi tienda', 'administrador no edita la tienda';
+  update public.equipos set precio = 1;
+  assert (select count(*) from public.equipos where precio = 1) = 0, 'administrador no edita equipos';
+  update public.modelos set activo = false where slug = 'iphone-16';
+  assert (select activo from public.modelos where slug = 'iphone-16'), 'administrador no toca el catálogo';
+  -- Asigna roles, desactiva y reactiva
+  update public.perfiles set rol = 'administrador' where correo = 'gestor@prueba.co';
+  assert (select rol from public.perfiles where correo = 'gestor@prueba.co') = 'administrador', 'administrador asigna roles';
+  update public.perfiles set rol = 'gestor' where correo = 'gestor@prueba.co';
+  update public.perfiles set activo = false where correo = 'gestor@prueba.co';
+  assert not (select activo from public.perfiles where correo = 'gestor@prueba.co'), 'administrador desactiva';
+  update public.perfiles set activo = true where correo = 'gestor@prueba.co';
 end $$;
 do $$ begin
-  insert into public.colores (modelo_id, nombre_es) values ((select id from public.modelos where slug = 'iphone-16'), 'Otro');
-  raise exception 'no se agregan colores a un modelo con colores oficiales';
+  insert into public.modelos (nombre, slug, generacion, orden) values ('iPhone 20', 'iphone-20', '20', 1999);
+  raise exception 'administrador no debería agregar modelos';
 exception when insufficient_privilege then null; end $$;
 do $$ begin
-  insert into public.colores (modelo_id, nombre_es, oficial) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'Falso', true);
-  raise exception 'no se crean colores oficiales desde el panel';
+  insert into public.colores (modelo_id, nombre_es) values ((select id from public.modelos where slug = 'iphone-16'), 'Prueba');
+  raise exception 'administrador no debería agregar colores';
 exception when insufficient_privilege then null; end $$;
 do $$ begin
-  delete from public.colores where nombre_es = 'Visón';
-  raise exception 'un color oficial no se borra';
+  insert into storage.objects (bucket_id, name) values ('fotos', 'equipo/2.webp');
+  raise exception 'administrador no debería subir fotos';
 exception when insufficient_privilege then null; end $$;
 do $$ begin
-  update public.perfiles set activo = false where correo = 'agencia@prueba.co';
-  raise exception 'la agencia no debería poder desactivarse a sí misma';
+  perform public.borrar_datos_demo();
+  raise exception 'administrador no debería borrar demo';
 exception when insufficient_privilege then null; end $$;
+do $$ begin
+  update public.perfiles set activo = false where correo = 'admin@prueba.co';
+  raise exception 'el administrador no debería poder desactivarse a sí mismo';
+exception when insufficient_privilege then null; end $$;
+do $$ begin
+  update public.perfiles set rol = 'gestor' where correo = 'admin@prueba.co';
+  raise exception 'el administrador no debería poder quitarse el rol';
+exception when insufficient_privilege then null; end $$;
+reset role;
+
+-- 5b. Siempre queda al menos un administrador activo (también con la clave de
+-- servicio, que usa la función "usuarios"; aquí, sin sesión).
+set request.jwt.claim.sub = '';
+do $$ begin
+  update public.perfiles set activo = false where correo = 'admin@prueba.co';
+  raise exception 'no se puede desactivar al último administrador';
+exception when insufficient_privilege then null; end $$;
+do $$ begin
+  update public.perfiles set rol = 'gestor' where correo = 'admin@prueba.co';
+  raise exception 'no se le puede quitar el rol al último administrador';
+exception when insufficient_privilege then null; end $$;
+do $$ begin
+  -- Con otro administrador activo, sí
+  update public.perfiles set rol = 'administrador' where correo = 'gestor@prueba.co';
+  update public.perfiles set activo = false where correo = 'admin@prueba.co';
+  assert (select count(*) from public.perfiles where rol = 'administrador' and activo) = 1, 'queda uno';
+  update public.perfiles set activo = true where correo = 'admin@prueba.co';
+  update public.perfiles set rol = 'gestor' where correo = 'gestor@prueba.co';
+end $$;
+
+-- 5c. El gestor borra los datos de demostración
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 do $$ begin
   perform public.borrar_datos_demo();
   assert (select count(*) from public.equipos where es_demo) = 0, 'demo borrado';
   assert not (select modo_demo from public.tienda), 'modo demo apagado';
-  -- iphone-18-pro-max, iphone-15-pro, iphone-13 vuelven a inactivos; iphone-18-pro lo tocó la tienda y queda activo
+  -- iphone-18-pro-max, iphone-15-pro, iphone-13 vuelven a inactivos; iphone-18-pro lo tocó el gestor y queda activo
   assert (select string_agg(slug, ',' order by orden) from public.modelos where activo) = 'iphone-16,iphone-18-pro', 'modelos de demo apagados';
 end $$;
 reset role;

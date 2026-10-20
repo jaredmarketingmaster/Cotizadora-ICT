@@ -23,7 +23,10 @@ const ctx = {
   tienda: null,
   sucio: false,
   alSalir: null,
-  esAgencia() { return this.usuario?.rol === "agencia"; },
+  // El administrador solo gestiona accesos (Usuarios); el gestor, todo lo demás.
+  esAdministrador() { return this.usuario?.rol === "administrador"; },
+  esGestor() { return this.usuario?.rol === "gestor"; },
+  inicio() { return this.esAdministrador() ? "usuarios" : "inicio"; },
   async recargarTienda() {
     this.tienda = await this.api.leerTienda();
     aplicarTema(this.tienda);
@@ -47,7 +50,7 @@ function vistaLogin(mensaje = "") {
   mostrarAcceso(`
     <h1>Iniciar sesión</h1>
     ${mensaje ? `<p class="todo-bien" role="status">${esc(mensaje)}</p>` : ""}
-    ${demo ? `<p class="nota-demo">Modo demo: entre con <strong>agencia@demo.co</strong> o <strong>tienda@demo.co</strong> y la contraseña <strong>demo1234</strong>. Los cambios quedan solo en este navegador.</p>` : ""}
+    ${demo ? `<p class="nota-demo">Modo demo: entre con <strong>gestor@demo.co</strong> (tienda, inventario y catálogo) o <strong>administrador@demo.co</strong> (usuarios) y la contraseña <strong>demo1234</strong>. Los cambios quedan solo en este navegador.</p>` : ""}
     <form id="form-login" novalidate>
       ${campoTexto({ id: "l-correo", etiqueta: "Correo", tipo: "email", requerido: true, atributos: 'autocomplete="username" inputmode="email"' })}
       ${campoTexto({ id: "l-clave", etiqueta: "Contraseña", tipo: "password", requerido: true, atributos: 'autocomplete="current-password"' })}
@@ -144,9 +147,9 @@ async function entrar() {
   $("#acceso-contenido").innerHTML = "";
   $("#cargando-panel").hidden = true;
   $("#app").hidden = false;
-  $("#barra-usuario").textContent = `${ctx.usuario.correo} · ${ctx.esAgencia() ? "Agencia" : "Tienda"}`;
-  $$("[data-solo-agencia]").forEach((el) => { el.hidden = !ctx.esAgencia(); });
-  if (!location.hash.startsWith("#/")) history.replaceState(null, "", "#/inicio");
+  $("#barra-usuario").textContent = `${ctx.usuario.correo} · ${ctx.esAdministrador() ? "Administrador" : "Gestor"}`;
+  $$("[data-rol]").forEach((el) => { el.hidden = el.dataset.rol !== ctx.usuario.rol; });
+  if (!location.hash.startsWith("#/")) history.replaceState(null, "", `#/${ctx.inicio()}`);
   await enrutar();
 }
 
@@ -163,7 +166,10 @@ async function enrutar() {
   ctx.alSalir?.();
   ctx.alSalir = null;
   rutaAnterior = location.hash;
-  const cargar = RUTAS[nombre] && (nombre !== "usuarios" || ctx.esAgencia()) ? RUTAS[nombre] : RUTAS.inicio;
+  // Cada rol ve solo sus secciones; lo demás lleva a su inicio.
+  const permitida = RUTAS[nombre] && (nombre === "usuarios" ? ctx.esAdministrador() : ctx.esGestor());
+  const cargar = permitida ? RUTAS[nombre] : RUTAS[ctx.inicio()];
+  if (!permitida && nombre !== ctx.inicio()) history.replaceState(null, "", `#/${ctx.inicio()}`);
   $$(".navegacion a").forEach((a) => {
     if (a.dataset.ruta === nombre) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   });
@@ -219,7 +225,7 @@ async function vistaInicio(vista) {
         ? `<ul class="avisos">${avisos.map(([t, href]) => `<li><span>${esc(t)}</span><a href="${href}">Resolver</a></li>`).join("")}</ul>`
         : '<p class="todo-bien">Todo está completo.</p>'}
     </section>
-    ${ctx.esAgencia() ? `
+    ${ctx.esGestor() ? `
     <section class="bloque" aria-labelledby="t-demo">
       <h2 id="t-demo">Modo demo</h2>
       <p class="ayuda">Con el modo demo encendido, el sitio muestra la franja "Sitio en preparación". Hay ${plural(demo, "equipo de demostración", "equipos de demostración")}.</p>

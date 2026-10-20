@@ -292,6 +292,8 @@ select.entrada { appearance: none; -webkit-appearance: none; padding-right: 40px
 .usuario-fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px solid var(--borde); border-radius: 14px; background: var(--tarjeta); }
 .usuario-fila .correo { font-weight: 700; word-break: break-all; }
 .usuario-fila .rol { color: var(--texto-suave); }
+.usuario-acciones { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.usuario-acciones .entrada { width: auto; min-height: 44px; }
 .estado-inactivo { color: var(--error); font-weight: 700; }
 
 /* Aviso flotante "Guardado" */
