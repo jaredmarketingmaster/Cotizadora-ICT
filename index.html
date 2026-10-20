@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Elija su iPhone y cómprelo por WhatsApp</title>
+  <meta name="description" content="Elija su iPhone nuevo o usado, vea el precio y cómprelo por WhatsApp.">
+  <meta name="theme-color" content="#0F172A">
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/sitio.css">
+  <script type="module" src="assets/js/sitio/principal.js"></script>
+</head>
+<body>
+  <a class="salto" href="#galeria">Ir a los equipos</a>
+
+  <div class="franja-demo" id="franja-demo" role="status" hidden>
+    Sitio en preparación: los equipos y precios son de demostración.
+  </div>
+
+  <header class="encabezado">
+    <div class="contenedor">
+      <div class="marca" id="marca">
+        <span class="marca-logo" id="marca-logo"></span>
+        <span class="marca-nombre" id="marca-nombre"></span>
+      </div>
+      <h1 class="titulo">Elija su iPhone y cómprelo por WhatsApp.</h1>
+    </div>
+  </header>
+
+  <main id="contenido">
+    <section class="contenedor filtros-envoltura" aria-labelledby="filtros-titulo">
+      <h2 class="oculto-visual" id="filtros-titulo">Filtros</h2>
+      <div class="filtros" id="filtros">
+        <div class="filtro" role="group" aria-labelledby="f-condicion-titulo">
+          <p class="filtro-pregunta" id="f-condicion-titulo">¿Nuevo o usado?</p>
+          <div class="segmentado" id="f-condicion">
+            <button type="button" class="segmento" data-valor="nuevo" aria-pressed="false">Nuevo</button>
+            <button type="button" class="segmento" data-valor="usado" aria-pressed="false">Usado</button>
+          </div>
+        </div>
+
+        <div class="filtro">
+          <p class="filtro-pregunta" id="f-modelo-titulo">¿Qué modelo?</p>
+          <div class="desplegable" id="f-modelo"></div>
+        </div>
+
+        <div class="filtro" role="group" aria-labelledby="f-capacidad-titulo">
+          <p class="filtro-pregunta" id="f-capacidad-titulo">¿Qué almacenamiento?</p>
+          <div class="chips" id="f-capacidad"></div>
+        </div>
+
+        <div class="filtros-pie">
+          <p class="contador cifras" id="contador" role="status" aria-live="polite"></p>
+          <button type="button" class="boton--enlace boton" id="limpiar" hidden>Limpiar filtros</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="contenedor galeria-envoltura" id="galeria" aria-labelledby="galeria-titulo" tabindex="-1">
+      <h2 class="oculto-visual" id="galeria-titulo">Equipos disponibles</h2>
+      <p class="aviso-carga" id="aviso-carga" role="alert" hidden></p>
+      <ul class="galeria" id="lista-equipos" aria-busy="true">
+        <li class="tarjeta tarjeta--esqueleto" aria-hidden="true"></li>
+        <li class="tarjeta tarjeta--esqueleto" aria-hidden="true"></li>
+        <li class="tarjeta tarjeta--esqueleto" aria-hidden="true"></li>
+      </ul>
+      <div class="vacio" id="vacio" hidden>
+        <p class="vacio-texto">En este momento no tenemos ese equipo publicado.</p>
+        <button type="button" class="boton boton--secundario boton--grande" id="consultar-sin-stock">Consultar por WhatsApp</button>
+      </div>
+    </section>
+
+    <section class="contenedor detalle-en-linea" id="detalle-en-linea" aria-label="Detalle del equipo" hidden></section>
+
+    <section class="info-tienda" id="info-tienda" aria-labelledby="info-titulo" hidden>
+      <div class="contenedor info-grilla">
+        <div>
+          <h2 id="info-titulo"></h2>
+          <dl class="info-datos" id="info-datos"></dl>
+        </div>
+        <div class="info-acciones" id="info-acciones"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <div class="contenedor pie-grilla">
+      <p class="pie-tienda" id="pie-tienda"></p>
+      <p class="pie-precios cifras" id="pie-precios"></p>
+      <nav class="pie-enlaces" aria-label="Legales">
+        <a href="privacidad/">Política de privacidad</a>
+        <a href="terminos/">Términos y condiciones</a>
+      </nav>
+      <p class="pie-aviso" id="pie-aviso" hidden></p>
+    </div>
+  </footer>
+
+  <!-- Detalle del equipo: hoja desde abajo en celular, ventana en escritorio -->
+  <dialog class="hoja" id="hoja-detalle" aria-labelledby="detalle-titulo">
+    <div class="hoja-cabecera" id="hoja-agarre">
+      <span class="hoja-agarradera" aria-hidden="true"></span>
+      <button type="button" class="boton-icono hoja-cerrar" id="cerrar-detalle" aria-label="Cerrar el detalle">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="hoja-cuerpo" id="hoja-cuerpo"></div>
+  </dialog>
+
+  <!-- Barra fija de compra en celular mientras se ve el detalle en la página -->
+  <div class="barra-compra" id="barra-compra" hidden></div>
+
+  <!-- Pop-up de datos -->
+  <dialog class="popup" id="popup" aria-labelledby="popup-titulo"></dialog>
+</body>
+</html>

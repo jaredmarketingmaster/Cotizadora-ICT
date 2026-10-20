@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Panel de la tienda</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0F172A">
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/panel.css">
+  <script type="module" src="../assets/js/panel/panel.js"></script>
+</head>
+<body>
+  <div class="cargando-panel" id="cargando-panel" role="status"><span class="spinner" aria-hidden="true"></span><span>Cargando el panel…</span></div>
+
+  <!-- Acceso -->
+  <main class="acceso" id="acceso" hidden>
+    <div class="acceso-caja">
+      <p class="acceso-marca">Panel de la tienda</p>
+      <div id="acceso-contenido"></div>
+    </div>
+  </main>
+
+  <!-- Panel -->
+  <div class="app" id="app" hidden>
+    <header class="barra-superior">
+      <div class="barra-superior-fila">
+        <div class="barra-titulo">
+          <span class="barra-tienda" id="barra-tienda">Panel</span>
+          <span class="barra-usuario" id="barra-usuario"></span>
+        </div>
+        <div class="barra-acciones">
+          <a class="boton boton--suave boton--chico" href="../" target="_blank" rel="noopener">Ver mi sitio</a>
+          <button type="button" class="boton boton--suave boton--chico" id="salir">Salir</button>
+        </div>
+      </div>
+      <nav class="navegacion" aria-label="Secciones del panel">
+        <a href="#/inicio" data-ruta="inicio">Inicio</a>
+        <a href="#/inventario" data-ruta="inventario">Inventario</a>
+        <a href="#/tienda" data-ruta="tienda">Mi tienda</a>
+        <a href="#/fichas" data-ruta="fichas">Fichas técnicas</a>
+        <a href="#/catalogo" data-ruta="catalogo">Catálogo</a>
+        <a href="#/legales" data-ruta="legales">Legales</a>
+        <a href="#/usuarios" data-ruta="usuarios" data-solo-agencia hidden>Usuarios</a>
+      </nav>
+    </header>
+    <main class="vista" id="vista" tabindex="-1"></main>
+  </div>
+
+  <div class="aviso-flotante" id="aviso-flotante" role="status" aria-live="polite"></div>
+  <dialog class="confirmar" id="confirmar" aria-labelledby="confirmar-titulo"></dialog>
+</body>
+</html>

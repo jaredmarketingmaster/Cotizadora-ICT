@@ -1,0 +1,263 @@
+/* =============================================================================
+   Base compartida (sitio y panel): variables, reinicio, botones, campos.
+   Los colores de la tienda (--primario, --secundario y sus textos) los pone
+   assets/js/tema.js; aquí van solo valores por defecto.
+   ========================================================================== */
+
+:root {
+  --primario: #1A73E8;
+  --sobre-primario: #FFFFFF;
+  --primario-texto: #1A6AD6;
+  --secundario: #0F172A;
+  --sobre-secundario: #FFFFFF;
+
+  --fondo: #FFFFFF;
+  --superficie: #F4F5F7;
+  --superficie-2: #E9EBEF;
+  --tarjeta: #FFFFFF;
+  --borde: #DADDE3;
+  --borde-fuerte: #8A909C;
+  --texto: #0F1115;
+  --texto-suave: #545A66;
+  --error: #B42318;
+  --error-fondo: #FEF3F2;
+  --exito: #067647;
+  --exito-fondo: #ECFDF3;
+  --aviso: #6B4E00;
+  --aviso-fondo: #FFF6D6;
+
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --radio: 20px;
+  --radio-md: 14px;
+  --radio-sm: 10px;
+  --sombra-1: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
+  --sombra-2: 0 12px 32px -12px rgba(16, 24, 40, .18), 0 4px 10px -4px rgba(16, 24, 40, .08);
+  --sombra-3: 0 24px 64px -16px rgba(16, 24, 40, .32);
+  --curva: cubic-bezier(.2, .8, .2, 1);
+  --rapido: 160ms;
+  --medio: 260ms;
+  --ancho: 1180px;
+  --gutter: clamp(16px, 4vw, 32px);
+  color-scheme: light;
+}
+
+:root[data-tema="oscuro"] {
+  --fondo: #0E1117;
+  --superficie: #161A22;
+  --superficie-2: #202631;
+  --tarjeta: #161A22;
+  --borde: #2C3340;
+  --borde-fuerte: #6D7685;
+  --texto: #F2F4F7;
+  --texto-suave: #A6AEBB;
+  --error: #FDA29B;
+  --error-fondo: #3A1512;
+  --exito: #75E0A7;
+  --exito-fondo: #0B2A1C;
+  --aviso: #FEDF89;
+  --aviso-fondo: #3A2E05;
+  --sombra-1: 0 1px 2px rgba(0, 0, 0, .4);
+  --sombra-2: 0 12px 32px -12px rgba(0, 0, 0, .6);
+  --sombra-3: 0 24px 64px -16px rgba(0, 0, 0, .7);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+img, svg { display: block; max-width: 100%; }
+img { height: auto; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+h1, h2, h3, h4 { margin: 0; line-height: 1.15; letter-spacing: -.02em; }
+p { margin: 0; }
+a { color: var(--primario-texto); text-underline-offset: .18em; }
+
+[hidden] { display: none !important; }
+
+.oculto-visual {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap; border: 0;
+}
+
+.salto {
+  position: absolute; left: 8px; top: -60px; z-index: 100;
+  background: var(--texto); color: var(--fondo);
+  padding: 12px 16px; border-radius: var(--radio-sm);
+  font-weight: 700; text-decoration: none;
+}
+.salto:focus { top: 8px; }
+
+/* Foco visible en cualquier fondo: anillo del color de texto + halo de fondo. */
+:focus-visible {
+  outline: 3px solid var(--texto);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--fondo);
+}
+
+.contenedor {
+  width: 100%;
+  max-width: var(--ancho);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.cifras { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+/* --- Botones --------------------------------------------------------------- */
+
+.boton {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 48px;
+  padding: 12px 22px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radio-md);
+  font-weight: 700; font-size: 1rem; line-height: 1.2;
+  text-decoration: none; text-align: center;
+  transition: background-color var(--rapido), border-color var(--rapido), box-shadow var(--rapido), transform var(--rapido), filter var(--rapido);
+  -webkit-tap-highlight-color: transparent;
+}
+.boton:disabled { opacity: .55; cursor: not-allowed; }
+.boton svg { width: 22px; height: 22px; flex: none; }
+
+.boton--primario {
+  background: var(--primario);
+  color: var(--sobre-primario);
+  box-shadow: 0 8px 20px -10px var(--primario);
+}
+.boton--secundario {
+  background: transparent;
+  color: var(--texto);
+  border-color: var(--borde-fuerte);
+}
+.boton--suave {
+  background: var(--superficie);
+  color: var(--texto);
+}
+.boton--peligro {
+  background: var(--error-fondo);
+  color: var(--error);
+  border-color: currentColor;
+}
+.boton--grande { min-height: 56px; padding: 16px 26px; font-size: 1.0625rem; border-radius: 16px; }
+.boton--bloque { width: 100%; }
+.boton--enlace {
+  min-height: 44px; padding: 8px 4px;
+  background: none; border: 0;
+  color: var(--primario-texto);
+  text-decoration: underline; font-weight: 600;
+}
+
+@media (hover: hover) {
+  .boton--primario:hover:not(:disabled) { filter: brightness(1.06) saturate(1.05); }
+  .boton--secundario:hover:not(:disabled), .boton--suave:hover:not(:disabled) { background: var(--superficie-2); }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .boton--primario:hover:not(:disabled) { transform: translateY(-1px); }
+}
+.boton:active:not(:disabled) { filter: brightness(.96); }
+
+.boton-icono {
+  display: inline-grid; place-items: center;
+  width: 44px; height: 44px;
+  padding: 0;
+  border: 0; border-radius: 999px;
+  background: var(--superficie);
+  color: var(--texto);
+  transition: background-color var(--rapido);
+}
+.boton-icono svg { width: 22px; height: 22px; }
+@media (hover: hover) { .boton-icono:hover { background: var(--superficie-2); } }
+
+/* --- Campos ---------------------------------------------------------------- */
+
+.campo { display: grid; gap: 6px; }
+.campo > label, .campo .etiqueta { font-weight: 600; }
+.campo .ayuda { color: var(--texto-suave); font-size: 1rem; }
+
+.entrada {
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 14px;
+  background: var(--fondo);
+  border: 1.5px solid var(--borde-fuerte);
+  border-radius: var(--radio-md);
+  font-size: 1rem;
+  transition: border-color var(--rapido), box-shadow var(--rapido);
+}
+textarea.entrada { min-height: 120px; resize: vertical; line-height: 1.5; }
+.entrada:focus-visible { outline: none; border-color: var(--primario-texto); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primario-texto) 30%, transparent); }
+.entrada[aria-invalid="true"] { border-color: var(--error); }
+
+.error-campo {
+  display: flex; gap: 6px; align-items: flex-start;
+  color: var(--error);
+  font-weight: 600;
+}
+.error-campo:empty { display: none; }
+
+.casilla {
+  display: grid; grid-template-columns: 24px 1fr; gap: 12px; align-items: start;
+}
+.casilla input {
+  width: 24px; height: 24px; margin: 0;
+  accent-color: var(--primario);
+}
+
+.etiqueta-pildora {
+  display: inline-flex; align-items: center;
+  min-height: 26px; padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--texto);
+  font-size: .875rem; font-weight: 700; letter-spacing: .01em;
+}
+.etiqueta-pildora--usado { background: var(--aviso-fondo); color: var(--aviso); }
+.etiqueta-demo {
+  display: inline-flex; align-items: center;
+  padding: 1px 8px;
+  border: 1.5px dashed currentColor;
+  border-radius: 6px;
+  color: var(--aviso);
+  background: var(--aviso-fondo);
+  font-size: .875rem; font-weight: 800; letter-spacing: .08em;
+}
+
+.spinner {
+  width: 22px; height: 22px;
+  border: 3px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: girar .8s linear infinite;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+  .spinner { animation: none; border-right-color: currentColor; opacity: .6; }
+}

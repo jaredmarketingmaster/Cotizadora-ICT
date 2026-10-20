@@ -1,0 +1,605 @@
+// =============================================================================
+// Inventario: lista con filtros y edición rápida (precio, stock, publicado),
+// formulario por pasos para agregar, edición completa, duplicar y borrar.
+// =============================================================================
+
+import { formatearCOP, formatearMiles, leerPrecio, hexValido, CAPACIDADES_SUGERIDAS, capacidadEnGB } from "../utils.js";
+import { rutaMiniatura, ESTADOS_ESTETICOS } from "../datos/comun.js";
+import { telefonoSVG } from "../ilustracion.js";
+import { $, $$, esc, avisar, confirmar, conBoton, campoTexto, interruptor, marcarError, enfocarPrimerError } from "./ui.js";
+import { comprimirFoto } from "./imagenes.js";
+
+const MAX_FOTOS = 6;
+
+function nombreModelo(modelos, id) {
+  return modelos.find((m) => m.id === id)?.nombre || "Modelo borrado";
+}
+
+function miniatura(api, q, alt = "") {
+  const ruta = q.fotos?.[0];
+  const url = ruta && (api.urlArchivo("fotos", rutaMiniatura(ruta)) || api.urlArchivo("fotos", ruta));
+  return url ? `<img src="${esc(url)}" alt="${esc(alt)}" loading="lazy">` : telefonoSVG(q.color_hex);
+}
+
+function rutasDeFotos(fotos) {
+  return (fotos || []).flatMap((r) => [r, rutaMiniatura(r)]);
+}
+
+export async function dibujar(vista, ctx, resto, params) {
+  if (resto[0] === "nuevo") return formulario(vista, ctx, { modo: params.get("desde") ? "duplicar" : "nuevo", desde: params.get("desde") });
+  if (resto[0]) return formulario(vista, ctx, { modo: "editar", id: resto[0] });
+  return lista(vista, ctx, params);
+}
+
+// --- Lista ---------------------------------------------------------------------
+
+async function lista(vista, ctx, params) {
+  const { api } = ctx;
+  const [equipos, modelos] = await Promise.all([api.listarEquipos(), api.listarModelos()]);
+  const activos = new Set(modelos.filter((m) => m.activo).map((m) => m.id));
+  const conEquipos = modelos.filter((m) => equipos.some((q) => q.modelo_id === m.id));
+  const estado = {
+    texto: "", modelo: "", condicion: "",
+    publicado: params.get("publicado") || "",
+    especial: params.get("stock") === "0" ? "sin-stock" : params.get("fotos") === "sin" ? "sin-foto" : ""
+  };
+
+  vista.innerHTML = `
+    <div class="vista-cabecera">
+      <h1>Inventario</h1>
+      <a class="boton boton--primario" href="#/inventario/nuevo">Agregar equipo</a>
+    </div>
+    <div class="barra-filtros">
+      <div class="campo"><label for="b-texto">Buscar</label><input class="entrada" id="b-texto" type="search" placeholder="Modelo, color o capacidad"></div>
+      <div class="campo"><label for="b-modelo">Modelo</label><select class="entrada" id="b-modelo"><option value="">Todos</option>${conEquipos.map((m) => `<option value="${m.id}">${esc(m.nombre)}</option>`).join("")}</select></div>
+      <div class="campo"><label for="b-condicion">Condición</label><select class="entrada" id="b-condicion"><option value="">Todas</option><option value="nuevo">Nuevo</option><option value="usado">Usado</option></select></div>
+      <div class="campo"><label for="b-publicado">Publicado</label><select class="entrada" id="b-publicado"><option value="">Todos</option><option value="si">Sí</option><option value="no">No</option></select></div>
+    </div>
+    <p id="filtro-especial" class="avisos" hidden></p>
+    <p class="ayuda" id="cuenta" role="status"></p>
+    <ul class="lista-equipos" id="lista"></ul>`;
+  $("#b-publicado").value = estado.publicado;
+
+  function filtrados() {
+    const t = estado.texto.toLowerCase();
+    return equipos.filter((q) =>
+      (!estado.modelo || q.modelo_id === Number(estado.modelo)) &&
+      (!estado.condicion || q.condicion === estado.condicion) &&
+      (!estado.publicado || q.publicado === (estado.publicado === "si")) &&
+      (estado.especial !== "sin-stock" || q.stock === 0) &&
+      (estado.especial !== "sin-foto" || (!q.es_demo && !(q.fotos || []).length)) &&
+      (!t || [nombreModelo(modelos, q.modelo_id), q.color_nombre, q.capacidad, q.condicion].join(" ").toLowerCase().includes(t)))
+      .sort((a, b) => {
+        const ma = modelos.find((m) => m.id === a.modelo_id)?.orden ?? 0;
+        const mb = modelos.find((m) => m.id === b.modelo_id)?.orden ?? 0;
+        return mb - ma || capacidadEnGB(a.capacidad) - capacidadEnGB(b.capacidad) || a.precio - b.precio;
+      });
+  }
+
+  function fila(q) {
+    const nombre = nombreModelo(modelos, q.modelo_id);
+    const notas = [
+      q.es_demo && "DEMO",
+      !activos.has(q.modelo_id) && "modelo inactivo: no se ve",
+      q.stock === 0 && "sin stock: no se ve",
+      q.condicion === "usado" && q.bateria_porcentaje != null && `batería ${q.bateria_porcentaje}%`
+    ].filter(Boolean);
+    return `<li class="fila-equipo" data-id="${q.id}">
+      <span class="fila-foto">${miniatura(api, q)}</span>
+      <div class="fila-info">
+        <span class="fila-nombre">${esc(nombre)}</span>
+        <span class="fila-sub">${[q.condicion === "usado" ? "Usado" : "Nuevo", q.capacidad, q.color_nombre].filter(Boolean).map(esc).join(" · ")}</span>
+        ${notas.length ? `<span class="fila-sub">${esc(notas.join(" · "))}</span>` : ""}
+      </div>
+      <div class="fila-edicion">
+        <div class="campo"><label for="p-${q.id}">Precio</label><input class="entrada cifras" id="p-${q.id}" data-campo="precio" inputmode="numeric" value="${formatearMiles(q.precio)}"></div>
+        <div class="campo"><label for="s-${q.id}">Stock</label><input class="entrada cifras" id="s-${q.id}" data-campo="stock" type="number" min="0" ${q.condicion === "usado" ? 'max="1"' : ""} inputmode="numeric" value="${q.stock}"></div>
+        ${interruptor({ id: `v-${q.id}`, etiqueta: "Publicado", marcado: q.publicado, atributos: 'data-campo="publicado"' })}
+      </div>
+      <div class="fila-acciones">
+        <a class="boton boton--suave boton--chico" href="#/inventario/${q.id}">Editar</a>
+        <a class="boton boton--suave boton--chico" href="#/inventario/nuevo?desde=${q.id}">Duplicar</a>
+        <button type="button" class="boton boton--peligro boton--chico" data-borrar>Borrar</button>
+      </div>
+      <p class="error-campo fila-error" role="alert"></p>
+    </li>`;
+  }
+
+  function pintar() {
+    const lista = filtrados();
+    const especial = $("#filtro-especial");
+    especial.hidden = !estado.especial;
+    especial.innerHTML = estado.especial
+      ? `<span>Mostrando solo ${estado.especial === "sin-stock" ? "equipos sin stock" : "equipos sin foto"}.</span> <button type="button" class="boton boton--enlace" id="quitar-especial">Ver todos</button>`
+      : "";
+    $("#quitar-especial")?.addEventListener("click", () => { estado.especial = ""; pintar(); });
+    $("#cuenta").textContent = `${lista.length} de ${equipos.length} equipos`;
+    $("#lista").innerHTML = lista.length
+      ? lista.map(fila).join("")
+      : `<li class="vacio-panel">${equipos.length ? "No hay equipos con esos filtros." : "Todavía no hay equipos. Toque «Agregar equipo» para cargar el primero."}</li>`;
+  }
+
+  $("#b-texto").addEventListener("input", (e) => { estado.texto = e.target.value.trim(); pintar(); });
+  $("#b-modelo").addEventListener("change", (e) => { estado.modelo = e.target.value; pintar(); });
+  $("#b-condicion").addEventListener("change", (e) => { estado.condicion = e.target.value; pintar(); });
+  $("#b-publicado").addEventListener("change", (e) => { estado.publicado = e.target.value; pintar(); });
+
+  // Edición rápida: se guarda al salir del campo, con Enter o al mover el interruptor.
+  async function guardarCampo(input) {
+    const li = input.closest(".fila-equipo");
+    const q = equipos.find((x) => x.id === li.dataset.id);
+    const error = $(".fila-error", li);
+    const campo = input.dataset.campo;
+    let valor;
+    if (campo === "precio") {
+      valor = leerPrecio(input.value);
+      if (valor == null) { error.textContent = "El precio debe ser un número entero mayor que 0."; input.setAttribute("aria-invalid", "true"); return; }
+      if (valor === q.precio) { input.value = formatearMiles(q.precio); return; }
+    } else if (campo === "stock") {
+      valor = Number(input.value);
+      const max = q.condicion === "usado" ? 1 : Infinity;
+      if (!Number.isInteger(valor) || valor < 0 || valor > max) {
+        error.textContent = q.condicion === "usado" ? "Un usado tiene stock 1, o 0 si se vendió." : "El stock debe ser un número entero de 0 o más.";
+        input.setAttribute("aria-invalid", "true");
+        return;
+      }
+      if (valor === q.stock) return;
+    } else {
+      valor = input.checked;
+    }
+    error.textContent = "";
+    input.removeAttribute("aria-invalid");
+    try {
+      const nuevo = await conBoton(null, () => api.actualizarEquipo(q.id, { [campo]: valor }));
+      Object.assign(q, nuevo);
+      if (campo === "precio") input.value = formatearMiles(nuevo.precio);
+    } catch (e) {
+      error.textContent = e.message;
+      if (campo === "publicado") input.checked = !valor;
+    }
+  }
+  const listaEl = $("#lista");
+  listaEl.addEventListener("change", (e) => { if (e.target.dataset.campo) guardarCampo(e.target); });
+  listaEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.dataset.campo && e.target.type !== "checkbox") { e.preventDefault(); e.target.blur(); }
+  });
+  listaEl.addEventListener("click", async (e) => {
+    if (!e.target.closest("[data-borrar]")) return;
+    const li = e.target.closest(".fila-equipo");
+    const q = equipos.find((x) => x.id === li.dataset.id);
+    const ok = await confirmar({
+      titulo: "¿Borrar este equipo?",
+      texto: `${nombreModelo(modelos, q.modelo_id)} ${q.capacidad}${q.color_nombre ? ` ${q.color_nombre}` : ""}. Se borran también sus fotos. Si solo quiere ocultarlo, ponga el stock en 0 o desmarque «Publicado».`,
+      aceptar: "Borrar", peligro: true
+    });
+    if (!ok) return;
+    await conBoton(null, async () => {
+      await api.borrarEquipo(q.id);
+      await api.borrarArchivos("fotos", rutasDeFotos(q.fotos)).catch(() => {});
+    }, { exito: "Equipo borrado" });
+    equipos.splice(equipos.indexOf(q), 1);
+    pintar();
+  });
+
+  pintar();
+}
+
+// --- Formulario (por pasos al agregar; completo al editar o duplicar) -----------
+
+const PASOS = [
+  ["modelo", "Modelo"],
+  ["condicion", "Condición"],
+  ["capacidad", "Capacidad"],
+  ["color", "Color"],
+  ["precio", "Precio y stock"],
+  ["fotos", "Fotos"],
+  ["usado", "Datos del usado"],
+  ["publicar", "Publicar"]
+];
+
+async function formulario(vista, ctx, { modo, id, desde }) {
+  const { api } = ctx;
+  const [equipos, modelos] = await Promise.all([api.listarEquipos(), api.listarModelos()]);
+  const original = id ? equipos.find((q) => q.id === id) : null;
+  if (modo === "editar" && !original) {
+    vista.innerHTML = '<p class="popup-alerta">Ese equipo ya no existe.</p><a class="volver" href="#/inventario">← Volver al inventario</a>';
+    return;
+  }
+  const fuente = modo === "duplicar" ? equipos.find((q) => q.id === desde) : original;
+  const q = {
+    modelo_id: fuente?.modelo_id ?? "", condicion: fuente?.condicion ?? "", capacidad: fuente?.capacidad ?? "",
+    color_nombre: fuente?.color_nombre ?? "", color_hex: fuente?.color_hex ?? "#8E8E93",
+    precio: fuente?.precio ?? null, stock: fuente?.stock ?? 1,
+    fotos: modo === "editar" ? [...(fuente?.fotos || [])] : [],
+    publicado: modo === "editar" ? fuente.publicado : false,
+    destacado: fuente?.destacado ?? false, descripcion_extra: fuente?.descripcion_extra ?? "",
+    bateria_porcentaje: fuente?.bateria_porcentaje ?? null, estado_estetico: fuente?.estado_estetico ?? null,
+    detalles: fuente?.detalles ?? "", incluye: fuente?.incluye ?? ""
+  };
+  const porPasos = modo === "nuevo";
+  let paso = 0;
+  const subidas = [];   // rutas subidas en esta edición (se borran si se cancela)
+  const quitadas = [];  // rutas a borrar cuando se guarde
+
+  const generaciones = [];
+  for (const m of [...modelos].sort((a, b) => b.orden - a.orden)) {
+    let g = generaciones.find((x) => x.nombre === m.generacion);
+    if (!g) { g = { nombre: m.generacion, modelos: [] }; generaciones.push(g); }
+    g.modelos.push(m);
+  }
+  const capsSugeridas = CAPACIDADES_SUGERIDAS.includes(q.capacidad) || !q.capacidad;
+  const titulo = { nuevo: "Agregar equipo", editar: "Editar equipo", duplicar: "Duplicar equipo" }[modo];
+
+  vista.innerHTML = `
+    <a class="volver" href="#/inventario">← Inventario</a>
+    <div class="vista-cabecera"><h1>${titulo}</h1>
+      ${modo === "duplicar" ? "<p>Se copiaron los datos del equipo. Cambie el color o la capacidad y cargue sus fotos.</p>" : ""}
+    </div>
+    <form id="form-equipo" novalidate>
+      ${porPasos ? `<div class="pasos-progreso" aria-hidden="true">${PASOS.map(() => "<span></span>").join("")}</div><p class="paso-titulo" id="paso-titulo" aria-live="polite"></p>` : ""}
+
+      <fieldset class="bloque" data-paso="modelo">
+        <legend class="oculto-visual">Modelo</legend>
+        <div class="campo">
+          <label for="e-modelo">Modelo</label>
+          <select class="entrada" id="e-modelo" aria-describedby="e-modelo-error">
+            <option value="">Elija el modelo</option>
+            ${generaciones.map((g) => `<optgroup label="${/^\d+$/.test(g.nombre) ? `Generación ${esc(g.nombre)}` : esc(g.nombre)}">${g.modelos.map((m) => `<option value="${m.id}" ${m.id === q.modelo_id ? "selected" : ""}>${esc(m.nombre)}${m.activo ? "" : " (inactivo)"}</option>`).join("")}</optgroup>`).join("")}
+          </select>
+          <p class="error-campo" id="e-modelo-error"></p>
+        </div>
+        <div id="aviso-inactivo" hidden>
+          <p class="ayuda">Este modelo está inactivo en el catálogo: sus equipos no se ven en el sitio.</p>
+          ${interruptor({ id: "e-activar", etiqueta: "Activar el modelo al guardar", marcado: true })}
+        </div>
+      </fieldset>
+
+      <fieldset class="bloque" data-paso="condicion" aria-describedby="e-condicion-error">
+        <legend>Condición</legend>
+        <div class="opciones-chip">
+          ${["nuevo", "usado"].map((c) => `<label class="opcion-chip"><input type="radio" name="e-condicion" value="${c}" ${q.condicion === c ? "checked" : ""}><span>${c === "nuevo" ? "Nuevo" : "Usado"}</span></label>`).join("")}
+        </div>
+        <p class="ayuda">Un nuevo es una variante (modelo, capacidad y color) con su stock. Un usado es una sola unidad física.</p>
+        <p class="error-campo" id="e-condicion-error"></p>
+      </fieldset>
+
+      <fieldset class="bloque" data-paso="capacidad" aria-describedby="e-capacidad-error">
+        <legend>Capacidad</legend>
+        <div class="opciones-chip">
+          ${CAPACIDADES_SUGERIDAS.map((c) => `<label class="opcion-chip"><input type="radio" name="e-capacidad" value="${c}" ${q.capacidad === c ? "checked" : ""}><span>${c}</span></label>`).join("")}
+          <label class="opcion-chip"><input type="radio" name="e-capacidad" value="otra" ${!capsSugeridas ? "checked" : ""}><span>Otra</span></label>
+        </div>
+        <div class="campo" id="caja-otra" ${capsSugeridas ? "hidden" : ""}>
+          <label for="e-capacidad-otra">Escriba la capacidad</label>
+          <input class="entrada" id="e-capacidad-otra" value="${capsSugeridas ? "" : esc(q.capacidad)}" placeholder="Ej. 32 GB">
+        </div>
+        <p class="error-campo" id="e-capacidad-error"></p>
+      </fieldset>
+
+      <fieldset class="bloque" data-paso="color">
+        <legend>Color</legend>
+        ${campoTexto({ id: "e-color-nombre", etiqueta: "Nombre del color", valor: q.color_nombre, ayuda: "Como lo quiere mostrar, ej. Negro.", atributos: 'maxlength="40"' })}
+        <div class="campo">
+          <label for="e-color-hex">Muestra del color</label>
+          <div class="selector-color">
+            <input type="color" id="e-color-picker" value="${esc(q.color_hex)}" aria-label="Elegir el color en la paleta">
+            <input class="entrada cifras" id="e-color-hex" value="${esc(q.color_hex)}" maxlength="7" aria-describedby="e-color-hex-error" spellcheck="false">
+          </div>
+          <p class="error-campo" id="e-color-hex-error"></p>
+        </div>
+      </fieldset>
+
+      <fieldset class="bloque" data-paso="precio">
+        <legend>Precio y stock</legend>
+        <div class="grilla-2">
+          ${campoTexto({ id: "e-precio", etiqueta: "Precio en pesos", valor: q.precio ? formatearMiles(q.precio) : "", ayuda: "Número entero, sin decimales. Ej. 5.299.000", atributos: 'inputmode="numeric" autocomplete="off"' })}
+          ${campoTexto({ id: "e-stock", etiqueta: "Stock", valor: String(q.stock), tipo: "number", ayuda: "Con stock 0 el equipo deja de verse, sin borrarse.", atributos: 'inputmode="numeric" min="0"' })}
+        </div>
+      </fieldset>
+
+      <fieldset class="bloque" data-paso="fotos">
+        <legend>Fotos</legend>
+        <p class="ayuda">Hasta ${MAX_FOTOS}. La primera es la principal. Se comprimen solas (WebP, máx. 1600 px). JPG, PNG, WebP o HEIC de hasta 10 MB.</p>
+        <ul class="fotos-lista" id="fotos-lista"></ul>
+        <div class="zona-subida" id="zona-subida">
+          <p>Arrastre las fotos aquí o</p>
+          <div class="zona-subida-botones">
+            <label class="boton boton--secundario" for="e-fotos">Elegir fotos</label>
+            <label class="boton boton--secundario" for="e-camara">Usar la cámara</label>
+          </div>
+          <input class="oculto-visual" id="e-fotos" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" multiple>
+          <input class="oculto-visual" id="e-camara" type="file" accept="image/*" capture="environment">
+        </div>
+        <p class="subiendo" id="subiendo" role="status" hidden></p>
+        <p class="error-campo" id="e-fotos-error" role="alert"></p>
+      </fieldset>
+
+      <fieldset class="bloque" data-paso="usado">
+        <legend>Datos del usado</legend>
+        <div class="grilla-2">
+          ${campoTexto({ id: "e-bateria", etiqueta: "Batería (%)", valor: q.bateria_porcentaje ?? "", tipo: "number", ayuda: "De 0 a 100.", atributos: 'inputmode="numeric" min="0" max="100"' })}
+          <div class="campo">
+            <label for="e-estado">Estado estético</label>
+            <select class="entrada" id="e-estado" aria-describedby="e-estado-error">
+              <option value="">Elija el estado</option>
+              ${ESTADOS_ESTETICOS.map((s) => `<option ${q.estado_estetico === s ? "selected" : ""}>${s}</option>`).join("")}
+            </select>
+            <p class="error-campo" id="e-estado-error"></p>
+          </div>
+        </div>
+        ${campoTexto({ id: "e-detalles", etiqueta: "Detalles", valor: q.detalles, ayuda: "Ej. rayón leve en el marco.", multilinea: true, atributos: 'rows="3" maxlength="500"' })}
+        ${campoTexto({ id: "e-incluye", etiqueta: "Qué incluye", valor: q.incluye, ayuda: "Ej. caja y cable.", atributos: 'maxlength="200"' })}
+      </fieldset>
+
+      <fieldset class="bloque" data-paso="publicar">
+        <legend>Publicar</legend>
+        ${interruptor({ id: "e-publicado", etiqueta: "Publicado (se ve en el sitio si tiene stock)", marcado: q.publicado })}
+        ${interruptor({ id: "e-destacado", etiqueta: "Destacado (sale primero en la galería)", marcado: q.destacado })}
+        ${campoTexto({ id: "e-descripcion", etiqueta: "Descripción extra (opcional)", valor: q.descripcion_extra, ayuda: "Se muestra en la ficha, debajo de la descripción del modelo.", multilinea: true, atributos: 'rows="3" maxlength="800"' })}
+        <div id="resumen-equipo" class="ayuda"></div>
+      </fieldset>
+
+      <div class="acciones-formulario">
+        ${porPasos ? `
+          <button type="button" class="boton boton--secundario" id="anterior">Anterior</button>
+          <button type="button" class="boton boton--primario" id="siguiente">Siguiente</button>` : ""}
+        <button type="submit" class="boton boton--primario" id="guardar">${modo === "editar" ? "Guardar cambios" : "Guardar equipo"}</button>
+      </div>
+    </form>`;
+
+  const form = $("#form-equipo");
+  const valor = (sel) => $(sel, form).value.trim();
+  const condicion = () => $('input[name="e-condicion"]:checked', form)?.value || "";
+  const modeloSel = () => modelos.find((m) => m.id === Number(valor("#e-modelo")));
+  const pasosVisibles = () => PASOS.filter(([k]) => k !== "usado" || condicion() === "usado");
+
+  function capacidad() {
+    const v = $('input[name="e-capacidad"]:checked', form)?.value || "";
+    return v === "otra" ? valor("#e-capacidad-otra") : v;
+  }
+
+  function actualizarVisibles() {
+    const m = modeloSel();
+    $("#aviso-inactivo").hidden = !m || m.activo;
+    const usado = condicion() === "usado";
+    const stock = $("#e-stock");
+    stock.max = usado ? "1" : "";
+    if (usado && Number(stock.value) > 1) stock.value = "1";
+    $('[data-paso="usado"]', form).hidden = porPasos ? pasosVisibles()[paso]?.[0] !== "usado" : !usado;
+    $("#caja-otra").hidden = $('input[name="e-capacidad"]:checked', form)?.value !== "otra";
+  }
+
+  function mostrarPaso() {
+    const visibles = pasosVisibles();
+    paso = Math.min(paso, visibles.length - 1);
+    const actual = visibles[paso][0];
+    $$("[data-paso]", form).forEach((f) => { f.hidden = f.dataset.paso !== actual; });
+    $$(".pasos-progreso span", form).forEach((s, i) => s.classList.toggle("hecho", i <= Math.round((paso / (visibles.length - 1)) * (PASOS.length - 1))));
+    $("#paso-titulo").textContent = `Paso ${paso + 1} de ${visibles.length}: ${visibles[paso][1]}`;
+    $("#anterior").hidden = paso === 0;
+    const ultimo = paso === visibles.length - 1;
+    $("#siguiente").hidden = ultimo;
+    $("#guardar").hidden = !ultimo;
+    if (actual === "publicar") dibujarResumen();
+    const primero = $(`[data-paso="${actual}"]`, form).querySelector("input:not([type=hidden]):not(.oculto-visual), select, textarea");
+    primero?.focus();
+  }
+
+  function dibujarResumen() {
+    const m = modeloSel();
+    const precio = leerPrecio(valor("#e-precio"));
+    $("#resumen-equipo").innerHTML = `Resumen: <strong>${esc([m?.nombre, condicion() === "usado" ? "Usado" : "Nuevo", capacidad(), valor("#e-color-nombre")].filter(Boolean).join(" · "))}</strong>
+      ${precio ? ` · ${formatearCOP(precio)}` : ""} · stock ${esc(valor("#e-stock"))} · ${fotos.length} foto${fotos.length === 1 ? "" : "s"}`;
+  }
+
+  // Error de un grupo de opciones: el foco va a la primera opción.
+  function errorGrupo(nombre, mensaje) {
+    $(`#${nombre}-error`, form).textContent = mensaje;
+    const primera = $(`input[name="${nombre}"]`, form);
+    if (mensaje) primera.setAttribute("aria-invalid", "true"); else primera.removeAttribute("aria-invalid");
+    return !mensaje;
+  }
+
+  // Validación por sección
+  const VALIDAR = {
+    modelo: () => marcarError(form, "e-modelo", modeloSel() ? "" : "Elija el modelo."),
+    condicion: () => errorGrupo("e-condicion", condicion() ? "" : "Elija si es nuevo o usado."),
+    capacidad: () => errorGrupo("e-capacidad", capacidad() ? "" : "Elija o escriba la capacidad."),
+    color: () => {
+      const a = marcarError(form, "e-color-nombre", valor("#e-color-nombre") ? "" : "Escriba el nombre del color.");
+      const b = marcarError(form, "e-color-hex", hexValido(valor("#e-color-hex")) ? "" : "Use el formato #RRGGBB, ej. #1C1C1E.");
+      return a && b;
+    },
+    precio: () => {
+      const a = marcarError(form, "e-precio", leerPrecio(valor("#e-precio")) ? "" : "El precio debe ser un número entero mayor que 0.");
+      const s = Number(valor("#e-stock"));
+      const max = condicion() === "usado" ? 1 : Infinity;
+      const b = marcarError(form, "e-stock", Number.isInteger(s) && s >= 0 && s <= max && valor("#e-stock") !== ""
+        ? "" : condicion() === "usado" ? "Un usado tiene stock 1, o 0 si se vendió." : "El stock debe ser un número entero de 0 o más.");
+      return a && b;
+    },
+    fotos: () => !subiendo,
+    usado: () => {
+      if (condicion() !== "usado") return true;
+      const b = valor("#e-bateria");
+      const n = Number(b);
+      const a = marcarError(form, "e-bateria", b !== "" && Number.isInteger(n) && n >= 0 && n <= 100 ? "" : "La batería debe ser un número entero de 0 a 100.");
+      const c = marcarError(form, "e-estado", valor("#e-estado") ? "" : "Elija el estado estético.");
+      return a && c;
+    },
+    publicar: () => true
+  };
+
+  // --- Fotos ---
+  let fotos = [...q.fotos];
+  let subiendo = false;
+  let arrastrada = -1;
+
+  function pintarFotos() {
+    $("#fotos-lista").innerHTML = fotos.map((r, i) => {
+      const url = api.urlArchivo("fotos", rutaMiniatura(r)) || api.urlArchivo("fotos", r);
+      return `<li class="foto-item" draggable="true" data-i="${i}">
+        ${i === 0 ? '<span class="principal">Principal</span>' : ""}
+        <img src="${esc(url)}" alt="Foto ${i + 1}">
+        <div class="foto-botones">
+          <button type="button" class="boton-icono" data-mover="-1" aria-label="Mover la foto ${i + 1} antes" ${i === 0 ? "disabled" : ""}>←</button>
+          <button type="button" class="boton-icono" data-quitar aria-label="Quitar la foto ${i + 1}">✕</button>
+          <button type="button" class="boton-icono" data-mover="1" aria-label="Mover la foto ${i + 1} después" ${i === fotos.length - 1 ? "disabled" : ""}>→</button>
+        </div>
+      </li>`;
+    }).join("");
+    $("#zona-subida").hidden = fotos.length >= MAX_FOTOS;
+  }
+
+  async function agregarArchivos(archivos) {
+    const errorEl = $("#e-fotos-error");
+    errorEl.textContent = "";
+    const lista = [...archivos].slice(0, MAX_FOTOS - fotos.length);
+    if (archivos.length > lista.length) errorEl.textContent = `Máximo ${MAX_FOTOS} fotos por equipo.`;
+    if (!lista.length) return;
+    subiendo = true;
+    const estadoEl = $("#subiendo");
+    estadoEl.hidden = false;
+    let i = 0;
+    for (const archivo of lista) {
+      estadoEl.innerHTML = `<span class="spinner" aria-hidden="true"></span>Subiendo ${++i} de ${lista.length}…`;
+      try {
+        const { grande, miniatura: mini, ext } = await comprimirFoto(archivo);
+        const ruta = `equipos/${crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2)}.${ext}`;
+        await api.subirArchivo("fotos", ruta, grande);
+        await api.subirArchivo("fotos", rutaMiniatura(ruta), mini);
+        subidas.push(ruta);
+        fotos.push(ruta);
+        ctx.sucio = true;
+        pintarFotos();
+      } catch (e) {
+        errorEl.textContent = e.message;
+      }
+    }
+    subiendo = false;
+    estadoEl.hidden = true;
+  }
+
+  $("#e-fotos").addEventListener("change", (e) => { agregarArchivos(e.target.files); e.target.value = ""; });
+  $("#e-camara").addEventListener("change", (e) => { agregarArchivos(e.target.files); e.target.value = ""; });
+  const zona = $("#zona-subida");
+  zona.addEventListener("dragover", (e) => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); zona.classList.add("encima"); } });
+  zona.addEventListener("dragleave", () => zona.classList.remove("encima"));
+  zona.addEventListener("drop", (e) => { e.preventDefault(); zona.classList.remove("encima"); agregarArchivos(e.dataTransfer.files); });
+
+  const listaFotos = $("#fotos-lista");
+  listaFotos.addEventListener("click", (e) => {
+    const li = e.target.closest(".foto-item");
+    if (!li) return;
+    const i = Number(li.dataset.i);
+    if (e.target.closest("[data-quitar]")) {
+      const [r] = fotos.splice(i, 1);
+      quitadas.push(r);
+      ctx.sucio = true;
+      pintarFotos();
+      ($(`.foto-item[data-i="${Math.min(i, fotos.length - 1)}"] [data-quitar]`) || $("#e-fotos").labels?.[0])?.focus?.();
+    }
+    const mover = e.target.closest("[data-mover]");
+    if (mover) {
+      const j = i + Number(mover.dataset.mover);
+      [fotos[i], fotos[j]] = [fotos[j], fotos[i]];
+      ctx.sucio = true;
+      pintarFotos();
+      $(`.foto-item[data-i="${j}"] [data-mover="${mover.dataset.mover}"]`)?.focus() || $(`.foto-item[data-i="${j}"] [data-quitar]`)?.focus();
+    }
+  });
+  listaFotos.addEventListener("dragstart", (e) => { const li = e.target.closest(".foto-item"); if (li) { arrastrada = Number(li.dataset.i); li.classList.add("arrastrando"); } });
+  listaFotos.addEventListener("dragend", () => { arrastrada = -1; pintarFotos(); });
+  listaFotos.addEventListener("dragover", (e) => { if (arrastrada >= 0) e.preventDefault(); });
+  listaFotos.addEventListener("drop", (e) => {
+    const li = e.target.closest(".foto-item");
+    if (arrastrada < 0 || !li) return;
+    e.preventDefault();
+    const destino = Number(li.dataset.i);
+    const [r] = fotos.splice(arrastrada, 1);
+    fotos.splice(destino, 0, r);
+    arrastrada = -1;
+    ctx.sucio = true;
+    pintarFotos();
+  });
+
+  // --- Eventos del formulario ---
+  form.addEventListener("input", () => { ctx.sucio = true; });
+  form.addEventListener("change", (e) => {
+    ctx.sucio = true;
+    if (e.target.name === "e-capacidad" || e.target.name === "e-condicion" || e.target.id === "e-modelo") actualizarVisibles();
+    if (porPasos && e.target.name === "e-condicion") mostrarPaso();
+  });
+  $("#e-color-picker").addEventListener("input", (e) => { $("#e-color-hex").value = e.target.value.toUpperCase(); });
+  $("#e-color-hex").addEventListener("input", (e) => {
+    const v = e.target.value.trim();
+    if (hexValido(v)) $("#e-color-picker").value = v.toLowerCase();
+  });
+  $("#e-precio").addEventListener("blur", (e) => { const p = leerPrecio(e.target.value); if (p) e.target.value = formatearMiles(p); });
+
+  if (porPasos) {
+    $("#siguiente").addEventListener("click", () => {
+      const actual = pasosVisibles()[paso][0];
+      if (!VALIDAR[actual]()) { enfocarPrimerError(form); return; }
+      paso++;
+      mostrarPaso();
+    });
+    $("#anterior").addEventListener("click", () => { paso = Math.max(0, paso - 1); mostrarPaso(); });
+    form.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && e.target.matches("input:not([type=checkbox]):not([type=radio])") && !$("#siguiente").hidden) {
+        e.preventDefault();
+        $("#siguiente").click();
+      }
+    });
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const malos = pasosVisibles().map(([k]) => k).filter((k) => !VALIDAR[k]());
+    if (malos.length) {
+      if (porPasos) { paso = pasosVisibles().findIndex(([k]) => k === malos[0]); mostrarPaso(); }
+      enfocarPrimerError(form);
+      if (subiendo) avisar("Espere a que terminen de subir las fotos.", "error");
+      return;
+    }
+    const usado = condicion() === "usado";
+    const datos = {
+      modelo_id: modeloSel().id,
+      condicion: condicion(),
+      capacidad: capacidad(),
+      color_nombre: valor("#e-color-nombre"),
+      color_hex: valor("#e-color-hex").toUpperCase(),
+      precio: leerPrecio(valor("#e-precio")),
+      stock: Number(valor("#e-stock")),
+      fotos,
+      publicado: $("#e-publicado").checked,
+      destacado: $("#e-destacado").checked,
+      descripcion_extra: valor("#e-descripcion"),
+      bateria_porcentaje: usado ? Number(valor("#e-bateria")) : null,
+      estado_estetico: usado ? valor("#e-estado") : null,
+      detalles: usado ? valor("#e-detalles") : "",
+      incluye: usado ? valor("#e-incluye") : ""
+    };
+    try {
+      await conBoton($("#guardar"), async () => {
+        if (modo === "editar") await api.actualizarEquipo(original.id, datos);
+        else await api.crearEquipo(datos);
+        const m = modeloSel();
+        if (!m.activo && $("#e-activar").checked) await api.guardarModelo(m.id, { activo: true });
+      });
+    } catch { return; }
+    await api.borrarArchivos("fotos", rutasDeFotos(quitadas)).catch(() => {});
+    subidas.length = 0;
+    ctx.sucio = false;
+    ctx.ir("inventario");
+  });
+
+  // Si se sale sin guardar, se borran las fotos subidas en esta edición.
+  ctx.alSalir = () => {
+    if (subidas.length) api.borrarArchivos("fotos", rutasDeFotos(subidas)).catch(() => {});
+  };
+
+  pintarFotos();
+  actualizarVisibles();
+  if (porPasos) mostrarPaso();
+}
