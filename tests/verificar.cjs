@@ -315,6 +315,8 @@ async function llenarPopup(p) {
     await p.waitForSelector("#l-alerta:not([hidden])");
     assert.equal(await p.textContent("#l-alerta"), "El correo o la contraseña no coinciden.");
     await entrarPanel(p, "tienda@demo.co");
+    // Inicio: la tarjeta de inventario muestra solo Publicados y En borrador.
+    assert.deepEqual(await p.locator(".estadistica span").allTextContents(), ["Publicados", "En borrador"]);
     assert.equal(await p.isVisible('[data-ruta="usuarios"]'), false);
     await p.goto(`${BASE}/admin/#/usuarios`);
     await p.waitForSelector(".estadisticas"); // vuelve a Inicio

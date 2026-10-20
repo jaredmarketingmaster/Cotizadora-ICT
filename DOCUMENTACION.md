@@ -724,7 +724,7 @@ La búsqueda se arma con `describirBusqueda`: el modelo o "iPhone", la condició
 
 | Ruta | Vista |
 |---|---|
-| `#/inicio` | Inicio, con estas partes:<ul><li>**Estadísticas:** publicados visibles, sin stock y en borrador. Cada una es un enlace al inventario filtrado.</li><li>**Fecha** de la última actualización de precios.</li><li>**"Lo que falta":** falta el logo, falta el WhatsApp, faltan los textos legales, hay equipos sin foto, equipos ocultos por modelo inactivo. Si no falta nada: "Todo está completo.".</li><li>**Botón** "Ver mi sitio".</li><li>**Solo agencia:** interruptor del modo demo, "Borrar datos de demostración" y, en demo, "Volver a los datos iniciales".</li></ul> |
+| `#/inicio` | Inicio, con estas partes:<ul><li>**Estadísticas:** publicados visibles y en borrador. Cada una es un enlace al inventario filtrado.</li><li>**Fecha** de la última actualización de precios.</li><li>**"Lo que falta":** falta el logo, falta el WhatsApp, faltan los textos legales, hay equipos sin foto, equipos ocultos por modelo inactivo. Si no falta nada: "Todo está completo.".</li><li>**Botón** "Ver mi sitio".</li><li>**Solo agencia:** interruptor del modo demo, "Borrar datos de demostración" y, en demo, "Volver a los datos iniciales".</li></ul> |
 | `#/inventario` | Lista, filtros y edición rápida. Acepta `?publicado=si|no`, `?stock=0` y `?fotos=sin`. |
 | `#/inventario/nuevo` | Formulario **por pasos**: modelo → condición → capacidad → color → precio y stock → fotos → datos del usado (solo si es usado) → publicar (con resumen). |
 | `#/inventario/nuevo?desde=<id>` | **Duplicar**: copia todo menos las fotos. |
@@ -1069,6 +1069,12 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 20/10/2026 · A1: Inicio solo con "Publicados" y "En borrador"
+
+- **Pedido de Jared (fase A, punto A1):** quitar "Sin stock" y su enlace de la tarjeta de inventario de Inicio.
+- **Hecho:** se quitaron la estadística y su enlace en `assets/js/panel/panel.js`, y la grilla de `assets/css/panel.css` pasó a 2 columnas. El resto de Inicio no cambia.
+- **Verificación:** el caso 9 de `tests/verificar.cjs` comprueba que solo aparecen "Publicados" y "En borrador".
 
 ### 20/10/2026 · Documentación completa y mantenimiento automático
 

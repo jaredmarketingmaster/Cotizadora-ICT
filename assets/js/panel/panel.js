@@ -187,7 +187,6 @@ async function vistaInicio(vista) {
   const [equipos, modelos, tienda] = await Promise.all([ctx.api.listarEquipos(), ctx.api.listarModelos(), ctx.recargarTienda()]);
   const activos = new Set(modelos.filter((m) => m.activo).map((m) => m.id));
   const publicados = equipos.filter((q) => q.publicado && q.stock > 0 && activos.has(q.modelo_id));
-  const sinStock = equipos.filter((q) => q.stock === 0);
   const borradores = equipos.filter((q) => !q.publicado);
   const ocultosPorModelo = equipos.filter((q) => q.publicado && q.stock > 0 && !activos.has(q.modelo_id));
   const sinFoto = equipos.filter((q) => !q.es_demo && !(q.fotos || []).length);
@@ -209,7 +208,6 @@ async function vistaInicio(vista) {
       <h2 id="t-inventario">Inventario</h2>
       <div class="estadisticas cifras">
         <a class="estadistica" href="#/inventario?publicado=si"><strong class="cifras-grandes">${publicados.length}</strong><span>Publicados</span></a>
-        <a class="estadistica" href="#/inventario?stock=0"><strong class="cifras-grandes">${sinStock.length}</strong><span>Sin stock</span></a>
         <a class="estadistica" href="#/inventario?publicado=no"><strong class="cifras-grandes">${borradores.length}</strong><span>En borrador</span></a>
       </div>
       <p>Última actualización de precios: <strong class="cifras">${fechaCorta(tienda.precios_actualizados_en) || "sin precios todavía"}</strong></p>
