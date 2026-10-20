@@ -324,7 +324,7 @@ async function llenarPopup(p) {
     assert.equal(await p.isVisible("#borrar-demo"), false);
     // La capa de datos también lo impide (no solo la interfaz)
     const error = await p.evaluate(async () => {
-      const { api } = await import("/assets/js/datos/api.js");
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
       const a = await api();
       try { await a.guardarModelo(1, { nombre: "x" }); return ""; } catch (e) { return e.message; }
     });
@@ -633,7 +633,7 @@ async function llenarPopup(p) {
     const pf = await nueva();
     await ir(pf);
     const r = await pf.evaluate(async () => {
-      const u = await import("/assets/js/utils.js");
+      const u = await import(new URL("assets/js/utils.js", location.href).href);
       const codigos = Array.from({ length: 3000 }, () => u.generarCodigo());
       return {
         cop: [u.formatearCOP(5299000), u.formatearCOP(1000), u.formatearCOP(999)],

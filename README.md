@@ -55,6 +55,23 @@ python3 -m http.server 8080
 
 En demo no sale ningún dato del navegador. El pedido que se mandaría a GHL queda en la consola y en `sessionStorage["cotizadora-demo:ultimo-lead"]`. Cada navegador tiene su propia copia, así que el modo demo no sirve para producción.
 
+### Verlo en GitHub Pages
+
+El repo ya está listo para Pages: rutas relativas y `.nojekyll`. La suite pasa también servida bajo `/Cotizadora-ICT/`, como la sirve Pages.
+
+1. En GitHub, ir a **Settings → Pages**.
+2. En **Source**, elegir *Deploy from a branch*.
+3. Elegir la rama y la carpeta `/ (root)`. Guardar.
+4. Esperar uno o dos minutos. Queda en:
+   - Sitio: <https://jaredmarketingmaster.github.io/Cotizadora-ICT/>
+   - Panel: <https://jaredmarketingmaster.github.io/Cotizadora-ICT/admin/>
+
+Para probar:
+
+- **El paso a WhatsApp:** entrar al panel, poner un WhatsApp propio en **Mi tienda** (ej. `573001234567`) y guardar. Sin número, el pop-up avisa que la tienda no lo tiene configurado.
+- **Que el panel cambia el sitio:** el panel y el sitio comparten los datos solo en el mismo navegador. Un cambio de precio en el panel se ve al recargar el sitio en ese navegador; en otro celular o computador se ven los datos de demostración iniciales.
+- **Volver al inicio:** con el usuario de agencia, ir a **Inicio → Volver a los datos iniciales**.
+
 ## Poner una tienda en producción
 
 ### 1. Supabase (un proyecto por tienda)
