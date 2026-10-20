@@ -1,0 +1,7 @@
+tests/capturas/
+node_modules/
+.DS_Store
+deno.lock
+.env
+supabase/.temp/
+supabase/.branches/

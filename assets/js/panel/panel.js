@@ -141,6 +141,7 @@ function vistaNuevaClave(tipo) {
 async function entrar() {
   await ctx.recargarTienda();
   $("#acceso").hidden = true;
+  $("#acceso-contenido").innerHTML = "";
   $("#cargando-panel").hidden = true;
   $("#app").hidden = false;
   $("#barra-usuario").textContent = `${ctx.usuario.correo} · ${ctx.esAgencia() ? "Agencia" : "Tienda"}`;

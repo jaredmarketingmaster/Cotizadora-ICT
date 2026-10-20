@@ -7,10 +7,15 @@
 import { hexValido, textoSobre, ajustarParaTexto } from "./utils.js";
 
 export const FONDOS = { claro: "#FFFFFF", oscuro: "#0E1117" };
+// Fondos donde puede ir texto en el color primario (página, tarjeta y
+// superficies). Deben coincidir con base.css.
+const SUPERFICIES = {
+  claro: ["#FFFFFF", "#F4F5F7", "#E9EBEF"],
+  oscuro: ["#0E1117", "#161A22", "#202631"]
+};
 
 export function variablesTema(tienda) {
   const tema = tienda?.tema === "oscuro" ? "oscuro" : "claro";
-  const fondo = FONDOS[tema];
   const primario = hexValido(tienda?.color_primario) ? tienda.color_primario.toUpperCase() : "#1A73E8";
   const secundario = hexValido(tienda?.color_secundario) ? tienda.color_secundario.toUpperCase() : "#0F172A";
   return {
@@ -19,7 +24,7 @@ export function variablesTema(tienda) {
       "--primario": primario,
       "--sobre-primario": textoSobre(primario),
       // El primario usado como texto, enlace o borde sobre el fondo de la página
-      "--primario-texto": ajustarParaTexto(primario, fondo),
+      "--primario-texto": ajustarParaTexto(primario, SUPERFICIES[tema]),
       "--secundario": secundario,
       "--sobre-secundario": textoSobre(secundario)
     }

@@ -9,9 +9,20 @@
   <link rel="icon" href="data:,">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <!-- Fuente sin bloquear el primer pintado (se ve la del sistema hasta que llega) -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/sitio.css">
+  <link rel="modulepreload" href="config.js">
+  <link rel="modulepreload" href="assets/js/utils.js">
+  <link rel="modulepreload" href="assets/js/datos/api.js">
+  <link rel="modulepreload" href="assets/js/tema.js">
+  <link rel="modulepreload" href="assets/js/sitio/catalogo.js">
+  <link rel="modulepreload" href="assets/js/sitio/filtros.js">
+  <link rel="modulepreload" href="assets/js/sitio/galeria.js">
+  <link rel="modulepreload" href="assets/js/sitio/detalle.js">
+  <link rel="modulepreload" href="assets/js/sitio/popup.js">
   <script type="module" src="assets/js/sitio/principal.js"></script>
 </head>
 <body>

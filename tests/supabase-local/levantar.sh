@@ -31,6 +31,11 @@ detener() {
 }
 if [ "${1:-}" = "detener" ]; then detener; echo "detenido"; exit 0; fi
 detener
+# Esperar a que los puertos de una corrida anterior queden libres.
+for p in 9100 9101 9998 9999 54321 "$PGPORT"; do
+  for _ in $(seq 50); do (exec 3<>"/dev/tcp/127.0.0.1/$p") 2>/dev/null || break; sleep 0.2; done
+done
+export DENO_NO_UPDATE_CHECK=1
 mkdir -p "$DIR"
 [ "$(id -u)" = "0" ] && chown postgres "$DIR"
 
@@ -57,8 +62,9 @@ export GOTRUE_JWT_SECRET="$SECRETO" GOTRUE_JWT_EXP=3600 GOTRUE_JWT_AUD=authentic
 export GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated GOTRUE_JWT_ADMIN_ROLES=service_role
 export GOTRUE_DISABLE_SIGNUP=true GOTRUE_EXTERNAL_EMAIL_ENABLED=true GOTRUE_MAILER_AUTOCONFIRM=true
 export GOTRUE_LOG_LEVEL=error
-(cd "$BIN" && ./auth migrate >"$DIR/auth-migrar.log" 2>&1)
-(cd "$BIN" && ./auth >"$DIR/auth.log" 2>&1 & echo $! >> "$DIR/pids")
+"$BIN/auth" migrate >"$DIR/auth-migrar.log" 2>&1
+# Sin subshell: así $! es el PID de auth y "detener" lo apaga de verdad.
+"$BIN/auth" >"$DIR/auth.log" 2>&1 & echo $! >> "$DIR/pids"
 
 # --- Migraciones del proyecto ------------------------------------------------
 "${PSQL[@]}" -f "$AQUI/despues_de_auth.sql"

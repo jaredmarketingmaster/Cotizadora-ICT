@@ -192,15 +192,19 @@ export function textoSobre(fondo) {
   return contraste(fondo, "#000000") >= cBlanco ? "#000000" : claro;
 }
 
-// Oscurece o aclara el color hasta llegar a 4,5:1 sobre el fondo (para usarlo
-// como texto o borde de enfoque). Si ya cumple, lo devuelve igual.
-export function ajustarParaTexto(color, fondo, minimo = 4.5) {
-  if (contraste(color, fondo) >= minimo) return color.toUpperCase();
-  const hacia = luminancia(fondo) > 0.5 ? [0, 0, 0] : [255, 255, 255];
+// Oscurece o aclara el color hasta llegar a 4,5:1 sobre el fondo, o sobre
+// todos los fondos si se pasa una lista (para usarlo como texto o enlace).
+// Si ya cumple, lo devuelve igual. Los fondos de una lista deben ser todos
+// claros o todos oscuros.
+export function ajustarParaTexto(color, fondos, minimo = 4.5) {
+  const lista = [].concat(fondos);
+  const cumple = (c) => lista.every((f) => contraste(c, f) >= minimo);
+  if (cumple(color)) return color.toUpperCase();
+  const hacia = luminancia(lista[0]) > 0.5 ? [0, 0, 0] : [255, 255, 255];
   const [r, g, b] = rgb(color);
   for (let t = 0.05; t <= 1; t += 0.05) {
     const c = hex(r + (hacia[0] - r) * t, g + (hacia[1] - g) * t, b + (hacia[2] - b) * t);
-    if (contraste(c, fondo) >= minimo) return c;
+    if (cumple(c)) return c;
   }
   return hacia[0] === 0 ? "#000000" : "#FFFFFF";
 }
