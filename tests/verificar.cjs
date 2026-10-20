@@ -366,6 +366,89 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  await caso("catálogo: 42 modelos desde el iPhone 7 y sus colores oficiales (completar la muestra, colores de la tienda)", async () => {
+    const p = await nueva();
+    await entrarPanel(p, "tienda@demo.co");
+    await p.goto(`${BASE}/admin/#/catalogo`);
+    await p.waitForSelector(".modelo-fila");
+    assert.equal(await p.locator(".modelo-fila").count(), 42);
+    const h2 = await p.locator(".grupo-catalogo h2").allTextContents();
+    assert.deepEqual(h2, ["Plegable", "Generación 18", "Generación 17", "Generación 16", "Generación 15", "Generación 14", "Generación 13", "Generación 12", "Generación 11", "Generación XS y XR", "Generación 8", "Generación 7"]);
+    const fila = p.locator('.modelo-fila:has(.nombre:text-is("iPhone 18 Pro"))');
+    await fila.locator(".colores-modelo > summary").click();
+    // El hexadecimal de la fuente es de solo lectura; el que falta se completa.
+    const burdeos = fila.locator('li:has-text("Borgoña")');
+    assert.equal((await burdeos.locator(".color-hex").textContent()).trim(), "#632432");
+    assert.equal(await burdeos.locator("input").count(), 0);
+    const oliva = fila.locator('li:has-text("Oliva")');
+    assert.equal(await oliva.locator(".muestra-color--vacia").count(), 1);
+    await oliva.locator("input[data-hex]").fill("5a5d3c");
+    await oliva.locator("input[data-hex]").press("Enter");
+    assert.match(await oliva.locator(".error-campo").textContent(), /#RRGGBB/);
+    await oliva.locator("input[data-hex]").fill("#5a5d3c");
+    await oliva.locator("input[data-hex]").press("Enter");
+    await p.waitForFunction(() => [...document.querySelectorAll("[data-color]")].some((li) => li.textContent.includes("Oliva") && li.querySelector(".muestra-color")?.style.background));
+    assert.equal(await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).colores.find((c) => c.nombre_es === "Oliva").hex, CLAVE_DEMO), "#5A5D3C");
+    // La tienda no agrega colores, y la capa de datos tampoco deja cambiar un hex de la fuente.
+    assert.equal(await p.locator("[data-agregar-color]").count(), 0);
+    const error = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      const c = (await a.listarColores()).find((x) => x.nombre_en === "Burgundy");
+      try { await a.guardarColor(c.id, { hex: "#000000" }); return ""; } catch (e) { return e.message; }
+    });
+    assert.match(error, /viene de la fuente/);
+    await p.context().close();
+
+    // Agencia: colores de la tienda solo en modelos sin colores oficiales (17 Pro)
+    const q = await nueva();
+    await entrarPanel(q, "agencia@demo.co");
+    await q.goto(`${BASE}/admin/#/catalogo`);
+    await q.waitForSelector(".modelo-fila");
+    const pro = q.locator('.modelo-fila:has(.nombre:text-is("iPhone 17 Pro")), .modelo-fila:has(input[value="iPhone 17 Pro"])');
+    assert.match(await pro.locator(".colores-modelo > summary").textContent(), /no tiene colores oficiales/);
+    await pro.locator(".colores-modelo > summary").click();
+    await pro.locator("[data-nombre-color]").fill("Naranja");
+    await pro.locator("[data-hex-nuevo]").fill("#E8772E");
+    await pro.locator('[data-agregar-color] [type="submit"]').click();
+    await q.waitForSelector('li:has-text("Naranja") >> text=De la tienda');
+    const dieciseis = q.locator('.modelo-fila:has(input[value="iPhone 16"])');
+    assert.equal(await dieciseis.locator("[data-agregar-color]").count(), 0);
+    assert.deepEqual(q.errores, []);
+    await q.context().close();
+  });
+
+  await caso("demo: los datos guardados de una versión vieja se migran (stock, tamaño, catálogo y colores)", async () => {
+    const p = await nueva();
+    await ir(p);
+    // Arma un estado como el de la versión 1: 32 modelos, stock numérico, sin colores.
+    await editarDemo(p, (e) => {
+      const nuevos = ["iphone-7", "iphone-7-plus", "iphone-8", "iphone-8-plus", "iphone-x", "iphone-xs", "iphone-xs-max", "iphone-xr", "iphone-se-2", "iphone-se-3"];
+      const fuera = new Set(e.modelos.filter((m) => nuevos.includes(m.slug)).map((m) => m.id));
+      e.modelos = e.modelos.filter((m) => !fuera.has(m.id));
+      e.fichas = e.fichas.filter((f) => !fuera.has(f.modelo_id));
+      e.modelos.forEach((m, i) => { m.orden = (i + 1) * 10; });
+      e.equipos.forEach((q, i) => { q.stock = i === 0 ? 0 : 2; delete q.en_stock; });
+      delete e.colores;
+      delete e.tienda.tamano_texto;
+      e.version = 1;
+    });
+    await ir(p);
+    const e = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)), CLAVE_DEMO);
+    assert.equal(e.version >= 4, true);
+    assert.equal(e.modelos.length, 42);
+    assert.equal(e.colores.length, 183);
+    assert.equal(e.tienda.tamano_texto, "normal");
+    assert.deepEqual(e.equipos.map((q) => q.en_stock), [false, true, true, true, true, true]);
+    assert.equal(new Set(e.modelos.map((m) => m.orden)).size, 42);
+    assert.equal(e.modelos.find((m) => m.slug === "iphone-17e").orden > e.modelos.find((m) => m.slug === "iphone-17-pro-max").orden, true);
+    // Los equipos siguen en su modelo
+    assert.equal(e.modelos.find((m) => m.id === e.equipos[0].modelo_id).slug, "iphone-18-pro-max");
+    assert.equal(await p.textContent("#contador"), "5 equipos disponibles");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("panel: agencia ve Usuarios, invita y desactiva", async () => {
     const p = await nueva();
     await entrarPanel(p, "agencia@demo.co");
@@ -641,7 +724,8 @@ async function llenarPopup(p) {
     // Con más de 8 modelos aparece el buscador
     await editarDemo(p, (e) => {
       const t = new Date().toISOString();
-      e.modelos.slice(0, 9).forEach((m, i) => {
+      // 9 modelos más: del iPhone 11 al 13 (el catálogo ahora empieza en el 7)
+      e.modelos.filter((m) => /^iphone-1[123]/.test(m.slug)).slice(0, 9).forEach((m, i) => {
         m.activo = true;
         e.equipos.push({ id: `x${i}`, modelo_id: m.id, condicion: "nuevo", capacidad: "128 GB", color_nombre: "Negro", color_hex: "#111111", precio: 1000000 + i, en_stock: true, fotos: [], publicado: true, destacado: false, descripcion_extra: "", es_demo: false, bateria_porcentaje: null, estado_estetico: null, detalles: "", incluye: "", creado_en: t, actualizado_en: t });
       });

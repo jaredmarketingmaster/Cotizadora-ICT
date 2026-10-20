@@ -8,8 +8,8 @@
 // No sirve para producción: cada navegador tiene su propia copia.
 // =============================================================================
 
-import { CATALOGO, DEMO_EQUIPOS } from "./semilla.js";
-import { ErrorDatos, equipoEsPublico, CAMPOS_TIENDA, CAMPOS_EQUIPO, ESTADOS_ESTETICOS, TAMANOS_TEXTO, elegir } from "./comun.js";
+import { CATALOGO, COLORES, DEMO_EQUIPOS } from "./semilla.js";
+import { ErrorDatos, equipoEsPublico, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, elegir } from "./comun.js";
 import { hexValido, whatsappTiendaValido, sesion, esperar } from "../utils.js";
 
 const CLAVE = "cotizadora-demo:v1";
@@ -53,6 +53,7 @@ function estadoInicial() {
     },
     modelos,
     fichas: modelos.map((m) => ({ modelo_id: m.id, descripcion: "", especificaciones: [], actualizado_en: t })),
+    colores: coloresOficiales(modelos),
     equipos,
     perfiles: USUARIOS_DEMO.map((u, i) => ({ user_id: `demo-${i + 1}`, correo: u.correo, rol: u.rol, activo: true, clave: CLAVE_DEMO, creado_en: t }))
   };
@@ -60,7 +61,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 3;
+const VERSION = 4;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -69,8 +70,33 @@ const MIGRACIONES = {
   // 0005_tamano_texto.sql
   2(e) {
     e.tienda.tamano_texto = "normal";
+  },
+  // 0006_catalogo_colores.sql: modelos que faltaban, orden por fecha de
+  // lanzamiento (los de la agencia, al final) y colores oficiales.
+  3(e) {
+    const enLista = new Set(CATALOGO.map((m) => m.slug));
+    for (const m of e.modelos) if (!enLista.has(m.slug)) m.orden += 10000;
+    const t = ahora();
+    for (const c of CATALOGO) {
+      const m = e.modelos.find((x) => x.slug === c.slug);
+      if (m) { m.orden = c.orden; continue; }
+      const id = Math.max(0, ...e.modelos.map((x) => x.id)) + 1;
+      e.modelos.push({ id, ...c, activo: false, activo_por_demo: false, creado_en: t });
+      e.fichas.push({ modelo_id: id, descripcion: "", especificaciones: [], actualizado_en: t });
+    }
+    e.colores = coloresOficiales(e.modelos);
   }
 };
+
+function coloresOficiales(modelos) {
+  const lista = [];
+  for (const m of [...modelos].sort((a, b) => a.orden - b.orden)) {
+    (COLORES[m.slug] || []).forEach(([nombre_es, nombre_en, hex], i) => lista.push({
+      id: lista.length + 1, modelo_id: m.id, nombre_es, nombre_en, hex, orden: i + 1, oficial: true, hex_de_fuente: hex !== ""
+    }));
+  }
+  return lista;
+}
 
 function migrar(e) {
   while (e.version < VERSION) { MIGRACIONES[e.version](e); e.version += 1; }
@@ -189,6 +215,15 @@ function validarEquipo(q, e) {
   if (q.estado_estetico != null && !ESTADOS_ESTETICOS.includes(q.estado_estetico)) throw new ErrorDatos("Elija un estado estético de la lista.");
 }
 
+function validarColor(c, e) {
+  if (!e.modelos.some((m) => m.id === c.modelo_id)) throw new ErrorDatos("Elija un modelo.");
+  if (!String(c.nombre_es || "").trim()) throw new ErrorDatos("Escriba el nombre del color.");
+  if (c.hex !== "" && !hexValido(c.hex)) throw new ErrorDatos("El color debe estar en formato hexadecimal, ej. #1C1C1E.");
+  if (e.colores.some((x) => x.id !== c.id && x.modelo_id === c.modelo_id && x.nombre_es === c.nombre_es)) {
+    throw new ErrorDatos("Ya existe un registro con ese nombre.");
+  }
+}
+
 // --- Adaptador ---------------------------------------------------------------
 
 const oyentesSesion = new Set();
@@ -210,6 +245,7 @@ export const demo = {
       tienda: e.tienda,
       modelos: modelosActivos,
       fichas: e.fichas.filter((f) => ids.has(f.modelo_id)),
+      colores: e.colores.filter((c) => ids.has(c.modelo_id)).sort((a, b) => a.modelo_id - b.modelo_id || a.orden - b.orden),
       equipos: e.equipos.filter((q) => equipoEsPublico(q, porId))
     });
   },
@@ -327,6 +363,57 @@ export const demo = {
     e.fichas.push({ modelo_id: id, descripcion: "", especificaciones: [], actualizado_en: ahora() });
     escribir(e);
     return copia(m);
+  },
+
+  // ---------------- Colores (mismas reglas que proteger_color) ----------------
+  async listarColores() {
+    await red();
+    return copia(leer().colores.sort((a, b) => a.modelo_id - b.modelo_id || a.orden - b.orden));
+  },
+
+  async guardarColor(id, cambios) {
+    await red();
+    const e = leer();
+    exigirStaff(e);
+    const c = e.colores.find((x) => x.id === id);
+    if (!c) throw new ErrorDatos("Ese color ya no existe.");
+    const nuevo = { ...c, ...elegir(cambios, CAMPOS_COLOR) };
+    if (nuevo.modelo_id !== c.modelo_id || (c.oficial && ["nombre_es", "nombre_en", "orden"].some((k) => nuevo[k] !== c[k]))) {
+      throw new ErrorDatos("El nombre de un color oficial no se puede cambiar.", "42501");
+    }
+    if (c.hex_de_fuente && nuevo.hex !== c.hex) throw new ErrorDatos("El hexadecimal de este color viene de la fuente y no se puede cambiar.", "42501");
+    validarColor(nuevo, e);
+    Object.assign(c, nuevo);
+    escribir(e);
+    return copia(c);
+  },
+
+  async agregarColor(datos) {
+    await red();
+    const e = leer();
+    exigirAgencia(e, "agregar colores");
+    if (e.colores.some((c) => c.modelo_id === datos.modelo_id && c.oficial)) {
+      throw new ErrorDatos("Este modelo tiene colores oficiales: no se le pueden agregar otros.", "42501");
+    }
+    const c = {
+      id: Math.max(0, ...e.colores.map((x) => x.id)) + 1, nombre_en: "", hex: "", orden: 0,
+      ...elegir(datos, CAMPOS_COLOR), oficial: false, hex_de_fuente: false
+    };
+    validarColor(c, e);
+    e.colores.push(c);
+    escribir(e);
+    return copia(c);
+  },
+
+  async borrarColor(id) {
+    await red();
+    const e = leer();
+    exigirAgencia(e, "borrar colores");
+    const c = e.colores.find((x) => x.id === id);
+    if (!c) return;
+    if (c.oficial) throw new ErrorDatos("Un color oficial no se puede borrar.", "42501");
+    e.colores.splice(e.colores.indexOf(c), 1);
+    escribir(e);
   },
 
   // ---------------- Fichas ----------------

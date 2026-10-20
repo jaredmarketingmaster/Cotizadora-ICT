@@ -129,7 +129,7 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.context().close();
   });
 
-  await caso("panel: sin sesión pide login; la tienda no ve Usuarios ni renombra", async () => {
+  await caso("panel: sin sesión pide login; la tienda no ve Usuarios ni renombra; colores del catálogo", async () => {
     const p = await pagina(390);
     await p.goto(`${BASE}/admin/#/inventario`);
     await p.waitForSelector("#form-login");
@@ -138,6 +138,27 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.goto(`${BASE}/admin/#/catalogo`);
     await p.waitForSelector(".modelo-fila");
     assert.equal(await p.locator("[data-renombrar]").count(), 0);
+    // Colores: completa la muestra que falta en el panel; el servidor rechaza
+    // cambiar un hexadecimal de la fuente y agregar colores (rol tienda).
+    const fila = p.locator('.modelo-fila:has(.nombre:text-is("iPhone 18 Pro"))');
+    await fila.locator(".colores-modelo > summary").click();
+    await fila.locator('li:has-text("Visón") input[data-hex]').fill("#8B7765");
+    await fila.locator('li:has-text("Visón") input[data-hex]').press("Enter");
+    await p.waitForSelector("#aviso-flotante.visible");
+    const r = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      const colores = await a.listarColores();
+      const vison = colores.find((c) => c.nombre_es === "Visón");
+      const burgundy = colores.find((c) => c.nombre_en === "Burgundy");
+      const salida = { vison: vison.hex };
+      try { await a.guardarColor(burgundy.id, { hex: "#000000" }); salida.fuente = "cambió"; } catch (e) { salida.fuente = e.message; }
+      try { await a.agregarColor({ modelo_id: burgundy.modelo_id, nombre_es: "Falso" }); salida.agregar = "agregó"; } catch (e) { salida.agregar = e.message; }
+      return salida;
+    });
+    assert.equal(r.vison, "#8B7765");
+    assert.match(r.fuente, /viene de la fuente/);
+    assert.match(r.agregar, /colores oficiales|permiso/);
     await p.goto(`${BASE}/admin/#/usuarios`);
     await p.waitForSelector(".estadisticas");
     assert.deepEqual(p.errores, []);

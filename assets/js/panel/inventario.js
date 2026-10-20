@@ -6,6 +6,7 @@
 import { formatearCOP, formatearMiles, leerPrecio, hexValido, CAPACIDADES_SUGERIDAS, capacidadEnGB } from "../utils.js";
 import { rutaMiniatura, ESTADOS_ESTETICOS } from "../datos/comun.js";
 import { telefonoSVG } from "../ilustracion.js";
+import { etiquetaGeneracion } from "../sitio/catalogo.js";
 import { $, $$, esc, avisar, confirmar, conBoton, campoTexto, interruptor, marcarError, enfocarPrimerError } from "./ui.js";
 import { comprimirFoto } from "./imagenes.js";
 
@@ -235,7 +236,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
           <label for="e-modelo">Modelo</label>
           <select class="entrada" id="e-modelo" aria-describedby="e-modelo-error">
             <option value="">Elija el modelo</option>
-            ${generaciones.map((g) => `<optgroup label="${/^\d+$/.test(g.nombre) ? `Generación ${esc(g.nombre)}` : esc(g.nombre)}">${g.modelos.map((m) => `<option value="${m.id}" ${m.id === q.modelo_id ? "selected" : ""}>${esc(m.nombre)}${m.activo ? "" : " (inactivo)"}</option>`).join("")}</optgroup>`).join("")}
+            ${generaciones.map((g) => `<optgroup label="${esc(etiquetaGeneracion(g.nombre))}">${g.modelos.map((m) => `<option value="${m.id}" ${m.id === q.modelo_id ? "selected" : ""}>${esc(m.nombre)}${m.activo ? "" : " (inactivo)"}</option>`).join("")}</optgroup>`).join("")}
           </select>
           <p class="error-campo" id="e-modelo-error"></p>
         </div>

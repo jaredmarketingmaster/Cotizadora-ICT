@@ -33,16 +33,39 @@ select id, 'nuevo', '128 GB', 'Agotado', 1000000, false, true from public.modelo
 insert into public.equipos (modelo_id, condicion, capacidad, color_nombre, precio, en_stock, publicado)
 select id, 'nuevo', '128 GB', 'Inactivo', 1000000, true, true from public.modelos where slug = 'iphone-16';
 
+-- 0b. Migración 0006: el modelo que agregó la agencia (antes_0006) quedó al
+-- final, después del Duo, en el orden que tenía.
+do $$
+begin
+  assert (select orden from public.modelos where slug = 'iphone-prueba') = 10330, 'modelo de la agencia al final';
+  assert (select slug from public.modelos order by orden desc limit 1) = 'iphone-prueba', 'después del Duo';
+  delete from public.modelos where slug = 'iphone-prueba';
+end $$;
+
 -- 1. Catálogo y semilla
 do $$
 begin
-  assert (select count(*) from public.modelos) = 32, 'deben ser 32 modelos';
-  assert (select count(*) from public.fichas) = 32, 'cada modelo con su ficha';
+  -- 42 modelos desde el iPhone 7, en orden de lanzamiento
+  assert (select count(*) from public.modelos) = 42, 'deben ser 42 modelos';
+  assert (select count(*) from public.fichas) = 42, 'cada modelo con su ficha';
+  assert (select string_agg(slug, ',' order by orden) from public.modelos where orden <= 80)
+    = 'iphone-7,iphone-7-plus,iphone-8,iphone-8-plus,iphone-x,iphone-xs,iphone-xs-max,iphone-xr', 'los primeros, del 7 al XR';
+  assert (select count(*) from public.modelos where slug in ('iphone-7','iphone-se-2','iphone-se-3') and not activo) = 3, 'los nuevos, inactivos';
+  assert (select generacion from public.modelos where slug = 'iphone-se-2') = '11', 'SE 2 en la generación de su lanzamiento';
+  assert (select count(distinct orden) from public.modelos) = 42, 'orden sin repetir';
+  -- Colores: 183 oficiales; solo 32 con hexadecimal de la fuente
+  assert (select count(*) from public.colores) = 183, '183 colores oficiales';
+  assert (select count(*) from public.colores where hex <> '') = 32, '32 con hexadecimal';
+  assert (select count(*) from public.colores where hex <> '' and not hex_de_fuente) = 0, 'hex de la fuente marcado';
+  assert (select count(*) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug in ('iphone-17-pro', 'iphone-17-pro-max')) = 0, '17 Pro sin colores en la fuente';
+  assert (select string_agg(nombre_es || '/' || nombre_en || '/' || hex, '|' order by c.orden) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-17e')
+    = 'Negro//#2C2D30|Blanco//#F5F6F8|Rosa pálido/Soft Pink/#EBCBD2', 'colores del 17e tal como la fuente';
   assert (select count(*) from public.fichas where descripcion <> '' or especificaciones <> '[]') = 0, 'fichas vacías';
   assert (select count(*) from public.modelos where activo and not activo_por_demo) = 0, 'solo activos por demo';
   assert (select count(*) from public.equipos where es_demo) = 6, '6 equipos demo';
+  -- Por fecha de lanzamiento, el 17e (marzo de 2026) va después del 17 Pro Max.
   assert (select string_agg(nombre, '|' order by orden) from public.modelos where generacion = '17')
-    = 'iPhone 17e|iPhone 17|iPhone Air|iPhone 17 Pro|iPhone 17 Pro Max', 'generación 17';
+    = 'iPhone 17|iPhone Air|iPhone 17 Pro|iPhone 17 Pro Max|iPhone 17e', 'generación 17';
   assert (select generacion from public.modelos where slug = 'iphone-duo') = 'Plegable', 'Duo plegable';
   assert (select precios_actualizados_en from public.tienda) is not null, 'fecha de precios';
 end $$;
@@ -59,7 +82,14 @@ begin
   assert (select count(*) from public.fichas) = 4, 'anon ve solo fichas de modelos activos';
   assert jsonb_array_length(public.datos_publicos() -> 'equipos') = 6, 'datos_publicos equipos';
   assert jsonb_array_length(public.datos_publicos() -> 'modelos') = 4, 'datos_publicos modelos';
+  -- Colores solo de los 4 modelos activos: 18 Pro Max (8), 18 Pro (8), 15 Pro (4) y 13 (6)
+  assert (select count(*) from public.colores) = 26, 'anon ve solo colores de modelos activos';
+  assert jsonb_array_length(public.datos_publicos() -> 'colores') = 26, 'datos_publicos colores';
 end $$;
+do $$ begin
+  update public.colores set hex = '#000000' where hex = '';
+  raise exception 'anon no debería completar colores';
+exception when insufficient_privilege then null; end $$;
 do $$ begin
   perform count(*) from public.perfiles;
   raise exception 'anon no debería poder leer perfiles';
@@ -103,7 +133,8 @@ do $$
 declare antes timestamptz; despues timestamptz;
 begin
   assert (select count(*) from public.equipos) = 9, 'tienda ve todo el inventario';
-  assert (select count(*) from public.modelos) = 32, 'tienda ve todo el catálogo';
+  assert (select count(*) from public.modelos) = 42, 'tienda ve todo el catálogo';
+  assert (select count(*) from public.colores) = 183, 'tienda ve todos los colores';
   assert (select count(*) from public.perfiles) = 1, 'tienda ve solo su perfil';
 
   update public.tienda set nombre = 'Mi tienda', whatsapp = '573001234567';
@@ -174,6 +205,24 @@ do $$ begin
   assert (select tamano_texto from public.tienda) = 'grande', 'tienda elige el tamaño del texto';
   update public.tienda set tamano_texto = 'normal';
 end $$;
+-- Colores con el rol tienda: completa el hexadecimal que falta; no toca lo
+-- que vino de la fuente; no agrega ni borra.
+do $$ begin
+  update public.colores set hex = '#5A5D3C' where nombre_es = 'Oliva' and modelo_id = (select id from public.modelos where slug = 'iphone-18-pro');
+  assert (select hex from public.colores where nombre_es = 'Oliva' and modelo_id = (select id from public.modelos where slug = 'iphone-18-pro')) = '#5A5D3C', 'tienda completa el hex que falta';
+end $$;
+do $$ begin
+  update public.colores set hex = '#000000' where nombre_en = 'Burgundy' and modelo_id = (select id from public.modelos where slug = 'iphone-18-pro');
+  raise exception 'el hex de la fuente no se cambia';
+exception when insufficient_privilege then null; end $$;
+do $$ begin
+  update public.colores set nombre_en = 'Olive' where nombre_es = 'Oliva';
+  raise exception 'el nombre de un color oficial no se cambia';
+exception when insufficient_privilege then null; end $$;
+do $$ begin
+  insert into public.colores (modelo_id, nombre_es) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'Prueba');
+  raise exception 'la tienda no agrega colores (permisos del catálogo)';
+exception when insufficient_privilege then null; end $$;
 do $$ begin
   update public.tienda set tamano_texto = 'enorme';
   raise exception 'tamaño de texto fuera de la lista no vale';
@@ -195,9 +244,27 @@ do $$ begin
   assert (select nombre from public.modelos where slug = 'iphone-16') = 'iPhone 16 (renombrado)', 'agencia renombra';
   insert into public.modelos (nombre, slug, generacion, orden) values ('iPhone 19', 'iphone-19', '19', 999);
   assert (select count(*) from public.fichas f join public.modelos m on m.id = f.modelo_id where m.slug = 'iphone-19') = 1, 'modelo nuevo con ficha';
+  -- Colores de la tienda: solo en modelos sin colores oficiales
+  insert into public.colores (modelo_id, nombre_es, hex) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'Naranja', '#E8772E');
+  assert (select count(*) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-17-pro' and not c.oficial) = 1, 'agencia agrega un color al 17 Pro';
+  update public.colores set hex = '#E87730', nombre_es = 'Naranja cósmico' where nombre_es = 'Naranja';
+  delete from public.colores where nombre_es = 'Naranja cósmico';
+  assert (select count(*) from public.colores where nombre_es like 'Naranja%') = 0, 'agencia borra un color de la tienda';
   update public.perfiles set activo = false where correo = 'tienda@prueba.co';
   assert not (select activo from public.perfiles where correo = 'tienda@prueba.co'), 'agencia desactiva';
 end $$;
+do $$ begin
+  insert into public.colores (modelo_id, nombre_es) values ((select id from public.modelos where slug = 'iphone-16'), 'Otro');
+  raise exception 'no se agregan colores a un modelo con colores oficiales';
+exception when insufficient_privilege then null; end $$;
+do $$ begin
+  insert into public.colores (modelo_id, nombre_es, oficial) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'Falso', true);
+  raise exception 'no se crean colores oficiales desde el panel';
+exception when insufficient_privilege then null; end $$;
+do $$ begin
+  delete from public.colores where nombre_es = 'Visón';
+  raise exception 'un color oficial no se borra';
+exception when insufficient_privilege then null; end $$;
 do $$ begin
   update public.perfiles set activo = false where correo = 'agencia@prueba.co';
   raise exception 'la agencia no debería poder desactivarse a sí misma';

@@ -5,7 +5,7 @@
 // =============================================================================
 
 import { CONFIG } from "../../../config.js";
-import { ErrorDatos, CAMPOS_TIENDA, CAMPOS_EQUIPO, elegir, mensajeDeError } from "./comun.js";
+import { ErrorDatos, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, elegir, mensajeDeError } from "./comun.js";
 
 const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm";
 const URL_BASE = String(CONFIG.supabase.url || "").replace(/\/+$/, "");
@@ -216,6 +216,34 @@ export const supabase = {
       .insert(elegir(datos, ["nombre", "slug", "generacion", "orden", "activo"])).select().single();
     fallo(error);
     return data;
+  },
+
+  // ---------------- Colores (las reglas están en proteger_color) ----------------
+  async listarColores() {
+    const c = await cliente();
+    const { data, error } = await c.from("colores").select("*").order("modelo_id").order("orden");
+    fallo(error);
+    return data;
+  },
+
+  async guardarColor(id, cambios) {
+    const c = await cliente();
+    const { data, error } = await c.from("colores").update(elegir(cambios, CAMPOS_COLOR)).eq("id", id).select().single();
+    fallo(error);
+    return data;
+  },
+
+  async agregarColor(datos) {
+    const c = await cliente();
+    const { data, error } = await c.from("colores").insert(elegir(datos, CAMPOS_COLOR)).select().single();
+    fallo(error);
+    return data;
+  },
+
+  async borrarColor(id) {
+    const c = await cliente();
+    const { error } = await c.from("colores").delete().eq("id", id);
+    fallo(error);
   },
 
   // ---------------- Fichas ----------------

@@ -40,6 +40,10 @@ export const CAMPOS_EQUIPO = [
   "bateria_porcentaje", "estado_estetico", "detalles", "incluye"
 ];
 
+// Colores del catálogo: la tienda completa el hexadecimal que falta y, solo en
+// modelos sin colores oficiales, agrega los suyos (igual que proteger_color).
+export const CAMPOS_COLOR = ["modelo_id", "nombre_es", "nombre_en", "hex", "orden"];
+
 export const TAMANOS_TEXTO = ["compacto", "normal", "grande"];
 
 export const ESTADOS_ESTETICOS = ["Como nuevo", "Excelente", "Muy bueno", "Bueno"];
@@ -55,7 +59,8 @@ export function mensajeDeError(error) {
   const texto = String(error?.message || error || "");
   const codigo = error?.code || "";
   if (codigo === "42501" || /row-level security|permission denied/i.test(texto)) {
-    return /agencia/i.test(texto) ? texto : "Su usuario no tiene permiso para hacer este cambio.";
+    // Los mensajes de los disparadores ya están en español para el usuario.
+    return !texto || /row-level security|permission denied/i.test(texto) ? "Su usuario no tiene permiso para hacer este cambio." : texto;
   }
   if (codigo === "23505") return "Ya existe un registro con ese nombre.";
   if (codigo === "23503") return "No se puede borrar: hay equipos cargados con este modelo.";

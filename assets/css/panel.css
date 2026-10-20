@@ -233,6 +233,19 @@ select.entrada { appearance: none; -webkit-appearance: none; padding-right: 40px
 .modelo-fila .nombre { font-weight: 700; min-width: 0; }
 .modelo-fila .botones { display: flex; gap: 6px; align-items: center; }
 .modelo-fila .entrada { min-height: 44px; max-width: 220px; }
+.colores-modelo { flex-basis: 100%; }
+.colores-modelo > summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; color: var(--texto-suave); font-weight: 600; }
+.lista-colores { display: grid; gap: 6px; margin: 4px 0 8px; padding: 0; list-style: none; }
+.lista-colores li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-height: 44px; }
+.muestra-color { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--borde); }
+/* Sin hexadecimal: muestra neutra rayada (no se inventa el color) */
+.muestra-color--vacia { background: repeating-linear-gradient(45deg, var(--superficie) 0 4px, var(--borde) 4px 8px); }
+.color-nombres { display: grid; flex: 1; min-width: 140px; }
+.color-nombre { font-weight: 600; }
+.color-hex { color: var(--texto-suave); }
+.color-campo .entrada { max-width: 140px; }
+.agregar-color { display: grid; gap: 10px; padding-top: 6px; }
+@media (min-width: 700px) { .agregar-color { grid-template-columns: 1fr 1fr auto; align-items: end; } }
 
 /* Vista previa de marca */
 .vista-previa { border-radius: 16px; overflow: hidden; border: 1px solid var(--borde); --t-titulo: 1; --t-espacio: 1; }

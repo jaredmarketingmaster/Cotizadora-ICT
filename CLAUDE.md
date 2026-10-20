@@ -53,7 +53,8 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
   - `supabase.js`: fetch directo en el sitio público, supabase-js desde el CDN en el panel.
 
   **Los dos tienen la misma interfaz y las mismas reglas.** Si se cambia una regla del SQL (permisos, validaciones, fecha de precios), hay que cambiarla también en `demo.js`.
-- La semilla está dos veces: en `supabase/migrations/0002_catalogo.sql` y `0003_demo.sql`, y en `assets/js/datos/semilla.js`. `tests/sql/probar.sh` revisa que coincidan.
+- La semilla está dos veces: en `supabase/migrations/0006_catalogo_colores.sql` (catálogo y colores) y `0003_demo.sql`, y en `assets/js/datos/semilla.js`. `tests/sql/probar.sh` revisa que coincidan.
+- El catálogo y los colores salen solo de los archivos de Jared. Lo que no está queda vacío: nunca completar de memoria.
 - La seguridad real está en el SQL: RLS, disparadores `proteger_catalogo` y `proteger_tienda`, y `borrar_datos_demo` solo para agencia. El panel solo oculta lo que el rol no puede hacer.
 - Fotos:
   - Se guardan dos tamaños: `ruta.webp` (máx. 1600 px) y `ruta-640.webp`. Usar `rutaMiniatura`.
@@ -67,7 +68,7 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
 node tests/documentacion.mjs                               # DOCUMENTACION.md cubre todos los archivos
 bash tests/sql/probar.sh                                   # SQL y RLS (Postgres local)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 28 casos, modo demo
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 30 casos, modo demo
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 ```
 

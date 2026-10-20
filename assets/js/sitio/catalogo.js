@@ -16,10 +16,11 @@ export function prepararCatalogo(datos) {
   const porId = new Map(modelos.map((m) => [m.id, { ...m, recencia: recencia.get(m.generacion) }]));
   const porSlug = new Map([...porId.values()].map((m) => [m.slug, m]));
   const fichas = new Map((datos.fichas || []).map((f) => [f.modelo_id, f]));
+  const colores = new Map((datos.colores || []).map((c) => [c.id, c]));
   const equipos = (datos.equipos || [])
     .filter((q) => porId.has(q.modelo_id) && q.publicado && q.en_stock)
     .map((q) => ({ ...q, modelo: porId.get(q.modelo_id) }));
-  return { tienda: datos.tienda || {}, porId, porSlug, fichas, equipos };
+  return { tienda: datos.tienda || {}, porId, porSlug, fichas, colores, equipos };
 }
 
 export function filtrar(equipos, { condicion = "", modelo = "", capacidad = "" } = {}) {
@@ -51,8 +52,10 @@ export function opcionesModelo(cat, condicion) {
     .map((g) => ({ ...g, opciones: g.opciones.sort((a, b) => a.orden - b.orden) }));
 }
 
+// "11" → "Generación 11"; "XS y XR" → "Generación XS y XR"; un grupo con
+// nombre propio ("Plegable") queda igual.
 export function etiquetaGeneracion(generacion) {
-  return /^\d+$/.test(generacion) ? `Generación ${generacion}` : generacion;
+  return /^(\d+|X)/.test(generacion) ? `Generación ${generacion}` : generacion;
 }
 
 export function opcionesCapacidad(cat, condicion, modelo) {

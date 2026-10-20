@@ -97,7 +97,7 @@ El prompt tiene 13 secciones:
 - Se escribieron `supabase/migrations/0001_esquema.sql`, `0002_catalogo.sql` y `0003_demo.sql`:
   - Tablas, RLS, disparadores y la función `datos_publicos()`.
   - Buckets de almacenamiento.
-  - Catálogo de 32 modelos y 6 equipos demo.
+  - Catálogo de 32 modelos y 6 equipos demo (desde `0006`, 42 modelos y sus colores).
 - Se probaron en un **Postgres 16 local** con una imitación mínima de Supabase (roles `anon` y `authenticated`, `auth.uid()` y `storage`). Lo hace `tests/sql/probar.sh`.
 - Durante las pruebas se corrigió:
   - Un disparador que habría revertido la fecha de precios.
@@ -299,8 +299,8 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | Archivo | Qué es |
 |---|---|
 | `assets/js/datos/api.js` (≈17) | `api()`: devuelve, una sola vez, el adaptador `demo` o `supabase` según `config.js`. Si se pide Supabase sin URL o clave, usa demo y avisa en la consola. |
-| `assets/js/datos/comun.js` (≈62) | Reglas compartidas por los dos adaptadores: <ul><li>`ErrorDatos`.</li><li>`equipoEsPublico`: publicado, con stock (`en_stock`) y de un modelo activo.</li><li>`LADO_GRANDE` = 1600 y `LADO_MINIATURA` = 640.</li><li>`rutaMiniatura`: `x.webp` → `x-640.webp`.</li><li>`CAMPOS_TIENDA`, `CAMPOS_EQUIPO`, `ESTADOS_ESTETICOS` y `elegir`.</li><li>`mensajeDeError`: traduce los errores de Postgres al español.</li></ul> |
-| `assets/js/datos/semilla.js` (≈47) | `CATALOGO`: los 32 modelos con slug, generación y orden de 10 en 10. `DEMO_EQUIPOS`: los 6 equipos demo. `slugDe`. **Debe coincidir** con `0002_catalogo.sql` y `0003_demo.sql`; la prueba SQL lo revisa. |
+| `assets/js/datos/comun.js` (≈62) | Reglas compartidas por los dos adaptadores: <ul><li>`ErrorDatos`.</li><li>`equipoEsPublico`: publicado, con stock (`en_stock`) y de un modelo activo.</li><li>`LADO_GRANDE` = 1600 y `LADO_MINIATURA` = 640.</li><li>`rutaMiniatura`: `x.webp` → `x-640.webp`.</li><li>`CAMPOS_TIENDA`, `CAMPOS_EQUIPO`, `CAMPOS_COLOR`, `TAMANOS_TEXTO`, `ESTADOS_ESTETICOS` y `elegir`.</li><li>`mensajeDeError`: traduce los errores de Postgres al español; los mensajes de los disparadores (ya en español) pasan tal cual.</li></ul> |
+| `assets/js/datos/semilla.js` (≈115) | `CATALOGO`: los **42 modelos** desde el iPhone 7, con slug, generación y orden de 10 en 10 por fecha de lanzamiento. `COLORES`: los 183 colores oficiales por slug (`[nombre_es, nombre_en, hex]`, vacío si la fuente no lo da). `DEMO_EQUIPOS`: los 6 equipos demo. `slugDe`. **Debe coincidir** con `0006_catalogo_colores.sql` y `0003_demo.sql`; la prueba SQL lo revisa. |
 | `assets/js/datos/demo.js` (≈436) | Back-end de demostración. Ver sección 7.2. |
 | `assets/js/datos/supabase.js` (≈304) | Back-end Supabase. Ver sección 7.3. |
 
@@ -309,7 +309,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | Archivo | Qué es |
 |---|---|
 | `assets/js/sitio/principal.js` (≈328) | **Orquestador del sitio.** Sus tareas: <ul><li>Captura la atribución, inicia el píxel y el script de GHL.</li><li>Carga los datos y aplica el tema.</li><li>Dibuja marca, información y pie.</li><li>Arma los filtros y lee y escribe la URL.</li><li>Actualiza contador y galería, y decide el detalle en línea.</li><li>Abre la hoja de detalle (con gesto de deslizar para cerrar) y conecta la barra fija.</li><li>En demo, recarga si otra pestaña cambió los datos (evento `storage`).</li></ul> |
-| `assets/js/sitio/catalogo.js` (≈163) | **Lógica pura, sin DOM:** <ul><li>`prepararCatalogo`, que calcula la recencia de cada generación como el mayor `orden` de sus modelos.</li><li>`filtrar`, `contarEquipos` (cantidad de equipos: el stock es sí/no), `opcionesModelo` (agrupadas por generación, de la más nueva a la más vieja), `etiquetaGeneracion` y `opcionesCapacidad`.</li><li>`encadenar`: limpia las elecciones que un cambio deja inválidas.</li><li>`tarjetas`: nuevos por modelo y capacidad, usados por unidad; orden: destacados, generación más nueva y precio.</li><li>`diapositivas`, `textoCondicion`, `textoAlternativo` y `describirBusqueda`.</li><li>`mensajeCompra`, `mensajeSinStock` y `enlaceWhatsApp`.</li></ul> |
+| `assets/js/sitio/catalogo.js` (≈163) | **Lógica pura, sin DOM:** <ul><li>`prepararCatalogo`, que calcula la recencia de cada generación como el mayor `orden` de sus modelos.</li><li>`filtrar`, `contarEquipos` (cantidad de equipos: el stock es sí/no), `opcionesModelo` (agrupadas por generación, de la más nueva a la más vieja), `etiquetaGeneracion` ("Generación 11", "Generación XS y XR"; "Plegable" queda igual; el panel usa la misma) y `opcionesCapacidad`.</li><li>`prepararCatalogo` guarda también los colores (`cat.colores`, por id).</li><li>`encadenar`: limpia las elecciones que un cambio deja inválidas.</li><li>`tarjetas`: nuevos por modelo y capacidad, usados por unidad; orden: destacados, generación más nueva y precio.</li><li>`diapositivas`, `textoCondicion`, `textoAlternativo` y `describirBusqueda`.</li><li>`mensajeCompra`, `mensajeSinStock` y `enlaceWhatsApp`.</li></ul> |
 | `assets/js/sitio/filtros.js` (≈189) | Controles de los filtros: <ul><li>`iniciarSegmentado`: Nuevo/Usado, donde un segundo toque desmarca.</li><li>`iniciarChips`: almacenamiento.</li><li>`iniciarDesplegable`: lista propia con `role="listbox"`, grupos por generación, "Todos los modelos", cantidad por modelo, buscador si hay más de 8, teclado (flechas, Inicio/Fin, Enter, Escape, Tab) y cierre al tocar afuera.</li><li>`marcarLimpiado`: destello cuando un filtro se limpia solo.</li></ul> |
 | `assets/js/sitio/galeria.js` (≈117) | `crearGaleria(lista, api)`: tarjetas con clave estable. Al filtrar, las que salen se desvanecen y las que quedan se reacomodan con **FLIP** (Web Animations API). Sin animación si hay `prefers-reduced-motion`. |
 | `assets/js/sitio/detalle.js` (≈219) | `crearDetalle(...)`: carrusel y ficha. <ul><li>El carrusel usa scroll-snap y se mueve con el dedo, flechas, puntos, muestras de color y teclado; con varias fotos muestra miniaturas.</li><li>La ficha tiene nombre, etiqueta, variante, `etiqueta_precio` y precio (el elemento más grande), datos de usado, descripciones, "Ver ficha técnica" (solo filas con valor), pagos, entrega, garantía y el botón.</li><li>También exporta `htmlBarraCompra` e `ICONO_WA`.</li></ul> |
@@ -328,7 +328,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `assets/js/panel/inventario.js` (≈605) | Inventario. <ul><li>**Lista** con buscador y filtros (modelo, condición, publicado y los especiales "sin stock" y "sin foto").</li><li>**Edición rápida** de precio, el interruptor **Stock** ("Con stock" / "Sin stock") y publicado: se guarda al salir del campo, con Enter o al mover el interruptor.</li><li>Borrar con confirmación (borra también las fotos).</li><li>**Formulario** por pasos para agregar, completo para editar y duplicar, con validaciones.</li><li>**Fotos:** subir, cámara, arrastrar y soltar, reordenar, quitar y máximo 6.</li><li>Opción de activar el modelo si estaba inactivo.</li><li>Limpia las fotos subidas si se sale sin guardar.</li></ul> |
 | `assets/js/panel/tienda.js` (≈359) | Mi tienda: <ul><li>Datos de la tienda y redes.</li><li>Marca: logo con **recorte** (horizontal 3:1 o cuadrado, arrastrar, zoom y teclado), favicon de 128 px, colores con selector y hexadecimal, tema, **tamaño del texto** (Compacto, Normal o Grande) y **vista previa en vivo** con el contraste calculado.</li><li>Venta: etiqueta del precio, **lista editable** de formas de pago, entrega y garantías.</li></ul> |
 | `assets/js/panel/fichas.js` (≈120) | Fichas técnicas: lista de modelos activos y editor por modelo. Tiene descripción, filas etiqueta/valor (agregar, editar, subir, bajar y borrar, con etiquetas sugeridas) y "Copiar ficha de otro modelo". |
-| `assets/js/panel/catalogo.js` (≈119) | Catálogo agrupado por generación con interruptor activo/inactivo. La **agencia** además renombra (el slug no cambia), reordena (intercambia el `orden`) y agrega modelos al final. |
+| `assets/js/panel/catalogo.js` (≈215) | Catálogo agrupado por generación con interruptor activo/inactivo. La **agencia** además renombra (el slug no cambia), reordena (intercambia el `orden`) y agrega modelos al final. **Colores** de cada modelo (desplegable): muestra, nombre en español y en inglés (solo lectura), hexadecimal de la fuente fijo y campo para completar el que falta; en modelos sin colores oficiales, la agencia agrega y borra colores de la tienda. |
 | `assets/js/panel/legales.js` (≈52) | Editores de privacidad, términos, autorización de datos y aviso de marca, con aviso si están vacíos y vista previa del formato básico. |
 | `assets/js/panel/usuarios.js` (≈66) | Solo agencia: invitar (correo y rol), desactivar con confirmación y reactivar. |
 | `assets/js/panel/imagenes.js` (≈85) | Fotos en el navegador, sin librerías: <ul><li>`validarArchivo`: jpg, png, webp o heic de hasta 10 MB.</li><li>`comprimirFoto`: devuelve `{grande ≤1600px, miniatura ≤640px, ext}` en WebP, o JPEG si el navegador no codifica WebP.</li><li>`codificar`, `cargarImagen` y `MAX_BYTES`.</li></ul>El HEIC se rechaza con un aviso claro si el navegador no lo lee. |
@@ -340,6 +340,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `supabase/migrations/0001_esquema.sql` (≈351) | Tablas, funciones de rol, disparadores, RLS, `datos_publicos()`, `borrar_datos_demo()`, buckets y reglas de almacenamiento. Ver sección 6. |
 | `supabase/migrations/0002_catalogo.sql` (≈42) | Inserta los **32 modelos** del catálogo maestro, en el orden del prompt, todos inactivos (`orden` 10, 20, …, 320). Cada modelo recibe su ficha vacía por disparador. |
 | `supabase/migrations/0003_demo.sql` (≈36) | Pone el nombre "Tienda de demostración" y `modo_demo = true`, activa los 4 modelos que usa la demo (con `activo_por_demo = true`) e inserta los 6 equipos demo. |
+| `supabase/migrations/0006_catalogo_colores.sql` (≈415) | Catálogo desde el iPhone 7: agrega los 10 modelos que faltaban (por slug), renumera el `orden` de los 42 por fecha de lanzamiento (los de la agencia quedan al final) y crea `colores` con los 183 colores oficiales, el disparador `colores_proteger`, su RLS y `datos_publicos()` con colores. Ver sección 6. |
 | `supabase/migrations/0005_tamano_texto.sql` (≈13) | Agrega `tienda.tamano_texto`: `compacto`, `normal` (por defecto) o `grande`. |
 | `supabase/migrations/0004_en_stock.sql` (≈40) | El stock pasa de número a sí/no: agrega `equipos.en_stock` (verdadero por defecto), convierte `stock > 0` en verdadero y 0 en falso, rehace `equipos_leer` y `datos_publicos()` con `en_stock`, y quita `stock` y `usado_es_una_unidad`. |
 | `supabase/functions/_compartido/lead.ts` (≈53) | `armarLead(datos)`: valida y arma el pedido que va a GHL. Exporta también `CAMPOS_ATRIBUCION` y `CAMPOS_OCULTOS`. No depende de Deno. |
@@ -353,10 +354,11 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈770) | Suite de aceptación en **modo demo** con Playwright: **28 casos**. Ver sección 14. |
+| `tests/verificar.cjs` (≈870) | Suite de aceptación en **modo demo** con Playwright: **30 casos**. Ver sección 14. |
 | `tests/verificar-supabase.cjs` (≈311) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **9 casos**. Reemplaza `config.js` en el navegador y puede servir un supabase-js local (`ICT_SUPABASE_JS`). |
 | `tests/documentacion.mjs` | Verificador de este documento: falla si algún archivo versionado no aparece en la sección 5. |
 | `tests/sql/probar.sh` | Crea un Postgres temporal, carga la imitación de Supabase y todas las migraciones en orden, compara la semilla con `semilla.js` y corre `pruebas.sql`. Antes de cada migración corre `tests/sql/antes_<migración>.sql` si existe. |
+| `tests/sql/antes_0006_catalogo_colores.sql` | Un modelo de la agencia (orden 330) antes de `0006`, para probar que queda al final. |
 | `tests/sql/antes_0004_en_stock.sql` | Datos con el esquema viejo (stock 4 y stock 0) para probar que `0004` los convierte bien. `pruebas.sql` los revisa y los borra. |
 | `tests/sql/supabase_simulado.sql` | Roles `anon`, `authenticated` y `service_role`, esquema `auth` con `auth.uid()`, y `storage.buckets` y `storage.objects` mínimos. |
 | `tests/sql/pruebas.sql` | Asserts de catálogo y semilla, y de RLS por rol (anon, sin perfil, inactivo, tienda, agencia). También validaciones, fecha de precios, protecciones de catálogo, modo demo y perfiles, y borrar demo. |
@@ -405,11 +407,20 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 - `id`: identity.
 - `nombre` y `slug`: únicos. El slug va en minúsculas con guiones.
-- `generacion`: texto, ej. "18", "17" o "Plegable".
-- `orden`: entero. Define la recencia.
+- `generacion`: texto, ej. "18", "XS y XR" o "Plegable". Los SE van en la generación de su lanzamiento (SE 2.ª en la 11, SE 3.ª en la 13), como en la fuente.
+- `orden`: entero, por fecha de lanzamiento (desde `0006`). Define la recencia.
 - `activo`.
 - `activo_por_demo`: lo pone la demo; se borra si alguien toca `activo`.
 - `creado_en`.
+
+**`colores`** (desde `0006`): los colores de cada modelo.
+
+- `id`, `modelo_id` (FK con `on delete cascade`), `orden`.
+- `nombre_es`: como lo escribe la fuente (obligatorio). `nombre_en`: el nombre oficial en inglés, **solo si la fuente lo da**.
+- `hex`: `#RRGGBB` o vacío si la fuente no lo da.
+- `oficial`: vino de la fuente. Los de la tienda (`false`) solo existen en modelos sin colores oficiales.
+- `hex_de_fuente`: el hexadecimal vino de la fuente y no se cambia.
+- Único: `(modelo_id, nombre_es)`.
 
 **`fichas`**: una por modelo.
 
@@ -461,6 +472,7 @@ Las tres son `security definer`:
 | `modelos_proteger` | Si hay sesión y no es agencia, bloquea los cambios de `nombre`, `slug`, `generacion` y `orden` (error 42501). Si alguien cambia `activo`, pone `activo_por_demo = false`. |
 | `tienda_proteger` | Solo la agencia cambia `modo_demo`. |
 | `perfiles_proteger` | Nadie cambia su propio rol ni se desactiva a sí mismo. |
+| `colores_proteger` | Con sesión: no se crean colores oficiales; los de la tienda solo en modelos sin colores oficiales; un oficial no cambia de nombre, modelo ni orden y no se borra (salvo en cascada al borrar el modelo); el hexadecimal de la fuente no cambia. |
 
 ### 6.4 Seguridad a nivel de fila (RLS) por rol
 
@@ -469,6 +481,7 @@ Las tres son `security definer`:
 | `tienda` | lee | lee y edita (no `modo_demo`) | lee y edita todo |
 | `modelos` | lee **solo activos** | lee todos; cambia `activo` | lee, edita, agrega y borra |
 | `fichas` | lee las de modelos activos | lee y edita | lee y edita |
+| `colores` | lee los de modelos activos | lee todos; completa el hexadecimal que falta | además agrega y borra los de la tienda |
 | `equipos` | lee solo **publicados, con stock (`en_stock`) y de modelo activo** | todo | todo |
 | `perfiles` | sin acceso (permiso revocado) | lee el suyo | lee y edita todos |
 | `storage.objects` (`fotos` y `marca`) | lee | sube, cambia y borra | sube, cambia y borra |
@@ -477,7 +490,7 @@ Un usuario autenticado **sin perfil o con el perfil inactivo** ve lo mismo que e
 
 ### 6.5 Funciones SQL de la API
 
-- **`datos_publicos()`** (`security invoker`, respeta la RLS): devuelve en **una sola llamada** `{tienda, modelos activos, fichas de modelos activos, equipos publicados con stock}`. El sitio público la usa por `POST /rest/v1/rpc/datos_publicos`.
+- **`datos_publicos()`** (`security invoker`, respeta la RLS): devuelve en **una sola llamada** `{tienda, modelos activos, fichas y colores de modelos activos, equipos publicados con stock}`. El sitio público la usa por `POST /rest/v1/rpc/datos_publicos`.
 - **`borrar_datos_demo()`** (solo agencia):
   1. Borra los equipos con `es_demo`.
   2. Apaga los modelos con `activo_por_demo`.
@@ -508,6 +521,7 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 | `sesionActual()`, `iniciarSesion(correo, clave)`, `cerrarSesion()`, `recuperarClave(correo)`, `cambiarClave(nueva)`, `tipoDeEnlace()`, `alCambiarSesion(fn)` | Autenticación. `tipoDeEnlace()` devuelve `"invite"` o `"recovery"` si se llegó desde un correo. |
 | `leerTienda()`, `guardarTienda(cambios)` | La tienda. |
 | `listarModelos()`, `guardarModelo(id, cambios)`, `agregarModelo(datos)` | El catálogo. |
+| `listarColores()`, `guardarColor(id, cambios)`, `agregarColor(datos)`, `borrarColor(id)` | Colores del catálogo, con las reglas de `colores_proteger`. |
 | `listarFichas()`, `guardarFicha(modeloId, {descripcion, especificaciones})` | Las fichas. |
 | `listarEquipos()`, `crearEquipo(datos)`, `actualizarEquipo(id, cambios)`, `borrarEquipo(id)` | El inventario. |
 | `subirArchivo(bucket, ruta, blob)`, `borrarArchivos(bucket, rutas)` | Los archivos. |
@@ -880,7 +894,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 ```bash
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 28 casos en modo demo (Playwright + Chromium)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 30 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (10 casos) + tipos
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
@@ -892,7 +906,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `ICT_BASE=URL`: por ejemplo `http://localhost:8081/Cotizadora-ICT`, para simular GitHub Pages.
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (28 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (30 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
@@ -903,7 +917,7 @@ node tests/documentacion.mjs                               # este documento cubr
 7. WhatsApp abre con el mensaje exacto. Un usado lleva batería y estado (casos 7 y 8). La consulta sin stock lleva su mensaje (7b).
 8. Pop-up: errores, foco, formato del celular, reintento y "Abrir WhatsApp" tras dos fallos.
 9. `/admin` sin sesión pide login. La tienda no ve Usuarios, no renombra, y la capa de datos también se lo impide.
-10. La agencia invita y desactiva usuarios.
+10. La agencia invita y desactiva usuarios. Catálogo: 42 modelos y generaciones en orden; colores (hex de la fuente fijo, completar el que falta, colores de la tienda solo en el 17 Pro). Datos demo guardados de una versión vieja se migran (stock, tamaño, catálogo y colores).
 11. Validaciones del panel.
 12. A 320, 360, 768 y 1440 px: sin scroll horizontal, un `h1` y sin errores en sitio, legales y todo el panel.
 13. Carrusel: dedo, flechas, puntos, muestras, teclado y Escape.
@@ -1007,6 +1021,11 @@ bash tests/supabase-local/levantar.sh detener
 | Código + Supabase en vez de AI Studio | No había acceso a AI Studio. Supabase da lo mismo: base de datos con RLS, usuarios y archivos. |
 | Inbound Webhook en vez del formulario nativo | El formulario nativo no se puede completar ni enviar desde código fuera de GHL (iframe de otro dominio). No se usan endpoints sin documentar. |
 | Back-end demo en el navegador | Permite ver, probar y presentar todo sin servidor (GitHub Pages) y correr la suite sin red. |
+| Catálogo y colores solo de los archivos de Jared | Pedido explícito: "es la ÚNICA fuente". Lo que falta queda vacío, con muestra neutra rayada en el panel. |
+| `nombre_es` además de `nombre_en` | La fuente da casi siempre el nombre en español y a veces no el inglés: sin `nombre_es` habría colores sin nombre. |
+| Hexadecimales del "iPhone 16 / 16e" también en el 16 Plus | La tabla de la fuente es por serie y el 16 Plus tiene exactamente los mismos colores. |
+| Colores de la tienda solo en modelos sin colores oficiales | El 17 Pro y el 17 Pro Max no tienen colores en la fuente; sin esto no se podrían cargar. Los oficiales no se mezclan con inventados. |
+| Modelos de la agencia al final al renumerar | `0006` no conoce su fecha de lanzamiento; quedan después del Duo en el orden que tenían. |
 | "Cantidad disponible" = cantidad de equipos | Desde `0004` el stock es sí/no (pedido de Jared), así que se cuentan equipos. Antes era la suma de stock. |
 | El detalle se abre solo con los **tres** filtros y una tarjeta | Lectura literal del prompt. |
 | Los filtros de la URL se respetan sin stock | Un anuncio de un equipo agotado lleva a "Consultar por WhatsApp". |
@@ -1036,7 +1055,13 @@ bash tests/supabase-local/levantar.sh detener
 **Pendientes del documento del prompt:**
 
 - [ ] Textos de privacidad, términos y autorización de datos (Ley 1581). Los redacta el abogado.
-- [ ] Confirmar en apple.com/co los nombres del catálogo maestro (del 11 al 17, iPhone Air e iPhone Duo).
+- [ ] Confirmar en apple.com/co los nombres del catálogo (desde el iPhone 7, iPhone Air e iPhone Duo).
+- [ ] **Datos que faltan en la fuente del catálogo** (quedaron vacíos; no se completaron de memoria):
+  - Hexadecimal de **todos** los colores de: iPhone 7, 7 Plus, 8, 8 Plus, X, XS, XS Max, XR, 11, 11 Pro, 11 Pro Max, SE (2.ª), 12 mini, 12, 12 Pro, 12 Pro Max, 13 mini, 13, 13 Pro, 13 Pro Max, SE (3.ª), 14, 14 Plus, 14 Pro, 14 Pro Max, 15, 15 Plus, 15 Pro, 15 Pro Max, 16 Pro, 16 Pro Max y Duo. Solo 32 de 183 colores tienen hexadecimal.
+  - Hexadecimal de Visón, Oliva, Azul nítido y Magenta del 18 Pro y 18 Pro Max.
+  - Nombre en inglés de: Blanco y Negro (17 y 17e); Negro, Visón, Oliva, Azul nítido, Magenta y Plata (18 Pro y 18 Pro Max); Titanio (Duo).
+  - Colores del iPhone 17 Pro y 17 Pro Max: la fuente no los lista (la tienda puede agregar los suyos).
+  - El hexadecimal de Borgoña y Glaciar viene marcado "aproximado" en la fuente.
 - [ ] Definir quién carga las fichas técnicas y desde qué fuente verificada.
 - [ ] Confirmar con cada tienda si su precio es de contado, para `etiqueta_precio`.
 - [ ] Crear en GHL los campos personalizados y el workflow con Inbound Webhook.
@@ -1079,6 +1104,21 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 20/10/2026 · A4: catálogo desde el iPhone 7 y colores oficiales
+
+- **Pedido de Jared (fase A, punto A4):** catálogo desde el iPhone 7 con su archivo como **única fuente**; tabla `colores`; agregar los modelos que faltan por slug, inactivos y con la ficha vacía; generación y orden por fecha de lanzamiento (renumerar sin cambiar slugs); el público lee solo colores de modelos activos; la escritura sigue los permisos del catálogo; en el Catálogo se ven los colores, el nombre es de solo lectura y el hexadecimal solo se completa donde falta.
+- **Hecho:**
+  - `supabase/migrations/0006_catalogo_colores.sql`: 10 modelos nuevos (iPhone 7, 7 Plus, 8, 8 Plus, X, XS, XS Max, XR, SE 2.ª y SE 3.ª), 42 en orden de lanzamiento (el 16e pasa después del 16 Pro Max y el 17e después del 17 Pro Max), tabla `colores` con 183 colores, disparador `colores_proteger`, RLS y `datos_publicos()` con colores.
+  - `semilla.js` generada de los mismos datos (`CATALOGO` y `COLORES`); `demo.js` versión 4 con la misma migración y los métodos de colores; `supabase.js` con los mismos métodos; `comun.js` (`CAMPOS_COLOR`, mensajes de los disparadores).
+  - Panel: colores por modelo en Catálogo; `etiquetaGeneracion` compartida ("Generación XS y XR").
+- **Datos que faltan en la fuente:** ver sección 17 (151 colores sin hexadecimal, nombres en inglés que faltan, 17 Pro y 17 Pro Max sin colores).
+- **Pruebas cambiadas y por qué:**
+  - `pruebas.sql`: 32 → 42 modelos; el orden de la generación 17 cambia (el 17e salió en marzo de 2026, después del 17 Pro Max: se reemplazó la prueba por la nueva lista); pruebas nuevas de colores (conteos, RLS, completar hex, hex de la fuente fijo, colores de la tienda, oficiales no se borran) y de la migración con un modelo de la agencia (`antes_0006_catalogo_colores.sql`).
+  - `comparar-semilla.mjs` compara también los colores.
+  - `verificar.cjs`: la prueba del buscador activaba "los primeros 9 modelos" (antes, del 11 al 13; ahora serían del 7 al 11): se eligen explícitamente del 11 al 13 para que siga probando lo mismo. Casos nuevos: Catálogo con colores, y migración de datos demo viejos.
+  - `verificar-supabase.cjs`: completar un hex desde el panel y rechazo del servidor a cambiar un hex de la fuente y a agregar colores con el rol tienda.
+- **Verificación:** `tests/sql/probar.sh` OK, `tests/verificar.cjs` 30/30 y `tests/verificar-supabase.cjs` 9/9.
 
 ### 20/10/2026 · A3: tamaño del texto (Compacto, Normal, Grande)
 
