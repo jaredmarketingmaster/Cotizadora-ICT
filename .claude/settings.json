@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/documentacion.sh\"",
+            "timeout": 30,
+            "statusMessage": "Revisando que DOCUMENTACION.md esté al día…"
+          }
+        ]
+      }
+    ]
+  }
+}

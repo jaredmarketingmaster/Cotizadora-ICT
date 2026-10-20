@@ -2,6 +2,21 @@
 
 Guía para las próximas sesiones de Claude Code en este repo. Leer completa, y el README, antes de tocar nada.
 
+## Documentación obligatoria: `DOCUMENTACION.md`
+
+`DOCUMENTACION.md` es la documentación completa del proyecto. Jared la usa para pasarle el proyecto a otros LLM. **Todo cambio en el repo se acompaña, en el mismo trabajo, de su actualización.**
+
+Qué actualizar (sección 18 del documento):
+- La sección 5 (mapa de archivos).
+- La sección temática que corresponda.
+- Los pendientes, si cambiaron.
+- La fecha de arriba.
+- Una entrada nueva arriba en la sección 19 (registro de cambios).
+
+Cómo se hace cumplir:
+- El hook `Stop` de `.claude/settings.json` (`.claude/hooks/documentacion.sh`) no deja terminar con cambios sin documentar.
+- `node tests/documentacion.mjs` falla si algún archivo no figura en el documento.
+
 ## Qué es
 
 - Plantilla de cotizadora para tiendas de iPhone: sitio público con filtros, galería, carrusel por color y pop-up a WhatsApp, más el panel `/admin`.
@@ -49,6 +64,7 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
 ## Cómo verificar antes de cada commit
 
 ```bash
+node tests/documentacion.mjs                               # DOCUMENTACION.md cubre todos los archivos
 bash tests/sql/probar.sh                                   # SQL y RLS (Postgres local)
 python3 -m http.server 8080 &
 NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 26 casos, modo demo

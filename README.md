@@ -7,6 +7,8 @@ Plantilla de cotizadora para tiendas de iPhone. Se clona una vez por tienda.
 
 Nada de la tienda va en el código: todo sale de la base de datos y se edita desde el panel. Lo único que cambia entre una tienda y otra es `config.js`.
 
+> **Documentación completa:** [`DOCUMENTACION.md`](DOCUMENTACION.md) explica todo el proyecto: historia, arquitectura, cada archivo, datos, flujos, pruebas, decisiones, pendientes y registro de cambios. Se actualiza con cada cambio y sirve para pasarle el proyecto a otra persona o a otro LLM.
+
 > **Por qué no está en AI Studio de GHL.** El prompt v2 era para el AI Studio de GHL. Desde aquí no tengo acceso a esa herramienta, así que construí lo mismo como código, con [Supabase](https://supabase.com) en lugar de AI Studio Cloud. Supabase da lo mismo: base de datos con seguridad a nivel de fila, usuarios y archivos. El prompt sigue sirviendo si se prefiere armarlo en AI Studio.
 
 ## Estructura
