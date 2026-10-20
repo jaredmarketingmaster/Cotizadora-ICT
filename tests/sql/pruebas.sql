@@ -323,6 +323,16 @@ do $$ begin
   raise exception 'un color oficial no se borra';
 exception when insufficient_privilege then null; end $$;
 do $$ begin
+  assert (select vista_equipos from public.tienda) = 'cuadricula', 'vista en cuadrícula por defecto';
+  update public.tienda set vista_equipos = 'carrusel';
+  assert ((public.datos_publicos() -> 'tienda' ->> 'vista_equipos') = 'carrusel'), 'el sitio recibe la vista';
+  update public.tienda set vista_equipos = 'cuadricula';
+end $$;
+do $$ begin
+  update public.tienda set vista_equipos = 'lista';
+  raise exception 'vista fuera de la lista no vale';
+exception when check_violation then null; end $$;
+do $$ begin
   update public.tienda set tamano_texto = 'enorme';
   raise exception 'tamaño de texto fuera de la lista no vale';
 exception when check_violation then null; end $$;

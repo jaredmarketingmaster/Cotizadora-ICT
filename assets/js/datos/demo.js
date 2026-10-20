@@ -9,7 +9,7 @@
 // =============================================================================
 
 import { CATALOGO, COLORES, DEMO_EQUIPOS } from "./semilla.js";
-import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, elegir } from "./comun.js";
+import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, elegir } from "./comun.js";
 import { hexValido, whatsappTiendaValido, sesion, esperar } from "../utils.js";
 
 const CLAVE = "cotizadora-demo:v1";
@@ -52,7 +52,7 @@ function estadoInicial() {
       color_primario: "#1A73E8", color_secundario: "#0F172A", tema: "claro", texto_entrega: "",
       formas_pago: [], texto_garantia_nuevos: "", texto_garantia_usados: "", etiqueta_precio: "Precio",
       texto_privacidad: "", texto_terminos: "", texto_autorizacion_datos: "", aviso_marca: "",
-      precios_actualizados_en: t, modo_demo: true, tamano_texto: "normal", actualizado_en: t
+      precios_actualizados_en: t, modo_demo: true, tamano_texto: "normal", vista_equipos: "cuadricula", actualizado_en: t
     },
     modelos,
     fichas: modelos.map((m) => ({ modelo_id: m.id, descripcion: "", especificaciones: [], actualizado_en: t })),
@@ -64,7 +64,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 8;
+const VERSION = 9;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -124,6 +124,10 @@ const MIGRACIONES = {
   // 0010_mas_vendido.sql
   7(e) {
     for (const q of e.equipos) q.mas_vendido = Boolean(q.mas_vendido);
+  },
+  // 0011_vista_equipos.sql
+  8(e) {
+    e.tienda.vista_equipos = "cuadricula";
   }
 };
 
@@ -260,6 +264,7 @@ function validarTienda(t) {
   if (!hexValido(t.color_primario) || !hexValido(t.color_secundario)) throw new ErrorDatos("Los colores deben estar en formato hexadecimal, ej. #1A73E8.");
   if (!["claro", "oscuro"].includes(t.tema)) throw new ErrorDatos("El tema debe ser claro u oscuro.");
   if (!TAMANOS_TEXTO.includes(t.tamano_texto)) throw new ErrorDatos("El tamaño del texto debe ser compacto, normal o grande.");
+  if (!VISTAS_EQUIPOS.includes(t.vista_equipos)) throw new ErrorDatos("La vista de los equipos debe ser cuadrícula o carrusel.");
 }
 
 // Como validar_color_equipo (0008): el color es del modelo y es obligatorio

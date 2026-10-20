@@ -48,7 +48,7 @@ export const CAMPOS_TIENDA = [
   "color_primario", "color_secundario", "tema", "texto_entrega", "formas_pago",
   "texto_garantia_nuevos", "texto_garantia_usados", "etiqueta_precio",
   "texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "modo_demo",
-  "tamano_texto"
+  "tamano_texto", "vista_equipos"
 ];
 
 export const CAMPOS_EQUIPO = [
@@ -72,6 +72,7 @@ export const MAX_MAS_VENDIDOS = 3;
 export const MENSAJE_MAS_VENDIDOS = "Ya tiene 3 equipos marcados como más vendidos. Desmarque uno para marcar este.";
 
 export const TAMANOS_TEXTO = ["compacto", "normal", "grande"];
+export const VISTAS_EQUIPOS = ["cuadricula", "carrusel"];
 
 export const ESTADOS_ESTETICOS = ["Como nuevo", "Excelente", "Muy bueno", "Bueno"];
 

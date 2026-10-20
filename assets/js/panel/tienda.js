@@ -10,6 +10,10 @@ import { $, $$, esc, avisar, conBoton, campoTexto, marcarError, enfocarPrimerErr
 import { cargarImagen, codificar } from "./imagenes.js";
 
 const TAMANOS = [["compacto", "Compacto"], ["normal", "Normal"], ["grande", "Grande"]];
+const VISTAS = [
+  ["cuadricula", "Cuadrícula", "Todas las tarjetas a la vista, en filas. Es la más rápida para comparar precios."],
+  ["carrusel", "Carrusel", "Una tarjeta al centro y las vecinas a los lados. El cliente pasa de una a otra con el dedo, las flechas o el teclado."]
+];
 
 export async function dibujar(vista, ctx) {
   const { api } = ctx;
@@ -80,6 +84,19 @@ export async function dibujar(vista, ctx) {
           <div class="vista-previa" id="vista-previa" aria-hidden="true"></div>
           <p class="contraste-nota" id="contraste-nota"></p>
         </div>
+      </section>
+
+      <section class="bloque" aria-labelledby="t-diseno">
+        <h2 id="t-diseno">Diseño del sitio</h2>
+        <fieldset class="campo">
+          <legend>Cómo se ven los equipos</legend>
+          <div class="opciones-vista">
+            ${VISTAS.map(([v, nombre, ayuda]) => `<label class="opcion-vista"><input type="radio" name="vista_equipos" value="${v}" aria-describedby="vista-${v}-ayuda" ${(t.vista_equipos || "cuadricula") === v ? "checked" : ""}>
+              <span class="opcion-vista-nombre">${nombre}</span>
+              <span class="ayuda" id="vista-${v}-ayuda">${ayuda}</span>
+            </label>`).join("")}
+          </div>
+        </fieldset>
       </section>
 
       <section class="bloque" aria-labelledby="t-venta">
@@ -330,6 +347,7 @@ export async function dibujar(vista, ctx) {
       whatsapp, correo_contacto: v("correo_contacto"),
       instagram_url: v("instagram_url"), facebook_url: v("facebook_url"), tiktok_url: v("tiktok_url"),
       logo, favicon, ...datosColores(),
+      vista_equipos: $('input[name="vista_equipos"]:checked').value,
       etiqueta_precio: v("etiqueta_precio") || "Precio",
       formas_pago: pagos.map((p) => p.trim()).filter(Boolean),
       texto_entrega: v("texto_entrega"), texto_garantia_nuevos: v("texto_garantia_nuevos"), texto_garantia_usados: v("texto_garantia_usados")

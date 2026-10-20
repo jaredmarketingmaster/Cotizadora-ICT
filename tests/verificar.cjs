@@ -857,6 +857,197 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  // ------------------------------------------------- B2: vista "Carrusel"
+  const ponerCarrusel = (p) => editarDemo(p, (e) => { e.tienda.vista_equipos = "carrusel"; });
+  const indicador = (p) => p.textContent(".ce-indicador").then((t) => t.trim());
+  const centro = (p) => p.locator(".galeria--carrusel > .tarjeta[data-centro] .tarjeta-nombre").textContent();
+  // Quieto: sin data-moviendo (lo pone el carrusel mientras se mueve) y con la
+  // tarjeta del centro exactamente al centro.
+  const esperarQuieto = (p) => p.waitForFunction(() => {
+    const li = document.querySelector(".galeria--carrusel > .tarjeta[data-centro]");
+    return li && !document.querySelector("#vista-equipos[data-moviendo]") && !document.getAnimations().length &&
+      Math.abs(parseFloat(li.style.getPropertyValue("--distancia"))) < 0.001;
+  });
+
+  await caso("carrusel: elegirlo en Mi tienda cambia el sitio; mismas tarjetas, orden, contador y detalle", async () => {
+    const p = await nueva(1280, 900);
+    await ir(p);
+    const ordenCuadricula = await p.locator(".galeria > .tarjeta .tarjeta-nombre").allTextContents();
+    await entrarPanel(p, "gestor@demo.co");
+    await p.goto(`${BASE}/admin/#/tienda`);
+    await p.waitForSelector("#form-tienda");
+    assert.equal(await p.isChecked('input[name="vista_equipos"][value="cuadricula"]'), true);
+    assert.match(await p.textContent("#vista-carrusel-ayuda"), /con el dedo, las flechas o el teclado/);
+    await p.check('input[name="vista_equipos"][value="carrusel"]');
+    await p.click("#guardar-tienda");
+    await p.waitForSelector("text=Guardado");
+    await ir(p);
+    const region = p.locator("#vista-equipos");
+    assert.equal(await region.getAttribute("aria-roledescription"), "carrusel");
+    assert.deepEqual(await p.locator(".galeria--carrusel > .tarjeta .tarjeta-nombre").allTextContents(), ordenCuadricula, "mismas tarjetas y mismo orden");
+    assert.deepEqual(await p.locator(".galeria--carrusel > .tarjeta").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label"))), ["1 de 5", "2 de 5", "3 de 5", "4 de 5", "5 de 5"]);
+    assert.equal(await indicador(p), "1 de 5");
+    assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
+    // Flechas de 44 px o más, con foco visible.
+    for (const sel of [".ce-anterior", ".ce-siguiente"]) {
+      const caja = await p.locator(sel).boundingBox();
+      assert.ok(caja.width >= 44 && caja.height >= 44, `${sel}: ${caja.width}x${caja.height}`);
+    }
+    await p.focus(".ce-siguiente");
+    await p.keyboard.press("Tab"); await p.keyboard.press("Shift+Tab");
+    assert.notEqual(await p.evaluate(() => getComputedStyle(document.activeElement).outlineStyle), "none");
+    // Tocar una vecina la trae al centro (no abre el detalle); tocar la del centro abre el detalle.
+    const vecina = p.locator(".galeria--carrusel > .tarjeta").nth(1);
+    await vecina.locator(".tarjeta-boton").click({ force: true });
+    await esperarQuieto(p);
+    assert.equal(await indicador(p), "2 de 5");
+    assert.equal(await p.evaluate(() => document.querySelector("#hoja-detalle").open), false);
+    await p.locator(".galeria--carrusel > .tarjeta[data-centro] .tarjeta-boton").click();
+    await p.waitForSelector("#hoja-detalle[open]");
+    assert.match(await p.textContent("#hoja-detalle .detalle-nombre"), /iPhone 18 Pro\b/);
+    await p.click("#cerrar-detalle");
+    // Volver a cuadrícula
+    await editarDemo(p, (e) => { e.tienda.vista_equipos = "cuadricula"; });
+    await ir(p);
+    assert.equal(await p.locator(".galeria--carrusel").count(), 0);
+    assert.equal(await p.locator("#vista-equipos").getAttribute("aria-roledescription"), null);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("carrusel: bucle en los dos sentidos con flechas, teclado, mouse, trackpad y dedo", async () => {
+    const p = await nueva(1280, 900);
+    await ir(p);
+    await ponerCarrusel(p);
+    await ir(p);
+    // Hacia atrás desde la primera: la última (bucle)
+    await p.click(".ce-anterior"); await esperarQuieto(p);
+    assert.equal(await indicador(p), "5 de 5");
+    // Hacia adelante desde la última: la primera
+    await p.click(".ce-siguiente"); await esperarQuieto(p);
+    assert.equal(await indicador(p), "1 de 5");
+    // Cinco adelante dan la vuelta completa
+    for (let i = 0; i < 5; i++) { await p.click(".ce-siguiente"); }
+    await esperarQuieto(p);
+    assert.equal(await indicador(p), "1 de 5");
+    // Teclado: ← y → con el foco en la tarjeta del centro (el foco la sigue)
+    await p.focus(".galeria--carrusel > .tarjeta[data-centro] .tarjeta-boton");
+    await p.keyboard.press("ArrowLeft"); await esperarQuieto(p);
+    assert.equal(await indicador(p), "5 de 5");
+    assert.equal(await p.evaluate(() => document.activeElement.closest(".tarjeta")?.hasAttribute("data-centro")), true);
+    await p.keyboard.press("ArrowRight"); await p.keyboard.press("ArrowRight"); await esperarQuieto(p);
+    assert.equal(await indicador(p), "2 de 5");
+    // Mouse: arrastrar hacia la izquierda avanza (y no abre el detalle)
+    const v = await p.locator(".ce-ventana").boundingBox();
+    const y = v.y + v.height / 2;
+    await p.mouse.move(v.x + v.width / 2, y);
+    await p.mouse.down();
+    for (let i = 1; i <= 10; i++) { await p.mouse.move(v.x + v.width / 2 - i * 22, y); await p.waitForTimeout(30); }
+    await p.mouse.up();
+    await esperarQuieto(p);
+    assert.equal(await indicador(p), "3 de 5");
+    assert.equal(await p.evaluate(() => document.querySelector("#hoja-detalle").open), false);
+    // Trackpad: desplazamiento horizontal
+    await p.mouse.move(v.x + v.width / 2, y);
+    for (let i = 0; i < 6; i++) { await p.mouse.wheel(-60, 0); await p.waitForTimeout(16); }
+    await esperarQuieto(p);
+    assert.equal(await indicador(p), "2 de 5", "trackpad");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+
+    // Dedo, en celular: deslizar hacia la izquierda avanza; hacia la derecha retrocede con bucle
+    const q = await nueva(390, 844, { hasTouch: true, isMobile: true });
+    await ir(q);
+    await ponerCarrusel(q);
+    await ir(q);
+    await q.locator(".ce-ventana").scrollIntoViewIfNeeded();
+    const caja = await q.locator(".ce-ventana").boundingBox();
+    const cdp = await q.context().newCDPSession(q);
+    const deslizar = async (sentido) => {
+      const yy = caja.y + caja.height / 2;
+      const x0 = caja.x + caja.width / 2;
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: x0, y: yy }] });
+      for (let i = 1; i <= 14; i++) {
+        await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: x0 + sentido * i * 10, y: yy }] });
+        await q.waitForTimeout(20);
+      }
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+      await esperarQuieto(q);
+    };
+    await deslizar(-1);
+    assert.equal(await indicador(q), "2 de 5", "dedo hacia la izquierda");
+    await deslizar(1);
+    await deslizar(1);
+    assert.equal(await indicador(q), "5 de 5");
+    assert.deepEqual(q.errores, []);
+    await q.context().close();
+  });
+
+  await caso("carrusel: 1 tarjeta sin flechas ni bucle; 2 tarjetas sin la misma a los dos lados; el filtro vuelve a la primera", async () => {
+    const p = await nueva(1280, 900);
+    await ir(p);
+    await ponerCarrusel(p);
+    await ir(p);
+    await p.click(".ce-siguiente"); await p.click(".ce-siguiente"); await esperarQuieto(p);
+    assert.equal(await indicador(p), "3 de 5");
+    // Filtrar reconstruye y vuelve a la primera
+    await p.click(".segmento[data-valor='usado']");
+    await esperarQuieto(p);
+    assert.equal(await p.locator(".galeria--carrusel > .tarjeta").count(), 2);
+    assert.equal(await indicador(p), "1 de 2");
+    // Con 2: una sola vecina visible, y nunca la misma tarjeta a los dos lados
+    const lados = () => p.evaluate(() => [...document.querySelectorAll(".galeria--carrusel > .tarjeta")]
+      .filter((li) => li.style.visibility !== "hidden" && !li.hasAttribute("data-centro"))
+      .map((li) => Math.sign(new DOMMatrixReadOnly(getComputedStyle(li).transform).m41 - 0)));
+    assert.equal((await lados()).length, 1);
+    await p.click(".ce-siguiente"); await esperarQuieto(p);
+    assert.equal(await indicador(p), "2 de 2");
+    assert.equal((await lados()).length, 1);
+    await p.click(".ce-siguiente"); await esperarQuieto(p);
+    assert.equal(await indicador(p), "1 de 2");
+    // Con 1: sin flechas, sin indicador y sin moverse
+    await ir(p, "/?condicion=usado&modelo=iphone-13");
+    assert.equal(await p.locator(".galeria--carrusel > .tarjeta").count(), 1);
+    assert.equal(await p.isVisible(".ce-anterior"), false);
+    assert.equal(await p.isVisible(".ce-siguiente"), false);
+    assert.equal(await p.isVisible(".ce-indicador"), false);
+    await p.focus(".galeria--carrusel .tarjeta-boton");
+    await p.keyboard.press("ArrowRight");
+    assert.equal(await p.locator(".galeria--carrusel > .tarjeta[data-centro]").count(), 1);
+    // Sin equipos: el estado vacío de siempre
+    await ir(p, "/?condicion=usado&modelo=iphone-18-pro");
+    assert.equal(await p.isVisible("#vacio"), true);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  for (const ancho of [320, 360, 768, 1440]) {
+    await caso(`carrusel: ${ancho}px sin scroll horizontal y con altura estable`, async () => {
+      const p = await nueva(ancho, 900);
+      await ir(p);
+      await ponerCarrusel(p);
+      await ir(p);
+      const alto = await p.locator("#lista-equipos").evaluate((el) => el.offsetHeight);
+      for (let i = 0; i < 3; i++) { await p.click(".ce-siguiente"); await esperarQuieto(p); }
+      assert.equal(await p.locator("#lista-equipos").evaluate((el) => el.offsetHeight), alto, "la altura no cambia al moverse");
+      const desborde = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      assert.ok(desborde <= 0, `desborda ${desborde}px`);
+      if (ancho === 360 || ancho === 1440) await captura(p, `b2-carrusel-${ancho}`);
+      await p.context().close();
+    });
+  }
+
+  await caso("carrusel con reduced-motion: se mueve sin animaciones", async () => {
+    const p = await nueva(390, 844, { reducedMotion: "reduce" });
+    await ir(p);
+    await ponerCarrusel(p);
+    await ir(p);
+    await p.click(".ce-siguiente");
+    assert.equal(await indicador(p), "2 de 5", "el cambio es directo");
+    assert.equal(await p.evaluate(() => document.getAnimations().length), 0);
+    await p.context().close();
+  });
+
   // ---------------------------------------------------------------- 12.11
   await caso("11. sin marca de Apple: ni manzana, ni imágenes, ni textos de la marca", async () => {
     const archivos = [];

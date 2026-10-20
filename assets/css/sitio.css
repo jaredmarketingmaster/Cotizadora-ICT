@@ -200,6 +200,48 @@
 @media (min-width: 960px) { .galeria { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 1200px) { .galeria { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
+/* --- Vista "Carrusel" (tienda.vista_equipos = "carrusel") --------------------
+   La tarjeta del centro al frente; las vecinas más chicas y desvanecidas hacia
+   los bordes (máscara). Las posiciones las pone carrusel-equipos.js. */
+.carrusel-equipos { position: relative; display: grid; justify-items: center; gap: 10px; }
+.carrusel-equipos .ce-ventana {
+  position: relative; width: 100%;
+  overflow: hidden; overflow: clip;
+  padding-block: 10px 14px;
+  touch-action: pan-y;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 16%, #000 84%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 16%, #000 84%, transparent 100%);
+}
+.carrusel-equipos.ce-una .ce-ventana { -webkit-mask-image: none; mask-image: none; }
+.carrusel-equipos.ce-arrastrando .ce-ventana { cursor: grabbing; user-select: none; }
+.galeria--carrusel { display: block; position: relative; min-height: 136px; }
+.galeria--carrusel > .tarjeta {
+  position: absolute; top: 0; left: 50%;
+  width: min(300px, 68vw);
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+}
+/* Sin transición de transform/opacity: las mueve el JS cuadro a cuadro */
+.galeria--carrusel > .tarjeta { transition: box-shadow var(--medio) var(--curva), border-color var(--medio); }
+.galeria--carrusel > .tarjeta:not([data-centro]) { box-shadow: none; }
+.galeria--carrusel .tarjeta-boton { grid-template-columns: 1fr; align-items: start; padding: 14px; }
+.galeria--carrusel .tarjeta-medio { aspect-ratio: 4 / 4.2; }
+.galeria--carrusel img { -webkit-user-drag: none; user-select: none; }
+.ce-flecha {
+  position: absolute; top: calc(50% - 40px); z-index: 120;
+  display: grid; place-items: center;
+  width: 48px; height: 48px; padding: 0;
+  border: 1px solid var(--borde-fuerte); border-radius: 50%;
+  background: var(--tarjeta); color: var(--texto);
+  box-shadow: var(--sombra-1);
+}
+.ce-flecha svg { width: 22px; height: 22px; }
+.ce-anterior { left: 0; }
+.ce-siguiente { right: 0; }
+.ce-indicador { color: var(--texto-suave); font-weight: 600; min-height: 1.5em; }
+@media (hover: hover) { .ce-flecha:hover { border-color: var(--primario-texto); color: var(--primario-texto); } }
+@media (min-width: 900px) { .ce-anterior { left: 8px; } .ce-siguiente { right: 8px; } }
+
 .tarjeta {
   position: relative;
   background: var(--tarjeta);

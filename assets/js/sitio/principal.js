@@ -14,6 +14,7 @@ import {
 } from "./catalogo.js";
 import { iniciarSegmentado, iniciarChips, iniciarDesplegable, marcarLimpiado } from "./filtros.js";
 import { crearGaleria } from "./galeria.js";
+import { crearCarruselEquipos } from "./carrusel-equipos.js";
 import { crearDetalle, htmlBarraCompra } from "./detalle.js";
 import { crearPopup } from "./popup.js";
 import { capturarAtribucion } from "./atribucion.js";
@@ -131,6 +132,37 @@ function actualizar() {
   // Con los tres filtros y una sola tarjeta, el detalle se abre solo debajo.
   const unica = condicion && modelo && capacidad && ultimasTarjetas.length === 1 ? ultimasTarjetas[0] : null;
   if (unica) mostrarEnLinea(unica); else quitarEnLinea();
+}
+
+// --- Vista de los equipos: cuadrícula o carrusel --------------------------------
+let carrusel = null;
+let vistaActual = "cuadricula";
+function aplicarVista(t) {
+  const vista = t.vista_equipos === "carrusel" ? "carrusel" : "cuadricula";
+  if (vista === vistaActual) return;
+  vistaActual = vista;
+  const region = $("#vista-equipos");
+  const lista = $("#lista-equipos");
+  const enCarrusel = vista === "carrusel";
+  region.classList.toggle("carrusel-equipos", enCarrusel);
+  lista.classList.toggle("galeria--carrusel", enCarrusel);
+  if (enCarrusel) {
+    region.setAttribute("role", "region");
+    region.setAttribute("aria-roledescription", "carrusel");
+    region.setAttribute("aria-label", "Equipos disponibles");
+    carrusel ??= crearCarruselEquipos(region, lista);
+    galeria.usarCarrusel(carrusel);
+  } else {
+    for (const a of ["role", "aria-roledescription", "aria-label"]) region.removeAttribute(a);
+    region.hidden = false;
+    region.querySelectorAll(".ce-flecha, .ce-indicador").forEach((el) => { el.hidden = true; });
+    for (const li of lista.children) {
+      for (const a of ["style", "role", "aria-roledescription", "aria-label", "aria-hidden", "data-centro"]) li.removeAttribute(a);
+      li.querySelector(".tarjeta-boton")?.removeAttribute("tabindex");
+    }
+    lista.style.height = "";
+    galeria.usarCarrusel(null);
+  }
 }
 
 // --- Detalle -----------------------------------------------------------------
@@ -274,6 +306,7 @@ async function iniciar() {
   seguro(() => dibujarPie(t), "pie");
 
   galeria = crearGaleria($("#lista-equipos"), api);
+  seguro(() => aplicarVista(t), "vista de equipos");
   popup = crearPopup({ dialogo: $("#popup"), api, obtenerTienda: () => cat.tienda });
   controles = {
     condicion: iniciarSegmentado($("#f-condicion"), (v) => cambiarFiltro("condicion", v)),
@@ -308,6 +341,7 @@ async function iniciar() {
       if (e.key !== "cotizadora-demo:v1") return;
       cat = prepararCatalogo(await api.cargarPublico());
       aplicarTema(cat.tienda); dibujarMarca(cat.tienda); dibujarInfo(cat.tienda); dibujarPie(cat.tienda);
+      aplicarVista(cat.tienda);
       quitarEnLinea();
       actualizar();
     });

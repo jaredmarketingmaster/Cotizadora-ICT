@@ -204,6 +204,14 @@ select.entrada { appearance: none; -webkit-appearance: none; padding-right: 40px
 .opcion-chip input:checked + span { background: var(--primario); border-color: var(--primario); color: var(--sobre-primario); }
 .opcion-chip input:focus-visible + span { outline: 3px solid var(--texto); outline-offset: 2px; }
 
+/* Diseño del sitio: opciones con su explicación */
+.opciones-vista { display: grid; gap: 10px; }
+@media (min-width: 700px) { .opciones-vista { grid-template-columns: 1fr 1fr; } }
+.opcion-vista { position: relative; display: grid; gap: 4px; padding: 14px 16px 14px 48px; min-height: 44px; border: 1.5px solid var(--borde-fuerte); border-radius: 14px; background: var(--fondo); cursor: pointer; }
+.opcion-vista input { position: absolute; left: 16px; top: 17px; width: 20px; height: 20px; margin: 0; accent-color: var(--primario); }
+.opcion-vista:has(input:checked) { border-color: var(--primario-texto); box-shadow: 0 0 0 2px var(--primario-texto); }
+.opcion-vista-nombre { font-weight: 700; }
+
 /* Video del equipo */
 .bloque-video { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--borde); }
 .video-vista { display: block; width: 100%; max-width: 320px; max-height: 360px; border-radius: 12px; background: #000; margin-bottom: 10px; }

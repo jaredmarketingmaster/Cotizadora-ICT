@@ -74,11 +74,19 @@
     <section class="contenedor galeria-envoltura" id="galeria" aria-labelledby="galeria-titulo" tabindex="-1">
       <h2 class="oculto-visual" id="galeria-titulo">Equipos disponibles</h2>
       <p class="aviso-carga" id="aviso-carga" role="alert" hidden></p>
-      <ul class="galeria" id="lista-equipos" aria-busy="true">
-        <li class="tarjeta tarjeta--esqueleto" aria-hidden="true"></li>
-        <li class="tarjeta tarjeta--esqueleto" aria-hidden="true"></li>
-        <li class="tarjeta tarjeta--esqueleto" aria-hidden="true"></li>
-      </ul>
+      <!-- Vista de los equipos: cuadrícula (por defecto) o carrusel (flechas e indicador solo en carrusel) -->
+      <div class="vista-equipos" id="vista-equipos">
+        <button type="button" class="ce-flecha ce-anterior" aria-label="Equipo anterior" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="ce-ventana">
+          <ul class="galeria" id="lista-equipos" aria-busy="true">
+            <li class="tarjeta tarjeta--esqueleto" aria-hidden="true"></li>
+            <li class="tarjeta tarjeta--esqueleto" aria-hidden="true"></li>
+            <li class="tarjeta tarjeta--esqueleto" aria-hidden="true"></li>
+          </ul>
+        </div>
+        <button type="button" class="ce-flecha ce-siguiente" aria-label="Equipo siguiente" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <p class="ce-indicador cifras" aria-live="polite" hidden></p>
+      </div>
       <div class="vacio" id="vacio" hidden>
         <p class="vacio-texto">En este momento no tenemos ese equipo publicado.</p>
         <button type="button" class="boton boton--secundario boton--grande" id="consultar-sin-stock">Consultar por WhatsApp</button>

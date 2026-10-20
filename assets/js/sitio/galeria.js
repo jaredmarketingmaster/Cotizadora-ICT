@@ -47,6 +47,7 @@ function htmlTarjeta(api, t, i) {
 export function crearGaleria(lista, api) {
   let animaciones = [];
   let version = 0;
+  let carrusel = null;  // con la vista "carrusel", él se encarga de mover las tarjetas
 
   function plantilla(t, i) {
     const tmp = document.createElement("template");
@@ -59,6 +60,13 @@ export function crearGaleria(lista, api) {
     animaciones.forEach((a) => a.cancel());
     animaciones = [];
     lista.removeAttribute("aria-busy");
+    if (carrusel) {
+      const habia = lista.querySelector(":scope > .tarjeta:not(.tarjeta--esqueleto)");
+      lista.innerHTML = "";
+      tarjetas.forEach((t, i) => lista.appendChild(plantilla(t, i)));
+      carrusel.reconstruir({ animar: Boolean(habia) });
+      return;
+    }
     const conMovimiento = !reducirMovimiento() && lista.children.length > 0 && !lista.querySelector(".tarjeta--esqueleto");
     const actuales = new Map([...lista.querySelectorAll(":scope > .tarjeta[data-clave]")].map((el) => [el.dataset.clave, el]));
     const nuevas = new Set(tarjetas.map((t) => t.clave));
@@ -113,5 +121,5 @@ export function crearGaleria(lista, api) {
       { duration: 300, delay: 60 + i * 30, easing: "cubic-bezier(.2,.8,.2,1)", fill: "backwards" })));
   }
 
-  return { dibujar };
+  return { dibujar, usarCarrusel(c) { carrusel = c; } };
 }

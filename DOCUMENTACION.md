@@ -311,7 +311,8 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `assets/js/sitio/principal.js` (≈328) | **Orquestador del sitio.** Sus tareas: <ul><li>Captura la atribución, inicia el píxel y el script de GHL.</li><li>Carga los datos y aplica el tema.</li><li>Dibuja marca, información y pie.</li><li>Arma los filtros y lee y escribe la URL.</li><li>Actualiza contador y galería, y decide el detalle en línea.</li><li>Abre la hoja de detalle (con gesto de deslizar para cerrar) y conecta la barra fija.</li><li>En demo, recarga si otra pestaña cambió los datos (evento `storage`).</li></ul> |
 | `assets/js/sitio/catalogo.js` (≈163) | **Lógica pura, sin DOM:** <ul><li>`prepararCatalogo`, que calcula la recencia de cada generación como el mayor `orden` de sus modelos.</li><li>`filtrar`, `contarEquipos` (cantidad de equipos: el stock es sí/no), `opcionesModelo` (agrupadas por generación, de la más nueva a la más vieja), `etiquetaGeneracion` ("Generación 11", "Generación XS y XR"; "Plegable" queda igual; el panel usa la misma) y `opcionesCapacidad`.</li><li>`prepararCatalogo` guarda también los colores (`cat.colores`, por id) y le pone a cada equipo `color` (el oficial), `color_nombre` (el que ve el cliente, con `nombreColor`) y `color_hex` (la muestra oficial o vacío). El resto del sitio (tarjetas, muestras, detalle, texto alternativo, WhatsApp y píxel) usa esos dos campos.</li><li>`encadenar`: limpia las elecciones que un cambio deja inválidas.</li><li>`tarjetas`: nuevos por modelo y capacidad, usados por unidad; orden: destacados, generación más nueva y precio.</li><li>`diapositivas`, `textoCondicion`, `textoAlternativo` y `describirBusqueda`.</li><li>`mensajeCompra`, `mensajeSinStock` y `enlaceWhatsApp`.</li></ul> |
 | `assets/js/sitio/filtros.js` (≈189) | Controles de los filtros: <ul><li>`iniciarSegmentado`: Nuevo/Usado, donde un segundo toque desmarca.</li><li>`iniciarChips`: almacenamiento.</li><li>`iniciarDesplegable`: lista propia con `role="listbox"`, grupos por generación, "Todos los modelos", cantidad por modelo, buscador si hay más de 8, teclado (flechas, Inicio/Fin, Enter, Escape, Tab) y cierre al tocar afuera.</li><li>`marcarLimpiado`: destello cuando un filtro se limpia solo.</li></ul> |
-| `assets/js/sitio/galeria.js` (≈117) | `crearGaleria(lista, api)`: tarjetas con clave estable. Al filtrar, las que salen se desvanecen y las que quedan se reacomodan con **FLIP** (Web Animations API). Sin animación si hay `prefers-reduced-motion`. |
+| `assets/js/sitio/galeria.js` (≈125) | `crearGaleria(lista, api)`: tarjetas con clave estable. Al filtrar, las que salen se desvanecen y las que quedan se reacomodan con **FLIP** (Web Animations API). Sin animación si hay `prefers-reduced-motion`. Con `usarCarrusel(c)`, dibuja las tarjetas y le pasa el movimiento al carrusel. |
+| `assets/js/sitio/carrusel-equipos.js` (≈250) | Vista **Carrusel** de los equipos: `crearCarruselEquipos(region, lista)` → `{reconstruir, mover, actual}`. Posición continua `pos`; cada tarjeta se dibuja a la distancia más corta del bucle (transform, opacidad y escala). Bucle infinito; arrastre con inercia y ajuste; flechas; ← →; trackpad horizontal; toque en vecina = centrarla; indicador "N de M"; altura de la tarjeta más alta; con 2 tarjetas, una sola vecina (con fundido si cambia de lado); con 1, sin flechas ni bucle; `data-moviendo` en la región mientras se mueve. Sin animación con `prefers-reduced-motion`. |
 | `assets/js/sitio/detalle.js` (≈219) | `crearDetalle(...)`: carrusel y ficha. <ul><li>El carrusel usa scroll-snap y se mueve con el dedo, flechas, puntos, muestras de color y teclado; con varias fotos muestra miniaturas.</li><li>La ficha tiene nombre, etiqueta, variante, `etiqueta_precio` y precio (el elemento más grande), datos de usado, descripciones, "Ver ficha técnica" (solo filas con valor), pagos, entrega, garantía y el botón.</li><li>También exporta `htmlBarraCompra` e `ICONO_WA`.</li></ul> |
 | `assets/js/sitio/popup.js` (≈272) | `crearPopup(...)`: el pop-up "Antes de pasar a WhatsApp" completo. Ver sección 9. |
 | `assets/js/sitio/fotos.js` (≈19) | `htmlFoto`: `<img>` con `srcset` 640w/1600w, `loading="lazy"` o `fetchpriority="high"`. `htmlMedio`: la foto principal o la ilustración. |
@@ -326,7 +327,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `assets/js/panel/panel.js` (≈283) | Arranque, acceso y rutas. <ul><li>**Acceso:** vistas de login, recuperación y "Cree su contraseña" o "Contraseña nueva", según `tipoDeEnlace()`.</li><li>`entrar()` y el router `enrutar()` por hash, que pregunta si hay cambios sin guardar (`ctx.sucio`) y llama `ctx.alSalir`.</li><li>La vista **Inicio**: estadísticas, fecha de precios, avisos de "Lo que falta" y modo demo (gestor).</li><li>Rutas por rol: el administrador solo llega a Usuarios; el gestor, a todo lo demás. La navegación muestra solo los enlaces de su rol (`data-rol`).</li><li>Define `ctx`, que tiene: `api`, `usuario`, `tienda`, `sucio`, `alSalir`, `esAdministrador()`, `esGestor()`, `inicio()`, `recargarTienda()` e `ir()`.</li></ul> |
 | `assets/js/panel/ui.js` (≈82) | Piezas de interfaz: `$`, `$$`, `esc`, `avisar` ("Guardado" o error), `confirmar` (promesa sobre `<dialog>`), `conBoton` (botón en espera más aviso), `campoTexto`, `interruptor`, `marcarError` y `enfocarPrimerError`. |
 | `assets/js/panel/inventario.js` (≈605) | Inventario. <ul><li>**Lista** con buscador y filtros (modelo, condición, publicado y los especiales "sin stock" y "sin foto").</li><li>**Edición rápida** de precio, el interruptor **Stock** ("Con stock" / "Sin stock"), publicado y **Más vendido** (máximo 3; el cuarto avisa sin llamar a la base): se guarda al salir del campo, con Enter o al mover el interruptor.</li><li>Borrar con confirmación (borra también las fotos).</li><li>**Formulario** por pasos para agregar, completo para editar y duplicar, con validaciones.</li><li>**Fotos:** subir, cámara, arrastrar y soltar, reordenar, quitar y máximo 6.</li><li>**Color:** el paso Color muestra solo los colores oficiales del modelo (muestra y nombre en inglés, o el de la fuente) y el campo opcional "Nombre que verá el cliente". No se crean colores ni se escribe un hexadecimal desde el equipo. Cambiar el modelo borra el color elegido. Si el modelo no tiene colores, se puede guardar sin color.</li><li>Opción de activar el modelo si estaba inactivo.</li><li>Limpia las fotos subidas si se sale sin guardar.</li></ul> |
-| `assets/js/panel/tienda.js` (≈359) | Mi tienda: <ul><li>Datos de la tienda y redes.</li><li>Marca: logo con **recorte** (horizontal 3:1 o cuadrado, arrastrar, zoom y teclado), favicon de 128 px, colores con selector y hexadecimal, tema, **tamaño del texto** (Compacto, Normal o Grande) y **vista previa en vivo** con el contraste calculado.</li><li>Venta: etiqueta del precio, **lista editable** de formas de pago, entrega y garantías.</li></ul> |
+| `assets/js/panel/tienda.js` (≈359) | Mi tienda: <ul><li>Datos de la tienda y redes.</li><li>Marca: logo con **recorte** (horizontal 3:1 o cuadrado, arrastrar, zoom y teclado), favicon de 128 px, colores con selector y hexadecimal, tema, **tamaño del texto** (Compacto, Normal o Grande) y **vista previa en vivo** con el contraste calculado.</li><li>**Diseño del sitio:** cómo se ven los equipos, "Cuadrícula" o "Carrusel", cada una con su explicación.</li><li>Venta: etiqueta del precio, **lista editable** de formas de pago, entrega y garantías.</li></ul> |
 | `assets/js/panel/fichas.js` (≈120) | Fichas técnicas: lista de modelos activos y editor por modelo. Tiene descripción, filas etiqueta/valor (agregar, editar, subir, bajar y borrar, con etiquetas sugeridas) y "Copiar ficha de otro modelo". |
 | `assets/js/panel/catalogo.js` (≈215) | Catálogo (gestor) agrupado por generación con interruptor activo/inactivo; renombra (el slug no cambia), reordena (intercambia el `orden`) y agrega modelos al final. **Colores** de cada modelo (desplegable): muestra, nombre en español y en inglés (solo lectura), hexadecimal de la fuente fijo y campo para completar el que falta; en modelos sin colores oficiales, el gestor agrega y borra colores de la tienda. |
 | `assets/js/panel/legales.js` (≈52) | Editores de privacidad, términos, autorización de datos y aviso de marca, con aviso si están vacíos y vista previa del formato básico. |
@@ -341,6 +342,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `supabase/migrations/0001_esquema.sql` (≈351) | Tablas, funciones de rol, disparadores, RLS, `datos_publicos()`, `borrar_datos_demo()`, buckets y reglas de almacenamiento. Ver sección 6. |
 | `supabase/migrations/0002_catalogo.sql` (≈42) | Inserta los **32 modelos** del catálogo maestro, en el orden del prompt, todos inactivos (`orden` 10, 20, …, 320). Cada modelo recibe su ficha vacía por disparador. |
 | `supabase/migrations/0003_demo.sql` (≈36) | Pone el nombre "Tienda de demostración" y `modo_demo = true`, activa los 4 modelos que usa la demo (con `activo_por_demo = true`) e inserta los 6 equipos demo. |
+| `supabase/migrations/0011_vista_equipos.sql` (≈12) | `tienda.vista_equipos`: `cuadricula` (por defecto) o `carrusel`. |
 | `supabase/migrations/0010_mas_vendido.sql` (≈30) | `equipos.mas_vendido` y el disparador `equipos_mas_vendido` (`limitar_mas_vendidos`): no deja marcar un cuarto, con un candado por transacción para que dos marcas a la vez no pasen de 3. Todavía no se muestra en el sitio. |
 | `supabase/migrations/0009_video.sql` (≈40) | Un video opcional por equipo: `equipos.video` (ruta con check) y bucket propio `videos` (público, 20 MB, `video/mp4` y `video/webm`); las reglas de Storage suman ese bucket (lee todo el mundo; sube, cambia y borra el gestor). |
 | `supabase/migrations/0008_color_oficial.sql` (≈85) | Cada equipo usa un color oficial de su modelo: `equipos.color_id` (FK a `colores`) y `color_nombre_mostrar`; migra los equipos existentes por nombre (español o inglés; "Glacier" → Glaciar) conservando el nombre que veía el cliente; borra `color_nombre` y `color_hex`; disparador `equipos_color` (`validar_color_equipo`). |
@@ -359,7 +361,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈1180) | Suite de aceptación en **modo demo** con Playwright: **35 casos**. Ver sección 14. |
+| `tests/verificar.cjs` (≈1400) | Suite de aceptación en **modo demo** con Playwright: **43 casos**. Ver sección 14. |
 | `tests/verificar-supabase.cjs` (≈311) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **9 casos**. Reemplaza `config.js` en el navegador y puede servir un supabase-js local (`ICT_SUPABASE_JS`). |
 | `tests/documentacion.mjs` | Verificador de este documento: falla si algún archivo versionado no aparece en la sección 5. |
 | `tests/sql/probar.sh` | Crea un Postgres temporal, carga la imitación de Supabase y todas las migraciones en orden, compara la semilla con `semilla.js` y corre `pruebas.sql`. Antes de cada migración corre `tests/sql/antes_<migración>.sql` si existe. |
@@ -399,6 +401,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
   - `color_primario` (por defecto `#1A73E8`) y `color_secundario` (`#0F172A`), ambos hexadecimales.
   - `tema`: `claro` u `oscuro`.
   - `tamano_texto`: `compacto`, `normal` (por defecto) o `grande` (desde `0005`).
+  - `vista_equipos`: `cuadricula` (por defecto) o `carrusel` (desde `0011`).
 - **Venta:**
   - `texto_entrega`.
   - `formas_pago`: `text[]`.
@@ -616,6 +619,10 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
   2. Se miden las posiciones, se reordena el DOM reutilizando los nodos y las que quedan se desplazan (320 ms).
   3. Las nuevas aparecen escalonadas.
 - **Estado vacío:** "En este momento no tenemos ese equipo publicado." y el botón "Consultar por WhatsApp", que abre el pop-up como consulta "sin stock".
+- **Vista "Carrusel"** (`tienda.vista_equipos = "carrusel"`, desde `0011`): las mismas tarjetas, el mismo filtro y el mismo orden, una al centro y las vecinas más chicas y desvanecidas (máscara en los bordes). Ver `carrusel-equipos.js` en la sección 5.
+  - Accesibilidad: la región lleva `role="region"`, `aria-roledescription="carrusel"` y `aria-label="Equipos disponibles"`; cada tarjeta, `aria-roledescription="diapositiva"` y `aria-label="N de M"`; las vecinas van con `aria-hidden` y fuera del orden de tabulación; flechas de 48 px con foco visible; el indicador es `aria-live`.
+  - Al cambiar un filtro se reconstruye y vuelve a la primera, con una transición suave.
+  - El contador, el estado vacío y el detalle en línea funcionan igual que en la cuadrícula.
 
 ### 8.4 Detalle y carrusel
 
@@ -922,7 +929,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 ```bash
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 35 casos en modo demo (Playwright + Chromium)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 43 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (10 casos) + tipos
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
@@ -934,7 +941,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `ICT_BASE=URL`: por ejemplo `http://localhost:8081/Cotizadora-ICT`, para simular GitHub Pages.
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (35 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (43 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
@@ -950,6 +957,7 @@ node tests/documentacion.mjs                               # este documento cubr
 12. A 320, 360, 768 y 1440 px: sin scroll horizontal, un `h1` y sin errores en sitio, legales y todo el panel.
 13. Carrusel: dedo, flechas, puntos, muestras, teclado y Escape.
 14. Gesto táctil real en el carrusel y cierre de la hoja con el gesto.
+14b. **Vista Carrusel** (8 casos): elegirla en Mi tienda cambia el sitio (mismas tarjetas, orden, contador y detalle; tocar una vecina la centra, la del centro abre el detalle; flechas de 44 px o más con foco visible); bucle en los dos sentidos con flechas, teclado, mouse, trackpad y dedo; 1 tarjeta sin flechas ni bucle, 2 tarjetas con una sola vecina, el filtro vuelve a la primera y el estado vacío; sin scroll horizontal y con altura estable a 320, 360, 768 y 1440 px; con reduced-motion, sin animaciones.
 15. Sin Apple: ni imágenes en el repo, ni la manzana U+F8FF, ni referencias, y solo recursos externos de Google Fonts.
 16. Contraste AA en 4 combinaciones: claro, oscuro, amarillo sobre blanco, y primario oscuro en tema oscuro. **Pie:** el fondo es el secundario y todo su texto pasa AA en claro y oscuro con 6 secundarios (incluidos gris medio, amarillo y azul).
 17. Textos de 16 px o más y zonas táctiles de 44 px, en el sitio, el pop-up y las legales, con los **tres tamaños de texto**. Compacto deja el cuerpo en 16 px y achica títulos y precios; Grande pone el cuerpo en 18 px. Elegir el tamaño en Mi tienda lo cambia en el sitio y no en el panel.
@@ -1141,6 +1149,14 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 20/10/2026 · B2: vista "Carrusel" de los equipos
+
+- **Pedido de Jared (fase B, punto B2):** `tienda.vista_equipos` ("cuadricula" por defecto o "carrusel") con selector y ayuda por opción en Mi tienda; carrusel con las mismas tarjetas, filtro y orden; tarjeta al centro y vecinas desvanecidas y más chicas; bucle infinito; arrastre con inercia y ajuste, flechas, teclado y trackpad; indicador "3 de 10"; tocar la del centro abre el detalle y una vecina la centra; altura estable sin scroll horizontal; al filtrar, vuelve a la primera con transición; 1 tarjeta sin flechas ni bucle; 2 sin repetir a los dos lados; contador, estado vacío y detalle en línea igual; accesibilidad y reduced-motion.
+- **Hecho:** `supabase/migrations/0011_vista_equipos.sql`; `assets/js/sitio/carrusel-equipos.js` (nuevo); `galeria.js` (`usarCarrusel`); `principal.js` (`aplicarVista`, también al cambiar los datos en otra pestaña); `index.html` (flechas e indicador junto a la lista); `sitio.css` (vista carrusel); panel `tienda.js` y `panel.css` (sección "Diseño del sitio"); `comun.js` (`VISTAS_EQUIPOS`); `demo.js` versión 9.
+- **Errores encontrados por las pruebas y corregidos:** dos toques seguidos en la flecha avanzaban una sola tarjeta (ahora se guarda el destino mientras se mueve).
+- **Pruebas:** 8 casos nuevos en `verificar.cjs` y la vista en `pruebas.sql`. Ninguna prueba se debilitó.
+- **Verificación:** `tests/sql/probar.sh` OK, `tests/verificar.cjs` 43/43 y `tests/verificar-supabase.cjs` 9/9.
 
 ### 20/10/2026 · B1: pie con el color secundario de la tienda
 
