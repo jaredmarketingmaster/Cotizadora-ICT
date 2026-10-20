@@ -19,20 +19,33 @@ end $$;
 -- (datos de tests/sql/antes_0004_en_stock.sql).
 do $$
 begin
-  assert (select en_stock from public.equipos where capacidad = 'MIGRACION' and color_nombre = 'Stock 4'), 'stock 4 → con stock';
-  assert not (select en_stock from public.equipos where capacidad = 'MIGRACION' and color_nombre = 'Stock 0'), 'stock 0 → sin stock';
+  assert (select en_stock from public.equipos where capacidad = 'MIGRACION' and color_nombre_mostrar = 'Stock 4'), 'stock 4 → con stock';
+  assert not (select en_stock from public.equipos where capacidad = 'MIGRACION' and color_nombre_mostrar = 'Stock 0'), 'stock 0 → sin stock';
+  -- 0008: estos colores no existen en la fuente: color_id vacío y el nombre se conserva
+  assert (select count(*) from public.equipos where capacidad = 'MIGRACION' and color_id is null) = 2, 'colores no encontrados quedan sin color_id';
   assert (select count(*) from public.equipos where es_demo and not en_stock) = 0, 'los demo quedan con stock';
   assert not exists (select 1 from information_schema.columns where table_name = 'equipos' and column_name = 'stock'), 'ya no hay columna stock';
   delete from public.equipos where capacidad = 'MIGRACION';
 end $$;
 
+-- 0d. Migración 0008: los equipos demo quedaron con su color oficial; el
+-- nombre que veía el cliente se conserva si no es el oficial.
+do $$
+begin
+  assert (select string_agg(m.slug || ':' || c.nombre_es || ':' || e.color_nombre_mostrar, '|' order by m.orden desc, e.precio)
+          from public.equipos e join public.modelos m on m.id = e.modelo_id join public.colores c on c.id = e.color_id where e.es_demo)
+    = 'iphone-18-pro-max:Negro:|iphone-18-pro-max:Plata:|iphone-18-pro-max:Borgoña:|iphone-18-pro:Glaciar:Glacier|iphone-15-pro:Titanio natural:Titanio natural|iphone-13:Medianoche:Medianoche',
+    'colores de los equipos demo';
+  assert not exists (select 1 from information_schema.columns where table_name = 'equipos' and column_name in ('color_nombre', 'color_hex')), 'sin color propio en equipos';
+end $$;
+
 -- Un equipo no publicado, uno sin stock y uno de un modelo inactivo.
-insert into public.equipos (modelo_id, condicion, capacidad, color_nombre, precio, en_stock, publicado)
-select id, 'nuevo', '128 GB', 'Borrador', 1000000, true, false from public.modelos where slug = 'iphone-18-pro';
-insert into public.equipos (modelo_id, condicion, capacidad, color_nombre, precio, en_stock, publicado)
-select id, 'nuevo', '128 GB', 'Agotado', 1000000, false, true from public.modelos where slug = 'iphone-18-pro';
-insert into public.equipos (modelo_id, condicion, capacidad, color_nombre, precio, en_stock, publicado)
-select id, 'nuevo', '128 GB', 'Inactivo', 1000000, true, true from public.modelos where slug = 'iphone-16';
+insert into public.equipos (modelo_id, condicion, capacidad, color_id, color_nombre_mostrar, precio, en_stock, publicado)
+select m.id, 'nuevo', '128 GB', c.id, 'Borrador', 1000000, true, false from public.modelos m join public.colores c on c.modelo_id = m.id and c.nombre_es = 'Visón' where m.slug = 'iphone-18-pro';
+insert into public.equipos (modelo_id, condicion, capacidad, color_id, color_nombre_mostrar, precio, en_stock, publicado)
+select m.id, 'nuevo', '128 GB', c.id, 'Agotado', 1000000, false, true from public.modelos m join public.colores c on c.modelo_id = m.id and c.nombre_es = 'Oliva' where m.slug = 'iphone-18-pro';
+insert into public.equipos (modelo_id, condicion, capacidad, color_id, color_nombre_mostrar, precio, en_stock, publicado)
+select m.id, 'nuevo', '128 GB', c.id, 'Inactivo', 1000000, true, true from public.modelos m join public.colores c on c.modelo_id = m.id and c.nombre_es = 'Rosa' where m.slug = 'iphone-16';
 
 -- 0b. Migración 0006: el modelo que agregó la agencia (antes_0006) quedó al
 -- final, después del Duo, en el orden que tenía.
@@ -144,12 +157,12 @@ begin
   -- Cambiar un precio actualiza la fecha del pie
   select precios_actualizados_en into antes from public.tienda;
   perform pg_sleep(0.01);
-  update public.equipos set precio = precio + 1 where color_nombre = 'Negro';
+  update public.equipos set precio = precio + 1 where color_id in (select id from public.colores where nombre_es = 'Negro');
   select precios_actualizados_en into despues from public.tienda;
   assert despues > antes, 'cambiar precio actualiza la fecha';
   -- Cambiar el stock no la toca
-  update public.equipos set en_stock = not en_stock where color_nombre = 'Negro';
-  update public.equipos set en_stock = not en_stock where color_nombre = 'Negro';
+  update public.equipos set en_stock = not en_stock where color_id in (select id from public.colores where nombre_es = 'Negro');
+  update public.equipos set en_stock = not en_stock where color_id in (select id from public.colores where nombre_es = 'Negro');
   assert (select precios_actualizados_en from public.tienda) = despues, 'stock no toca la fecha';
 
   -- Catálogo completo: activar, renombrar, reordenar y agregar
@@ -179,18 +192,45 @@ do $$ begin
   insert into storage.objects (bucket_id, name) values ('fotos', 'equipo/1.webp');
   assert (select count(*) from storage.objects) = 1, 'gestor sube fotos';
 end $$;
+-- Color del equipo: debe ser de su modelo; obligatorio si el modelo tiene colores.
+do $$ begin
+  insert into public.equipos (modelo_id, condicion, capacidad, precio, color_id)
+  values ((select id from public.modelos where slug = 'iphone-13'), 'usado', '64 GB', 100,
+          (select c.id from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-14' and c.nombre_es = 'Azul'));
+  raise exception 'un color de otro modelo no vale';
+exception when check_violation then null; end $$;
+do $$ begin
+  insert into public.equipos (modelo_id, condicion, capacidad, precio) values ((select id from public.modelos where slug = 'iphone-13'), 'usado', '64 GB', 100);
+  raise exception 'sin color no vale si el modelo tiene colores';
+exception when check_violation then null; end $$;
+do $$ begin
+  -- Cambiar el modelo obliga a elegir de nuevo el color
+  update public.equipos set modelo_id = (select id from public.modelos where slug = 'iphone-14') where color_nombre_mostrar = 'Borrador';
+  raise exception 'al cambiar el modelo, el color viejo no vale';
+exception when check_violation then null; end $$;
+do $$ begin
+  -- Un modelo sin colores (17 Pro) acepta un equipo sin color, y el nombre a mostrar se recorta
+  insert into public.equipos (modelo_id, condicion, capacidad, precio, color_nombre_mostrar) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'nuevo', '256 GB', 100, '  Naranja  ');
+  assert (select color_nombre_mostrar from public.equipos where capacidad = '256 GB' and precio = 100) = 'Naranja', 'nombre a mostrar sin espacios';
+  delete from public.equipos where capacidad = '256 GB' and precio = 100;
+end $$;
+do $$ begin
+  update public.equipos set color_nombre_mostrar = repeat('x', 41) where color_nombre_mostrar = 'Borrador';
+  raise exception 'nombre a mostrar de más de 40 no vale';
+exception when check_violation then null; end $$;
+-- (en el 17 Pro, que no tiene colores, para probar solo cada regla)
 do $$ begin
   insert into public.equipos (modelo_id, condicion, capacidad, precio, en_stock)
-  values ((select id from public.modelos where slug = 'iphone-13'), 'usado', '64 GB', 100, null);
+  values ((select id from public.modelos where slug = 'iphone-17-pro'), 'usado', '64 GB', 100, null);
   raise exception 'el stock no puede quedar vacío';
 exception when not_null_violation then null; end $$;
 do $$ begin
   insert into public.equipos (modelo_id, condicion, capacidad, precio, bateria_porcentaje)
-  values ((select id from public.modelos where slug = 'iphone-13'), 'usado', '64 GB', 100, 101);
+  values ((select id from public.modelos where slug = 'iphone-17-pro'), 'usado', '64 GB', 100, 101);
   raise exception 'batería 101 no vale';
 exception when check_violation then null; end $$;
 do $$ begin
-  insert into public.equipos (modelo_id, condicion, capacidad, precio) values ((select id from public.modelos where slug = 'iphone-13'), 'nuevo', '64 GB', 0);
+  insert into public.equipos (modelo_id, condicion, capacidad, precio) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'nuevo', '64 GB', 0);
   raise exception 'precio 0 no vale';
 exception when check_violation then null; end $$;
 do $$ begin
@@ -207,6 +247,14 @@ do $$ begin
   insert into public.colores (modelo_id, nombre_es, hex) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'Naranja', '#E8772E');
   assert (select count(*) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-17-pro' and not c.oficial) = 1, 'gestor agrega un color al 17 Pro';
   update public.colores set hex = '#E87730', nombre_es = 'Naranja cósmico' where nombre_es = 'Naranja';
+  -- Un color en uso no se borra
+  insert into public.equipos (modelo_id, condicion, capacidad, precio, color_id)
+  values ((select id from public.modelos where slug = 'iphone-17-pro'), 'nuevo', '2 TB', 100, (select id from public.colores where nombre_es = 'Naranja cósmico'));
+  begin
+    delete from public.colores where nombre_es = 'Naranja cósmico';
+    raise exception 'un color en uso no se borra';
+  exception when foreign_key_violation then null; end;
+  delete from public.equipos where capacidad = '2 TB';
   delete from public.colores where nombre_es = 'Naranja cósmico';
   assert (select count(*) from public.colores where nombre_es like 'Naranja%') = 0, 'gestor borra un color de la tienda';
 end $$;

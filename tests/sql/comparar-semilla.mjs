@@ -14,8 +14,8 @@ const colores = CATALOGO.flatMap((m) => (COLORES[m.slug] || []).map(([nombre_es,
 })));
 assert.deepEqual(sql.colores, colores, "los colores del SQL y los de semilla.js no coinciden");
 const normal = (e) => ({
-  slug: e.slug, condicion: e.condicion, capacidad: e.capacidad, color_nombre: e.color_nombre,
-  color_hex: e.color_hex, precio: Number(e.precio), en_stock: e.en_stock, destacado: e.destacado,
+  slug: e.slug, condicion: e.condicion, capacidad: e.capacidad, color: e.color,
+  color_nombre_mostrar: e.color_nombre_mostrar, precio: Number(e.precio), en_stock: e.en_stock, destacado: e.destacado,
   bateria_porcentaje: e.bateria_porcentaje ?? null, estado_estetico: e.estado_estetico ?? null,
   detalles: e.detalles ?? "", incluye: e.incluye ?? ""
 });

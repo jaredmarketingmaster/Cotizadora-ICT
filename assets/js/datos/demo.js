@@ -9,7 +9,7 @@
 // =============================================================================
 
 import { CATALOGO, COLORES, DEMO_EQUIPOS } from "./semilla.js";
-import { ErrorDatos, equipoEsPublico, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, elegir } from "./comun.js";
+import { ErrorDatos, equipoEsPublico, nombreColor, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, elegir } from "./comun.js";
 import { hexValido, whatsappTiendaValido, sesion, esperar } from "../utils.js";
 
 const CLAVE = "cotizadora-demo:v1";
@@ -34,9 +34,12 @@ function estadoInicial() {
   const modelos = CATALOGO.map((m, i) => ({ id: i + 1, ...m, activo: false, activo_por_demo: false, creado_en: t }));
   const porSlug = new Map(modelos.map((m) => [m.slug, m]));
   for (const d of DEMO_EQUIPOS) Object.assign(porSlug.get(d.slug), { activo: true, activo_por_demo: true });
+  const colores = coloresOficiales(modelos);
+  const colorDe = (modeloId, nombre) => colores.find((c) => c.modelo_id === modeloId && c.nombre_es === nombre).id;
   const equipos = DEMO_EQUIPOS.map((d) => ({
     id: uuid(), modelo_id: porSlug.get(d.slug).id, condicion: d.condicion, capacidad: d.capacidad,
-    color_nombre: d.color_nombre, color_hex: d.color_hex, precio: d.precio, en_stock: d.en_stock, fotos: [],
+    color_id: colorDe(porSlug.get(d.slug).id, d.color), color_nombre_mostrar: d.color_nombre_mostrar,
+    precio: d.precio, en_stock: d.en_stock, fotos: [],
     publicado: true, destacado: d.destacado, descripcion_extra: "", es_demo: true,
     bateria_porcentaje: d.bateria_porcentaje ?? null, estado_estetico: d.estado_estetico ?? null,
     detalles: d.detalles ?? "", incluye: d.incluye ?? "", creado_en: t, actualizado_en: t
@@ -53,7 +56,7 @@ function estadoInicial() {
     },
     modelos,
     fichas: modelos.map((m) => ({ modelo_id: m.id, descripcion: "", especificaciones: [], actualizado_en: t })),
-    colores: coloresOficiales(modelos),
+    colores,
     equipos,
     perfiles: USUARIOS_DEMO.map((u, i) => ({ user_id: `demo-${i + 1}`, correo: u.correo, rol: u.rol, activo: true, clave: CLAVE_DEMO, creado_en: t }))
   };
@@ -61,7 +64,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 5;
+const VERSION = 6;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -93,6 +96,25 @@ const MIGRACIONES = {
     for (const p of e.perfiles) {
       p.rol = { agencia: "administrador", tienda: "gestor" }[p.rol] || p.rol;
       p.correo = correos[p.correo] || p.correo;
+    }
+  },
+  // 0008_color_oficial.sql: cada equipo pasa a un color oficial de su modelo
+  // (por nombre en español o inglés; "Glacier" → Glaciar). Si el nombre que
+  // tenía no es el que se mostraría, queda en color_nombre_mostrar. Sin color
+  // encontrado: color_id vacío y el nombre se conserva.
+  5(e) {
+    const equivalentes = { glacier: "glaciar" };
+    for (const q of e.equipos) {
+      const viejo = String(q.color_nombre || "").trim();
+      const v = viejo.toLowerCase();
+      const c = viejo && e.colores
+        .filter((x) => x.modelo_id === q.modelo_id)
+        .sort((a, b) => a.orden - b.orden)
+        .find((x) => x.nombre_es.toLowerCase() === v || (x.nombre_en && x.nombre_en.toLowerCase() === v) || x.nombre_es.toLowerCase() === equivalentes[v]);
+      q.color_id = c ? c.id : null;
+      q.color_nombre_mostrar = c ? (viejo !== nombreColor(c) ? viejo : "") : viejo.slice(0, 40);
+      delete q.color_nombre;
+      delete q.color_hex;
     }
   }
 };
@@ -232,13 +254,24 @@ function validarTienda(t) {
   if (!TAMANOS_TEXTO.includes(t.tamano_texto)) throw new ErrorDatos("El tamaño del texto debe ser compacto, normal o grande.");
 }
 
+// Como validar_color_equipo (0008): el color es del modelo y es obligatorio
+// si el modelo tiene colores (al crear, o al cambiar el modelo o el color).
+function validarColorEquipo(q, e, anterior = null) {
+  q.color_nombre_mostrar = String(q.color_nombre_mostrar || "").trim();
+  if (q.color_nombre_mostrar.length > 40) throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
+  if (q.color_id != null) {
+    if (!e.colores.some((c) => c.id === q.color_id && c.modelo_id === q.modelo_id)) throw new ErrorDatos("El color elegido no es de este modelo.");
+  } else if ((!anterior || anterior.modelo_id !== q.modelo_id || anterior.color_id != null) && e.colores.some((c) => c.modelo_id === q.modelo_id)) {
+    throw new ErrorDatos("Elija el color.");
+  }
+}
+
 function validarEquipo(q, e) {
   if (!e.modelos.some((m) => m.id === q.modelo_id)) throw new ErrorDatos("Elija un modelo.");
   if (!["nuevo", "usado"].includes(q.condicion)) throw new ErrorDatos("Elija si es nuevo o usado.");
   if (!String(q.capacidad || "").trim()) throw new ErrorDatos("Elija la capacidad.");
   if (!Number.isSafeInteger(q.precio) || q.precio <= 0) throw new ErrorDatos("El precio debe ser un número entero mayor que 0.");
   if (typeof q.en_stock !== "boolean") throw new ErrorDatos("Indique si el equipo tiene stock.");
-  if (!hexValido(q.color_hex)) throw new ErrorDatos("El color debe estar en formato hexadecimal, ej. #1C1C1E.");
   if ((q.fotos || []).length > 6) throw new ErrorDatos("Máximo 6 fotos por equipo.");
   if (q.bateria_porcentaje != null && !(Number.isInteger(q.bateria_porcentaje) && q.bateria_porcentaje >= 0 && q.bateria_porcentaje <= 100)) {
     throw new ErrorDatos("La batería debe estar entre 0 y 100.");
@@ -442,6 +475,7 @@ export const demo = {
     const c = e.colores.find((x) => x.id === id);
     if (!c) return;
     if (c.oficial) throw new ErrorDatos("Un color oficial no se puede borrar.", "42501");
+    if (e.equipos.some((q) => q.color_id === id)) throw new ErrorDatos("No se puede borrar: hay equipos con este color.");
     e.colores.splice(e.colores.indexOf(c), 1);
     escribir(e);
   },
@@ -479,11 +513,12 @@ export const demo = {
     const e = leer();
     exigirGestor(e);
     const q = {
-      id: uuid(), color_nombre: "", color_hex: "#8E8E93", en_stock: true, fotos: [], publicado: false, destacado: false,
+      id: uuid(), color_id: null, color_nombre_mostrar: "", en_stock: true, fotos: [], publicado: false, destacado: false,
       descripcion_extra: "", es_demo: false, bateria_porcentaje: null, estado_estetico: null, detalles: "", incluye: "",
       ...elegir(datos, CAMPOS_EQUIPO), creado_en: ahora(), actualizado_en: ahora()
     };
     validarEquipo(q, e);
+    validarColorEquipo(q, e);
     e.equipos.push(q);
     e.tienda.precios_actualizados_en = ahora();
     escribir(e);
@@ -498,6 +533,7 @@ export const demo = {
     if (!q) throw new ErrorDatos("Ese equipo ya no existe.");
     const nuevo = { ...q, ...elegir(cambios, CAMPOS_EQUIPO), actualizado_en: ahora() };
     validarEquipo(nuevo, e);
+    if (["modelo_id", "color_id", "color_nombre_mostrar"].some((k) => k in cambios)) validarColorEquipo(nuevo, e, q);
     if (nuevo.precio !== q.precio) e.tienda.precios_actualizados_en = ahora();
     Object.assign(q, nuevo);
     escribir(e);

@@ -18,7 +18,7 @@ function htmlTarjeta(api, t, i) {
   if (t.condicion === "nuevo") {
     sub = escaparHTML(t.capacidad);
     const colores = t.equipos.filter((e) => e.color_nombre || e.color_hex);
-    muestras = `<span class="muestras" aria-hidden="true">${colores.map((e) => `<span class="muestra" style="--c:${e.color_hex}"></span>`).join("")}</span>`;
+    muestras = `<span class="muestras" aria-hidden="true">${colores.map((e) => `<span class="muestra"${e.color_hex ? ` style="--c:${e.color_hex}"` : ""}></span>`).join("")}</span>`;
     const nombres = colores.map((e) => e.color_nombre).filter(Boolean);
     if (nombres.length) muestras += `<span class="oculto-visual">Colores: ${escaparHTML(nombres.join(", "))}.</span>`;
   } else {

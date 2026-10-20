@@ -160,8 +160,8 @@ async function llenarPopup(p) {
     const p = await nueva();
     await ir(p);
     await editarDemo(p, (e) => {
-      e.equipos.find((q) => q.color_nombre === "Glacier").en_stock = false;
-      e.equipos.find((q) => q.color_nombre === "Burgundy").publicado = false;
+      e.equipos.find((q) => q.color_nombre_mostrar === "Glacier").en_stock = false;
+      e.equipos.find((q) => q.capacidad === "512 GB").publicado = false;
     });
     await ir(p);
     const texto = await p.textContent("#lista-equipos");
@@ -182,7 +182,7 @@ async function llenarPopup(p) {
     const estado = () => fila.locator(".interruptor-estado").innerText().then((t) => t.trim());
     assert.equal(await estado(), "Con stock");
     await fila.locator('[data-campo="en_stock"]').uncheck();
-    const glacierEnStock = () => p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).equipos.find((q) => q.color_nombre === "Glacier").en_stock, CLAVE_DEMO);
+    const glacierEnStock = () => p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).equipos.find((q) => q.color_nombre_mostrar === "Glacier").en_stock, CLAVE_DEMO);
     await p.waitForFunction((clave) => JSON.parse(localStorage.getItem(clave)).equipos.some((q) => !q.en_stock), CLAVE_DEMO);
     assert.equal(await glacierEnStock(), false);
     assert.equal(await estado(), "Sin stock");
@@ -424,6 +424,81 @@ async function llenarPopup(p) {
     await q.context().close();
   });
 
+  await caso("color oficial: el equipo elige un color del modelo y el nombre a mostrar llega al sitio, WhatsApp y el píxel", async () => {
+    const p = await nueva(390, 844);
+    await p.route("**/config.js", async (r) => {
+      const cuerpo = fs.readFileSync(path.join(RAIZ, "config.js"), "utf8").replace('metaPixelId: ""', 'metaPixelId: "123456789012345"');
+      await r.fulfill({ contentType: "text/javascript", body: cuerpo });
+    });
+    await p.route("https://connect.facebook.net/**", (r) => r.fulfill({ contentType: "text/javascript", body: "" }));
+    await entrarPanel(p, "gestor@demo.co");
+    await p.goto(`${BASE}/admin/#/inventario/nuevo`);
+    await p.waitForSelector("#form-equipo");
+    await p.selectOption("#e-modelo", { label: "iPhone 17 (inactivo)" });
+    await p.click("#siguiente");
+    await p.check('input[name="e-condicion"][value="nuevo"]', { force: true }); await p.click("#siguiente");
+    await p.check('input[name="e-capacidad"][value="256 GB"]', { force: true }); await p.click("#siguiente");
+    // No hay forma de crear colores ni de escribir un hexadecimal desde el equipo:
+    // solo los 5 colores oficiales del iPhone 17 y el nombre a mostrar.
+    assert.deepEqual(await p.locator(".opcion-color .opcion-color-nombres > span:first-child").allTextContents(), ["Lavender", "Sage Green", "Mist Blue", "Blanco", "Negro"]);
+    assert.equal(await p.locator('[data-paso="color"] input:not([type=radio])').count(), 1);
+    assert.equal(await p.locator('[data-paso="color"] input[type=color]').count(), 0);
+    await p.check('.opcion-color:has-text("Lavender") input', { force: true });
+    await p.fill("#e-color-mostrar", "Lila");
+    // Cambiar el modelo borra el color elegido
+    await p.click("#anterior"); await p.click("#anterior"); await p.click("#anterior");
+    await p.selectOption("#e-modelo", { label: "iPhone Air (inactivo)" });
+    await p.click("#siguiente"); await p.click("#siguiente"); await p.click("#siguiente");
+    assert.equal(await p.locator('input[name="e-color"]:checked').count(), 0);
+    assert.deepEqual(await p.locator(".opcion-color .opcion-color-nombres > span:first-child").allTextContents(), ["Sky Blue", "Light Gold", "Cloud White", "Space Black"]);
+    await p.click("#anterior"); await p.click("#anterior"); await p.click("#anterior");
+    await p.selectOption("#e-modelo", { label: "iPhone 17 (inactivo)" });
+    await p.click("#siguiente"); await p.click("#siguiente"); await p.click("#siguiente");
+    await p.check('.opcion-color:has-text("Lavender") input', { force: true });
+    await p.click("#siguiente");
+    await p.fill("#e-precio", "4.500.000"); await p.click("#siguiente");
+    await p.click("#siguiente"); // fotos
+    await p.check("#e-publicado");
+    assert.match(await p.textContent("#resumen-equipo"), /iPhone 17 · Nuevo · 256 GB · Lila/);
+    await p.click("#guardar");
+    await p.waitForURL(/#\/inventario$/);
+    assert.match(await p.textContent('.fila-equipo:has-text("iPhone 17")'), /Lila/);
+    // La capa de datos tampoco acepta un color de otro modelo.
+    const error = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      const colores = await a.listarColores();
+      const modelos = await a.listarModelos();
+      const m17 = modelos.find((m) => m.slug === "iphone-17").id;
+      const ajeno = colores.find((c) => c.modelo_id !== m17).id;
+      try { await a.crearEquipo({ modelo_id: m17, condicion: "nuevo", capacidad: "512 GB", precio: 1, color_id: ajeno }); return ""; } catch (e) { return e.message; }
+    });
+    assert.equal(error, "El color elegido no es de este modelo.");
+
+    // En el sitio: tarjeta, detalle, texto alternativo, WhatsApp y píxel con "Lila".
+    await editarDemo(p, (e) => { e.tienda.whatsapp = "573001234567"; });
+    await ir(p, "/?condicion=nuevo&modelo=iphone-17&capacidad=256-gb");
+    assert.equal((await p.textContent("#detalle-en-linea [data-color-actual]")).trim(), "Lila");
+    assert.match(await p.textContent("#detalle-en-linea .detalle-variante"), /256 GB · Lila/);
+    // Sin foto, la ilustración lleva el texto alternativo en aria-label.
+    assert.equal(await p.getAttribute('#detalle-en-linea .diapositiva [role="img"]', "aria-label"), "iPhone 17, 256 GB, color Lila");
+    assert.equal(await p.getAttribute('.tarjeta:has-text("iPhone 17") .muestra', "style"), "--c:#C6BFE6");
+    await p.click("#detalle-en-linea [data-comprar]");
+    await llenarPopup(p);
+    await p.click("[data-enviar]");
+    await p.waitForSelector("text=Su pedido está listo");
+    const wa = new URL((await p.evaluate(() => window.__abiertos))[0]).searchParams.get("text");
+    assert.match(wa, /^256 GB · Lila$/m);
+    const cola = await p.evaluate(() => window.fbq.queue.map((a) => JSON.parse(JSON.stringify([...a]))));
+    assert.equal(cola.find((a) => a[1] === "Lead")[2].content_name, "iPhone 17 256 GB Lila");
+    // Sin nombre a mostrar, se ve el oficial en inglés.
+    await editarDemo(p, (e) => { e.equipos.find((q) => q.color_nombre_mostrar === "Lila").color_nombre_mostrar = ""; });
+    await ir(p, "/?condicion=nuevo&modelo=iphone-17&capacidad=256-gb");
+    assert.equal((await p.textContent("#detalle-en-linea [data-color-actual]")).trim(), "Lavender");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("roles: el administrador solo ve Usuarios; la capa de datos le impide lo demás", async () => {
     const p = await nueva(390, 844);
     await entrarPanel(p, "administrador@demo.co");
@@ -463,6 +538,10 @@ async function llenarPopup(p) {
       e.fichas = e.fichas.filter((f) => !fuera.has(f.modelo_id));
       e.modelos.forEach((m, i) => { m.orden = (i + 1) * 10; });
       e.equipos.forEach((q, i) => { q.stock = i === 0 ? 0 : 2; delete q.en_stock; });
+      // Colores con nombre y hexadecimal propios, como antes de 0008
+      const viejos = ["Negro", "Plata", "Burgundy", "Glacier", "Titanio natural", "Medianoche"];
+      e.equipos.forEach((q, i) => { q.color_nombre = viejos[i]; q.color_hex = "#123456"; delete q.color_id; delete q.color_nombre_mostrar; });
+      e.equipos[2].color_nombre = "Color que no existe";
       delete e.colores;
       delete e.tienda.tamano_texto;
       e.perfiles[0].rol = "agencia"; e.perfiles[0].correo = "agencia@demo.co";
@@ -473,6 +552,13 @@ async function llenarPopup(p) {
     const e = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)), CLAVE_DEMO);
     assert.equal(e.version >= 5, true);
     assert.deepEqual(e.perfiles.map((x) => `${x.correo}:${x.rol}`), ["administrador@demo.co:administrador", "gestor@demo.co:gestor"]);
+    // 0008: color oficial por nombre; el nombre viejo queda si no es el oficial;
+    // sin coincidencia, sin color y con el nombre conservado.
+    const nombreDe = (q) => e.colores.find((c) => c.id === q.color_id)?.nombre_es ?? null;
+    assert.deepEqual(e.equipos.map((q) => [nombreDe(q), q.color_nombre_mostrar]), [
+      ["Negro", ""], ["Plata", ""], [null, "Color que no existe"], ["Glaciar", "Glacier"], ["Titanio natural", "Titanio natural"], ["Medianoche", "Medianoche"]
+    ]);
+    assert.ok(e.equipos.every((q) => !("color_hex" in q) && !("color_nombre" in q)));
     assert.equal(e.modelos.length, 42);
     assert.equal(e.colores.length, 183);
     assert.equal(e.tienda.tamano_texto, "normal");
@@ -536,7 +622,10 @@ async function llenarPopup(p) {
     await p.click("#siguiente");
     await p.check('input[name="e-condicion"][value="usado"]', { force: true }); await p.click("#siguiente");
     await p.check('input[name="e-capacidad"][value="64 GB"]', { force: true }); await p.click("#siguiente");
-    await p.fill("#e-color-nombre", "Blanco"); await p.fill("#e-color-hex", "#F5F5F0"); await p.click("#siguiente");
+    // Color: solo los oficiales del modelo; sin elegir, avisa.
+    await p.click("#siguiente");
+    assert.equal(await p.textContent("#e-color-error"), "Elija el color.");
+    await p.check('input[name="e-color"] >> nth=0', { force: true }); await p.click("#siguiente");
     // El stock es un interruptor que arranca en «Con stock».
     assert.equal(await p.isChecked("#e-stock"), true);
     assert.equal((await p.innerText('label[for="e-stock"] .interruptor-estado')).trim(), "Con stock");
@@ -785,7 +874,7 @@ async function llenarPopup(p) {
       // 9 modelos más: del iPhone 11 al 13 (el catálogo ahora empieza en el 7)
       e.modelos.filter((m) => /^iphone-1[123]/.test(m.slug)).slice(0, 9).forEach((m, i) => {
         m.activo = true;
-        e.equipos.push({ id: `x${i}`, modelo_id: m.id, condicion: "nuevo", capacidad: "128 GB", color_nombre: "Negro", color_hex: "#111111", precio: 1000000 + i, en_stock: true, fotos: [], publicado: true, destacado: false, descripcion_extra: "", es_demo: false, bateria_porcentaje: null, estado_estetico: null, detalles: "", incluye: "", creado_en: t, actualizado_en: t });
+        e.equipos.push({ id: `x${i}`, modelo_id: m.id, condicion: "nuevo", capacidad: "128 GB", color_id: e.colores.find((c) => c.modelo_id === m.id)?.id ?? null, color_nombre_mostrar: "", precio: 1000000 + i, en_stock: true, fotos: [], publicado: true, destacado: false, descripcion_extra: "", es_demo: false, bateria_porcentaje: null, estado_estetico: null, detalles: "", incluye: "", creado_en: t, actualizado_en: t });
       });
     });
     await ir(p);

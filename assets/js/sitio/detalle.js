@@ -60,7 +60,7 @@ export function crearDetalle({ api, cat, tarjeta, lista, inicial, alComprar, alC
       <div class="colores">
         <p class="colores-titulo">${condicion === "nuevo" ? "Color" : "Unidad"}: <strong data-color-actual></strong></p>
         ${lista.length > 1 ? `<div class="colores-lista" role="group" aria-label="${condicion === "nuevo" ? "Colores" : "Unidades"}">
-          ${lista.map((q, i) => `<button type="button" class="color-boton" data-i="${i}"><span class="muestra" style="--c:${q.color_hex}" aria-hidden="true"></span>${escaparHTML(etiquetaMuestra(q, condicion))}</button>`).join("")}
+          ${lista.map((q, i) => `<button type="button" class="color-boton" data-i="${i}"><span class="muestra"${q.color_hex ? ` style="--c:${q.color_hex}"` : ""} aria-hidden="true"></span>${escaparHTML(etiquetaMuestra(q, condicion))}</button>`).join("")}
         </div>` : ""}
       </div>
     </div>

@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { capacidadEnGB, formatearCOP } from "../utils.js";
+import { nombreColor } from "../datos/comun.js";
 
 // Recencia de cada generación = el mayor "orden" de sus modelos en el catálogo.
 // Así el plegable (último del catálogo) y los modelos que se agreguen después
@@ -17,9 +18,15 @@ export function prepararCatalogo(datos) {
   const porSlug = new Map([...porId.values()].map((m) => [m.slug, m]));
   const fichas = new Map((datos.fichas || []).map((f) => [f.modelo_id, f]));
   const colores = new Map((datos.colores || []).map((c) => [c.id, c]));
+  // El color de cada equipo sale del color oficial: color_nombre es el nombre
+  // que ve el cliente (el que eligió la tienda o el oficial) y color_hex la
+  // muestra oficial ("" si la fuente no la tiene: muestra neutra).
   const equipos = (datos.equipos || [])
     .filter((q) => porId.has(q.modelo_id) && q.publicado && q.en_stock)
-    .map((q) => ({ ...q, modelo: porId.get(q.modelo_id) }));
+    .map((q) => {
+      const color = colores.get(q.color_id) || null;
+      return { ...q, modelo: porId.get(q.modelo_id), color, color_nombre: nombreColor(color, q.color_nombre_mostrar), color_hex: color?.hex || "" };
+    });
   return { tienda: datos.tienda || {}, porId, porSlug, fichas, colores, equipos };
 }
 

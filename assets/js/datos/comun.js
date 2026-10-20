@@ -35,7 +35,7 @@ export const CAMPOS_TIENDA = [
 ];
 
 export const CAMPOS_EQUIPO = [
-  "modelo_id", "condicion", "capacidad", "color_nombre", "color_hex", "precio", "en_stock",
+  "modelo_id", "condicion", "capacidad", "color_id", "color_nombre_mostrar", "precio", "en_stock",
   "fotos", "publicado", "destacado", "descripcion_extra", "es_demo",
   "bateria_porcentaje", "estado_estetico", "detalles", "incluye"
 ];
@@ -43,6 +43,12 @@ export const CAMPOS_EQUIPO = [
 // Colores del catálogo: la tienda completa el hexadecimal que falta y, solo en
 // modelos sin colores oficiales, agrega los suyos (igual que proteger_color).
 export const CAMPOS_COLOR = ["modelo_id", "nombre_es", "nombre_en", "hex", "orden"];
+
+// Nombre del color que ve el cliente: el que eligió la tienda o, si no, el
+// oficial en inglés (o el de la fuente, si no hay nombre en inglés).
+export function nombreColor(color, mostrar = "") {
+  return String(mostrar || "").trim() || color?.nombre_en || color?.nombre_es || "";
+}
 
 export const TAMANOS_TEXTO = ["compacto", "normal", "grande"];
 
@@ -63,8 +69,8 @@ export function mensajeDeError(error) {
     return !texto || /row-level security|permission denied/i.test(texto) ? "Su usuario no tiene permiso para hacer este cambio." : texto;
   }
   if (codigo === "23505") return "Ya existe un registro con ese nombre.";
-  if (codigo === "23503") return "No se puede borrar: hay equipos cargados con este modelo.";
-  if (codigo === "23514") return "Algún dato no tiene el formato correcto. Revise los campos.";
+  if (codigo === "23503") return /colores|color_id/.test(texto) ? "No se puede borrar: hay equipos con este color." : "No se puede borrar: hay equipos cargados con este modelo.";
+  if (codigo === "23514") return /violates check constraint/i.test(texto) || !texto ? "Algún dato no tiene el formato correcto. Revise los campos." : texto;
   if (/Failed to fetch|NetworkError|network/i.test(texto)) return "No hay conexión. Revise su internet e inténtelo de nuevo.";
   return texto || "Algo salió mal. Inténtelo de nuevo.";
 }

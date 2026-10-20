@@ -207,7 +207,9 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.click("#siguiente");
     await p.check('input[name="e-condicion"][value="nuevo"]', { force: true }); await p.click("#siguiente");
     await p.check('input[name="e-capacidad"][value="1 TB"]', { force: true }); await p.click("#siguiente");
-    await p.fill("#e-color-nombre", "Prueba"); await p.fill("#e-color-hex", "#334455"); await p.click("#siguiente");
+    // El 17 Pro no tiene colores en la fuente: se guarda sin color y con un nombre a mostrar.
+    assert.match(await p.textContent("#opciones-color"), /no tiene colores cargados/);
+    await p.fill("#e-color-mostrar", "Prueba"); await p.click("#siguiente");
     await p.fill("#e-precio", "9000000"); await p.click("#siguiente");
     const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
     await p.setInputFiles("#e-fotos", { name: "a.png", mimeType: "image/png", buffer: png });
@@ -219,6 +221,7 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     const s = await p.context().newPage();
     await s.goto(`${BASE}/?condicion=nuevo&modelo=iphone-17-pro&capacidad=1-tb`, { waitUntil: "networkidle" });
     assert.match(await s.textContent("#detalle-en-linea .precio-valor"), /\$9\.000\.000/);
+    assert.match(await s.textContent("#detalle-en-linea .detalle-variante"), /1 TB · Prueba/);
     const src = await s.getAttribute("#detalle-en-linea .diapositiva img", "src");
     assert.match(src, /\/storage\/v1\/object\/public\/fotos\/equipos\//);
     const r = await s.request.get(src);

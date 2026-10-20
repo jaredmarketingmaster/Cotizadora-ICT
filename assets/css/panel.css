@@ -195,6 +195,15 @@ select.entrada { appearance: none; -webkit-appearance: none; padding-right: 40px
 .opcion-chip input:checked + span { background: var(--primario); border-color: var(--primario); color: var(--sobre-primario); }
 .opcion-chip input:focus-visible + span { outline: 3px solid var(--texto); outline-offset: 2px; }
 
+/* Colores oficiales del modelo en el formulario del equipo */
+.opciones-color { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); gap: 8px; }
+.opcion-color { position: relative; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 12px; border: 1.5px solid var(--borde-fuerte); border-radius: 14px; background: var(--fondo); cursor: pointer; }
+.opcion-color input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.opcion-color:has(input:checked) { border-color: var(--primario-texto); box-shadow: 0 0 0 2px var(--primario-texto); }
+.opcion-color:has(input:focus-visible) { outline: 3px solid var(--texto); outline-offset: 2px; }
+.opcion-color-nombres { display: grid; font-weight: 700; min-width: 0; }
+.opcion-color-nombres .ayuda { font-weight: 400; }
+
 .selector-color { display: flex; gap: 10px; align-items: center; }
 .selector-color input[type="color"] { width: 56px; height: 52px; padding: 4px; border: 1.5px solid var(--borde-fuerte); border-radius: var(--radio-md); background: var(--fondo); cursor: pointer; flex: none; }
 .selector-color .entrada { max-width: 160px; text-transform: uppercase; }

@@ -3,8 +3,8 @@
 // formulario por pasos para agregar, edición completa, duplicar y borrar.
 // =============================================================================
 
-import { formatearCOP, formatearMiles, leerPrecio, hexValido, CAPACIDADES_SUGERIDAS, capacidadEnGB } from "../utils.js";
-import { rutaMiniatura, ESTADOS_ESTETICOS } from "../datos/comun.js";
+import { formatearCOP, formatearMiles, leerPrecio, CAPACIDADES_SUGERIDAS, capacidadEnGB } from "../utils.js";
+import { rutaMiniatura, ESTADOS_ESTETICOS, nombreColor } from "../datos/comun.js";
 import { telefonoSVG } from "../ilustracion.js";
 import { etiquetaGeneracion } from "../sitio/catalogo.js";
 import { $, $$, esc, avisar, confirmar, conBoton, campoTexto, interruptor, marcarError, enfocarPrimerError } from "./ui.js";
@@ -16,10 +16,15 @@ function nombreModelo(modelos, id) {
   return modelos.find((m) => m.id === id)?.nombre || "Modelo borrado";
 }
 
-function miniatura(api, q, alt = "") {
+function miniatura(api, q, colores, alt = "") {
   const ruta = q.fotos?.[0];
   const url = ruta && (api.urlArchivo("fotos", rutaMiniatura(ruta)) || api.urlArchivo("fotos", ruta));
-  return url ? `<img src="${esc(url)}" alt="${esc(alt)}" loading="lazy">` : telefonoSVG(q.color_hex);
+  return url ? `<img src="${esc(url)}" alt="${esc(alt)}" loading="lazy">` : telefonoSVG(colores.get(q.color_id)?.hex);
+}
+
+// Nombre del color que verá el cliente (el elegido o el oficial).
+function colorDe(q, colores) {
+  return nombreColor(colores.get(q.color_id), q.color_nombre_mostrar);
 }
 
 function rutasDeFotos(fotos) {
@@ -36,7 +41,8 @@ export async function dibujar(vista, ctx, resto, params) {
 
 async function lista(vista, ctx, params) {
   const { api } = ctx;
-  const [equipos, modelos] = await Promise.all([api.listarEquipos(), api.listarModelos()]);
+  const [equipos, modelos, listaColores] = await Promise.all([api.listarEquipos(), api.listarModelos(), api.listarColores()]);
+  const colores = new Map(listaColores.map((c) => [c.id, c]));
   const activos = new Set(modelos.filter((m) => m.activo).map((m) => m.id));
   const conEquipos = modelos.filter((m) => equipos.some((q) => q.modelo_id === m.id));
   const estado = {
@@ -69,7 +75,7 @@ async function lista(vista, ctx, params) {
       (!estado.publicado || q.publicado === (estado.publicado === "si")) &&
       (estado.especial !== "sin-stock" || !q.en_stock) &&
       (estado.especial !== "sin-foto" || (!q.es_demo && !(q.fotos || []).length)) &&
-      (!t || [nombreModelo(modelos, q.modelo_id), q.color_nombre, q.capacidad, q.condicion].join(" ").toLowerCase().includes(t)))
+      (!t || [nombreModelo(modelos, q.modelo_id), colorDe(q, colores), q.capacidad, q.condicion].join(" ").toLowerCase().includes(t)))
       .sort((a, b) => {
         const ma = modelos.find((m) => m.id === a.modelo_id)?.orden ?? 0;
         const mb = modelos.find((m) => m.id === b.modelo_id)?.orden ?? 0;
@@ -86,10 +92,10 @@ async function lista(vista, ctx, params) {
       q.condicion === "usado" && q.bateria_porcentaje != null && `batería ${q.bateria_porcentaje}%`
     ].filter(Boolean);
     return `<li class="fila-equipo" data-id="${q.id}">
-      <span class="fila-foto">${miniatura(api, q)}</span>
+      <span class="fila-foto">${miniatura(api, q, colores)}</span>
       <div class="fila-info">
         <span class="fila-nombre">${esc(nombre)}</span>
-        <span class="fila-sub">${[q.condicion === "usado" ? "Usado" : "Nuevo", q.capacidad, q.color_nombre].filter(Boolean).map(esc).join(" · ")}</span>
+        <span class="fila-sub">${[q.condicion === "usado" ? "Usado" : "Nuevo", q.capacidad, colorDe(q, colores)].filter(Boolean).map(esc).join(" · ")}</span>
         ${notas.length ? `<span class="fila-sub">${esc(notas.join(" · "))}</span>` : ""}
       </div>
       <div class="fila-edicion">
@@ -161,7 +167,7 @@ async function lista(vista, ctx, params) {
     const q = equipos.find((x) => x.id === li.dataset.id);
     const ok = await confirmar({
       titulo: "¿Borrar este equipo?",
-      texto: `${nombreModelo(modelos, q.modelo_id)} ${q.capacidad}${q.color_nombre ? ` ${q.color_nombre}` : ""}. Se borran también sus fotos. Si solo quiere ocultarlo, márquelo «Sin stock» o desmarque «Publicado».`,
+      texto: `${nombreModelo(modelos, q.modelo_id)} ${q.capacidad}${colorDe(q, colores) ? ` ${colorDe(q, colores)}` : ""}. Se borran también sus fotos. Si solo quiere ocultarlo, márquelo «Sin stock» o desmarque «Publicado».`,
       aceptar: "Borrar", peligro: true
     });
     if (!ok) return;
@@ -191,7 +197,7 @@ const PASOS = [
 
 async function formulario(vista, ctx, { modo, id, desde }) {
   const { api } = ctx;
-  const [equipos, modelos] = await Promise.all([api.listarEquipos(), api.listarModelos()]);
+  const [equipos, modelos, listaColores] = await Promise.all([api.listarEquipos(), api.listarModelos(), api.listarColores()]);
   const original = id ? equipos.find((q) => q.id === id) : null;
   if (modo === "editar" && !original) {
     vista.innerHTML = '<p class="popup-alerta">Ese equipo ya no existe.</p><a class="volver" href="#/inventario">← Volver al inventario</a>';
@@ -200,7 +206,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
   const fuente = modo === "duplicar" ? equipos.find((q) => q.id === desde) : original;
   const q = {
     modelo_id: fuente?.modelo_id ?? "", condicion: fuente?.condicion ?? "", capacidad: fuente?.capacidad ?? "",
-    color_nombre: fuente?.color_nombre ?? "", color_hex: fuente?.color_hex ?? "#8E8E93",
+    color_id: fuente?.color_id ?? null, color_nombre_mostrar: fuente?.color_nombre_mostrar ?? "",
     precio: fuente?.precio ?? null, en_stock: fuente?.en_stock ?? true,
     fotos: modo === "editar" ? [...(fuente?.fotos || [])] : [],
     publicado: modo === "editar" ? fuente.publicado : false,
@@ -268,17 +274,12 @@ async function formulario(vista, ctx, { modo, id, desde }) {
         <p class="error-campo" id="e-capacidad-error"></p>
       </fieldset>
 
-      <fieldset class="bloque" data-paso="color">
+      <fieldset class="bloque" data-paso="color" aria-describedby="e-color-error">
         <legend>Color</legend>
-        ${campoTexto({ id: "e-color-nombre", etiqueta: "Nombre del color", valor: q.color_nombre, ayuda: "Como lo quiere mostrar, ej. Negro.", atributos: 'maxlength="40"' })}
-        <div class="campo">
-          <label for="e-color-hex">Muestra del color</label>
-          <div class="selector-color">
-            <input type="color" id="e-color-picker" value="${esc(q.color_hex)}" aria-label="Elegir el color en la paleta">
-            <input class="entrada cifras" id="e-color-hex" value="${esc(q.color_hex)}" maxlength="7" aria-describedby="e-color-hex-error" spellcheck="false">
-          </div>
-          <p class="error-campo" id="e-color-hex-error"></p>
-        </div>
+        <p class="ayuda">Los colores oficiales del modelo. Para agregar o completar colores, vaya a Catálogo.</p>
+        <div class="opciones-color" id="opciones-color"></div>
+        <p class="error-campo" id="e-color-error"></p>
+        ${campoTexto({ id: "e-color-mostrar", etiqueta: "Nombre que verá el cliente (opcional)", valor: q.color_nombre_mostrar, ayuda: "Por ejemplo, el nombre en español. Si lo deja vacío, se muestra el nombre oficial en inglés.", atributos: 'maxlength="40"' })}
       </fieldset>
 
       <fieldset class="bloque" data-paso="precio">
@@ -349,6 +350,27 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     return v === "otra" ? valor("#e-capacidad-otra") : v;
   }
 
+  // Colores oficiales del modelo elegido (radios con muestra). Cambiar el
+  // modelo borra el color elegido.
+  let modeloColores = q.modelo_id;
+  function pintarColores() {
+    const m = modeloSel();
+    if (m?.id !== modeloColores) { q.color_id = null; modeloColores = m?.id; }
+    const lista = m ? listaColores.filter((c) => c.modelo_id === m.id).sort((a, b) => a.orden - b.orden) : [];
+    $("#opciones-color").innerHTML = !m
+      ? '<p class="ayuda">Elija primero el modelo.</p>'
+      : lista.length
+        ? lista.map((c) => `<label class="opcion-color"><input type="radio" name="e-color" value="${c.id}" ${q.color_id === c.id ? "checked" : ""}>
+            <span class="muestra-color${c.hex ? "" : " muestra-color--vacia"}" ${c.hex ? `style="background:${esc(c.hex)}"` : ""} aria-hidden="true"></span>
+            <span class="opcion-color-nombres"><span>${esc(c.nombre_en || c.nombre_es)}</span>${c.nombre_en ? `<span class="ayuda">${esc(c.nombre_es)}</span>` : ""}</span>
+          </label>`).join("")
+        : '<p class="ayuda">Este modelo no tiene colores cargados. Puede guardar el equipo sin color o agregar los colores en Catálogo.</p>';
+  }
+  const colorSel = () => {
+    const v = $('input[name="e-color"]:checked', form)?.value;
+    return v ? Number(v) : null;
+  };
+
   function actualizarVisibles() {
     const m = modeloSel();
     $("#aviso-inactivo").hidden = !m || m.activo;
@@ -376,7 +398,8 @@ async function formulario(vista, ctx, { modo, id, desde }) {
   function dibujarResumen() {
     const m = modeloSel();
     const precio = leerPrecio(valor("#e-precio"));
-    $("#resumen-equipo").innerHTML = `Resumen: <strong>${esc([m?.nombre, condicion() === "usado" ? "Usado" : "Nuevo", capacidad(), valor("#e-color-nombre")].filter(Boolean).join(" · "))}</strong>
+    const color = nombreColor(listaColores.find((c) => c.id === colorSel()), valor("#e-color-mostrar"));
+    $("#resumen-equipo").innerHTML = `Resumen: <strong>${esc([m?.nombre, condicion() === "usado" ? "Usado" : "Nuevo", capacidad(), color].filter(Boolean).join(" · "))}</strong>
       ${precio ? ` · ${formatearCOP(precio)}` : ""} · ${$("#e-stock").checked ? "con stock" : "sin stock"} · ${fotos.length} foto${fotos.length === 1 ? "" : "s"}`;
   }
 
@@ -384,7 +407,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
   function errorGrupo(nombre, mensaje) {
     $(`#${nombre}-error`, form).textContent = mensaje;
     const primera = $(`input[name="${nombre}"]`, form);
-    if (mensaje) primera.setAttribute("aria-invalid", "true"); else primera.removeAttribute("aria-invalid");
+    if (mensaje) primera?.setAttribute("aria-invalid", "true"); else primera?.removeAttribute("aria-invalid");
     return !mensaje;
   }
 
@@ -394,9 +417,8 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     condicion: () => errorGrupo("e-condicion", condicion() ? "" : "Elija si es nuevo o usado."),
     capacidad: () => errorGrupo("e-capacidad", capacidad() ? "" : "Elija o escriba la capacidad."),
     color: () => {
-      const a = marcarError(form, "e-color-nombre", valor("#e-color-nombre") ? "" : "Escriba el nombre del color.");
-      const b = marcarError(form, "e-color-hex", hexValido(valor("#e-color-hex")) ? "" : "Use el formato #RRGGBB, ej. #1C1C1E.");
-      return a && b;
+      const hay = Boolean(modeloSel()) && listaColores.some((c) => c.modelo_id === modeloSel().id);
+      return errorGrupo("e-color", hay && !colorSel() ? "Elija el color." : "");
     },
     precio: () => {
       return marcarError(form, "e-precio", leerPrecio(valor("#e-precio")) ? "" : "El precio debe ser un número entero mayor que 0.");
@@ -511,12 +533,9 @@ async function formulario(vista, ctx, { modo, id, desde }) {
   form.addEventListener("change", (e) => {
     ctx.sucio = true;
     if (e.target.name === "e-capacidad" || e.target.name === "e-condicion" || e.target.id === "e-modelo") actualizarVisibles();
+    if (e.target.id === "e-modelo") pintarColores();
+    if (e.target.name === "e-color") { q.color_id = colorSel(); errorGrupo("e-color", ""); }
     if (porPasos && e.target.name === "e-condicion") mostrarPaso();
-  });
-  $("#e-color-picker").addEventListener("input", (e) => { $("#e-color-hex").value = e.target.value.toUpperCase(); });
-  $("#e-color-hex").addEventListener("input", (e) => {
-    const v = e.target.value.trim();
-    if (hexValido(v)) $("#e-color-picker").value = v.toLowerCase();
   });
   $("#e-precio").addEventListener("blur", (e) => { const p = leerPrecio(e.target.value); if (p) e.target.value = formatearMiles(p); });
 
@@ -550,8 +569,8 @@ async function formulario(vista, ctx, { modo, id, desde }) {
       modelo_id: modeloSel().id,
       condicion: condicion(),
       capacidad: capacidad(),
-      color_nombre: valor("#e-color-nombre"),
-      color_hex: valor("#e-color-hex").toUpperCase(),
+      color_id: colorSel(),
+      color_nombre_mostrar: valor("#e-color-mostrar"),
       precio: leerPrecio(valor("#e-precio")),
       en_stock: $("#e-stock").checked,
       fotos,
@@ -583,6 +602,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
   };
 
   pintarFotos();
+  pintarColores();
   actualizarVisibles();
   if (porPasos) mostrarPaso();
 }
