@@ -39,7 +39,12 @@ function cliente() {
     const params = new URLSearchParams(location.hash.replace(/^#/, "") + "&" + location.search.replace(/^\?/, ""));
     tipoEnlace = params.get("type") || "";
     clientePromesa = import(SUPABASE_JS).then(({ createClient }) => {
-      const c = createClient(URL_BASE, CLAVE, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+      // Flujo "implicit": el enlace del correo (invitación o recuperación)
+      // funciona aunque se abra en otro navegador o en el celular. Con PKCE
+      // solo funcionaría en el mismo navegador donde se pidió.
+      const c = createClient(URL_BASE, CLAVE, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "implicit" }
+      });
       c.auth.onAuthStateChange((evento) => {
         if (evento === "PASSWORD_RECOVERY") tipoEnlace = "recovery";
       });

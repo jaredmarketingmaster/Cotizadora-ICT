@@ -2,9 +2,10 @@
 # =============================================================================
 # Levanta un "Supabase local" mínimo para probar el modo supabase de punta a
 # punta, sin Docker:
-#   Postgres + servidor de auth de Supabase (GoTrue) + PostgREST + la función
-#   enviar-lead (Deno) + un webhook de GHL simulado + una pasarela en :54321
-#   con Storage simulado en memoria.
+#   Postgres + servidor de auth de Supabase (GoTrue) + PostgREST + las
+#   funciones enviar-lead y usuarios (Deno) + un webhook de GHL simulado + un
+#   SMTP simulado (guarda los correos) + una pasarela en :54321 con Storage
+#   simulado en memoria.
 #
 # Necesita: binarios de Postgres 15+, y en $BIN: postgrest, auth (con su
 # carpeta migrations/) y deno. Ver README, "Pruebas".
@@ -12,7 +13,8 @@
 #   BIN=/ruta/binarios bash tests/supabase-local/levantar.sh   # deja todo corriendo
 #   bash tests/supabase-local/levantar.sh detener
 #
-# Deja en $DIR/entorno: URL, ANON y el archivo donde cae el último lead.
+# Deja en $DIR/entorno: URL, ANON, el archivo donde cae el último lead y la
+# carpeta donde caen los correos.
 # =============================================================================
 set -euo pipefail
 AQUI="$(cd "$(dirname "$0")" && pwd)"
@@ -32,7 +34,7 @@ detener() {
 if [ "${1:-}" = "detener" ]; then detener; echo "detenido"; exit 0; fi
 detener
 # Esperar a que los puertos de una corrida anterior queden libres.
-for p in 9100 9101 9998 9999 54321 "$PGPORT"; do
+for p in 2525 9100 9101 9102 9998 9999 54321 "$PGPORT"; do
   for _ in $(seq 50); do (exec 3<>"/dev/tcp/127.0.0.1/$p") 2>/dev/null || break; sleep 0.2; done
 done
 export DENO_NO_UPDATE_CHECK=1
@@ -49,6 +51,9 @@ SERVICIO="$(node "$AQUI/jwt.mjs" "$SECRETO" service_role)"
 PSQL=(psql -h 127.0.0.1 -p "$PGPORT" -U postgres -d postgres -q -v ON_ERROR_STOP=1)
 "${PSQL[@]}" -f "$AQUI/roles.sql"
 
+# --- SMTP simulado (invitaciones y recuperación de contraseña) --------------------
+node "$AQUI/smtp-simulado.mjs" 2525 "$DIR/correos" & echo $! >> "$DIR/pids"
+
 # --- Auth (GoTrue) ----------------------------------------------------------
 export GOTRUE_DB_DRIVER=postgres
 export DATABASE_URL="postgres://supabase_auth_admin@127.0.0.1:$PGPORT/postgres?sslmode=disable&search_path=auth"
@@ -61,6 +66,13 @@ export GOTRUE_URI_ALLOW_LIST="http://localhost:8080/**"
 export GOTRUE_JWT_SECRET="$SECRETO" GOTRUE_JWT_EXP=3600 GOTRUE_JWT_AUD=authenticated
 export GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated GOTRUE_JWT_ADMIN_ROLES=service_role
 export GOTRUE_DISABLE_SIGNUP=true GOTRUE_EXTERNAL_EMAIL_ENABLED=true GOTRUE_MAILER_AUTOCONFIRM=true
+export GOTRUE_SMTP_HOST=127.0.0.1 GOTRUE_SMTP_PORT=2525 GOTRUE_SMTP_ADMIN_EMAIL=no-responder@local.co
+export GOTRUE_SMTP_SENDER_NAME="Panel local" GOTRUE_SMTP_MAX_FREQUENCY=1s GOTRUE_RATE_LIMIT_EMAIL_SENT=1000
+# Las plantillas en español del repo (la pasarela las sirve en /plantillas/).
+export GOTRUE_MAILER_TEMPLATES_INVITE="http://127.0.0.1:54321/plantillas/invitacion.html"
+export GOTRUE_MAILER_TEMPLATES_RECOVERY="http://127.0.0.1:54321/plantillas/recuperacion.html"
+export GOTRUE_MAILER_SUBJECTS_INVITE="Su acceso al panel de la tienda"
+export GOTRUE_MAILER_SUBJECTS_RECOVERY="Contraseña nueva para el panel de la tienda"
 export GOTRUE_LOG_LEVEL=error
 "$BIN/auth" migrate >"$DIR/auth-migrar.log" 2>&1
 # Sin subshell: así $! es el PID de auth y "detener" lo apaga de verdad.
@@ -81,13 +93,19 @@ node "$RAIZ/tests/funciones/webhook-simulado.mjs" 9101 "$DIR/ultimo-lead.json" &
 GHL_WEBHOOK_URL="http://127.0.0.1:9101" "$BIN/deno" run --allow-net --allow-env --allow-read --no-prompt \
   "$RAIZ/tests/funciones/servir.ts" 9100 "$RAIZ/supabase/functions/enviar-lead/index.ts" >"$DIR/funcion.log" 2>&1 & echo $! >> "$DIR/pids"
 
+# --- Función usuarios (usa la clave de servicio, como en Supabase) ---------------
+SUPABASE_URL="http://127.0.0.1:54321" SUPABASE_ANON_KEY="$ANON" SUPABASE_SERVICE_ROLE_KEY="$SERVICIO" \
+  "$BIN/deno" run --allow-net --allow-env --allow-read --allow-sys --no-prompt \
+  "$RAIZ/tests/funciones/servir.ts" 9102 "$RAIZ/supabase/functions/usuarios/index.ts" >"$DIR/usuarios.log" 2>&1 & echo $! >> "$DIR/pids"
+
 # --- Pasarela -------------------------------------------------------------------
-node "$AQUI/pasarela.mjs" 54321 9998 9999 9100 & echo $! >> "$DIR/pids"
+node "$AQUI/pasarela.mjs" 54321 9998 9999 "enviar-lead=9100,usuarios=9102" & echo $! >> "$DIR/pids"
 
 esperar() { for _ in $(seq 100); do curl -s -o /dev/null "$1" && return 0; sleep 0.2; done; echo "no arrancó: $1"; exit 1; }
 esperar "http://127.0.0.1:9999/health"
 esperar "http://127.0.0.1:9998/"
 esperar "http://127.0.0.1:9100/"
+esperar "http://127.0.0.1:9102/"
 esperar "http://127.0.0.1:54321/"
 
 # --- Usuarios de prueba -----------------------------------------------------------
@@ -105,6 +123,7 @@ cat > "$DIR/entorno" <<EOT
 URL=http://127.0.0.1:54321
 ANON=$ANON
 LEAD=$DIR/ultimo-lead.json
+CORREOS=$DIR/correos
 PSQL_PUERTO=$PGPORT
 EOT
 echo "Supabase local listo en http://127.0.0.1:54321 (usuarios agencia@local.co y tienda@local.co, clave clave-de-prueba-1)"

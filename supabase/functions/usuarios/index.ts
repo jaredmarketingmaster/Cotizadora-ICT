@@ -41,6 +41,10 @@ Deno.serve(async (req) => {
     const correo = String(datos.correo || "").trim().toLowerCase();
     const rol = datos.rol === "agencia" ? "agencia" : "tienda";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) return responder({ error: "Revise el correo." }, 400);
+    // Si ya tiene perfil no se invita de nuevo: GoTrue reenviaría la
+    // invitación a un usuario que todavía no la aceptó.
+    const { data: existente } = await servicio.from("perfiles").select("user_id").eq("correo", correo).maybeSingle();
+    if (existente) return responder({ error: "Ese correo ya tiene usuario." }, 400);
     const { data, error } = await servicio.auth.admin.inviteUserByEmail(correo, {
       redirectTo: typeof datos.redirectTo === "string" ? datos.redirectTo : undefined
     });

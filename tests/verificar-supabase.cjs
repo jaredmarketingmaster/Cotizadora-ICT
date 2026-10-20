@@ -44,10 +44,10 @@ async function pagina(ancho = 1280) {
   return p;
 }
 
-async function entrar(p, correo) {
+async function entrar(p, correo, clave = "clave-de-prueba-1") {
   await p.goto(`${BASE}/admin/`);
   await p.fill("#l-correo", correo);
-  await p.fill("#l-clave", "clave-de-prueba-1");
+  await p.fill("#l-clave", clave);
   await p.click("#form-login [type=submit]");
   // Entra a la sección del enlace (o a Inicio si no había ninguna).
   try {
@@ -57,6 +57,32 @@ async function entrar(p, correo) {
     throw new Error(`no entró al panel: ${JSON.stringify(estado)}`);
   }
 }
+
+// Último correo que recibió una dirección (SMTP simulado) y su enlace.
+function ultimoCorreo(para) {
+  const carpeta = ENTORNO.CORREOS;
+  const archivos = fs.existsSync(carpeta) ? fs.readdirSync(carpeta).sort() : [];
+  for (const f of archivos.reverse()) {
+    const c = JSON.parse(fs.readFileSync(`${carpeta}/${f}`, "utf8"));
+    if (c.para.includes(para)) {
+      const enlace = (c.crudo.match(/href="([^"]+)"/) || [])[1]?.replace(/&amp;/g, "&");
+      const asunto = (c.crudo.match(/^Subject: (.*)$/m) || [])[1];
+      return { ...c, enlace, asunto };
+    }
+  }
+  return null;
+}
+
+async function esperarCorreo(para, cuantos) {
+  for (let i = 0; i < 50; i++) {
+    const n = fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENTORNO.CORREOS).length : 0;
+    if (n >= cuantos) return ultimoCorreo(para);
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  throw new Error(`no llegó el correo para ${para}`);
+}
+
+const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENTORNO.CORREOS).length : 0);
 
 (async () => {
   const args = [];
@@ -179,6 +205,104 @@ async function entrar(p, correo) {
     assert.equal(await s.locator(".etiqueta-demo").count(), 0);
     assert.equal(await s.locator(".galeria > .tarjeta").count(), 1);
     await p.context().close();
+  });
+
+  await caso("invitación: la agencia invita, el enlace del correo pide crear la contraseña y entra", async () => {
+    const p = await pagina(390);
+    await entrar(p, "agencia@local.co");
+    await p.goto(`${BASE}/admin/#/usuarios`);
+    await p.waitForSelector("#form-invitar");
+    const antes = contarCorreos();
+    await p.fill("#u-correo", "invitado@local.co");
+    await p.click("#form-invitar [type=submit]");
+    await p.waitForSelector('.usuario-fila:has-text("invitado@local.co")', { timeout: 15000 });
+    const correo = await esperarCorreo("invitado@local.co", antes + 1);
+    assert.equal(correo.asunto, "Su acceso al panel de la tienda");
+    assert.match(correo.crudo, /cree su contraseña/i);
+    // Invitar otra vez el mismo correo no manda otro correo
+    await p.fill("#u-correo", "invitado@local.co");
+    await p.click("#form-invitar [type=submit]");
+    assert.equal(await p.textContent("#u-correo-error"), "Ese correo ya tiene usuario.");
+    await p.context().close();
+
+    // La persona invitada abre el enlace en otro navegador.
+    const q = await pagina(390);
+    await q.goto(correo.enlace);
+    await q.waitForSelector("#form-clave", { timeout: 15000 });
+    assert.equal(await q.textContent("#acceso h1"), "Cree su contraseña");
+    await q.fill("#c-clave", "clave-invitado-1");
+    await q.fill("#c-clave2", "otra-cosa-123");
+    await q.click("#form-clave [type=submit]");
+    assert.equal(await q.textContent("#c-clave2-error"), "Las dos contraseñas no coinciden.");
+    await q.fill("#c-clave2", "clave-invitado-1");
+    await q.click("#form-clave [type=submit]");
+    await q.waitForSelector("#app:not([hidden]) .estadisticas", { timeout: 15000 });
+    assert.match(await q.textContent("#barra-usuario"), /invitado@local\.co · Tienda/);
+    assert.ok(!/access_token/.test(q.url()), "el token quedó en la URL");
+    // Sale y vuelve a entrar con la contraseña que creó.
+    await q.click("#salir");
+    await q.waitForSelector("#form-login");
+    await entrar(q, "invitado@local.co", "clave-invitado-1");
+    assert.deepEqual(q.errores, []);
+    await q.context().close();
+  });
+
+  await caso("recuperación: el enlace del correo pide la contraseña nueva y entra", async () => {
+    const p = await pagina(390);
+    await p.goto(`${BASE}/admin/`);
+    await p.click("#ir-recuperar");
+    const antes = contarCorreos();
+    await p.fill("#r-correo", "invitado@local.co");
+    await p.click("#form-recuperar [type=submit]");
+    await p.waitForSelector("text=le llegará un enlace");
+    const correo = await esperarCorreo("invitado@local.co", antes + 1);
+    assert.equal(correo.asunto, "Contraseña nueva para el panel de la tienda");
+    await p.context().close();
+
+    const q = await pagina(1280);
+    await q.goto(correo.enlace);
+    await q.waitForSelector("#form-clave", { timeout: 15000 });
+    assert.equal(await q.textContent("#acceso h1"), "Contraseña nueva");
+    await q.fill("#c-clave", "clave-invitado-2");
+    await q.fill("#c-clave2", "clave-invitado-2");
+    await q.click("#form-clave [type=submit]");
+    await q.waitForSelector("#app:not([hidden]) .estadisticas", { timeout: 15000 });
+    await q.context().close();
+
+    const r = await pagina(390);
+    await r.goto(`${BASE}/admin/`);
+    await r.fill("#l-correo", "invitado@local.co");
+    await r.fill("#l-clave", "clave-invitado-1");
+    await r.click("#form-login [type=submit]");
+    await r.waitForSelector("#l-alerta:not([hidden])");
+    assert.equal(await r.textContent("#l-alerta"), "El correo o la contraseña no coinciden.");
+    await entrar(r, "invitado@local.co", "clave-invitado-2");
+    await r.context().close();
+  });
+
+  await caso("usuarios: la agencia desactiva (no puede entrar) y reactiva (vuelve a entrar)", async () => {
+    const p = await pagina(1280);
+    await entrar(p, "agencia@local.co");
+    await p.goto(`${BASE}/admin/#/usuarios`);
+    const fila = '.usuario-fila:has-text("invitado@local.co")';
+    await p.click(`${fila} [data-estado]`);
+    await p.click('#confirmar [value="si"]');
+    await p.waitForSelector(`${fila} .estado-inactivo`, { timeout: 15000 });
+
+    const q = await pagina(390);
+    await q.goto(`${BASE}/admin/`);
+    await q.fill("#l-correo", "invitado@local.co");
+    await q.fill("#l-clave", "clave-invitado-2");
+    await q.click("#form-login [type=submit]");
+    await q.waitForSelector("#l-alerta:not([hidden])", { timeout: 15000 });
+    assert.equal(await q.textContent("#l-alerta"), "Este usuario está desactivado. Hable con la agencia.");
+
+    await p.click(`${fila} [data-estado]`);
+    await p.locator(`${fila} .estado-inactivo`).waitFor({ state: "detached", timeout: 15000 });
+    await entrar(q, "invitado@local.co", "clave-invitado-2");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+    await q.context().close();
   });
 
   await navegador.close();

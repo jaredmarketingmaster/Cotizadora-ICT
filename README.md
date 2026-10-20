@@ -73,6 +73,8 @@ En demo no sale ningún dato del navegador. El pedido que se mandaría a GHL que
    - **Site URL:** `https://dominio-de-la-tienda/admin/`
    - **Redirect URLs:** `https://dominio-de-la-tienda/admin/**`
 5. **Correo:** el correo que trae Supabase tiene un límite de envíos muy bajo y es para pruebas. Para las invitaciones y la recuperación de contraseña, configurar un SMTP propio en **Authentication → Emails → SMTP Settings**.
+
+   Supabase trae las plantillas en inglés. Pegar las de `supabase/correos/` (invitación y recuperación, en español y con "usted") en **Authentication → Emails → Templates**. El `LEAME.md` de esa carpeta dice qué asunto y qué archivo va en cada una.
 6. **Primer usuario de la agencia:**
    1. En **Authentication → Users → Add user**, crearlo con contraseña y "Auto Confirm User".
    2. En el SQL Editor, correr:
@@ -187,7 +189,7 @@ Todas corren en este repo sin Docker. La última corrida pasó completa.
 | `tests/sql/probar.sh` | Migraciones en un Postgres local:<br>- Seguridad a nivel de fila por rol (público, sin perfil, inactivo, tienda, agencia)<br>- Validaciones<br>- Fecha de precios<br>- Borrar demo<br>- La semilla del SQL coincide con la del modo demo | `bash tests/sql/probar.sh` |
 | `tests/verificar.cjs` | 26 casos en modo demo:<br>- Las 11 pruebas de aceptación de la sección 12<br>- Pop-up: errores, reintento y fallo doble<br>- Panel: validaciones<br>- Ancho de 320 a 1440 px<br>- Carrusel con dedo, flechas, puntos y teclado<br>- Contraste AA en 4 combinaciones de colores<br>- Textos de 16 px o más y zonas táctiles de 44 px<br>- Teclado en la lista<br>- `prefers-reduced-motion`<br>- Píxel y formatos | `python3 -m http.server 8080 &`<br>`NODE_PATH="$(npm root -g)" node tests/verificar.cjs` |
 | `tests/funciones/probar.sh` | `enviar-lead` con Deno contra un webhook de GHL simulado:<br>- Campos<br>- Validaciones<br>- GHL caído<br>- Falta de secreto<br>- Orígenes | `DENO=/ruta/deno bash tests/funciones/probar.sh` |
-| `tests/verificar-supabase.cjs` | Modo Supabase de punta a punta contra un "Supabase local": Postgres, el servidor de auth oficial (GoTrue v2.180.0), PostgREST 12.2.3, la función en Deno y Storage **simulado**. Cubre sitio, pop-up → función → webhook, permisos del panel, precio → sitio, foto y borrar demo. | `BIN=/carpeta/con/postgrest,auth,deno bash tests/supabase-local/levantar.sh`<br>`NODE_PATH=… node tests/verificar-supabase.cjs` |
+| `tests/verificar-supabase.cjs` | 9 casos del modo Supabase de punta a punta contra un "Supabase local": Postgres, el servidor de auth oficial (GoTrue v2.180.0), PostgREST 12.2.3, las dos funciones en Deno, un SMTP simulado que guarda los correos y Storage **simulado**. Cubre:<br>- Sitio y pop-up → función → webhook<br>- Permisos del panel<br>- Precio → sitio, foto y borrar demo<br>- Invitar por el panel → correo en español → enlace → "Cree su contraseña" → entra<br>- Recuperar la contraseña con el enlace del correo<br>- Desactivar (no puede entrar) y reactivar | `BIN=/carpeta/con/postgrest,auth,deno bash tests/supabase-local/levantar.sh`<br>`NODE_PATH=… node tests/verificar-supabase.cjs` |
 
 Variables útiles:
 
@@ -199,8 +201,7 @@ Variables útiles:
 **Lo que no pude probar aquí:**
 
 - El Storage real de Supabase: sus reglas sí están probadas en SQL.
-- El envío de correos de invitación y recuperación.
-- La función `usuarios` contra Supabase real: solo pasó la revisión de tipos.
+- Los correos y la función `usuarios` en un Supabase real (en el local, con el servidor de auth oficial, sí funcionan).
 - La conexión real con GHL.
 - El script de seguimiento de GHL.
 

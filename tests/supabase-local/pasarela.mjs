@@ -2,14 +2,20 @@
 // Pasarela local que imita la API de Supabase para las pruebas:
 //   /rest/v1/*       → PostgREST
 //   /auth/v1/*       → servidor de auth de Supabase (GoTrue)
-//   /functions/v1/x  → función de Deno en su puerto
+//   /functions/v1/x  → la función x de Deno en su puerto
 //   /storage/v1/*    → Storage SIMULADO en memoria (subir, leer público, borrar)
+//   /verify          → auth (el GoTrue local arma así los enlaces de los correos)
+//   /plantillas/*    → supabase/correos/*.html (plantillas de correo para auth)
 // Como en Supabase, si no viene Authorization se usa la apikey.
 // Solo para pruebas locales.
 // =============================================================================
 import { createServer, request } from "node:http";
+import { readFileSync } from "node:fs";
 
-const [puerto, rest, auth, funciones] = process.argv.slice(2).map(Number);
+//   node pasarela.mjs <puerto> <rest> <auth> "enviar-lead=9100,usuarios=9102"
+const [puerto, rest, auth] = process.argv.slice(2, 5).map(Number);
+const funciones = Object.fromEntries((process.argv[5] || "").split(",").filter(Boolean)
+  .map((par) => par.split("=")).map(([nombre, p]) => [nombre, Number(p)]));
 const archivos = new Map();
 
 function cors(res) {
@@ -38,7 +44,20 @@ createServer((req, res) => {
   if (req.method === "OPTIONS") { cors(res); res.writeHead(204).end(); return; }
   if (url.pathname.startsWith("/rest/v1")) return reenviar(req, res, rest, req.url.replace("/rest/v1", "") || "/");
   if (url.pathname.startsWith("/auth/v1")) return reenviar(req, res, auth, req.url.replace("/auth/v1", ""));
-  if (url.pathname.startsWith("/functions/v1/")) return reenviar(req, res, funciones, "/");
+  if (url.pathname === "/verify") return reenviar(req, res, auth, req.url);
+  if (url.pathname.startsWith("/plantillas/")) {
+    try {
+      const nombre = url.pathname.split("/").pop().replace(/[^a-z0-9.-]/gi, "");
+      const html = readFileSync(new URL(`../../supabase/correos/${nombre}`, import.meta.url));
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" }).end(html);
+    } catch { res.writeHead(404).end(); }
+    return;
+  }
+  if (url.pathname.startsWith("/functions/v1/")) {
+    const destino = funciones[url.pathname.split("/")[3]];
+    if (!destino) { cors(res); res.writeHead(404).end("función desconocida"); return; }
+    return reenviar(req, res, destino, "/");
+  }
   if (url.pathname.startsWith("/storage/v1/")) {
     cors(res);
     const m = url.pathname.match(/^\/storage\/v1\/object\/(public\/)?([^/]+)\/?(.*)$/);
