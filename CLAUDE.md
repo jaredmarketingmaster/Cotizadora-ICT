@@ -61,6 +61,7 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
   - Se guardan dos tamaños: `ruta.webp` (máx. 1600 px) y `ruta-640.webp`. Usar `rutaMiniatura`.
   - Las rutas van en `equipos.fotos`.
   - Al borrar un equipo o quitar una foto se borran los dos archivos.
+- Video (opcional, uno por equipo): bucket `videos`, ruta en `equipos.video`, validado en `panel/video.js` antes de subir (MP4 H.264 o WebM, 15 s, 20 MB), sin comprimir. Se borra al quitarlo o al borrar el equipo.
 - Cambios a la base: siempre una migración nueva (`0004_…sql`). Nunca editar una ya corrida en producción.
 
 ## Cómo verificar antes de cada commit
@@ -69,7 +70,7 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
 node tests/documentacion.mjs                               # DOCUMENTACION.md cubre todos los archivos
 bash tests/sql/probar.sh                                   # SQL y RLS (Postgres local)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 32 casos, modo demo
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 33 casos, modo demo
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 ```
 

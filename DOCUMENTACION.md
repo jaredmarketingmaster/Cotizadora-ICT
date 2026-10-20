@@ -332,6 +332,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `assets/js/panel/legales.js` (≈52) | Editores de privacidad, términos, autorización de datos y aviso de marca, con aviso si están vacíos y vista previa del formato básico. |
 | `assets/js/panel/usuarios.js` (≈100) | Solo administrador: invitar (correo y rol), **asignar rol** (selector por usuario), desactivar con confirmación y reactivar. Su propia fila no tiene controles. |
 | `assets/js/panel/imagenes.js` (≈85) | Fotos en el navegador, sin librerías: <ul><li>`validarArchivo`: jpg, png, webp o heic de hasta 10 MB.</li><li>`comprimirFoto`: devuelve `{grande ≤1600px, miniatura ≤640px, ext}` en WebP, o JPEG si el navegador no codifica WebP.</li><li>`codificar`, `cargarImagen` y `MAX_BYTES`.</li></ul>El HEIC se rechaza con un aviso claro si el navegador no lo lee. |
+| `assets/js/panel/video.js` (≈110) | Video corto del equipo, validado en el navegador antes de subir y **sin comprimir**: <ul><li>`validarVideo(archivo)`: MP4 o WebM; hasta 20 MB; hasta 15 s (con 0,1 s de margen). Devuelve `{ext, segundos}`.</li><li>MP4: `leerMp4` lee la caja `mvhd` (duración) y busca `avc1`/`avc3` en `moov` (H.264); no hace falta que el navegador sepa reproducirlo.</li><li>WebM: la duración que informa `<video>` (si dice Infinity, busca el final).</li><li>.mov, MP4 en HEVC u otro formato: "Este formato puede no verse en todos los celulares. Súbalo en MP4." (`MENSAJE_FORMATO`).</li></ul> |
 
 ### 5.8 Supabase (`supabase/`)
 
@@ -340,6 +341,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `supabase/migrations/0001_esquema.sql` (≈351) | Tablas, funciones de rol, disparadores, RLS, `datos_publicos()`, `borrar_datos_demo()`, buckets y reglas de almacenamiento. Ver sección 6. |
 | `supabase/migrations/0002_catalogo.sql` (≈42) | Inserta los **32 modelos** del catálogo maestro, en el orden del prompt, todos inactivos (`orden` 10, 20, …, 320). Cada modelo recibe su ficha vacía por disparador. |
 | `supabase/migrations/0003_demo.sql` (≈36) | Pone el nombre "Tienda de demostración" y `modo_demo = true`, activa los 4 modelos que usa la demo (con `activo_por_demo = true`) e inserta los 6 equipos demo. |
+| `supabase/migrations/0009_video.sql` (≈40) | Un video opcional por equipo: `equipos.video` (ruta con check) y bucket propio `videos` (público, 20 MB, `video/mp4` y `video/webm`); las reglas de Storage suman ese bucket (lee todo el mundo; sube, cambia y borra el gestor). |
 | `supabase/migrations/0008_color_oficial.sql` (≈85) | Cada equipo usa un color oficial de su modelo: `equipos.color_id` (FK a `colores`) y `color_nombre_mostrar`; migra los equipos existentes por nombre (español o inglés; "Glacier" → Glaciar) conservando el nombre que veía el cliente; borra `color_nombre` y `color_hex`; disparador `equipos_color` (`validar_color_equipo`). |
 | `supabase/migrations/0007_roles.sql` (≈200) | Roles **administrador** y **gestor** en lugar de agencia y tienda: convierte los perfiles, crea `es_administrador()` y `es_gestor()`, rehace todas las políticas (tablas y Storage), `proteger_catalogo`, `proteger_tienda`, `proteger_perfil` (siempre un administrador activo) y `borrar_datos_demo`, y borra `es_agencia()` y `es_staff()`. |
 | `supabase/migrations/0006_catalogo_colores.sql` (≈415) | Catálogo desde el iPhone 7: agrega los 10 modelos que faltaban (por slug), renumera el `orden` de los 42 por fecha de lanzamiento (los de la agencia quedan al final) y crea `colores` con los 183 colores oficiales, el disparador `colores_proteger`, su RLS y `datos_publicos()` con colores. Ver sección 6. |
@@ -356,7 +358,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈1030) | Suite de aceptación en **modo demo** con Playwright: **32 casos**. Ver sección 14. |
+| `tests/verificar.cjs` (≈1100) | Suite de aceptación en **modo demo** con Playwright: **33 casos**. Ver sección 14. |
 | `tests/verificar-supabase.cjs` (≈311) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **9 casos**. Reemplaza `config.js` en el navegador y puede servir un supabase-js local (`ICT_SUPABASE_JS`). |
 | `tests/documentacion.mjs` | Verificador de este documento: falla si algún archivo versionado no aparece en la sección 5. |
 | `tests/sql/probar.sh` | Crea un Postgres temporal, carga la imitación de Supabase y todas las migraciones en orden, compara la semilla con `semilla.js` y corre `pruebas.sql`. Antes de cada migración corre `tests/sql/antes_<migración>.sql` si existe. |
@@ -370,7 +372,8 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `tests/funciones/servir.ts` | Corre una función de Supabase en un puerto fijo (`Deno.serve` no lee `PORT`). |
 | `tests/funciones/webhook-simulado.mjs` | Webhook de GHL falso: guarda el último cuerpo recibido y responde con el código de `ESTADO`. |
 | `tests/supabase-local/levantar.sh` | Levanta el "Supabase local" completo (ver sección 14.3) y deja `/tmp/cotizadora-supabase-local/entorno`. Con el argumento `detener`, lo apaga. |
-| `tests/supabase-local/pasarela.mjs` | Pasarela en el puerto 54321 que imita las rutas de Supabase. Tiene Storage en memoria, sirve las plantillas de correo y agrega `Authorization` desde la `apikey`. |
+| `tests/supabase-local/pasarela.mjs` | Pasarela en el puerto 54321 que imita las rutas de Supabase. Tiene Storage en memoria (lee la parte del archivo de los envíos multipart de supabase-js y exige el límite y los tipos de cada bucket: 413 y 415), sirve las plantillas de correo y agrega `Authorization` desde la `apikey`. |
+| `tests/videos/corto.mp4`, `tests/videos/largo.mp4`, `tests/videos/corto.webm`, `tests/videos/hevc.mp4`, `tests/videos/clip.mov` | Videos de prueba hechos con ffmpeg (patrón de prueba, sin personas ni marcas): H.264 de 3 s y de 16 s, WebM VP8 de 3 s, HEVC de 3 s y .mov de 3 s. Pesan entre 15 y 75 KB. |
 | `tests/supabase-local/roles.sql` | Roles y esquema `auth` que Supabase ya trae. |
 | `tests/supabase-local/despues_de_auth.sql` | Permisos y Storage simulado, después de las migraciones de GoTrue. |
 | `tests/supabase-local/jwt.mjs` | Firma JWT HS256 (`anon` o `service_role`) para el entorno local. |
@@ -444,6 +447,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 - `precio`: bigint mayor que 0.
 - `en_stock`: sí/no, verdadero por defecto (desde `0004`; antes era un entero `stock`).
 - `fotos`: `text[]` de hasta 6 rutas.
+- `video` (desde `0009`): ruta en el bucket `videos` o vacío.
 - `publicado`, `destacado`, `descripcion_extra`, `es_demo`.
 - **Solo usados:**
   - `bateria_porcentaje`: de 0 a 100.
@@ -508,6 +512,8 @@ Un usuario autenticado **sin perfil o con el perfil inactivo** ve lo mismo que e
 - **Buckets públicos:**
   - `fotos`: webp, jpeg o png, hasta 10 MB.
   - `marca`: además svg e ico.
+  - `videos` (desde `0009`): `video/mp4` y `video/webm`, hasta 20 MB. Es un bucket propio para no ampliar los tipos ni el límite de `fotos`.
+- **Rutas de videos:** `equipos/<uuid>.mp4|webm` (lo exige el check de `equipos.video`).
 - **Rutas de fotos:** `equipos/<uuid>.webp` y `equipos/<uuid>-640.webp`.
 - **Logo:** `logo-<timestamp>.webp|png`. **Favicon:** `favicon-<timestamp>.png`.
 
@@ -785,6 +791,13 @@ Son las mismas que exige el SQL:
 - **Al guardar** se borran del almacenamiento las fotos quitadas.
 - **Al salir sin guardar** se borran las que se subieron en esa edición.
 
+**Video (paso "Fotos y video", opcional):**
+
+- Uno por equipo: MP4 (H.264) o WebM, hasta 15 segundos y 20 MB. Se valida **antes de subir** (`video.js`) y se sube tal cual, sin comprimir.
+- Un .mov u otro formato se rechaza con "Este formato puede no verse en todos los celulares. Súbalo en MP4.". También un MP4 en HEVC (el formato "Alta eficiencia" del iPhone), con el mismo mensaje.
+- Vista previa en el formulario, "Cambiar video" y "Quitar video". Duplicar no copia el video, igual que las fotos.
+- Al guardar se borra del almacenamiento el video quitado o reemplazado; al salir sin guardar, el que se subió; al borrar el equipo, su video.
+
 ---
 
 ## 11. Funciones del servidor (Edge Functions)
@@ -904,7 +917,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 ```bash
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 32 casos en modo demo (Playwright + Chromium)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 33 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (10 casos) + tipos
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
@@ -916,7 +929,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `ICT_BASE=URL`: por ejemplo `http://localhost:8081/Cotizadora-ICT`, para simular GitHub Pages.
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (32 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (33 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
@@ -928,7 +941,7 @@ node tests/documentacion.mjs                               # este documento cubr
 8. Pop-up: errores, foco, formato del celular, reintento y "Abrir WhatsApp" tras dos fallos.
 9. `/admin` sin sesión pide login. La tienda no ve Usuarios, no renombra, y la capa de datos también se lo impide.
 10. Roles: el gestor no ve Usuarios y la capa de datos le niega gestionarlos; el administrador solo ve Usuarios y la capa de datos le niega lo demás; invita con rol, asigna roles, desactiva y no puede quitarse a sí mismo. Catálogo: 42 modelos y generaciones en orden; colores (hex de la fuente fijo, completar el que falta, colores de la tienda solo en el 17 Pro). Datos demo guardados de una versión vieja se migran (stock, tamaño, catálogo y colores).
-11. Validaciones del panel. **Color oficial:** el paso Color ofrece solo los colores del modelo (sin crear colores ni escribir hexadecimales), cambiar el modelo borra el color, la capa de datos rechaza un color de otro modelo, y el nombre a mostrar ("Lila") llega a la tarjeta, el detalle, el texto alternativo, el mensaje de WhatsApp y el `content_name` del píxel; sin nombre a mostrar se ve el oficial ("Lavender").
+11. Validaciones del panel. **Video:** .mov, MP4 en HEVC, 16 s y más de 20 MB se rechazan antes de subir (no queda nada guardado); MP4 de 3 s y WebM se aceptan; quitar el video, reemplazarlo o borrar el equipo borra el archivo; la capa de datos repite los límites de Storage. **Color oficial:** el paso Color ofrece solo los colores del modelo (sin crear colores ni escribir hexadecimales), cambiar el modelo borra el color, la capa de datos rechaza un color de otro modelo, y el nombre a mostrar ("Lila") llega a la tarjeta, el detalle, el texto alternativo, el mensaje de WhatsApp y el `content_name` del píxel; sin nombre a mostrar se ve el oficial ("Lavender").
 12. A 320, 360, 768 y 1440 px: sin scroll horizontal, un `h1` y sin errores en sitio, legales y todo el panel.
 13. Carrusel: dedo, flechas, puntos, muestras, teclado y Escape.
 14. Gesto táctil real en el carrusel y cierre de la hoja con el gesto.
@@ -970,7 +983,7 @@ bash tests/supabase-local/levantar.sh detener
 2. El pop-up pasa por la función y llega al webhook con todos los campos.
 3. Permisos del panel: el gestor no ve Usuarios y el servidor (función y tabla) le niega gestionarlos; colores.
 4. Un precio cambiado en el panel se ve en el sitio, con la fecha.
-5. Crear un equipo con foto (Storage simulado).
+5. Crear un equipo con foto y **video** (Storage simulado): el video queda en el bucket `videos` y se sirve como `video/mp4`; Storage rechaza un tipo no permitido aunque se salte el panel.
 6. El gestor borra la demo.
 7. **Invitación:** el administrador (que solo ve Usuarios y al que el servidor le niega lo demás) invita; el correo en español, el enlace, "Cree su contraseña" y el ingreso como gestor.
 8. **Recuperación:** el enlace y la contraseña nueva.
@@ -1035,6 +1048,9 @@ bash tests/supabase-local/levantar.sh detener
 | `nombre_es` además de `nombre_en` | La fuente da casi siempre el nombre en español y a veces no el inglés: sin `nombre_es` habría colores sin nombre. |
 | Hexadecimales del "iPhone 16 / 16e" también en el 16 Plus | La tabla de la fuente es por serie y el 16 Plus tiene exactamente los mismos colores. |
 | Colores de la tienda solo en modelos sin colores oficiales | El 17 Pro y el 17 Pro Max no tienen colores en la fuente; sin esto no se podrían cargar. Los oficiales no se mezclan con inventados. |
+| Bucket propio para videos | Límite (20 MB) y tipos (MP4 y WebM) propios, sin aflojar las reglas de `fotos`. |
+| Duración del MP4 desde la caja `mvhd` | Funciona aunque el navegador no sepa reproducir el video (por ejemplo, Chromium sin códecs propietarios) y no descarga nada extra. |
+| MP4 en HEVC rechazado | El pedido es "MP4 (H.264)": HEVC no se ve en todos los navegadores. Se usa el mismo mensaje que para .mov. |
 | Color del equipo = color oficial + nombre a mostrar | Pedido de Jared (A6). La muestra siempre es la oficial; el nombre que ve el cliente lo puede poner la tienda (por ejemplo, en español). |
 | `0008` conserva el nombre que veía el cliente | Si el nombre viejo no es el oficial ("Glacier", "Medianoche"), queda en `color_nombre_mostrar`: el sitio no cambia para el cliente. Si no se encuentra el color, el equipo queda sin `color_id`, con su nombre, y un NOTICE lo avisa: no se bloquea la migración. |
 | El administrador no edita contenido | Pedido de Jared: el administrador solo gestiona accesos. Si una persona necesita las dos cosas, usa dos usuarios. Los perfiles viejos pasan agencia → administrador y tienda → gestor. |
@@ -1119,6 +1135,19 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 20/10/2026 · A7: un video corto opcional por equipo
+
+- **Pedido de Jared (fase A, punto A7):** un video corto opcional por equipo; MP4 (H.264) o WebM; hasta 15 s y 20 MB; validado en el navegador (la duración, de los metadatos); .mov u otro formato rechazado con "Este formato puede no verse en todos los celulares. Súbalo en MP4."; sin compresión; bucket propio o tipos ampliados (elegir lo más limpio y explicarlo); se borra al quitarlo o al borrar el equipo.
+- **Decisión:** bucket propio `videos` (ver sección 16): así `fotos` sigue aceptando solo imágenes de 10 MB y Storage exige 20 MB y MP4/WebM para los videos aunque alguien salte el panel.
+- **Hecho:**
+  - `supabase/migrations/0009_video.sql`: `equipos.video`, bucket `videos` y reglas de Storage.
+  - `assets/js/panel/video.js` (nuevo): validación antes de subir.
+  - `inventario.js`: bloque "Video (opcional)" en el paso "Fotos y video", vista previa, cambiar y quitar, y borrado del archivo al guardar, al salir sin guardar y al borrar el equipo.
+  - `comun.js`: `BUCKETS`, `mensajeArchivo` y `RUTA_VIDEO`; `demo.js` versión 7 repite los límites de Storage y el check de la ruta; `supabase.js` traduce los rechazos de Storage.
+  - Entorno local: Storage simulado con límites por bucket y lectura de multipart; videos de prueba en `tests/videos/`.
+- **Pruebas:** `pruebas.sql` (bucket, límites, ruta del video y permisos por rol), `verificar.cjs` (caso nuevo del video) y `verificar-supabase.cjs` (video subido y servido; tipo no permitido rechazado por Storage). Ninguna prueba se debilitó.
+- **Verificación:** `tests/sql/probar.sh` OK, `tests/verificar.cjs` 33/33 y `tests/verificar-supabase.cjs` 9/9.
 
 ### 20/10/2026 · A6: el equipo usa un color oficial de su modelo
 

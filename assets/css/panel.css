@@ -195,6 +195,10 @@ select.entrada { appearance: none; -webkit-appearance: none; padding-right: 40px
 .opcion-chip input:checked + span { background: var(--primario); border-color: var(--primario); color: var(--sobre-primario); }
 .opcion-chip input:focus-visible + span { outline: 3px solid var(--texto); outline-offset: 2px; }
 
+/* Video del equipo */
+.bloque-video { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--borde); }
+.video-vista { display: block; width: 100%; max-width: 320px; max-height: 360px; border-radius: 12px; background: #000; margin-bottom: 10px; }
+
 /* Colores oficiales del modelo en el formulario del equipo */
 .opciones-color { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); gap: 8px; }
 .opcion-color { position: relative; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 12px; border: 1.5px solid var(--borde-fuerte); border-radius: 14px; background: var(--fondo); cursor: pointer; }

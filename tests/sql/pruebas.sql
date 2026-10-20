@@ -121,6 +121,10 @@ do $$ begin
   raise exception 'anon no debería subir archivos';
 exception when insufficient_privilege then null; end $$;
 do $$ begin
+  insert into storage.objects (bucket_id, name) values ('videos', 'equipos/x.mp4');
+  raise exception 'anon no debería subir videos';
+exception when insufficient_privilege then null; end $$;
+do $$ begin
   perform public.borrar_datos_demo();
   raise exception 'anon no debería borrar demo';
 exception when insufficient_privilege then null; end $$;
@@ -191,7 +195,24 @@ end $$;
 do $$ begin
   insert into storage.objects (bucket_id, name) values ('fotos', 'equipo/1.webp');
   assert (select count(*) from storage.objects) = 1, 'gestor sube fotos';
+  -- Video (0009): bucket propio de 20 MB, solo MP4 y WebM
+  assert (select file_size_limit from storage.buckets where id = 'videos') = 20971520, 'videos: 20 MB';
+  assert (select allowed_mime_types from storage.buckets where id = 'videos') = array['video/mp4', 'video/webm'], 'videos: MP4 y WebM';
+  assert (select file_size_limit from storage.buckets where id = 'fotos') = 10485760, 'fotos sigue en 10 MB';
+  insert into storage.objects (bucket_id, name) values ('videos', 'equipos/v1.mp4');
+  update public.equipos set video = 'equipos/v1.mp4' where color_nombre_mostrar = 'Borrador';
+  assert (select video from public.equipos where color_nombre_mostrar = 'Borrador') = 'equipos/v1.mp4', 'gestor pone un video';
+  update public.equipos set video = '' where color_nombre_mostrar = 'Borrador';
+  delete from storage.objects where bucket_id = 'videos';
 end $$;
+do $$ begin
+  update public.equipos set video = 'equipos/v1.mov' where color_nombre_mostrar = 'Borrador';
+  raise exception 'un video .mov no vale';
+exception when check_violation then null; end $$;
+do $$ begin
+  update public.equipos set video = '../otro/v1.mp4' where color_nombre_mostrar = 'Borrador';
+  raise exception 'una ruta de video rara no vale';
+exception when check_violation then null; end $$;
 -- Color del equipo: debe ser de su modelo; obligatorio si el modelo tiene colores.
 do $$ begin
   insert into public.equipos (modelo_id, condicion, capacidad, precio, color_id)
@@ -324,6 +345,10 @@ exception when insufficient_privilege then null; end $$;
 do $$ begin
   insert into storage.objects (bucket_id, name) values ('fotos', 'equipo/2.webp');
   raise exception 'administrador no debería subir fotos';
+exception when insufficient_privilege then null; end $$;
+do $$ begin
+  insert into storage.objects (bucket_id, name) values ('videos', 'equipos/v2.mp4');
+  raise exception 'administrador no debería subir videos';
 exception when insufficient_privilege then null; end $$;
 do $$ begin
   perform public.borrar_datos_demo();

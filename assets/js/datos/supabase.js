@@ -5,7 +5,7 @@
 // =============================================================================
 
 import { CONFIG } from "../../../config.js";
-import { ErrorDatos, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, elegir, mensajeDeError } from "./comun.js";
+import { ErrorDatos, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, elegir, mensajeDeError, mensajeArchivo } from "./comun.js";
 
 const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm";
 const URL_BASE = String(CONFIG.supabase.url || "").replace(/\/+$/, "");
@@ -297,7 +297,7 @@ export const supabase = {
     const { error } = await c.storage.from(bucket).upload(ruta, blob, {
       contentType: blob.type, cacheControl: "31536000", upsert: false
     });
-    if (error) throw new ErrorDatos(/size|large/i.test(error.message) ? "La foto es muy pesada." : "No se pudo subir la foto. Inténtelo de nuevo.");
+    if (error) throw new ErrorDatos(mensajeArchivo(bucket, /size|large/i.test(error.message) ? "peso" : /mime|type/i.test(error.message) ? "tipo" : ""));
     return ruta;
   },
 

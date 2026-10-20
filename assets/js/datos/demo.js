@@ -9,7 +9,7 @@
 // =============================================================================
 
 import { CATALOGO, COLORES, DEMO_EQUIPOS } from "./semilla.js";
-import { ErrorDatos, equipoEsPublico, nombreColor, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, elegir } from "./comun.js";
+import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, elegir } from "./comun.js";
 import { hexValido, whatsappTiendaValido, sesion, esperar } from "../utils.js";
 
 const CLAVE = "cotizadora-demo:v1";
@@ -39,7 +39,7 @@ function estadoInicial() {
   const equipos = DEMO_EQUIPOS.map((d) => ({
     id: uuid(), modelo_id: porSlug.get(d.slug).id, condicion: d.condicion, capacidad: d.capacidad,
     color_id: colorDe(porSlug.get(d.slug).id, d.color), color_nombre_mostrar: d.color_nombre_mostrar,
-    precio: d.precio, en_stock: d.en_stock, fotos: [],
+    precio: d.precio, en_stock: d.en_stock, fotos: [], video: "",
     publicado: true, destacado: d.destacado, descripcion_extra: "", es_demo: true,
     bateria_porcentaje: d.bateria_porcentaje ?? null, estado_estetico: d.estado_estetico ?? null,
     detalles: d.detalles ?? "", incluye: d.incluye ?? "", creado_en: t, actualizado_en: t
@@ -64,7 +64,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 6;
+const VERSION = 7;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -116,6 +116,10 @@ const MIGRACIONES = {
       delete q.color_nombre;
       delete q.color_hex;
     }
+  },
+  // 0009_video.sql: un video opcional por equipo.
+  6(e) {
+    for (const q of e.equipos) q.video = q.video || "";
   }
 };
 
@@ -273,6 +277,7 @@ function validarEquipo(q, e) {
   if (!Number.isSafeInteger(q.precio) || q.precio <= 0) throw new ErrorDatos("El precio debe ser un número entero mayor que 0.");
   if (typeof q.en_stock !== "boolean") throw new ErrorDatos("Indique si el equipo tiene stock.");
   if ((q.fotos || []).length > 6) throw new ErrorDatos("Máximo 6 fotos por equipo.");
+  if ((q.video ?? "") !== "" && !RUTA_VIDEO.test(q.video)) throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
   if (q.bateria_porcentaje != null && !(Number.isInteger(q.bateria_porcentaje) && q.bateria_porcentaje >= 0 && q.bateria_porcentaje <= 100)) {
     throw new ErrorDatos("La batería debe estar entre 0 y 100.");
   }
@@ -513,7 +518,7 @@ export const demo = {
     const e = leer();
     exigirGestor(e);
     const q = {
-      id: uuid(), color_id: null, color_nombre_mostrar: "", en_stock: true, fotos: [], publicado: false, destacado: false,
+      id: uuid(), color_id: null, color_nombre_mostrar: "", en_stock: true, fotos: [], video: "", publicado: false, destacado: false,
       descripcion_extra: "", es_demo: false, bateria_porcentaje: null, estado_estetico: null, detalles: "", incluye: "",
       ...elegir(datos, CAMPOS_EQUIPO), creado_en: ahora(), actualizado_en: ahora()
     };
@@ -549,9 +554,14 @@ export const demo = {
   },
 
   // ---------------- Archivos ----------------
-  async subirArchivo(_bucket, ruta, blob) {
+  async subirArchivo(bucket, ruta, blob) {
     const e = leer();
     exigirGestor(e);
+    // Como Storage: cada bucket con su límite y sus tipos.
+    const reglas = BUCKETS[bucket];
+    if (!reglas) throw new ErrorDatos("No se pudo subir el archivo.");
+    if (!reglas.tipos.includes(blob.type)) throw new ErrorDatos(mensajeArchivo(bucket, "tipo"));
+    if (blob.size > reglas.max) throw new ErrorDatos(mensajeArchivo(bucket, "peso"));
     await idb("readwrite", (s) => s.put(blob, ruta));
     urls.set(ruta, URL.createObjectURL(blob));
     return ruta;

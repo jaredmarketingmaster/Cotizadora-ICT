@@ -499,6 +499,72 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  await caso("video: se valida antes de subir (formato, H.264, 15 s, 20 MB) y se borra al quitarlo o al borrar el equipo", async () => {
+    const p = await nueva();
+    await entrarPanel(p, "gestor@demo.co");
+    const videos = path.join(RAIZ, "tests", "videos");
+    // Archivos guardados en el navegador (IndexedDB del modo demo)
+    const guardados = () => p.evaluate(() => new Promise((r) => {
+      const pedido = indexedDB.open("cotizadora-demo");
+      pedido.onsuccess = () => { const k = pedido.result.transaction("archivos").objectStore("archivos").getAllKeys(); k.onsuccess = () => r(k.result.filter((x) => /\.(mp4|webm|mov)$/.test(x))); };
+    }));
+    const glaciar = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).equipos.find((q) => q.color_nombre_mostrar === "Glacier").id, CLAVE_DEMO);
+    await p.goto(`${BASE}/admin/#/inventario/${glaciar}`);
+    await p.waitForSelector("#form-equipo");
+    const subir = async (nombre, opciones) => {
+      await p.setInputFiles("#e-video", opciones || path.join(videos, nombre));
+      await p.waitForFunction(() => document.querySelector("#subiendo-video").hidden);
+      return (await p.textContent("#e-video-error")).trim();
+    };
+    const formato = "Este formato puede no verse en todos los celulares. Súbalo en MP4.";
+    assert.equal(await subir("clip.mov"), formato);
+    assert.equal(await subir("hevc.mp4"), formato, "un MP4 en HEVC no es H.264");
+    assert.equal(await subir("largo.mp4"), "El video dura más de 15 segundos. Súbalo más corto.");
+    assert.equal(await subir("", { name: "pesado.mp4", mimeType: "video/mp4", buffer: Buffer.alloc(20 * 1024 * 1024 + 1) }), "El video pesa más de 20 MB.");
+    // Nada de eso se subió.
+    assert.deepEqual(await guardados(), []);
+    // Un MP4 H.264 de 3 s y un WebM sí.
+    assert.equal(await subir("corto.webm"), "");
+    assert.equal(await subir("corto.mp4"), "");
+    assert.equal(await p.locator("#video-actual video").count(), 1);
+    await p.click("#guardar");
+    await p.waitForURL(/#\/inventario$/);
+    let e = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)), CLAVE_DEMO);
+    const ruta = e.equipos.find((q) => q.id === glaciar).video;
+    assert.match(ruta, /^equipos\/[\w-]+\.mp4$/);
+    // El WebM que se reemplazó se borró al guardar; queda solo el MP4.
+    assert.deepEqual(await guardados(), [ruta]);
+    // Quitar el video y guardar borra el archivo.
+    await p.goto(`${BASE}/admin/#/inventario/${glaciar}`);
+    await p.waitForSelector("#quitar-video");
+    await p.click("#quitar-video");
+    await p.click("#guardar");
+    await p.waitForURL(/#\/inventario$/);
+    e = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)), CLAVE_DEMO);
+    assert.equal(e.equipos.find((q) => q.id === glaciar).video, "");
+    assert.deepEqual(await guardados(), []);
+    // Borrar el equipo borra también su video.
+    await p.goto(`${BASE}/admin/#/inventario/${glaciar}`);
+    await p.waitForSelector("#form-equipo");
+    assert.equal(await subir("corto.mp4"), "");
+    await p.click("#guardar");
+    await p.waitForURL(/#\/inventario$/);
+    assert.equal((await guardados()).length, 1);
+    await p.click('.fila-equipo:has-text("Glacier") [data-borrar]');
+    await p.click('#confirmar [value="si"]');
+    await p.waitForSelector("text=Equipo borrado");
+    assert.deepEqual(await guardados(), []);
+    // La capa de datos repite los límites de Storage.
+    const r = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      try { await a.subirArchivo("videos", "equipos/x.mov", new Blob(["x"], { type: "video/quicktime" })); return ""; } catch (err) { return err.message; }
+    });
+    assert.equal(r, formato);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("roles: el administrador solo ve Usuarios; la capa de datos le impide lo demás", async () => {
     const p = await nueva(390, 844);
     await entrarPanel(p, "administrador@demo.co");

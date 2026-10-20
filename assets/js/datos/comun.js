@@ -19,6 +19,23 @@ export function equipoEsPublico(equipo, modelosPorId) {
 // Fotos: se guardan dos tamaños. La ruta principal es la grande (máx. 1600 px)
 // y la miniatura (máx. 640 px) lleva "-640" antes de la extensión.
 export const LADO_GRANDE = 1600;
+
+// Buckets de Storage con su límite y sus tipos (los mismos de las migraciones
+// 0001 y 0009). El modo demo los repite; en Supabase los exige Storage.
+export const BUCKETS = {
+  fotos: { max: 10 * 1024 * 1024, tipos: ["image/webp", "image/jpeg", "image/png"] },
+  marca: { max: 10 * 1024 * 1024, tipos: ["image/webp", "image/jpeg", "image/png", "image/svg+xml", "image/x-icon"] },
+  videos: { max: 20 * 1024 * 1024, tipos: ["video/mp4", "video/webm"] }
+};
+
+// Mensaje cuando Storage rechaza un archivo (por peso o por tipo).
+export function mensajeArchivo(bucket, motivo) {
+  if (bucket === "videos") return motivo === "peso" ? "El video pesa más de 20 MB." : "Este formato puede no verse en todos los celulares. Súbalo en MP4.";
+  return motivo === "peso" ? "La foto es muy pesada." : "No se pudo subir la foto. Inténtelo de nuevo.";
+}
+
+// Ruta del video de un equipo (igual que el check de equipos.video en 0009).
+export const RUTA_VIDEO = /^equipos\/[A-Za-z0-9_-]+\.(mp4|webm)$/;
 export const LADO_MINIATURA = 640;
 
 export function rutaMiniatura(ruta) {
@@ -36,7 +53,7 @@ export const CAMPOS_TIENDA = [
 
 export const CAMPOS_EQUIPO = [
   "modelo_id", "condicion", "capacidad", "color_id", "color_nombre_mostrar", "precio", "en_stock",
-  "fotos", "publicado", "destacado", "descripcion_extra", "es_demo",
+  "fotos", "video", "publicado", "destacado", "descripcion_extra", "es_demo",
   "bateria_porcentaje", "estado_estetico", "detalles", "incluye"
 ];
 

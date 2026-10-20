@@ -17,6 +17,13 @@ const [puerto, rest, auth] = process.argv.slice(2, 5).map(Number);
 const funciones = Object.fromEntries((process.argv[5] || "").split(",").filter(Boolean)
   .map((par) => par.split("=")).map(([nombre, p]) => [nombre, Number(p)]));
 const archivos = new Map();
+// Límite y tipos de cada bucket, como los define la migración (Storage real los
+// exige igual: 413 si pesa más, 415 si el tipo no está permitido).
+const BUCKETS = {
+  fotos: { max: 10485760, tipos: ["image/webp", "image/jpeg", "image/png"] },
+  marca: { max: 10485760, tipos: ["image/webp", "image/jpeg", "image/png", "image/svg+xml", "image/x-icon"] },
+  videos: { max: 20971520, tipos: ["video/mp4", "video/webm"] }
+};
 
 function cors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -74,7 +81,38 @@ createServer((req, res) => {
       const partes = [];
       req.on("data", (c) => partes.push(c));
       req.on("end", () => {
-        archivos.set(clave, { tipo: req.headers["content-type"] || "application/octet-stream", datos: Buffer.concat(partes) });
+        let tipo = req.headers["content-type"] || "application/octet-stream";
+        let datos = Buffer.concat(partes);
+        // supabase-js manda los Blob como multipart/form-data: el archivo y su
+        // tipo van en la parte que tiene "filename".
+        const limite = /^multipart\/form-data;.*boundary=(?:"([^"]+)"|([^;]+))/i.exec(tipo);
+        if (limite) {
+          const separador = Buffer.from(`--${limite[1] || limite[2]}`);
+          let i = datos.indexOf(separador);
+          while (i !== -1) {
+            const sig = datos.indexOf(separador, i + separador.length);
+            if (sig === -1) break;
+            const parte = datos.subarray(i + separador.length + 2, sig - 2);
+            const fin = parte.indexOf("\r\n\r\n");
+            const cabeceras = parte.subarray(0, fin).toString();
+            if (/filename=/i.test(cabeceras)) {
+              tipo = (/content-type:\s*([^\r\n]+)/i.exec(cabeceras) || [, "application/octet-stream"])[1].trim();
+              datos = parte.subarray(fin + 4);
+              break;
+            }
+            i = sig;
+          }
+        }
+        const reglas = BUCKETS[bucket];
+        if (reglas && datos.length > reglas.max) {
+          res.writeHead(413, { "content-type": "application/json" }).end(JSON.stringify({ statusCode: "413", error: "Payload too large", message: "The object exceeded the maximum allowed size" }));
+          return;
+        }
+        if (reglas && !reglas.tipos.includes(tipo.split(";")[0])) {
+          res.writeHead(415, { "content-type": "application/json" }).end(JSON.stringify({ statusCode: "415", error: "invalid_mime_type", message: `mime type ${tipo} is not supported` }));
+          return;
+        }
+        archivos.set(clave, { tipo, datos });
         res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ Key: clave }));
       });
       return;

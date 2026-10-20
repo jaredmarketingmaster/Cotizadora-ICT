@@ -12,6 +12,7 @@
 // =============================================================================
 const { chromium } = require("playwright");
 const fs = require("fs");
+const path = require("path");
 const assert = require("assert/strict");
 
 const BASE = process.env.ICT_BASE || "http://localhost:8080";
@@ -214,6 +215,11 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
     await p.setInputFiles("#e-fotos", { name: "a.png", mimeType: "image/png", buffer: png });
     await p.waitForSelector(".foto-item", { timeout: 15000 });
+    // Video: el panel lo valida y lo sube al bucket "videos".
+    await p.setInputFiles("#e-video", path.join(__dirname, "videos", "corto.mp4"));
+    await p.waitForFunction(() => document.querySelector("#subiendo-video").hidden, null, { timeout: 15000 });
+    assert.equal((await p.textContent("#e-video-error")).trim(), "");
+    await p.waitForSelector("#video-actual video", { timeout: 15000 });
     await p.click("#siguiente");
     await p.check("#e-publicado");
     await p.click("#guardar");
@@ -226,6 +232,20 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     assert.match(src, /\/storage\/v1\/object\/public\/fotos\/equipos\//);
     const r = await s.request.get(src);
     assert.equal(r.status(), 200);
+    // El video quedó guardado y se sirve desde Storage.
+    const video = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      const q = (await a.listarEquipos()).find((x) => x.capacidad === "1 TB");
+      const subida = await a.subirArchivo("videos", "equipos/intruso.mp4", new Blob(["x"], { type: "video/quicktime" })).then(() => "subió", (e) => e.message);
+      return { url: a.urlArchivo("videos", q.video), subida };
+    });
+    assert.match(video.url, /\/storage\/v1\/object\/public\/videos\/equipos\/[\w-]+\.mp4$/);
+    const rv = await s.request.get(video.url);
+    assert.equal(rv.status(), 200);
+    assert.equal(rv.headers()["content-type"], "video/mp4");
+    // Storage rechaza un tipo no permitido aunque se salte el panel.
+    assert.equal(video.subida, "Este formato puede no verse en todos los celulares. Súbalo en MP4.");
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });

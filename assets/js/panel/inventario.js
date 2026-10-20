@@ -9,6 +9,7 @@ import { telefonoSVG } from "../ilustracion.js";
 import { etiquetaGeneracion } from "../sitio/catalogo.js";
 import { $, $$, esc, avisar, confirmar, conBoton, campoTexto, interruptor, marcarError, enfocarPrimerError } from "./ui.js";
 import { comprimirFoto } from "./imagenes.js";
+import { validarVideo } from "./video.js";
 
 const MAX_FOTOS = 6;
 
@@ -167,13 +168,14 @@ async function lista(vista, ctx, params) {
     const q = equipos.find((x) => x.id === li.dataset.id);
     const ok = await confirmar({
       titulo: "¿Borrar este equipo?",
-      texto: `${nombreModelo(modelos, q.modelo_id)} ${q.capacidad}${colorDe(q, colores) ? ` ${colorDe(q, colores)}` : ""}. Se borran también sus fotos. Si solo quiere ocultarlo, márquelo «Sin stock» o desmarque «Publicado».`,
+      texto: `${nombreModelo(modelos, q.modelo_id)} ${q.capacidad}${colorDe(q, colores) ? ` ${colorDe(q, colores)}` : ""}. Se borran también sus fotos y su video. Si solo quiere ocultarlo, márquelo «Sin stock» o desmarque «Publicado».`,
       aceptar: "Borrar", peligro: true
     });
     if (!ok) return;
     await conBoton(null, async () => {
       await api.borrarEquipo(q.id);
       await api.borrarArchivos("fotos", rutasDeFotos(q.fotos)).catch(() => {});
+      if (q.video) await api.borrarArchivos("videos", [q.video]).catch(() => {});
     }, { exito: "Equipo borrado" });
     equipos.splice(equipos.indexOf(q), 1);
     pintar();
@@ -190,7 +192,7 @@ const PASOS = [
   ["capacidad", "Capacidad"],
   ["color", "Color"],
   ["precio", "Precio y stock"],
-  ["fotos", "Fotos"],
+  ["fotos", "Fotos y video"],
   ["usado", "Datos del usado"],
   ["publicar", "Publicar"]
 ];
@@ -209,6 +211,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     color_id: fuente?.color_id ?? null, color_nombre_mostrar: fuente?.color_nombre_mostrar ?? "",
     precio: fuente?.precio ?? null, en_stock: fuente?.en_stock ?? true,
     fotos: modo === "editar" ? [...(fuente?.fotos || [])] : [],
+    video: modo === "editar" ? fuente?.video || "" : "",
     publicado: modo === "editar" ? fuente.publicado : false,
     destacado: fuente?.destacado ?? false, descripcion_extra: fuente?.descripcion_extra ?? "",
     bateria_porcentaje: fuente?.bateria_porcentaje ?? null, estado_estetico: fuente?.estado_estetico ?? null,
@@ -218,6 +221,8 @@ async function formulario(vista, ctx, { modo, id, desde }) {
   let paso = 0;
   const subidas = [];   // rutas subidas en esta edición (se borran si se cancela)
   const quitadas = [];  // rutas a borrar cuando se guarde
+  const videosSubidos = [];  // igual, para el bucket "videos"
+  const videosQuitados = [];
 
   const generaciones = [];
   for (const m of [...modelos].sort((a, b) => b.orden - a.orden)) {
@@ -304,6 +309,14 @@ async function formulario(vista, ctx, { modo, id, desde }) {
         </div>
         <p class="subiendo" id="subiendo" role="status" hidden></p>
         <p class="error-campo" id="e-fotos-error" role="alert"></p>
+        <div class="campo bloque-video">
+          <span class="etiqueta" id="e-video-titulo">Video (opcional)</span>
+          <p class="ayuda" id="e-video-ayuda">Un video corto del equipo: MP4 o WebM, de hasta 15 segundos y 20 MB. Se sube tal cual, sin comprimir. En el sitio solo se descarga si el cliente lo toca.</p>
+          <div id="video-actual"></div>
+          <input class="oculto-visual" id="e-video" type="file" accept="video/mp4,video/webm,.mp4,.webm" aria-describedby="e-video-ayuda e-video-error">
+          <p class="subiendo" id="subiendo-video" role="status" hidden></p>
+          <p class="error-campo" id="e-video-error" role="alert"></p>
+        </div>
       </fieldset>
 
       <fieldset class="bloque" data-paso="usado">
@@ -400,7 +413,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     const precio = leerPrecio(valor("#e-precio"));
     const color = nombreColor(listaColores.find((c) => c.id === colorSel()), valor("#e-color-mostrar"));
     $("#resumen-equipo").innerHTML = `Resumen: <strong>${esc([m?.nombre, condicion() === "usado" ? "Usado" : "Nuevo", capacidad(), color].filter(Boolean).join(" · "))}</strong>
-      ${precio ? ` · ${formatearCOP(precio)}` : ""} · ${$("#e-stock").checked ? "con stock" : "sin stock"} · ${fotos.length} foto${fotos.length === 1 ? "" : "s"}`;
+      ${precio ? ` · ${formatearCOP(precio)}` : ""} · ${$("#e-stock").checked ? "con stock" : "sin stock"} · ${fotos.length} foto${fotos.length === 1 ? "" : "s"}${video ? " · con video" : ""}`;
   }
 
   // Error de un grupo de opciones: el foco va a la primera opción.
@@ -423,7 +436,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     precio: () => {
       return marcarError(form, "e-precio", leerPrecio(valor("#e-precio")) ? "" : "El precio debe ser un número entero mayor que 0.");
     },
-    fotos: () => !subiendo,
+    fotos: () => !subiendo && !subiendoVideo,
     usado: () => {
       if (condicion() !== "usado") return true;
       const b = valor("#e-bateria");
@@ -528,6 +541,53 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     pintarFotos();
   });
 
+  // --- Video ---
+  let video = q.video;
+  let subiendoVideo = false;
+  function pintarVideo() {
+    const url = video ? api.urlArchivo("videos", video) : "";
+    $("#video-actual").innerHTML = video
+      ? `<video class="video-vista" src="${esc(url)}" controls preload="metadata" playsinline aria-label="Video del equipo"></video>
+         <div class="zona-subida-botones"><label class="boton boton--secundario" for="e-video">Cambiar video</label>
+         <button type="button" class="boton boton--enlace" id="quitar-video">Quitar video</button></div>`
+      : '<label class="boton boton--secundario" for="e-video">Elegir video</label>';
+    $("#quitar-video")?.addEventListener("click", () => {
+      videosQuitados.push(video);
+      video = "";
+      ctx.sucio = true;
+      pintarVideo();
+      $('label[for="e-video"]').focus();
+    });
+  }
+  $("#e-video").addEventListener("change", async (e) => {
+    const archivo = e.target.files[0];
+    e.target.value = "";
+    if (!archivo) return;
+    const errorEl = $("#e-video-error");
+    const estadoEl = $("#subiendo-video");
+    errorEl.textContent = "";
+    subiendoVideo = true;
+    estadoEl.hidden = false;
+    estadoEl.innerHTML = '<span class="spinner" aria-hidden="true"></span>Revisando el video…';
+    try {
+      // Se valida antes de subir: no se sube nada que no sirva.
+      const { ext } = await validarVideo(archivo);
+      estadoEl.innerHTML = '<span class="spinner" aria-hidden="true"></span>Subiendo el video…';
+      const ruta = `equipos/${crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2)}.${ext}`;
+      await api.subirArchivo("videos", ruta, archivo);
+      if (video) videosQuitados.push(video);
+      videosSubidos.push(ruta);
+      video = ruta;
+      ctx.sucio = true;
+      pintarVideo();
+    } catch (err) {
+      errorEl.textContent = err.message;
+    } finally {
+      subiendoVideo = false;
+      estadoEl.hidden = true;
+    }
+  });
+
   // --- Eventos del formulario ---
   form.addEventListener("input", () => { ctx.sucio = true; });
   form.addEventListener("change", (e) => {
@@ -561,7 +621,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     if (malos.length) {
       if (porPasos) { paso = pasosVisibles().findIndex(([k]) => k === malos[0]); mostrarPaso(); }
       enfocarPrimerError(form);
-      if (subiendo) avisar("Espere a que terminen de subir las fotos.", "error");
+      if (subiendo || subiendoVideo) avisar("Espere a que terminen de subir las fotos y el video.", "error");
       return;
     }
     const usado = condicion() === "usado";
@@ -574,6 +634,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
       precio: leerPrecio(valor("#e-precio")),
       en_stock: $("#e-stock").checked,
       fotos,
+      video,
       publicado: $("#e-publicado").checked,
       destacado: $("#e-destacado").checked,
       descripcion_extra: valor("#e-descripcion"),
@@ -591,7 +652,9 @@ async function formulario(vista, ctx, { modo, id, desde }) {
       });
     } catch { return; }
     await api.borrarArchivos("fotos", rutasDeFotos(quitadas)).catch(() => {});
+    if (videosQuitados.length) await api.borrarArchivos("videos", videosQuitados.filter((r) => r !== video)).catch(() => {});
     subidas.length = 0;
+    videosSubidos.length = 0;
     ctx.sucio = false;
     ctx.ir("inventario");
   });
@@ -599,9 +662,11 @@ async function formulario(vista, ctx, { modo, id, desde }) {
   // Si se sale sin guardar, se borran las fotos subidas en esta edición.
   ctx.alSalir = () => {
     if (subidas.length) api.borrarArchivos("fotos", rutasDeFotos(subidas)).catch(() => {});
+    if (videosSubidos.length) api.borrarArchivos("videos", videosSubidos).catch(() => {});
   };
 
   pintarFotos();
+  pintarVideo();
   pintarColores();
   actualizarVisibles();
   if (porPasos) mostrarPaso();
