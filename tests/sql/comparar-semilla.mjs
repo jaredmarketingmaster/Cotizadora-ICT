@@ -11,7 +11,7 @@ const { CATALOGO, DEMO_EQUIPOS } = await import(pathToFileURL(`${raiz}/assets/js
 assert.deepEqual(sql.modelos, CATALOGO, "el catálogo del SQL y el de semilla.js no coinciden");
 const normal = (e) => ({
   slug: e.slug, condicion: e.condicion, capacidad: e.capacidad, color_nombre: e.color_nombre,
-  color_hex: e.color_hex, precio: Number(e.precio), stock: e.stock, destacado: e.destacado,
+  color_hex: e.color_hex, precio: Number(e.precio), en_stock: e.en_stock, destacado: e.destacado,
   bateria_porcentaje: e.bateria_porcentaje ?? null, estado_estetico: e.estado_estetico ?? null,
   detalles: e.detalles ?? "", incluye: e.incluye ?? ""
 });

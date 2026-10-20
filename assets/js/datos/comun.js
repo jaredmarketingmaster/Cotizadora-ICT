@@ -13,7 +13,7 @@ export class ErrorDatos extends Error {
 // Lo que el público puede ver (igual que la política equipos_leer del SQL).
 export function equipoEsPublico(equipo, modelosPorId) {
   const modelo = modelosPorId.get(equipo.modelo_id);
-  return Boolean(equipo.publicado && equipo.stock > 0 && modelo?.activo);
+  return Boolean(equipo.publicado && equipo.en_stock && modelo?.activo);
 }
 
 // Fotos: se guardan dos tamaños. La ruta principal es la grande (máx. 1600 px)
@@ -34,7 +34,7 @@ export const CAMPOS_TIENDA = [
 ];
 
 export const CAMPOS_EQUIPO = [
-  "modelo_id", "condicion", "capacidad", "color_nombre", "color_hex", "precio", "stock",
+  "modelo_id", "condicion", "capacidad", "color_nombre", "color_hex", "precio", "en_stock",
   "fotos", "publicado", "destacado", "descripcion_extra", "es_demo",
   "bateria_porcentaje", "estado_estetico", "detalles", "incluye"
 ];

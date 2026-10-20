@@ -299,7 +299,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | Archivo | Qué es |
 |---|---|
 | `assets/js/datos/api.js` (≈17) | `api()`: devuelve, una sola vez, el adaptador `demo` o `supabase` según `config.js`. Si se pide Supabase sin URL o clave, usa demo y avisa en la consola. |
-| `assets/js/datos/comun.js` (≈62) | Reglas compartidas por los dos adaptadores: <ul><li>`ErrorDatos`.</li><li>`equipoEsPublico`: publicado, con stock mayor que 0 y de un modelo activo.</li><li>`LADO_GRANDE` = 1600 y `LADO_MINIATURA` = 640.</li><li>`rutaMiniatura`: `x.webp` → `x-640.webp`.</li><li>`CAMPOS_TIENDA`, `CAMPOS_EQUIPO`, `ESTADOS_ESTETICOS` y `elegir`.</li><li>`mensajeDeError`: traduce los errores de Postgres al español.</li></ul> |
+| `assets/js/datos/comun.js` (≈62) | Reglas compartidas por los dos adaptadores: <ul><li>`ErrorDatos`.</li><li>`equipoEsPublico`: publicado, con stock (`en_stock`) y de un modelo activo.</li><li>`LADO_GRANDE` = 1600 y `LADO_MINIATURA` = 640.</li><li>`rutaMiniatura`: `x.webp` → `x-640.webp`.</li><li>`CAMPOS_TIENDA`, `CAMPOS_EQUIPO`, `ESTADOS_ESTETICOS` y `elegir`.</li><li>`mensajeDeError`: traduce los errores de Postgres al español.</li></ul> |
 | `assets/js/datos/semilla.js` (≈47) | `CATALOGO`: los 32 modelos con slug, generación y orden de 10 en 10. `DEMO_EQUIPOS`: los 6 equipos demo. `slugDe`. **Debe coincidir** con `0002_catalogo.sql` y `0003_demo.sql`; la prueba SQL lo revisa. |
 | `assets/js/datos/demo.js` (≈436) | Back-end de demostración. Ver sección 7.2. |
 | `assets/js/datos/supabase.js` (≈304) | Back-end Supabase. Ver sección 7.3. |
@@ -309,7 +309,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | Archivo | Qué es |
 |---|---|
 | `assets/js/sitio/principal.js` (≈328) | **Orquestador del sitio.** Sus tareas: <ul><li>Captura la atribución, inicia el píxel y el script de GHL.</li><li>Carga los datos y aplica el tema.</li><li>Dibuja marca, información y pie.</li><li>Arma los filtros y lee y escribe la URL.</li><li>Actualiza contador y galería, y decide el detalle en línea.</li><li>Abre la hoja de detalle (con gesto de deslizar para cerrar) y conecta la barra fija.</li><li>En demo, recarga si otra pestaña cambió los datos (evento `storage`).</li></ul> |
-| `assets/js/sitio/catalogo.js` (≈163) | **Lógica pura, sin DOM:** <ul><li>`prepararCatalogo`, que calcula la recencia de cada generación como el mayor `orden` de sus modelos.</li><li>`filtrar`, `contarUnidades` (suma de stock), `opcionesModelo` (agrupadas por generación, de la más nueva a la más vieja), `etiquetaGeneracion` y `opcionesCapacidad`.</li><li>`encadenar`: limpia las elecciones que un cambio deja inválidas.</li><li>`tarjetas`: nuevos por modelo y capacidad, usados por unidad; orden: destacados, generación más nueva y precio.</li><li>`diapositivas`, `textoCondicion`, `textoAlternativo` y `describirBusqueda`.</li><li>`mensajeCompra`, `mensajeSinStock` y `enlaceWhatsApp`.</li></ul> |
+| `assets/js/sitio/catalogo.js` (≈163) | **Lógica pura, sin DOM:** <ul><li>`prepararCatalogo`, que calcula la recencia de cada generación como el mayor `orden` de sus modelos.</li><li>`filtrar`, `contarEquipos` (cantidad de equipos: el stock es sí/no), `opcionesModelo` (agrupadas por generación, de la más nueva a la más vieja), `etiquetaGeneracion` y `opcionesCapacidad`.</li><li>`encadenar`: limpia las elecciones que un cambio deja inválidas.</li><li>`tarjetas`: nuevos por modelo y capacidad, usados por unidad; orden: destacados, generación más nueva y precio.</li><li>`diapositivas`, `textoCondicion`, `textoAlternativo` y `describirBusqueda`.</li><li>`mensajeCompra`, `mensajeSinStock` y `enlaceWhatsApp`.</li></ul> |
 | `assets/js/sitio/filtros.js` (≈189) | Controles de los filtros: <ul><li>`iniciarSegmentado`: Nuevo/Usado, donde un segundo toque desmarca.</li><li>`iniciarChips`: almacenamiento.</li><li>`iniciarDesplegable`: lista propia con `role="listbox"`, grupos por generación, "Todos los modelos", cantidad por modelo, buscador si hay más de 8, teclado (flechas, Inicio/Fin, Enter, Escape, Tab) y cierre al tocar afuera.</li><li>`marcarLimpiado`: destello cuando un filtro se limpia solo.</li></ul> |
 | `assets/js/sitio/galeria.js` (≈117) | `crearGaleria(lista, api)`: tarjetas con clave estable. Al filtrar, las que salen se desvanecen y las que quedan se reacomodan con **FLIP** (Web Animations API). Sin animación si hay `prefers-reduced-motion`. |
 | `assets/js/sitio/detalle.js` (≈219) | `crearDetalle(...)`: carrusel y ficha. <ul><li>El carrusel usa scroll-snap y se mueve con el dedo, flechas, puntos, muestras de color y teclado; con varias fotos muestra miniaturas.</li><li>La ficha tiene nombre, etiqueta, variante, `etiqueta_precio` y precio (el elemento más grande), datos de usado, descripciones, "Ver ficha técnica" (solo filas con valor), pagos, entrega, garantía y el botón.</li><li>También exporta `htmlBarraCompra` e `ICONO_WA`.</li></ul> |
@@ -325,7 +325,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 |---|---|
 | `assets/js/panel/panel.js` (≈283) | Arranque, acceso y rutas. <ul><li>**Acceso:** vistas de login, recuperación y "Cree su contraseña" o "Contraseña nueva", según `tipoDeEnlace()`.</li><li>`entrar()` y el router `enrutar()` por hash, que pregunta si hay cambios sin guardar (`ctx.sucio`) y llama `ctx.alSalir`.</li><li>La vista **Inicio**: estadísticas, fecha de precios, avisos de "Lo que falta" y modo demo para la agencia.</li><li>Define `ctx`, que tiene: `api`, `usuario`, `tienda`, `sucio`, `alSalir`, `esAgencia()`, `recargarTienda()` e `ir()`.</li></ul> |
 | `assets/js/panel/ui.js` (≈82) | Piezas de interfaz: `$`, `$$`, `esc`, `avisar` ("Guardado" o error), `confirmar` (promesa sobre `<dialog>`), `conBoton` (botón en espera más aviso), `campoTexto`, `interruptor`, `marcarError` y `enfocarPrimerError`. |
-| `assets/js/panel/inventario.js` (≈605) | Inventario. <ul><li>**Lista** con buscador y filtros (modelo, condición, publicado y los especiales "sin stock" y "sin foto").</li><li>**Edición rápida** de precio, stock y publicado: se guarda al salir del campo o con Enter.</li><li>Borrar con confirmación (borra también las fotos).</li><li>**Formulario** por pasos para agregar, completo para editar y duplicar, con validaciones.</li><li>**Fotos:** subir, cámara, arrastrar y soltar, reordenar, quitar y máximo 6.</li><li>Opción de activar el modelo si estaba inactivo.</li><li>Limpia las fotos subidas si se sale sin guardar.</li></ul> |
+| `assets/js/panel/inventario.js` (≈605) | Inventario. <ul><li>**Lista** con buscador y filtros (modelo, condición, publicado y los especiales "sin stock" y "sin foto").</li><li>**Edición rápida** de precio, el interruptor **Stock** ("Con stock" / "Sin stock") y publicado: se guarda al salir del campo, con Enter o al mover el interruptor.</li><li>Borrar con confirmación (borra también las fotos).</li><li>**Formulario** por pasos para agregar, completo para editar y duplicar, con validaciones.</li><li>**Fotos:** subir, cámara, arrastrar y soltar, reordenar, quitar y máximo 6.</li><li>Opción de activar el modelo si estaba inactivo.</li><li>Limpia las fotos subidas si se sale sin guardar.</li></ul> |
 | `assets/js/panel/tienda.js` (≈359) | Mi tienda: <ul><li>Datos de la tienda y redes.</li><li>Marca: logo con **recorte** (horizontal 3:1 o cuadrado, arrastrar, zoom y teclado), favicon de 128 px, colores con selector y hexadecimal, tema y **vista previa en vivo** con el contraste calculado.</li><li>Venta: etiqueta del precio, **lista editable** de formas de pago, entrega y garantías.</li></ul> |
 | `assets/js/panel/fichas.js` (≈120) | Fichas técnicas: lista de modelos activos y editor por modelo. Tiene descripción, filas etiqueta/valor (agregar, editar, subir, bajar y borrar, con etiquetas sugeridas) y "Copiar ficha de otro modelo". |
 | `assets/js/panel/catalogo.js` (≈119) | Catálogo agrupado por generación con interruptor activo/inactivo. La **agencia** además renombra (el slug no cambia), reordena (intercambia el `orden`) y agrega modelos al final. |
@@ -340,6 +340,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `supabase/migrations/0001_esquema.sql` (≈351) | Tablas, funciones de rol, disparadores, RLS, `datos_publicos()`, `borrar_datos_demo()`, buckets y reglas de almacenamiento. Ver sección 6. |
 | `supabase/migrations/0002_catalogo.sql` (≈42) | Inserta los **32 modelos** del catálogo maestro, en el orden del prompt, todos inactivos (`orden` 10, 20, …, 320). Cada modelo recibe su ficha vacía por disparador. |
 | `supabase/migrations/0003_demo.sql` (≈36) | Pone el nombre "Tienda de demostración" y `modo_demo = true`, activa los 4 modelos que usa la demo (con `activo_por_demo = true`) e inserta los 6 equipos demo. |
+| `supabase/migrations/0004_en_stock.sql` (≈40) | El stock pasa de número a sí/no: agrega `equipos.en_stock` (verdadero por defecto), convierte `stock > 0` en verdadero y 0 en falso, rehace `equipos_leer` y `datos_publicos()` con `en_stock`, y quita `stock` y `usado_es_una_unidad`. |
 | `supabase/functions/_compartido/lead.ts` (≈53) | `armarLead(datos)`: valida y arma el pedido que va a GHL. Exporta también `CAMPOS_ATRIBUCION` y `CAMPOS_OCULTOS`. No depende de Deno. |
 | `supabase/functions/enviar-lead/index.ts` (≈73) | Función pública, sin JWT: valida y reenvía al Inbound Webhook de GHL. Ver sección 11.1. |
 | `supabase/functions/usuarios/index.ts` (≈72) | Función solo para agencia: invitar, desactivar y reactivar con la clave de servicio. Ver sección 11.2. |
@@ -351,10 +352,11 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈689) | Suite de aceptación en **modo demo** con Playwright: **26 casos**. Ver sección 14. |
+| `tests/verificar.cjs` (≈715) | Suite de aceptación en **modo demo** con Playwright: **27 casos**. Ver sección 14. |
 | `tests/verificar-supabase.cjs` (≈311) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **9 casos**. Reemplaza `config.js` en el navegador y puede servir un supabase-js local (`ICT_SUPABASE_JS`). |
 | `tests/documentacion.mjs` | Verificador de este documento: falla si algún archivo versionado no aparece en la sección 5. |
-| `tests/sql/probar.sh` | Crea un Postgres temporal, carga la imitación de Supabase y las 3 migraciones, compara la semilla con `semilla.js` y corre `pruebas.sql`. |
+| `tests/sql/probar.sh` | Crea un Postgres temporal, carga la imitación de Supabase y todas las migraciones en orden, compara la semilla con `semilla.js` y corre `pruebas.sql`. Antes de cada migración corre `tests/sql/antes_<migración>.sql` si existe. |
+| `tests/sql/antes_0004_en_stock.sql` | Datos con el esquema viejo (stock 4 y stock 0) para probar que `0004` los convierte bien. `pruebas.sql` los revisa y los borra. |
 | `tests/sql/supabase_simulado.sql` | Roles `anon`, `authenticated` y `service_role`, esquema `auth` con `auth.uid()`, y `storage.buckets` y `storage.objects` mínimos. |
 | `tests/sql/pruebas.sql` | Asserts de catálogo y semilla, y de RLS por rol (anon, sin perfil, inactivo, tienda, agencia). También validaciones, fecha de precios, protecciones de catálogo, modo demo y perfiles, y borrar demo. |
 | `tests/sql/comparar-semilla.mjs` | Compara el JSON de la semilla del SQL con `semilla.js`. |
@@ -422,7 +424,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 - `capacidad`: texto no vacío.
 - `color_nombre`, `color_hex`: hexadecimal.
 - `precio`: bigint mayor que 0.
-- `stock`: entero de 0 o más.
+- `en_stock`: sí/no, verdadero por defecto (desde `0004`; antes era un entero `stock`).
 - `fotos`: `text[]` de hasta 6 rutas.
 - `publicado`, `destacado`, `descripcion_extra`, `es_demo`.
 - **Solo usados:**
@@ -430,7 +432,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
   - `estado_estetico`: Como nuevo, Excelente, Muy bueno o Bueno.
   - `detalles`, `incluye`.
 - `creado_en`, `actualizado_en`.
-- Restricción **`usado_es_una_unidad`**: un usado tiene `stock ≤ 1`.
+- La restricción `usado_es_una_unidad` (un usado con `stock ≤ 1`) se quitó en `0004`: ya no hay cantidades.
 
 **`perfiles`**: quién puede entrar al panel.
 
@@ -465,7 +467,7 @@ Las tres son `security definer`:
 | `tienda` | lee | lee y edita (no `modo_demo`) | lee y edita todo |
 | `modelos` | lee **solo activos** | lee todos; cambia `activo` | lee, edita, agrega y borra |
 | `fichas` | lee las de modelos activos | lee y edita | lee y edita |
-| `equipos` | lee solo **publicados, con stock > 0 y de modelo activo** | todo | todo |
+| `equipos` | lee solo **publicados, con stock (`en_stock`) y de modelo activo** | todo | todo |
 | `perfiles` | sin acceso (permiso revocado) | lee el suyo | lee y edita todos |
 | `storage.objects` (`fotos` y `marca`) | lee | sube, cambia y borra | sube, cambia y borra |
 
@@ -516,6 +518,7 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 - **Estado:** `localStorage["cotizadora-demo:v1"]`, un JSON con `tienda`, `modelos`, `fichas`, `equipos` y `perfiles`. Se comparte entre pestañas del mismo navegador.
 - **Fotos:** IndexedDB, base `cotizadora-demo`, almacén `archivos`. Se exponen como `blob:` URLs.
 - **Usuarios de prueba:** `agencia@demo.co` y `tienda@demo.co`, clave `demo1234`. La sesión va en `sessionStorage["cotizadora-demo:sesion"]`.
+- **Versión de los datos:** el JSON lleva `version` (hoy 2). Si el navegador tiene una versión vieja, `migrar()` repite la migración SQL del mismo número (por ejemplo `stock` → `en_stock`) sin perder lo cargado.
 - **Repite las reglas del SQL:**
   - Permisos por rol.
   - Las restricciones CHECK.
@@ -561,11 +564,11 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 - **"¿Nuevo o usado?"**: segmentado sin selección inicial. Un segundo toque desmarca.
 - **"¿Qué modelo?"**: lista propia que muestra **solo los modelos activos con stock para la condición elegida**.
   - Va agrupada por generación, de la más nueva a la más vieja. La recencia es el mayor `orden` de la generación, así "Plegable" (iPhone Duo) queda primero.
-  - Muestra la cantidad por modelo (suma de stock).
+  - Muestra la cantidad de equipos por modelo.
   - Si hay más de 8 modelos, aparece un buscador.
 - **"¿Qué almacenamiento?"**: chips con las capacidades que existen para lo ya elegido, ordenadas por tamaño (`capacidadEnGB`).
 - **Encadenado:** si un cambio deja inválida una elección posterior, `encadenar()` la limpia y `marcarLimpiado()` hace un destello.
-- **Contador:** "N equipos disponibles" o "1 equipo disponible", contando **unidades** (suma de stock).
+- **Contador:** "N equipos disponibles" o "1 equipo disponible", contando **equipos** (variantes nuevas y unidades usadas). Desde `0004` el stock es sí/no, así que ya no hay unidades que sumar.
 - **"Limpiar filtros"** solo aparece si hay algún filtro.
 - **La URL se actualiza con `history.replaceState`.** Solo cambian `condicion`, `modelo` y `capacidad`; los UTM y demás parámetros se quedan.
 
@@ -726,7 +729,7 @@ La búsqueda se arma con `describirBusqueda`: el modelo o "iPhone", la condició
 |---|---|
 | `#/inicio` | Inicio, con estas partes:<ul><li>**Estadísticas:** publicados visibles y en borrador. Cada una es un enlace al inventario filtrado.</li><li>**Fecha** de la última actualización de precios.</li><li>**"Lo que falta":** falta el logo, falta el WhatsApp, faltan los textos legales, hay equipos sin foto, equipos ocultos por modelo inactivo. Si no falta nada: "Todo está completo.".</li><li>**Botón** "Ver mi sitio".</li><li>**Solo agencia:** interruptor del modo demo, "Borrar datos de demostración" y, en demo, "Volver a los datos iniciales".</li></ul> |
 | `#/inventario` | Lista, filtros y edición rápida. Acepta `?publicado=si|no`, `?stock=0` y `?fotos=sin`. |
-| `#/inventario/nuevo` | Formulario **por pasos**: modelo → condición → capacidad → color → precio y stock → fotos → datos del usado (solo si es usado) → publicar (con resumen). |
+| `#/inventario/nuevo` | Formulario **por pasos**: modelo → condición → capacidad → color → precio y stock (interruptor) → fotos → datos del usado (solo si es usado) → publicar (con resumen). |
 | `#/inventario/nuevo?desde=<id>` | **Duplicar**: copia todo menos las fotos. |
 | `#/inventario/<id>` | Editar el equipo (formulario completo). |
 | `#/tienda` | Mi tienda. |
@@ -740,7 +743,7 @@ La búsqueda se arma con `describirBusqueda`: el modelo o "iPhone", la condició
 Son las mismas que exige el SQL:
 
 - **Precio:** entero mayor que 0. Acepta "5.299.000".
-- **Stock:** entero de 0 o más. Un usado tiene 0 o 1.
+- **Stock:** interruptor "Stock" con "Con stock" / "Sin stock" (por defecto, con stock). Duplicar copia el estado. Sin stock, el equipo no se ve en el sitio.
 - **Usados:** batería obligatoria de 0 a 100 y estado estético obligatorio.
 - **Color:** nombre obligatorio y hexadecimal `#RRGGBB`.
 - **Tienda:** WhatsApp de 12 dígitos que empiece por 57; correo válido; redes con `https://`.
@@ -870,7 +873,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 ```bash
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 26 casos en modo demo (Playwright + Chromium)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 27 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (10 casos) + tipos
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
@@ -882,12 +885,12 @@ node tests/documentacion.mjs                               # este documento cubr
 - `ICT_BASE=URL`: por ejemplo `http://localhost:8081/Cotizadora-ICT`, para simular GitHub Pages.
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (26 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (27 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
 3. Los filtros solo ofrecen opciones con stock; al encadenar, se limpian solos; un segundo toque desmarca.
-4. Un equipo con stock 0 o sin publicar no aparece.
+4. Un equipo sin stock o sin publicar no aparece. El interruptor Stock de la lista lo oculta y lo vuelve a mostrar en el sitio, y el filtro `?stock=0` muestra solo los que no tienen stock.
 5. Cambiar un precio en el panel lo cambia en el sitio y actualiza la fecha del pie.
 6. Con UTM, el pedido lleva todos los campos.
 7. WhatsApp abre con el mensaje exacto. Un usado lleva batería y estado (casos 7 y 8). La consulta sin stock lleva su mensaje (7b).
@@ -997,7 +1000,7 @@ bash tests/supabase-local/levantar.sh detener
 | Código + Supabase en vez de AI Studio | No había acceso a AI Studio. Supabase da lo mismo: base de datos con RLS, usuarios y archivos. |
 | Inbound Webhook en vez del formulario nativo | El formulario nativo no se puede completar ni enviar desde código fuera de GHL (iframe de otro dominio). No se usan endpoints sin documentar. |
 | Back-end demo en el navegador | Permite ver, probar y presentar todo sin servidor (GitHub Pages) y correr la suite sin red. |
-| "Cantidad disponible" = suma de stock | Es el significado literal de "cantidad disponible". |
+| "Cantidad disponible" = cantidad de equipos | Desde `0004` el stock es sí/no (pedido de Jared), así que se cuentan equipos. Antes era la suma de stock. |
 | El detalle se abre solo con los **tres** filtros y una tarjeta | Lectura literal del prompt. |
 | Los filtros de la URL se respetan sin stock | Un anuncio de un equipo agotado lleva a "Consultar por WhatsApp". |
 | La demo activa 4 modelos (`activo_por_demo`) | El catálogo debe quedar todo inactivo, pero los equipos demo deben verse. Borrar la demo los vuelve a apagar, salvo que la tienda los haya tocado. |
@@ -1069,6 +1072,20 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 20/10/2026 · A2: el stock pasa a "Con stock" / "Sin stock"
+
+- **Pedido de Jared (fase A, punto A2):** reemplazar el número de stock por un sí/no, verdadero por defecto; la migración convierte `stock > 0` en verdadero; quitar `usado_es_una_unidad`; los conteos pasan a ser cantidad de equipos con stock; interruptor "Stock" en la lista, la edición rápida y los formularios; Duplicar copia el estado; se mantiene el filtro especial "sin stock".
+- **Hecho:**
+  - `supabase/migrations/0004_en_stock.sql`: columna `en_stock`, conversión, política `equipos_leer`, `datos_publicos()` e índice nuevos; se borran `stock` y la restricción.
+  - `demo.js`: `version` 2 con `migrar()`, que repite la conversión en los datos guardados del navegador; valida que `en_stock` sea sí/no.
+  - `comun.js` (`equipoEsPublico`, `CAMPOS_EQUIPO`), `catalogo.js` (`contarEquipos`, cantidades por modelo), `principal.js`, `panel.js` (Publicados) y `semilla.js` (`en_stock: true`).
+  - Panel: `interruptor()` de `ui.js` acepta `estados` y muestra "Con stock" / "Sin stock"; `inventario.js` usa el interruptor en la lista y en el formulario, y el texto de borrar dice «Sin stock».
+- **Pruebas cambiadas y por qué:**
+  - `pruebas.sql`: la prueba "un usado no puede tener stock 2" perdió sentido (ya no hay cantidades). Se reemplazó por "el stock no puede quedar vacío" (`not null`) y por el bloque 0, que prueba la conversión de la migración con datos viejos (`antes_0004_en_stock.sql`).
+  - `verificar.cjs`: los contadores pasan de unidades a equipos (5 → 2, 10 → 6, 7 → 4); la validación "Un usado tiene stock 1" se reemplazó por la comprobación del interruptor ("Con stock" por defecto); caso nuevo del interruptor de la lista (oculta y vuelve a mostrar en el sitio, y filtro `?stock=0`).
+  - `verificar-supabase.cjs`: contador 10 → 6 y el formulario ya no escribe un número de stock.
+- **Verificación:** `tests/sql/probar.sh` OK, `tests/verificar.cjs` 27/27, `tests/verificar-supabase.cjs` 9/9.
 
 ### 20/10/2026 · A1: Inicio solo con "Publicados" y "En borrador"
 

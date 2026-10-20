@@ -117,7 +117,8 @@ async function llenarPopup(p) {
     await p.waitForTimeout(600);
     assert.equal(new URL(p.url()).search, "?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=256-gb");
     assert.equal(await p.locator(".galeria > .tarjeta").count(), 1);
-    assert.equal(await p.textContent("#contador"), "5 equipos disponibles");
+    // El stock es sí/no: el contador cuenta equipos (Negro y Plata), no unidades.
+    assert.equal(await p.textContent("#contador"), "2 equipos disponibles");
     // Una sola tarjeta con los tres filtros: el detalle se abre solo debajo.
     assert.ok(await p.isVisible("#detalle-en-linea .detalle"));
     const colores = await p.locator("#detalle-en-linea .color-boton").allTextContents();
@@ -148,25 +149,54 @@ async function llenarPopup(p) {
     // Un segundo toque desmarca
     await p.click(".segmento[data-valor='nuevo']");
     assert.equal(await p.locator('.segmento[aria-pressed="true"]').count(), 0);
-    assert.equal(await p.textContent("#contador"), "10 equipos disponibles");
+    assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
     await p.context().close();
   });
 
   // ---------------------------------------------------------------- 12.4
-  await caso("4. un equipo con stock 0 o sin publicar no aparece", async () => {
+  await caso("4. un equipo sin stock o sin publicar no aparece", async () => {
     const p = await nueva();
     await ir(p);
     await editarDemo(p, (e) => {
-      e.equipos.find((q) => q.color_nombre === "Glacier").stock = 0;
+      e.equipos.find((q) => q.color_nombre === "Glacier").en_stock = false;
       e.equipos.find((q) => q.color_nombre === "Burgundy").publicado = false;
     });
     await ir(p);
     const texto = await p.textContent("#lista-equipos");
-    assert.ok(!/iPhone 18 Pro\b(?! Max)/.test(texto), "el 18 Pro con stock 0 sigue visible");
+    assert.ok(!/iPhone 18 Pro\b(?! Max)/.test(texto), "el 18 Pro sin stock sigue visible");
     assert.equal(await p.locator(".galeria > .tarjeta").count(), 3);
-    assert.equal(await p.textContent("#contador"), "7 equipos disponibles");
+    assert.equal(await p.textContent("#contador"), "4 equipos disponibles");
     await p.click("#f-modelo-boton");
     assert.equal(await p.locator('[role="option"][data-valor="iphone-18-pro"]').count(), 0);
+    await p.context().close();
+  });
+
+  await caso("stock: el interruptor de la lista oculta y vuelve a mostrar el equipo en el sitio", async () => {
+    const p = await nueva();
+    await entrarPanel(p, "tienda@demo.co");
+    await p.goto(`${BASE}/admin/#/inventario`);
+    await p.waitForSelector(".fila-equipo");
+    const fila = p.locator('.fila-equipo:has-text("Glacier")');
+    const estado = () => fila.locator(".interruptor-estado").innerText().then((t) => t.trim());
+    assert.equal(await estado(), "Con stock");
+    await fila.locator('[data-campo="en_stock"]').uncheck();
+    const glacierEnStock = () => p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).equipos.find((q) => q.color_nombre === "Glacier").en_stock, CLAVE_DEMO);
+    await p.waitForFunction((clave) => JSON.parse(localStorage.getItem(clave)).equipos.some((q) => !q.en_stock), CLAVE_DEMO);
+    assert.equal(await glacierEnStock(), false);
+    assert.equal(await estado(), "Sin stock");
+    await ir(p);
+    assert.equal(await p.textContent("#contador"), "5 equipos disponibles");
+    assert.ok(!/iPhone 18 Pro\b(?! Max)/.test(await p.textContent("#lista-equipos")));
+    // El filtro especial de la lista muestra solo los equipos sin stock.
+    await p.goto(`${BASE}/admin/#/inventario?stock=0`);
+    await p.waitForSelector("#filtro-especial:not([hidden])");
+    assert.equal(await p.locator(".fila-equipo").count(), 1);
+    await p.locator('.fila-equipo [data-campo="en_stock"]').check();
+    assert.ok((await p.textContent(".fila-equipo")).includes("sin stock: no se ve"));
+    await p.waitForFunction((clave) => JSON.parse(localStorage.getItem(clave)).equipos.every((q) => q.en_stock), CLAVE_DEMO);
+    await ir(p);
+    assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
+    assert.deepEqual(p.errores, []);
     await p.context().close();
   });
 
@@ -368,10 +398,12 @@ async function llenarPopup(p) {
     await p.check('input[name="e-condicion"][value="usado"]', { force: true }); await p.click("#siguiente");
     await p.check('input[name="e-capacidad"][value="64 GB"]', { force: true }); await p.click("#siguiente");
     await p.fill("#e-color-nombre", "Blanco"); await p.fill("#e-color-hex", "#F5F5F0"); await p.click("#siguiente");
-    await p.fill("#e-precio", "0"); await p.fill("#e-stock", "2"); await p.click("#siguiente");
+    // El stock es un interruptor que arranca en «Con stock».
+    assert.equal(await p.isChecked("#e-stock"), true);
+    assert.equal((await p.innerText('label[for="e-stock"] .interruptor-estado')).trim(), "Con stock");
+    await p.fill("#e-precio", "0"); await p.click("#siguiente");
     assert.equal(await p.textContent("#e-precio-error"), "El precio debe ser un número entero mayor que 0.");
-    assert.equal(await p.textContent("#e-stock-error"), "Un usado tiene stock 1, o 0 si se vendió.");
-    await p.fill("#e-precio", "1.200.000"); await p.fill("#e-stock", "1"); await p.click("#siguiente");
+    await p.fill("#e-precio", "1.200.000"); await p.click("#siguiente");
     await p.click("#siguiente"); // fotos
     await p.fill("#e-bateria", "101"); await p.click("#siguiente");
     assert.equal(await p.textContent("#e-bateria-error"), "La batería debe ser un número entero de 0 a 100.");
@@ -570,7 +602,7 @@ async function llenarPopup(p) {
       const t = new Date().toISOString();
       e.modelos.slice(0, 9).forEach((m, i) => {
         m.activo = true;
-        e.equipos.push({ id: `x${i}`, modelo_id: m.id, condicion: "nuevo", capacidad: "128 GB", color_nombre: "Negro", color_hex: "#111111", precio: 1000000 + i, stock: 1, fotos: [], publicado: true, destacado: false, descripcion_extra: "", es_demo: false, bateria_porcentaje: null, estado_estetico: null, detalles: "", incluye: "", creado_en: t, actualizado_en: t });
+        e.equipos.push({ id: `x${i}`, modelo_id: m.id, condicion: "nuevo", capacidad: "128 GB", color_nombre: "Negro", color_hex: "#111111", precio: 1000000 + i, en_stock: true, fotos: [], publicado: true, destacado: false, descripcion_extra: "", es_demo: false, bateria_porcentaje: null, estado_estetico: null, detalles: "", incluye: "", creado_en: t, actualizado_en: t });
       });
     });
     await ir(p);

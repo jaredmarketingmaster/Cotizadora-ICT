@@ -1,5 +1,5 @@
 // =============================================================================
-// Inventario: lista con filtros y edición rápida (precio, stock, publicado),
+// Inventario: lista con filtros y edición rápida (precio, stock sí/no, publicado),
 // formulario por pasos para agregar, edición completa, duplicar y borrar.
 // =============================================================================
 
@@ -66,7 +66,7 @@ async function lista(vista, ctx, params) {
       (!estado.modelo || q.modelo_id === Number(estado.modelo)) &&
       (!estado.condicion || q.condicion === estado.condicion) &&
       (!estado.publicado || q.publicado === (estado.publicado === "si")) &&
-      (estado.especial !== "sin-stock" || q.stock === 0) &&
+      (estado.especial !== "sin-stock" || !q.en_stock) &&
       (estado.especial !== "sin-foto" || (!q.es_demo && !(q.fotos || []).length)) &&
       (!t || [nombreModelo(modelos, q.modelo_id), q.color_nombre, q.capacidad, q.condicion].join(" ").toLowerCase().includes(t)))
       .sort((a, b) => {
@@ -81,7 +81,7 @@ async function lista(vista, ctx, params) {
     const notas = [
       q.es_demo && "DEMO",
       !activos.has(q.modelo_id) && "modelo inactivo: no se ve",
-      q.stock === 0 && "sin stock: no se ve",
+      !q.en_stock && "sin stock: no se ve",
       q.condicion === "usado" && q.bateria_porcentaje != null && `batería ${q.bateria_porcentaje}%`
     ].filter(Boolean);
     return `<li class="fila-equipo" data-id="${q.id}">
@@ -93,7 +93,7 @@ async function lista(vista, ctx, params) {
       </div>
       <div class="fila-edicion">
         <div class="campo"><label for="p-${q.id}">Precio</label><input class="entrada cifras" id="p-${q.id}" data-campo="precio" inputmode="numeric" value="${formatearMiles(q.precio)}"></div>
-        <div class="campo"><label for="s-${q.id}">Stock</label><input class="entrada cifras" id="s-${q.id}" data-campo="stock" type="number" min="0" ${q.condicion === "usado" ? 'max="1"' : ""} inputmode="numeric" value="${q.stock}"></div>
+        ${interruptor({ id: `s-${q.id}`, etiqueta: "Stock", marcado: q.en_stock, atributos: 'data-campo="en_stock"', estados: ["Con stock", "Sin stock"] })}
         ${interruptor({ id: `v-${q.id}`, etiqueta: "Publicado", marcado: q.publicado, atributos: 'data-campo="publicado"' })}
       </div>
       <div class="fila-acciones">
@@ -135,15 +135,6 @@ async function lista(vista, ctx, params) {
       valor = leerPrecio(input.value);
       if (valor == null) { error.textContent = "El precio debe ser un número entero mayor que 0."; input.setAttribute("aria-invalid", "true"); return; }
       if (valor === q.precio) { input.value = formatearMiles(q.precio); return; }
-    } else if (campo === "stock") {
-      valor = Number(input.value);
-      const max = q.condicion === "usado" ? 1 : Infinity;
-      if (!Number.isInteger(valor) || valor < 0 || valor > max) {
-        error.textContent = q.condicion === "usado" ? "Un usado tiene stock 1, o 0 si se vendió." : "El stock debe ser un número entero de 0 o más.";
-        input.setAttribute("aria-invalid", "true");
-        return;
-      }
-      if (valor === q.stock) return;
     } else {
       valor = input.checked;
     }
@@ -155,7 +146,7 @@ async function lista(vista, ctx, params) {
       if (campo === "precio") input.value = formatearMiles(nuevo.precio);
     } catch (e) {
       error.textContent = e.message;
-      if (campo === "publicado") input.checked = !valor;
+      if (input.type === "checkbox") input.checked = !valor;
     }
   }
   const listaEl = $("#lista");
@@ -169,7 +160,7 @@ async function lista(vista, ctx, params) {
     const q = equipos.find((x) => x.id === li.dataset.id);
     const ok = await confirmar({
       titulo: "¿Borrar este equipo?",
-      texto: `${nombreModelo(modelos, q.modelo_id)} ${q.capacidad}${q.color_nombre ? ` ${q.color_nombre}` : ""}. Se borran también sus fotos. Si solo quiere ocultarlo, ponga el stock en 0 o desmarque «Publicado».`,
+      texto: `${nombreModelo(modelos, q.modelo_id)} ${q.capacidad}${q.color_nombre ? ` ${q.color_nombre}` : ""}. Se borran también sus fotos. Si solo quiere ocultarlo, márquelo «Sin stock» o desmarque «Publicado».`,
       aceptar: "Borrar", peligro: true
     });
     if (!ok) return;
@@ -209,7 +200,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
   const q = {
     modelo_id: fuente?.modelo_id ?? "", condicion: fuente?.condicion ?? "", capacidad: fuente?.capacidad ?? "",
     color_nombre: fuente?.color_nombre ?? "", color_hex: fuente?.color_hex ?? "#8E8E93",
-    precio: fuente?.precio ?? null, stock: fuente?.stock ?? 1,
+    precio: fuente?.precio ?? null, en_stock: fuente?.en_stock ?? true,
     fotos: modo === "editar" ? [...(fuente?.fotos || [])] : [],
     publicado: modo === "editar" ? fuente.publicado : false,
     destacado: fuente?.destacado ?? false, descripcion_extra: fuente?.descripcion_extra ?? "",
@@ -259,7 +250,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
         <div class="opciones-chip">
           ${["nuevo", "usado"].map((c) => `<label class="opcion-chip"><input type="radio" name="e-condicion" value="${c}" ${q.condicion === c ? "checked" : ""}><span>${c === "nuevo" ? "Nuevo" : "Usado"}</span></label>`).join("")}
         </div>
-        <p class="ayuda">Un nuevo es una variante (modelo, capacidad y color) con su stock. Un usado es una sola unidad física.</p>
+        <p class="ayuda">Un nuevo es una variante (modelo, capacidad y color). Un usado es una sola unidad física.</p>
         <p class="error-campo" id="e-condicion-error"></p>
       </fieldset>
 
@@ -291,10 +282,9 @@ async function formulario(vista, ctx, { modo, id, desde }) {
 
       <fieldset class="bloque" data-paso="precio">
         <legend>Precio y stock</legend>
-        <div class="grilla-2">
-          ${campoTexto({ id: "e-precio", etiqueta: "Precio en pesos", valor: q.precio ? formatearMiles(q.precio) : "", ayuda: "Número entero, sin decimales. Ej. 5.299.000", atributos: 'inputmode="numeric" autocomplete="off"' })}
-          ${campoTexto({ id: "e-stock", etiqueta: "Stock", valor: String(q.stock), tipo: "number", ayuda: "Con stock 0 el equipo deja de verse, sin borrarse.", atributos: 'inputmode="numeric" min="0"' })}
-        </div>
+        ${campoTexto({ id: "e-precio", etiqueta: "Precio en pesos", valor: q.precio ? formatearMiles(q.precio) : "", ayuda: "Número entero, sin decimales. Ej. 5.299.000", atributos: 'inputmode="numeric" autocomplete="off"' })}
+        ${interruptor({ id: "e-stock", etiqueta: "Stock", marcado: q.en_stock, estados: ["Con stock", "Sin stock"] })}
+        <p class="ayuda">Sin stock, el equipo deja de verse en el sitio, sin borrarse.</p>
       </fieldset>
 
       <fieldset class="bloque" data-paso="fotos">
@@ -362,9 +352,6 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     const m = modeloSel();
     $("#aviso-inactivo").hidden = !m || m.activo;
     const usado = condicion() === "usado";
-    const stock = $("#e-stock");
-    stock.max = usado ? "1" : "";
-    if (usado && Number(stock.value) > 1) stock.value = "1";
     $('[data-paso="usado"]', form).hidden = porPasos ? pasosVisibles()[paso]?.[0] !== "usado" : !usado;
     $("#caja-otra").hidden = $('input[name="e-capacidad"]:checked', form)?.value !== "otra";
   }
@@ -389,7 +376,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     const m = modeloSel();
     const precio = leerPrecio(valor("#e-precio"));
     $("#resumen-equipo").innerHTML = `Resumen: <strong>${esc([m?.nombre, condicion() === "usado" ? "Usado" : "Nuevo", capacidad(), valor("#e-color-nombre")].filter(Boolean).join(" · "))}</strong>
-      ${precio ? ` · ${formatearCOP(precio)}` : ""} · stock ${esc(valor("#e-stock"))} · ${fotos.length} foto${fotos.length === 1 ? "" : "s"}`;
+      ${precio ? ` · ${formatearCOP(precio)}` : ""} · ${$("#e-stock").checked ? "con stock" : "sin stock"} · ${fotos.length} foto${fotos.length === 1 ? "" : "s"}`;
   }
 
   // Error de un grupo de opciones: el foco va a la primera opción.
@@ -411,12 +398,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
       return a && b;
     },
     precio: () => {
-      const a = marcarError(form, "e-precio", leerPrecio(valor("#e-precio")) ? "" : "El precio debe ser un número entero mayor que 0.");
-      const s = Number(valor("#e-stock"));
-      const max = condicion() === "usado" ? 1 : Infinity;
-      const b = marcarError(form, "e-stock", Number.isInteger(s) && s >= 0 && s <= max && valor("#e-stock") !== ""
-        ? "" : condicion() === "usado" ? "Un usado tiene stock 1, o 0 si se vendió." : "El stock debe ser un número entero de 0 o más.");
-      return a && b;
+      return marcarError(form, "e-precio", leerPrecio(valor("#e-precio")) ? "" : "El precio debe ser un número entero mayor que 0.");
     },
     fotos: () => !subiendo,
     usado: () => {
@@ -570,7 +552,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
       color_nombre: valor("#e-color-nombre"),
       color_hex: valor("#e-color-hex").toUpperCase(),
       precio: leerPrecio(valor("#e-precio")),
-      stock: Number(valor("#e-stock")),
+      en_stock: $("#e-stock").checked,
       fotos,
       publicado: $("#e-publicado").checked,
       destacado: $("#e-destacado").checked,

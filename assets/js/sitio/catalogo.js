@@ -17,7 +17,7 @@ export function prepararCatalogo(datos) {
   const porSlug = new Map([...porId.values()].map((m) => [m.slug, m]));
   const fichas = new Map((datos.fichas || []).map((f) => [f.modelo_id, f]));
   const equipos = (datos.equipos || [])
-    .filter((q) => porId.has(q.modelo_id) && q.publicado && q.stock > 0)
+    .filter((q) => porId.has(q.modelo_id) && q.publicado && q.en_stock)
     .map((q) => ({ ...q, modelo: porId.get(q.modelo_id) }));
   return { tienda: datos.tienda || {}, porId, porSlug, fichas, equipos };
 }
@@ -29,8 +29,9 @@ export function filtrar(equipos, { condicion = "", modelo = "", capacidad = "" }
     (!capacidad || q.capacidad === capacidad));
 }
 
-export function contarUnidades(equipos) {
-  return equipos.reduce((n, q) => n + q.stock, 0);
+// El stock es sí/no: se cuentan equipos (variantes y usados), no unidades.
+export function contarEquipos(equipos) {
+  return equipos.length;
 }
 
 // Modelos con stock para la condición elegida, agrupados por generación de la
@@ -38,7 +39,7 @@ export function contarUnidades(equipos) {
 export function opcionesModelo(cat, condicion) {
   const lista = filtrar(cat.equipos, { condicion });
   const cantidades = new Map();
-  for (const q of lista) cantidades.set(q.modelo_id, (cantidades.get(q.modelo_id) || 0) + q.stock);
+  for (const q of lista) cantidades.set(q.modelo_id, (cantidades.get(q.modelo_id) || 0) + 1);
   const grupos = new Map();
   for (const [id, cantidad] of cantidades) {
     const m = cat.porId.get(id);

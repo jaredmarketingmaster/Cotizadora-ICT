@@ -185,7 +185,7 @@ No pude abrir la documentación de GHL desde este entorno: su dominio está bloq
 ## Decisiones que tomé (revisar)
 
 - **Back-end Supabase** en lugar de AI Studio Cloud: ver arriba.
-- **"Cantidad disponible"** (contador y lista de modelos) = **suma del stock**, no cantidad de tarjetas. "12 equipos disponibles" significa 12 unidades.
+- **"Cantidad disponible"** (contador y lista de modelos) = **cantidad de equipos con stock**. El stock es sí/no ("Con stock" / "Sin stock"), así que no hay unidades que sumar.
 - **El detalle se abre solo debajo** cuando los **tres** filtros están elegidos y queda una sola tarjeta. Así lo leo en el prompt.
 - **Los filtros de la URL se respetan aunque no haya stock.** Un anuncio de un equipo agotado lleva al estado vacío con "Consultar por WhatsApp". Un `modelo` que no existe o está inactivo se ignora.
 - **Datos demo:** para que se vean, `0003_demo.sql` activa los 4 modelos que usan. Quedan marcados con `activo_por_demo`. El catálogo de `0002` sí queda todo inactivo, como pide el prompt.
@@ -206,7 +206,7 @@ Todas corren en este repo sin Docker. La última corrida pasó completa.
 | Prueba | Qué cubre | Cómo correrla |
 |---|---|---|
 | `tests/sql/probar.sh` | Migraciones en un Postgres local:<br>- Seguridad a nivel de fila por rol (público, sin perfil, inactivo, tienda, agencia)<br>- Validaciones<br>- Fecha de precios<br>- Borrar demo<br>- La semilla del SQL coincide con la del modo demo | `bash tests/sql/probar.sh` |
-| `tests/verificar.cjs` | 26 casos en modo demo:<br>- Las 11 pruebas de aceptación de la sección 12<br>- Pop-up: errores, reintento y fallo doble<br>- Panel: validaciones<br>- Ancho de 320 a 1440 px<br>- Carrusel con dedo, flechas, puntos y teclado<br>- Contraste AA en 4 combinaciones de colores<br>- Textos de 16 px o más y zonas táctiles de 44 px<br>- Teclado en la lista<br>- `prefers-reduced-motion`<br>- Píxel y formatos | `python3 -m http.server 8080 &`<br>`NODE_PATH="$(npm root -g)" node tests/verificar.cjs` |
+| `tests/verificar.cjs` | 27 casos en modo demo:<br>- Las 11 pruebas de aceptación de la sección 12<br>- Pop-up: errores, reintento y fallo doble<br>- Panel: validaciones<br>- Ancho de 320 a 1440 px<br>- Carrusel con dedo, flechas, puntos y teclado<br>- Contraste AA en 4 combinaciones de colores<br>- Textos de 16 px o más y zonas táctiles de 44 px<br>- Teclado en la lista<br>- `prefers-reduced-motion`<br>- Píxel y formatos | `python3 -m http.server 8080 &`<br>`NODE_PATH="$(npm root -g)" node tests/verificar.cjs` |
 | `tests/funciones/probar.sh` | `enviar-lead` con Deno contra un webhook de GHL simulado:<br>- Campos<br>- Validaciones<br>- GHL caído<br>- Falta de secreto<br>- Orígenes | `DENO=/ruta/deno bash tests/funciones/probar.sh` |
 | `tests/verificar-supabase.cjs` | 9 casos del modo Supabase de punta a punta contra un "Supabase local": Postgres, el servidor de auth oficial (GoTrue v2.180.0), PostgREST 12.2.3, las dos funciones en Deno, un SMTP simulado que guarda los correos y Storage **simulado**. Cubre:<br>- Sitio y pop-up → función → webhook<br>- Permisos del panel<br>- Precio → sitio, foto y borrar demo<br>- Invitar por el panel → correo en español → enlace → "Cree su contraseña" → entra<br>- Recuperar la contraseña con el enlace del correo<br>- Desactivar (no puede entrar) y reactivar | `BIN=/carpeta/con/postgrest,auth,deno bash tests/supabase-local/levantar.sh`<br>`NODE_PATH=… node tests/verificar-supabase.cjs` |
 

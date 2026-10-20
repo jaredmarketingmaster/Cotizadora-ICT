@@ -123,6 +123,9 @@ legend { padding: 0; font-weight: 700; }
 :root[data-tema="oscuro"] .interruptor input:checked { background: #12B76A; }
 .interruptor input:checked::after { transform: translateX(20px); }
 .interruptor input:disabled { opacity: .5; cursor: not-allowed; }
+.interruptor-estado { font-weight: 400; color: var(--texto-suave); }
+.interruptor input:checked ~ .interruptor-estado .no,
+.interruptor input:not(:checked) ~ .interruptor-estado .si { display: none; }
 
 /* Filtros del inventario */
 .barra-filtros { display: grid; gap: 10px; margin-bottom: 14px; }

@@ -63,8 +63,13 @@ export function campoTexto({ id, etiqueta, valor = "", tipo = "text", ayuda = ""
   </div>`;
 }
 
-export function interruptor({ id, etiqueta, marcado = false, atributos = "" }) {
-  return `<label class="interruptor" for="${id}"><input type="checkbox" role="switch" id="${id}" name="${id}" ${marcado ? "checked" : ""} ${atributos}><span>${esc(etiqueta)}</span></label>`;
+// estados: ["Con stock", "Sin stock"] muestra al lado el texto del estado
+// actual (el lector de pantalla ya anuncia encendido/apagado).
+export function interruptor({ id, etiqueta, marcado = false, atributos = "", estados = null }) {
+  const estado = estados
+    ? `<span class="interruptor-estado" aria-hidden="true"><span class="si">${esc(estados[0])}</span><span class="no">${esc(estados[1])}</span></span>`
+    : "";
+  return `<label class="interruptor" for="${id}"><input type="checkbox" role="switch" id="${id}" name="${id}" ${marcado ? "checked" : ""} ${atributos}><span>${esc(etiqueta)}</span>${estado}</label>`;
 }
 
 export function marcarError(raiz, id, mensaje) {

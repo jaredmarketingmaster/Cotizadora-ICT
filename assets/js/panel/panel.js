@@ -186,9 +186,9 @@ async function enrutar() {
 async function vistaInicio(vista) {
   const [equipos, modelos, tienda] = await Promise.all([ctx.api.listarEquipos(), ctx.api.listarModelos(), ctx.recargarTienda()]);
   const activos = new Set(modelos.filter((m) => m.activo).map((m) => m.id));
-  const publicados = equipos.filter((q) => q.publicado && q.stock > 0 && activos.has(q.modelo_id));
+  const publicados = equipos.filter((q) => q.publicado && q.en_stock && activos.has(q.modelo_id));
   const borradores = equipos.filter((q) => !q.publicado);
-  const ocultosPorModelo = equipos.filter((q) => q.publicado && q.stock > 0 && !activos.has(q.modelo_id));
+  const ocultosPorModelo = equipos.filter((q) => q.publicado && q.en_stock && !activos.has(q.modelo_id));
   const sinFoto = equipos.filter((q) => !q.es_demo && !(q.fotos || []).length);
   const avisos = [
     !tienda.logo && ["Falta el logo", "#/tienda"],

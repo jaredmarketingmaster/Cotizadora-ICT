@@ -36,13 +36,13 @@ function estadoInicial() {
   for (const d of DEMO_EQUIPOS) Object.assign(porSlug.get(d.slug), { activo: true, activo_por_demo: true });
   const equipos = DEMO_EQUIPOS.map((d) => ({
     id: uuid(), modelo_id: porSlug.get(d.slug).id, condicion: d.condicion, capacidad: d.capacidad,
-    color_nombre: d.color_nombre, color_hex: d.color_hex, precio: d.precio, stock: d.stock, fotos: [],
+    color_nombre: d.color_nombre, color_hex: d.color_hex, precio: d.precio, en_stock: d.en_stock, fotos: [],
     publicado: true, destacado: d.destacado, descripcion_extra: "", es_demo: true,
     bateria_porcentaje: d.bateria_porcentaje ?? null, estado_estetico: d.estado_estetico ?? null,
     detalles: d.detalles ?? "", incluye: d.incluye ?? "", creado_en: t, actualizado_en: t
   }));
   return {
-    version: 1,
+    version: VERSION,
     tienda: {
       id: 1, nombre: "Tienda de demostración", ciudad: "", direccion: "", horario_texto: "", whatsapp: "",
       correo_contacto: "", instagram_url: "", facebook_url: "", tiktok_url: "", logo: "", favicon: "",
@@ -58,12 +58,29 @@ function estadoInicial() {
   };
 }
 
+// Versión de los datos guardados en el navegador. Cada cambio de forma repite
+// la migración SQL del mismo número, para no perder lo que el usuario cargó.
+const VERSION = 2;
+const MIGRACIONES = {
+  // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
+  1(e) {
+    for (const q of e.equipos) { q.en_stock = q.stock > 0; delete q.stock; }
+  }
+};
+
+function migrar(e) {
+  while (e.version < VERSION) { MIGRACIONES[e.version](e); e.version += 1; }
+}
+
 function leer() {
   try {
     const crudo = localStorage.getItem(CLAVE);
     if (crudo) {
       const e = JSON.parse(crudo);
-      if (e?.version === 1) return e;
+      if (Number.isInteger(e?.version) && e.version <= VERSION) {
+        if (e.version < VERSION) { migrar(e); escribir(e); }
+        return e;
+      }
     }
   } catch { /* sin almacenamiento o dato roto: se reinicia */ }
   const e = estadoInicial();
@@ -158,8 +175,7 @@ function validarEquipo(q, e) {
   if (!["nuevo", "usado"].includes(q.condicion)) throw new ErrorDatos("Elija si es nuevo o usado.");
   if (!String(q.capacidad || "").trim()) throw new ErrorDatos("Elija la capacidad.");
   if (!Number.isSafeInteger(q.precio) || q.precio <= 0) throw new ErrorDatos("El precio debe ser un número entero mayor que 0.");
-  if (!Number.isSafeInteger(q.stock) || q.stock < 0) throw new ErrorDatos("El stock debe ser un número entero de 0 o más.");
-  if (q.condicion === "usado" && q.stock > 1) throw new ErrorDatos("Un usado es una sola unidad: el stock es 1 (o 0 si se vendió).");
+  if (typeof q.en_stock !== "boolean") throw new ErrorDatos("Indique si el equipo tiene stock.");
   if (!hexValido(q.color_hex)) throw new ErrorDatos("El color debe estar en formato hexadecimal, ej. #1C1C1E.");
   if ((q.fotos || []).length > 6) throw new ErrorDatos("Máximo 6 fotos por equipo.");
   if (q.bateria_porcentaje != null && !(Number.isInteger(q.bateria_porcentaje) && q.bateria_porcentaje >= 0 && q.bateria_porcentaje <= 100)) {
@@ -335,7 +351,7 @@ export const demo = {
     const e = leer();
     exigirStaff(e);
     const q = {
-      id: uuid(), color_nombre: "", color_hex: "#8E8E93", stock: 1, fotos: [], publicado: false, destacado: false,
+      id: uuid(), color_nombre: "", color_hex: "#8E8E93", en_stock: true, fotos: [], publicado: false, destacado: false,
       descripcion_extra: "", es_demo: false, bateria_porcentaje: null, estado_estetico: null, detalles: "", incluye: "",
       ...elegir(datos, CAMPOS_EQUIPO), creado_en: ahora(), actualizado_en: ahora()
     };

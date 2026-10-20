@@ -14,13 +14,24 @@ insert into public.perfiles (user_id, correo, rol, activo) values
   ('00000000-0000-0000-0000-00000000000b', 'tienda@prueba.co', 'tienda', true),
   ('00000000-0000-0000-0000-00000000000c', 'inactivo@prueba.co', 'tienda', false);
 
--- Un equipo no publicado, uno con stock 0 y uno de un modelo inactivo.
-insert into public.equipos (modelo_id, condicion, capacidad, color_nombre, precio, stock, publicado)
-select id, 'nuevo', '128 GB', 'Borrador', 1000000, 2, false from public.modelos where slug = 'iphone-18-pro';
-insert into public.equipos (modelo_id, condicion, capacidad, color_nombre, precio, stock, publicado)
-select id, 'nuevo', '128 GB', 'Agotado', 1000000, 0, true from public.modelos where slug = 'iphone-18-pro';
-insert into public.equipos (modelo_id, condicion, capacidad, color_nombre, precio, stock, publicado)
-select id, 'nuevo', '128 GB', 'Inactivo', 1000000, 5, true from public.modelos where slug = 'iphone-16';
+-- 0. Migración 0004: stock > 0 pasó a en_stock verdadero y 0 a falso
+-- (datos de tests/sql/antes_0004_en_stock.sql).
+do $$
+begin
+  assert (select en_stock from public.equipos where capacidad = 'MIGRACION' and color_nombre = 'Stock 4'), 'stock 4 → con stock';
+  assert not (select en_stock from public.equipos where capacidad = 'MIGRACION' and color_nombre = 'Stock 0'), 'stock 0 → sin stock';
+  assert (select count(*) from public.equipos where es_demo and not en_stock) = 0, 'los demo quedan con stock';
+  assert not exists (select 1 from information_schema.columns where table_name = 'equipos' and column_name = 'stock'), 'ya no hay columna stock';
+  delete from public.equipos where capacidad = 'MIGRACION';
+end $$;
+
+-- Un equipo no publicado, uno sin stock y uno de un modelo inactivo.
+insert into public.equipos (modelo_id, condicion, capacidad, color_nombre, precio, en_stock, publicado)
+select id, 'nuevo', '128 GB', 'Borrador', 1000000, true, false from public.modelos where slug = 'iphone-18-pro';
+insert into public.equipos (modelo_id, condicion, capacidad, color_nombre, precio, en_stock, publicado)
+select id, 'nuevo', '128 GB', 'Agotado', 1000000, false, true from public.modelos where slug = 'iphone-18-pro';
+insert into public.equipos (modelo_id, condicion, capacidad, color_nombre, precio, en_stock, publicado)
+select id, 'nuevo', '128 GB', 'Inactivo', 1000000, true, true from public.modelos where slug = 'iphone-16';
 
 -- 1. Catálogo y semilla
 do $$
@@ -105,7 +116,8 @@ begin
   select precios_actualizados_en into despues from public.tienda;
   assert despues > antes, 'cambiar precio actualiza la fecha';
   -- Cambiar el stock no la toca
-  update public.equipos set stock = stock where color_nombre = 'Negro';
+  update public.equipos set en_stock = not en_stock where color_nombre = 'Negro';
+  update public.equipos set en_stock = not en_stock where color_nombre = 'Negro';
   assert (select precios_actualizados_en from public.tienda) = despues, 'stock no toca la fecha';
 
   -- Activar modelos sí; renombrar no
@@ -143,13 +155,13 @@ do $$ begin
   assert (select count(*) from storage.objects) = 1, 'tienda sube fotos';
 end $$;
 do $$ begin
-  insert into public.equipos (modelo_id, condicion, capacidad, precio, stock)
-  values ((select id from public.modelos where slug = 'iphone-13'), 'usado', '64 GB', 100, 2);
-  raise exception 'un usado no puede tener stock 2';
-exception when check_violation then null; end $$;
+  insert into public.equipos (modelo_id, condicion, capacidad, precio, en_stock)
+  values ((select id from public.modelos where slug = 'iphone-13'), 'usado', '64 GB', 100, null);
+  raise exception 'el stock no puede quedar vacío';
+exception when not_null_violation then null; end $$;
 do $$ begin
-  insert into public.equipos (modelo_id, condicion, capacidad, precio, stock, bateria_porcentaje)
-  values ((select id from public.modelos where slug = 'iphone-13'), 'usado', '64 GB', 100, 1, 101);
+  insert into public.equipos (modelo_id, condicion, capacidad, precio, bateria_porcentaje)
+  values ((select id from public.modelos where slug = 'iphone-13'), 'usado', '64 GB', 100, 101);
   raise exception 'batería 101 no vale';
 exception when check_violation then null; end $$;
 do $$ begin

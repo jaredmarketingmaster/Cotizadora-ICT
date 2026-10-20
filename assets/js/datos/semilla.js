@@ -36,12 +36,12 @@ export const CATALOGO = NOMBRES.map((nombre, i) => ({
 
 // Precios redondos de ejemplo: NO son precios reales.
 export const DEMO_EQUIPOS = [
-  { slug: "iphone-18-pro-max", condicion: "nuevo", capacidad: "256 GB", color_nombre: "Negro", color_hex: "#1C1C1E", precio: 6000000, stock: 3, destacado: true },
-  { slug: "iphone-18-pro-max", condicion: "nuevo", capacidad: "256 GB", color_nombre: "Plata", color_hex: "#D9DADC", precio: 6200000, stock: 2, destacado: true },
-  { slug: "iphone-18-pro-max", condicion: "nuevo", capacidad: "512 GB", color_nombre: "Burgundy", color_hex: "#6E1F2E", precio: 7000000, stock: 1, destacado: false },
-  { slug: "iphone-18-pro", condicion: "nuevo", capacidad: "256 GB", color_nombre: "Glacier", color_hex: "#CFE0EA", precio: 5500000, stock: 2, destacado: false },
-  { slug: "iphone-15-pro", condicion: "usado", capacidad: "128 GB", color_nombre: "Titanio natural", color_hex: "#BAB4A9", precio: 3000000, stock: 1, destacado: false,
+  { slug: "iphone-18-pro-max", condicion: "nuevo", capacidad: "256 GB", color_nombre: "Negro", color_hex: "#1C1C1E", precio: 6000000, en_stock: true, destacado: true },
+  { slug: "iphone-18-pro-max", condicion: "nuevo", capacidad: "256 GB", color_nombre: "Plata", color_hex: "#D9DADC", precio: 6200000, en_stock: true, destacado: true },
+  { slug: "iphone-18-pro-max", condicion: "nuevo", capacidad: "512 GB", color_nombre: "Burgundy", color_hex: "#6E1F2E", precio: 7000000, en_stock: true, destacado: false },
+  { slug: "iphone-18-pro", condicion: "nuevo", capacidad: "256 GB", color_nombre: "Glacier", color_hex: "#CFE0EA", precio: 5500000, en_stock: true, destacado: false },
+  { slug: "iphone-15-pro", condicion: "usado", capacidad: "128 GB", color_nombre: "Titanio natural", color_hex: "#BAB4A9", precio: 3000000, en_stock: true, destacado: false,
     bateria_porcentaje: 88, estado_estetico: "Excelente", detalles: "Rayón leve en el marco", incluye: "Caja y cable" },
-  { slug: "iphone-13", condicion: "usado", capacidad: "128 GB", color_nombre: "Medianoche", color_hex: "#232A31", precio: 1800000, stock: 1, destacado: false,
+  { slug: "iphone-13", condicion: "usado", capacidad: "128 GB", color_nombre: "Medianoche", color_hex: "#232A31", precio: 1800000, en_stock: true, destacado: false,
     bateria_porcentaje: 84, estado_estetico: "Muy bueno", detalles: "", incluye: "Solo el equipo" }
 ];

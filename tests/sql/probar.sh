@@ -24,14 +24,20 @@ trap limpiar EXIT
 
 PSQL=(psql -h "$DIR" -p "$PUERTO" -U postgres -d postgres -q -v ON_ERROR_STOP=1)
 "${PSQL[@]}" -f "$RAIZ/tests/sql/supabase_simulado.sql"
-for f in "$RAIZ"/supabase/migrations/*.sql; do "${PSQL[@]}" -f "$f"; done
+# tests/sql/antes_<migración>.sql (si existe) carga datos con el esquema de
+# antes de esa migración, para probar que la migración los convierte bien.
+for f in "$RAIZ"/supabase/migrations/*.sql; do
+  antes="$RAIZ/tests/sql/antes_$(basename "$f")"
+  if [ -f "$antes" ]; then "${PSQL[@]}" -f "$antes"; fi
+  "${PSQL[@]}" -f "$f"
+done
 # La semilla del SQL y la del adaptador demo deben coincidir (antes de que las
 # pruebas cambien los datos).
 "${PSQL[@]}" -At -c "
   select json_build_object(
     'modelos', (select json_agg(json_build_object('nombre', nombre, 'slug', slug, 'generacion', generacion, 'orden', orden) order by orden) from public.modelos),
     'demo', (select json_agg(json_build_object('slug', m.slug, 'condicion', e.condicion, 'capacidad', e.capacidad,
-      'color_nombre', e.color_nombre, 'color_hex', e.color_hex, 'precio', e.precio, 'stock', e.stock, 'destacado', e.destacado,
+      'color_nombre', e.color_nombre, 'color_hex', e.color_hex, 'precio', e.precio, 'en_stock', e.en_stock, 'destacado', e.destacado,
       'bateria_porcentaje', e.bateria_porcentaje, 'estado_estetico', e.estado_estetico, 'detalles', e.detalles, 'incluye', e.incluye))
       from public.equipos e join public.modelos m on m.id = e.modelo_id where e.es_demo))" > "$DIR/semilla.json"
 node "$RAIZ/tests/sql/comparar-semilla.mjs" "$RAIZ" "$DIR/semilla.json"

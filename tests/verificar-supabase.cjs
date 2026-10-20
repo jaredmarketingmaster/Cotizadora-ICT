@@ -92,7 +92,7 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
   await caso("sitio: carga los datos públicos con la RPC", async () => {
     const p = await pagina();
     await p.goto(`${BASE}/`, { waitUntil: "networkidle" });
-    assert.equal(await p.textContent("#contador"), "10 equipos disponibles");
+    assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
     assert.equal(await p.locator(".galeria > .tarjeta").count(), 5);
     assert.ok(await p.isVisible("#franja-demo"));
     assert.deepEqual(p.errores, []);
@@ -171,7 +171,7 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.check('input[name="e-condicion"][value="nuevo"]', { force: true }); await p.click("#siguiente");
     await p.check('input[name="e-capacidad"][value="1 TB"]', { force: true }); await p.click("#siguiente");
     await p.fill("#e-color-nombre", "Prueba"); await p.fill("#e-color-hex", "#334455"); await p.click("#siguiente");
-    await p.fill("#e-precio", "9000000"); await p.fill("#e-stock", "2"); await p.click("#siguiente");
+    await p.fill("#e-precio", "9000000"); await p.click("#siguiente");
     const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
     await p.setInputFiles("#e-fotos", { name: "a.png", mimeType: "image/png", buffer: png });
     await p.waitForSelector(".foto-item", { timeout: 15000 });

@@ -9,7 +9,7 @@ import { aplicarTema } from "../tema.js";
 import { logoGenericoSVG } from "../ilustracion.js";
 import { escaparHTML, fechaCorta, plural, seguro, slugCapacidad, capacidadDeSlug, reducirMovimiento } from "../utils.js";
 import {
-  prepararCatalogo, filtrar, contarUnidades, opcionesModelo, opcionesCapacidad, encadenar,
+  prepararCatalogo, filtrar, contarEquipos, opcionesModelo, opcionesCapacidad, encadenar,
   tarjetas as armarTarjetas, diapositivas, describirBusqueda
 } from "./catalogo.js";
 import { iniciarSegmentado, iniciarChips, iniciarDesplegable, marcarLimpiado } from "./filtros.js";
@@ -115,13 +115,13 @@ function actualizar() {
   controles.condicion.marcar(condicion);
 
   const grupos = opcionesModelo(cat, condicion);
-  const totalCondicion = contarUnidades(filtrar(cat.equipos, { condicion }));
+  const totalCondicion = contarEquipos(filtrar(cat.equipos, { condicion }));
   controles.modelo.actualizar(grupos, modelo, modelo ? cat.porSlug.get(modelo)?.nombre : "", totalCondicion);
   controles.capacidad.dibujar(opcionesCapacidad(cat, condicion, modelo), capacidad);
 
   const lista = filtrar(cat.equipos, filtros);
-  const unidades = contarUnidades(lista);
-  $("#contador").textContent = plural(unidades, "equipo disponible", "equipos disponibles");
+  const cantidad = contarEquipos(lista);
+  $("#contador").textContent = plural(cantidad, "equipo disponible", "equipos disponibles");
   $("#limpiar").hidden = !(condicion || modelo || capacidad);
 
   ultimasTarjetas = armarTarjetas(lista);
