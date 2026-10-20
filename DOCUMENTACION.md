@@ -361,7 +361,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈1400) | Suite de aceptación en **modo demo** con Playwright: **43 casos**. Ver sección 14. |
+| `tests/verificar.cjs` (≈1440) | Suite de aceptación en **modo demo** con Playwright: **44 casos**. Ver sección 14. |
 | `tests/verificar-supabase.cjs` (≈311) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **9 casos**. Reemplaza `config.js` en el navegador y puede servir un supabase-js local (`ICT_SUPABASE_JS`). |
 | `tests/documentacion.mjs` | Verificador de este documento: falla si algún archivo versionado no aparece en la sección 5. |
 | `tests/sql/probar.sh` | Crea un Postgres temporal, carga la imitación de Supabase y todas las migraciones en orden, compara la semilla con `semilla.js` y corre `pruebas.sql`. Antes de cada migración corre `tests/sql/antes_<migración>.sql` si existe. |
@@ -646,6 +646,8 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
   - Sobre la página mientras el detalle en línea está en pantalla (IntersectionObserver).
 - Abrir un detalle dispara `ViewContent` en el píxel.
 
+**Video del equipo (B3):** si el equipo tiene video, aparece como una miniatura más, al final, con el ícono de reproducir (si el equipo no tiene fotos, también aparece la miniatura de la ilustración). El `<video>` recién se crea al tocarla, con `controls`, `playsinline` y `preload="none"`, y se reproduce porque el cliente lo tocó; no hay reproducción automática al cargar. Volver a una foto o cambiar de color lo quita.
+
 ### 8.5 Información de la tienda y pie
 
 - **Información:**
@@ -929,7 +931,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 ```bash
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 43 casos en modo demo (Playwright + Chromium)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 44 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (10 casos) + tipos
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
@@ -941,7 +943,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `ICT_BASE=URL`: por ejemplo `http://localhost:8081/Cotizadora-ICT`, para simular GitHub Pages.
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (43 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (44 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
@@ -955,7 +957,7 @@ node tests/documentacion.mjs                               # este documento cubr
 10. Roles: el gestor no ve Usuarios y la capa de datos le niega gestionarlos; el administrador solo ve Usuarios y la capa de datos le niega lo demás; invita con rol, asigna roles, desactiva y no puede quitarse a sí mismo. Catálogo: 42 modelos y generaciones en orden; colores (hex de la fuente fijo, completar el que falta, colores de la tienda solo en el 17 Pro). Datos demo guardados de una versión vieja se migran (stock, tamaño, catálogo y colores).
 11. Validaciones del panel. **Más vendido:** tres se marcan en la lista; el cuarto avisa y no se guarda (también en la capa de datos y en el formulario); desmarcando uno, se puede; Duplicar no lo copia; el sitio no lo muestra. **Video:** .mov, MP4 en HEVC, 16 s y más de 20 MB se rechazan antes de subir (no queda nada guardado); MP4 de 3 s y WebM se aceptan; quitar el video, reemplazarlo o borrar el equipo borra el archivo; la capa de datos repite los límites de Storage. **Color oficial:** el paso Color ofrece solo los colores del modelo (sin crear colores ni escribir hexadecimales), cambiar el modelo borra el color, la capa de datos rechaza un color de otro modelo, y el nombre a mostrar ("Lila") llega a la tarjeta, el detalle, el texto alternativo, el mensaje de WhatsApp y el `content_name` del píxel; sin nombre a mostrar se ve el oficial ("Lavender").
 12. A 320, 360, 768 y 1440 px: sin scroll horizontal, un `h1` y sin errores en sitio, legales y todo el panel.
-13. Carrusel: dedo, flechas, puntos, muestras, teclado y Escape.
+13. Carrusel: dedo, flechas, puntos, muestras, teclado y Escape. **Video en el detalle:** miniatura con ícono; sin `<video>` en la página hasta tocarla; al tocarla, `preload="none"`, `controls`, sin `autoplay` y se reproduce; volver a la foto lo quita.
 14. Gesto táctil real en el carrusel y cierre de la hoja con el gesto.
 14b. **Vista Carrusel** (8 casos): elegirla en Mi tienda cambia el sitio (mismas tarjetas, orden, contador y detalle; tocar una vecina la centra, la del centro abre el detalle; flechas de 44 px o más con foco visible); bucle en los dos sentidos con flechas, teclado, mouse, trackpad y dedo; 1 tarjeta sin flechas ni bucle, 2 tarjetas con una sola vecina, el filtro vuelve a la primera y el estado vacío; sin scroll horizontal y con altura estable a 320, 360, 768 y 1440 px; con reduced-motion, sin animaciones.
 15. Sin Apple: ni imágenes en el repo, ni la manzana U+F8FF, ni referencias, y solo recursos externos de Google Fonts.
@@ -996,7 +998,7 @@ bash tests/supabase-local/levantar.sh detener
 2. El pop-up pasa por la función y llega al webhook con todos los campos.
 3. Permisos del panel: el gestor no ve Usuarios y el servidor (función y tabla) le niega gestionarlos; colores.
 4. Un precio cambiado en el panel se ve en el sitio, con la fecha.
-5. Crear un equipo con foto y **video** (Storage simulado): el video queda en el bucket `videos` y se sirve como `video/mp4`; Storage rechaza un tipo no permitido aunque se salte el panel.
+5. Crear un equipo con foto y **video** (Storage simulado); en el sitio, **ningún pedido al video hasta tocar su miniatura**, y al tocarla se pide; el video queda en el bucket `videos` y se sirve como `video/mp4`; Storage rechaza un tipo no permitido aunque se salte el panel.
 6. El gestor borra la demo.
 7. **Invitación:** el administrador (que solo ve Usuarios y al que el servidor le niega lo demás) invita; el correo en español, el enlace, "Cree su contraseña" y el ingreso como gestor.
 8. **Recuperación:** el enlace y la contraseña nueva.
@@ -1149,6 +1151,13 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 20/10/2026 · B3: el video en el detalle
+
+- **Pedido de Jared (fase B, punto B3):** el video como una miniatura más en el detalle, con ícono de reproducir; se reproduce al tocarlo, con controles; sin reproducción automática; `preload="none"`.
+- **Hecho:** `detalle.js` (miniatura del video, `mostrarVideo`; la miniatura de la ilustración cuando no hay fotos) y `sitio.css` (ícono y video). El `<video>` se crea recién al tocar la miniatura, así que no se descarga nada antes.
+- **Pruebas:** caso nuevo en `verificar.cjs` (DOM, atributos y reproducción) y, en `verificar-supabase.cjs`, que el navegador no pide el archivo hasta tocar la miniatura.
+- **Verificación:** `tests/verificar.cjs` 44/44 y `tests/verificar-supabase.cjs` 9/9.
 
 ### 20/10/2026 · B2: vista "Carrusel" de los equipos
 

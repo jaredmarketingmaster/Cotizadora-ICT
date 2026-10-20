@@ -10,6 +10,7 @@ import { htmlFoto, htmlMedio } from "./fotos.js";
 
 const ICONO_ANT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const ICONO_SIG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICONO_PLAY = '<svg class="icono-play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,.55)"/><path d="M10 8l6 4-6 4z" fill="#fff"/></svg>';
 const ICONO_ABRIR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 export const ICONO_WA = '<svg class="icono-wa" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>';
 
@@ -119,23 +120,48 @@ export function crearDetalle({ api, cat, tarjeta, lista, inicial, alComprar, alC
     fichaEl.querySelector(".ficha-tecnica")?.addEventListener("toggle", (e) => { fichaAbierta = e.target.open; });
   }
 
+  // Miniaturas: las fotos del color (o la unidad) y, si tiene, el video al
+  // final con el ícono de reproducir. El video no se descarga hasta tocarlo.
+  const urlVideo = (q) => (q.video ? api.urlArchivo("videos", q.video) : "");
   function dibujarMiniaturas() {
     const q = equipo();
     const fotos = (q.fotos || []).filter((r) => api.urlArchivo("fotos", r));
-    if (fotos.length < 2) { miniaturas.hidden = true; miniaturas.innerHTML = ""; return; }
+    const video = urlVideo(q);
+    if (fotos.length < 2 && !video) { miniaturas.hidden = true; miniaturas.innerHTML = ""; return; }
     miniaturas.hidden = false;
-    miniaturas.innerHTML = fotos.map((r, i) =>
-      `<button type="button" class="miniatura" data-f="${i}" aria-label="Foto ${i + 1} de ${fotos.length}" aria-current="${i === fotoActual}">${htmlFoto(api, r, "", { sizes: "64px" })}</button>`).join("");
+    const conFotos = fotos.length
+      ? fotos.map((r, i) => `<button type="button" class="miniatura" data-f="${i}" aria-label="Foto ${i + 1} de ${fotos.length}" aria-current="${i === fotoActual}">${htmlFoto(api, r, "", { sizes: "64px" })}</button>`).join("")
+      : `<button type="button" class="miniatura" data-f="0" aria-label="Imagen del equipo" aria-current="${fotoActual === 0}">${htmlMedio(api, q, "")}</button>`;
+    miniaturas.innerHTML = conFotos + (video
+      ? `<button type="button" class="miniatura miniatura--video" data-video aria-label="Ver el video" aria-current="${fotoActual === "video"}">${fotos.length ? htmlFoto(api, fotos[0], "", { sizes: "64px" }) : ""}${ICONO_PLAY}</button>`
+      : "");
+  }
+
+  function mostrarVideo() {
+    const q = equipo();
+    const url = urlVideo(q);
+    if (!url) return;
+    fotoActual = "video";
+    const diap = pista.children[indice];
+    // preload="none": hasta ahora no se descargó nada. Se reproduce porque el
+    // cliente lo tocó (no hay reproducción automática al cargar).
+    diap.innerHTML = `<video class="detalle-video" src="${escaparHTML(url)}" controls playsinline preload="none" aria-label="${escaparHTML(`Video de ${textoAlternativo(q)}`)}"></video>`;
+    const v = diap.querySelector("video");
+    v.play?.()?.catch?.(() => {});
+    miniaturas.querySelectorAll(".miniatura").forEach((b) => b.setAttribute("aria-current", String(b.hasAttribute("data-video"))));
   }
 
   function mostrarFoto(i) {
     const q = equipo();
     const fotos = (q.fotos || []).filter((r) => api.urlArchivo("fotos", r));
-    if (!fotos[i]) return;
+    if (!fotos[i] && !(i === 0 && !fotos.length)) return;
     fotoActual = i;
-    const diap = pista.children[indice];
-    diap.innerHTML = htmlFoto(api, fotos[i], textoAlternativo(q), { sizes: "(min-width: 900px) 560px, 100vw", cargaInmediata: true });
-    miniaturas.querySelectorAll(".miniatura").forEach((b, j) => b.setAttribute("aria-current", String(j === i)));
+    if (fotos.length) {
+      pista.children[indice].innerHTML = htmlFoto(api, fotos[i], textoAlternativo(q), { sizes: "(min-width: 900px) 560px, 100vw", cargaInmediata: true });
+    } else {
+      restaurarDiapositiva(indice);
+    }
+    miniaturas.querySelectorAll(".miniatura").forEach((b) => b.setAttribute("aria-current", String(Number(b.dataset.f) === i && !b.hasAttribute("data-video"))));
   }
 
   function actualizar() {
@@ -191,7 +217,8 @@ export function crearDetalle({ api, cat, tarjeta, lista, inicial, alComprar, alC
   colores.forEach((c) => c.addEventListener("click", () => ir(Number(c.dataset.i))));
   miniaturas.addEventListener("click", (e) => {
     const b = e.target.closest(".miniatura");
-    if (b) mostrarFoto(Number(b.dataset.f));
+    if (!b) return;
+    if (b.hasAttribute("data-video")) mostrarVideo(); else mostrarFoto(Number(b.dataset.f));
   });
   fichaEl.addEventListener("click", (e) => {
     if (e.target.closest("[data-comprar]")) alComprar(equipo());

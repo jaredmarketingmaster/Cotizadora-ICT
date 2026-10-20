@@ -620,6 +620,40 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  await caso("video en el detalle: miniatura con ícono, no se descarga hasta tocarla, se reproduce con controles y sin reproducción automática", async () => {
+    const p = await nueva(1280, 900);
+    await entrarPanel(p, "gestor@demo.co");
+    const glaciar = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).equipos.find((q) => q.color_nombre_mostrar === "Glacier").id, CLAVE_DEMO);
+    await p.goto(`${BASE}/admin/#/inventario/${glaciar}`);
+    await p.waitForSelector("#form-equipo");
+    await p.setInputFiles("#e-video", path.join(RAIZ, "tests", "videos", "corto.webm"));
+    await p.waitForSelector("#video-actual video");
+    await p.click("#guardar");
+    await p.waitForURL(/#\/inventario$/);
+    await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro&capacidad=256-gb");
+    const det = "#detalle-en-linea";
+    // La miniatura del video está, con el ícono; todavía no hay ningún <video>.
+    assert.equal(await p.locator(`${det} .miniatura--video .icono-play`).count(), 1);
+    assert.equal(await p.getAttribute(`${det} .miniatura--video`, "aria-label"), "Ver el video");
+    assert.equal(await p.locator(`${det} video`).count(), 0, "el video no está en la página antes de tocarlo");
+    await p.click(`${det} .miniatura--video`);
+    const v = p.locator(`${det} video.detalle-video`);
+    assert.equal(await v.getAttribute("preload"), "none");
+    assert.equal(await v.getAttribute("controls"), "");
+    assert.equal(await v.getAttribute("autoplay"), null);
+    assert.equal(await v.getAttribute("aria-label"), "Video de iPhone 18 Pro, 256 GB, color Glacier");
+    await p.waitForFunction((sel) => { const x = document.querySelector(sel); return x && !x.paused && x.currentTime > 0; }, `${det} video`);
+    assert.equal(await p.getAttribute(`${det} .miniatura--video`, "aria-current"), "true");
+    // Volver a la imagen quita el video.
+    await p.click(`${det} .miniatura[data-f="0"]`);
+    assert.equal(await p.locator(`${det} video`).count(), 0);
+    // Un equipo sin video no tiene la miniatura.
+    await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb");
+    assert.equal(await p.locator(`${det} .miniatura--video`).count(), 0);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("roles: el administrador solo ve Usuarios; la capa de datos le impide lo demás", async () => {
     const p = await nueva(390, 844);
     await entrarPanel(p, "administrador@demo.co");

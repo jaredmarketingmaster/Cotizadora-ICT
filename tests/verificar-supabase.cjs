@@ -225,7 +225,18 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.click("#guardar");
     await p.waitForURL(/#\/inventario$/, { timeout: 15000 });
     const s = await p.context().newPage();
+    const pedidosVideo = [];
+    s.on("request", (r) => { if (/\/storage\/v1\/object\/public\/videos\//.test(r.url())) pedidosVideo.push(r.url()); });
     await s.goto(`${BASE}/?condicion=nuevo&modelo=iphone-17-pro&capacidad=1-tb`, { waitUntil: "networkidle" });
+    // El video no se descarga hasta tocar su miniatura.
+    await s.waitForSelector("#detalle-en-linea .miniatura--video");
+    await s.waitForTimeout(500);
+    assert.equal(pedidosVideo.length, 0, "el video se pidió antes de tocarlo");
+    await s.click("#detalle-en-linea .miniatura--video");
+    await s.waitForFunction(() => document.querySelector("#detalle-en-linea video"));
+    await s.waitForTimeout(800);
+    assert.ok(pedidosVideo.length >= 1, "al tocarlo, el video se pide");
+    await s.click('#detalle-en-linea .miniatura[data-f="0"]');
     assert.match(await s.textContent("#detalle-en-linea .precio-valor"), /\$9\.000\.000/);
     assert.match(await s.textContent("#detalle-en-linea .detalle-variante"), /1 TB · Prueba/);
     const src = await s.getAttribute("#detalle-en-linea .diapositiva img", "src");
