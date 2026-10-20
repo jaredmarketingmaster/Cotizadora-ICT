@@ -905,6 +905,28 @@ async function llenarPopup(p) {
     }
   });
 
+  await caso("pie: fondo con el color secundario y texto AA en claro y oscuro, con cualquier color", async () => {
+    const p = await nueva(390, 844);
+    await ir(p);
+    for (const tema of ["claro", "oscuro"]) {
+      for (const secundario of ["#0F172A", "#FFFFFF", "#777777", "#FFD60A", "#1A73E8", "#7A7A00"]) {
+        await editarDemo(p, (e, x) => Object.assign(e.tienda, { tema: x[0], color_secundario: x[1], nombre: "Tienda Prueba", ciudad: "Medellín", aviso_marca: "iPhone es una marca de su fabricante." }), [tema, secundario]);
+        await ir(p);
+        const r = await p.evaluate(() => {
+          const pie = document.querySelector(".pie");
+          const textos = [...pie.querySelectorAll("p, a")].filter((el) => el.textContent.trim() && !el.hidden);
+          return { fondo: getComputedStyle(pie).backgroundColor, n: textos.length };
+        });
+        const esperado = `rgb(${parseInt(secundario.slice(1, 3), 16)}, ${parseInt(secundario.slice(3, 5), 16)}, ${parseInt(secundario.slice(5, 7), 16)})`;
+        assert.equal(r.fondo, esperado, `${tema} ${secundario}: fondo del pie`);
+        assert.ok(r.n >= 4, "el pie tiene sus textos");
+        const malos = (await p.evaluate(contrasteMalo)).filter((m) => /^(P|A)\.pie|pie-/.test(m));
+        assert.deepEqual(malos, [], `${tema} ${secundario}`);
+      }
+    }
+    await p.context().close();
+  });
+
   await caso("a11y: textos de 16 px o más y zonas táctiles de 44 px", async () => {
     const p = await nueva(390, 844);
     await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=256-gb");

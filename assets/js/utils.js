@@ -166,6 +166,13 @@ function hex(r, g, b) {
   return "#" + [r, g, b].map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, "0")).join("").toUpperCase();
 }
 
+// Mezcla dos colores: t = 0 da "a" y t = 1 da "b".
+export function mezclar(a, b, t) {
+  const [r1, g1, b1] = rgb(a);
+  const [r2, g2, b2] = rgb(b);
+  return hex(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t);
+}
+
 export function luminancia(color) {
   const [r, g, b] = rgb(color).map((v) => {
     const c = v / 255;
@@ -196,17 +203,24 @@ export function textoSobre(fondo) {
 // todos los fondos si se pasa una lista (para usarlo como texto o enlace).
 // Si ya cumple, lo devuelve igual. Los fondos de una lista deben ser todos
 // claros o todos oscuros.
+// Si en esa dirección no alcanza (fondos de luminancia media, como #777777),
+// prueba la otra; y si ninguna alcanza, el polo con más contraste.
 export function ajustarParaTexto(color, fondos, minimo = 4.5) {
   const lista = [].concat(fondos);
   const cumple = (c) => lista.every((f) => contraste(c, f) >= minimo);
   if (cumple(color)) return color.toUpperCase();
-  const hacia = luminancia(lista[0]) > 0.5 ? [0, 0, 0] : [255, 255, 255];
   const [r, g, b] = rgb(color);
-  for (let t = 0.05; t <= 1; t += 0.05) {
-    const c = hex(r + (hacia[0] - r) * t, g + (hacia[1] - g) * t, b + (hacia[2] - b) * t);
-    if (cumple(c)) return c;
+  const negro = [0, 0, 0];
+  const blanco = [255, 255, 255];
+  const direcciones = luminancia(lista[0]) > 0.5 ? [negro, blanco] : [blanco, negro];
+  for (const hacia of direcciones) {
+    for (let t = 0.05; t <= 1.0001; t += 0.05) {
+      const c = hex(r + (hacia[0] - r) * t, g + (hacia[1] - g) * t, b + (hacia[2] - b) * t);
+      if (cumple(c)) return c;
+    }
   }
-  return hacia[0] === 0 ? "#000000" : "#FFFFFF";
+  const peor = (c) => Math.min(...lista.map((f) => contraste(c, f)));
+  return peor("#000000") >= peor("#FFFFFF") ? "#000000" : "#FFFFFF";
 }
 
 // --- Almacenamiento seguro (modo privado, cookies bloqueadas) -----------------

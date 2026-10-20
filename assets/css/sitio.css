@@ -511,11 +511,19 @@
 @media (min-width: 900px) { .info-grilla { grid-template-columns: 1.2fr 1fr; align-items: start; } .info-acciones { justify-content: flex-end; } .redes { justify-content: flex-end; } }
 
 /* --- Pie --------------------------------------------------------------------- */
-.pie { padding-block: calc(32px * var(--t-espacio)) calc(calc(40px * var(--t-espacio)) + env(safe-area-inset-bottom)); border-top: 1px solid var(--borde); }
-.pie-grilla { display: grid; gap: 10px; color: var(--texto-suave); }
-.pie-tienda { color: var(--texto); font-weight: 700; }
+/* Fondo: el color secundario de la tienda. El texto usa --sobre-secundario y
+   --sobre-secundario-suave, calculados en tema.js con 4,5:1 o más (claro y
+   oscuro, con cualquier color). */
+.pie {
+  padding-block: calc(32px * var(--t-espacio)) calc(calc(40px * var(--t-espacio)) + env(safe-area-inset-bottom));
+  background: var(--secundario);
+  color: var(--sobre-secundario-suave);
+}
+.pie-grilla { display: grid; gap: 10px; }
+.pie-tienda { color: var(--sobre-secundario); font-weight: 700; }
 .pie-enlaces { display: flex; flex-wrap: wrap; gap: 4px 20px; }
-.pie-enlaces a { display: inline-flex; align-items: center; min-height: 44px; color: var(--texto); font-weight: 600; }
+.pie-enlaces a { display: inline-flex; align-items: center; min-height: 44px; color: var(--sobre-secundario); font-weight: 600; }
+.pie :focus-visible { outline-color: var(--sobre-secundario); }
 .pie-aviso { font-size: 1rem; }
 
 /* --- Pop-up de datos --------------------------------------------------------- */

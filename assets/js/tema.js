@@ -4,7 +4,7 @@
 // se calcula para cumplir contraste AA (4,5:1).
 // =============================================================================
 
-import { hexValido, textoSobre, ajustarParaTexto } from "./utils.js";
+import { hexValido, textoSobre, ajustarParaTexto, mezclar } from "./utils.js";
 import { TAMANOS_TEXTO } from "./datos/comun.js";
 
 export const FONDOS = { claro: "#FFFFFF", oscuro: "#0E1117" };
@@ -29,7 +29,10 @@ export function variablesTema(tienda) {
       // El primario usado como texto, enlace o borde sobre el fondo de la página
       "--primario-texto": ajustarParaTexto(primario, SUPERFICIES[tema]),
       "--secundario": secundario,
-      "--sobre-secundario": textoSobre(secundario)
+      "--sobre-secundario": textoSobre(secundario),
+      // Texto secundario sobre el color secundario (pie): más suave, pero
+      // ajustado hasta 4,5:1 como mínimo.
+      "--sobre-secundario-suave": ajustarParaTexto(mezclar(textoSobre(secundario), secundario, 0.3), secundario)
     }
   };
 }
