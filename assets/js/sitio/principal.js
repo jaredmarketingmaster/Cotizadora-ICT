@@ -18,6 +18,7 @@ import { crearCarruselEquipos } from "./carrusel-equipos.js";
 import { crearDetalle, htmlBarraCompra } from "./detalle.js";
 import { crearPopup } from "./popup.js";
 import { capturarAtribucion } from "./atribucion.js";
+import { abrirConTransicion, cerrarConTransicion, cerrarConEscape } from "./transiciones.js";
 import { iniciarPixel, evento, parametrosEquipo } from "./pixel.js";
 
 const $ = (s) => document.querySelector(s);
@@ -157,7 +158,7 @@ function aplicarVista(t) {
     region.hidden = false;
     region.querySelectorAll(".ce-flecha, .ce-indicador").forEach((el) => { el.hidden = true; });
     for (const li of lista.children) {
-      for (const a of ["style", "role", "aria-roledescription", "aria-label", "aria-hidden", "data-centro"]) li.removeAttribute(a);
+      for (const a of ["style", "aria-label", "aria-hidden", "data-centro"]) li.removeAttribute(a);
       li.querySelector(".tarjeta-boton")?.removeAttribute("tabindex");
     }
     lista.style.height = "";
@@ -210,7 +211,7 @@ function observarBarra(seccion) {
   observadorBarra.observe(seccion);
 }
 
-function abrirHoja(tarjeta) {
+function abrirHoja(tarjeta, origen = null) {
   const hoja = $("#hoja-detalle");
   const cuerpo = $("#hoja-cuerpo");
   const { lista, inicial } = diapositivas(cat, tarjeta);
@@ -225,18 +226,26 @@ function abrirHoja(tarjeta) {
   cuerpo.appendChild(barra);
   barra.addEventListener("click", (e) => { if (e.target.closest("[data-comprar]")) comprar(detalleHoja.equipo()); });
   $("#barra-compra").hidden = true;
-  hoja.showModal();
-  cuerpo.scrollTop = 0;
-  detalleHoja.montar();
-  hoja.querySelector(".carrusel-pista").focus({ preventScroll: true });
+  const mostrar = () => {
+    hoja.showModal();
+    cuerpo.scrollTop = 0;
+    detalleHoja.montar();
+    hoja.querySelector(".carrusel-pista").focus({ preventScroll: true });
+  };
+  // La foto de la tarjeta viaja hasta el detalle (si hay View Transitions).
+  abrirConTransicion(hoja, mostrar, {
+    origen: origen?.querySelector(".tarjeta-medio") || null,
+    destino: () => hoja.querySelector(".diapositiva[data-i] > *")
+  });
   evento("ViewContent", parametrosEquipo(detalleHoja.equipo()));
 }
 
 function iniciarHoja() {
   const hoja = $("#hoja-detalle");
   let origen = null;
-  $("#cerrar-detalle").addEventListener("click", () => hoja.close());
-  hoja.addEventListener("click", (e) => { if (e.target === hoja) hoja.close(); });
+  $("#cerrar-detalle").addEventListener("click", () => cerrarConTransicion(hoja));
+  hoja.addEventListener("click", (e) => { if (e.target === hoja) cerrarConTransicion(hoja); });
+  cerrarConEscape(hoja);
   hoja.addEventListener("close", () => {
     detalleHoja?.destruir();
     detalleHoja = null;
@@ -251,7 +260,7 @@ function iniciarHoja() {
     const t = ultimasTarjetas.find((x) => x.clave === b.dataset.clave);
     if (!t) return;
     origen = b;
-    abrirHoja(t);
+    abrirHoja(t, b);
   });
 
   // Gesto de deslizar hacia abajo para cerrar (celular).
@@ -271,7 +280,7 @@ function iniciarHoja() {
   const soltar = () => {
     if (inicioY == null) return;
     inicioY = null;
-    if (delta > 110) { hoja.close(); return; }
+    if (delta > 110) { cerrarConTransicion(hoja); return; }
     if (!reducirMovimiento()) {
       hoja.animate([{ transform: hoja.style.transform || "none" }, { transform: "none" }], { duration: 200, easing: "ease-out" });
     }

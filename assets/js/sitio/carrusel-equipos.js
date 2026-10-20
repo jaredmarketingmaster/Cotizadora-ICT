@@ -30,6 +30,7 @@ export function crearCarruselEquipos(region, lista) {
   let n = 0;
   let pos = 0;
   let paso = 300;
+  let origen = 0;  // x de la tarjeta del centro, en px enteros
   // Lado por el que se mueve (+1 adelante, −1 atrás). Con un número par de
   // tarjetas decide de qué lado queda la opuesta; con 2, la vecina.
   let sesgo = -1;
@@ -59,13 +60,16 @@ export function crearCarruselEquipos(region, lista) {
       li.style.visibility = visible ? "" : "hidden";
       if (!visible) return;
       const escala = 1 - Math.min(a, 1.5) * 0.09;
-      let opacidad = 1 - Math.min(a, 2) * 0.32;
+      // El desvanecido de las vecinas lo hace una capa encima (::after, con
+      // --distancia); la opacidad solo baja en el fundido de un salto de lado.
+      let opacidad = 1;
       const salto = saltos.get(li);
       if (salto != null) {
         const t = (ahora - salto) / 200;
         if (t >= 1) saltos.delete(li); else { opacidad *= t; fundiendo = true; }
       }
-      li.style.transform = `translate3d(calc(-50% + ${(d * paso).toFixed(2)}px), 0, 0) scale(${escala.toFixed(4)})`;
+      // Posición en píxeles enteros: con medios píxeles el texto se ve borroso.
+      li.style.transform = `translate3d(${origen + Math.round(d * paso)}px, 0, 0) scale(${escala.toFixed(4)})`;
       li.style.opacity = opacidad.toFixed(3);
       li.style.zIndex = String(100 - Math.round(a * 10));
       li.style.setProperty("--distancia", a.toFixed(3));
@@ -129,7 +133,8 @@ export function crearCarruselEquipos(region, lista) {
 
   function medir() {
     if (!n) { lista.style.height = ""; return; }
-    const ancho = tarjetas[0].offsetWidth || 280;
+    const ancho = tarjetas[0].getBoundingClientRect().width || 280;
+    origen = Math.round((lista.getBoundingClientRect().width - ancho) / 2);
     paso = ancho * 0.92 + 12;
     const alto = Math.max(...tarjetas.map((li) => li.offsetHeight));
     lista.style.height = `${Math.ceil(alto)}px`;
@@ -231,11 +236,9 @@ export function crearCarruselEquipos(region, lista) {
     sesgo = -1;
     previas = new Map();
     saltos = new Map();
-    tarjetas.forEach((li, i) => {
-      li.setAttribute("role", "group");
-      li.setAttribute("aria-roledescription", "diapositiva");
-      li.setAttribute("aria-label", `${i + 1} de ${n}`);
-    });
+    // Cada tarjeta sigue siendo un ítem de la lista (un <li> no admite
+    // role="group"); su nombre es "N de M".
+    tarjetas.forEach((li, i) => li.setAttribute("aria-label", `${i + 1} de ${n}`));
     region.hidden = n === 0;
     region.classList.toggle("ce-una", n <= 1);
     anterior.hidden = siguiente.hidden = n <= 1;

@@ -29,6 +29,10 @@ export function iniciarSegmentado(contenedor, alCambiar) {
   return {
     marcar(valor) {
       for (const b of botones) b.setAttribute("aria-pressed", String(b.dataset.valor === valor));
+      // Indicador que se desliza (sitio.css, .segmentado::before)
+      const i = botones.findIndex((b) => b.dataset.valor === valor);
+      if (i >= 0) contenedor.style.setProperty("--i", String(i));
+      contenedor.style.setProperty("--visible", i >= 0 ? "1" : "0");
     }
   };
 }

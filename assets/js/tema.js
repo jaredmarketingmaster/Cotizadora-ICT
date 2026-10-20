@@ -44,4 +44,9 @@ export function aplicarTema(tienda, raiz = document.documentElement) {
   for (const [k, v] of Object.entries(vars)) raiz.style.setProperty(k, v);
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = vars["--secundario"];
+  // Para la próxima visita: el script del <head> la aplica antes del primer
+  // pintado (sin parpadeo de claro a oscuro ni cambio de tamaño).
+  try { localStorage.setItem(CLAVE_APARIENCIA, JSON.stringify({ tema, tamano, vars })); } catch { /* sin almacenamiento */ }
 }
+
+export const CLAVE_APARIENCIA = "cotizadora:apariencia";

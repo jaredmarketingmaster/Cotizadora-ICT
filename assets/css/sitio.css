@@ -32,16 +32,32 @@
   padding: calc(20px * var(--t-espacio)) 0 calc(92px * var(--t-espacio));
   overflow: hidden;
 }
-/* Brillo decorativo (va en ::before para no tocar el contraste del texto) */
-.encabezado::before {
+/* Brillos decorativos (en ::before y ::after para no tocar el contraste del
+   texto): uno del color primario arriba a la derecha y uno suave abajo. */
+.encabezado::before, .encabezado::after {
   content: "";
-  position: absolute; inset: -40% -20% auto auto;
-  width: 70vmax; height: 70vmax;
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--primario) 38%, transparent), transparent 70%);
-  opacity: .55;
+  position: absolute;
   z-index: -1;
   pointer-events: none;
 }
+.encabezado::before {
+  inset: -40% -20% auto auto;
+  width: 70vmax; height: 70vmax;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--primario) 38%, transparent), transparent 70%);
+  opacity: .55;
+}
+.encabezado::after {
+  inset: auto auto -55% -25%;
+  width: 60vmax; height: 60vmax;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--sobre-secundario) 9%, transparent), transparent 70%);
+}
+/* Entrada suave del título: solo se mueve y se enfoca; la opacidad no cambia,
+   así el título se ve (y cuenta para el LCP) desde el primer pintado. */
+@media (prefers-reduced-motion: no-preference) {
+  .titulo { animation: titulo-entra 900ms var(--curva); }
+  .marca { animation: titulo-entra 700ms var(--curva); }
+}
+@keyframes titulo-entra { from { transform: translateY(14px); filter: blur(6px); } }
 .marca {
   display: flex; align-items: center; gap: 12px;
   min-height: 44px;
@@ -66,19 +82,40 @@
   display: grid;
   gap: calc(22px * var(--t-espacio));
   padding: calc(clamp(18px, 3.5vw, 28px) * var(--t-espacio));
-  background: var(--tarjeta);
-  border: 1px solid var(--borde);
+  /* Vidrio: la tarjeta al 92 % deja ver un poco el encabezado, desenfocado.
+     Con 92 % el texto suave sigue sobre 4,5:1 aun sobre un fondo negro o blanco. */
+  background: color-mix(in srgb, var(--tarjeta) 92%, transparent);
+  -webkit-backdrop-filter: saturate(1.6) blur(22px);
+  backdrop-filter: saturate(1.6) blur(22px);
+  border: 1px solid color-mix(in srgb, var(--borde) 75%, transparent);
   border-radius: var(--radio);
-  box-shadow: var(--sombra-2);
+  box-shadow: var(--sombra-2), inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent);
 }
+:root[data-tema="oscuro"] .filtros { box-shadow: var(--sombra-2), inset 0 1px 0 rgba(255, 255, 255, .06); }
 .filtro { display: grid; gap: 10px; align-content: start; min-width: 0; }
 .filtro-pregunta { font-weight: 700; font-size: 1.0625rem; }
 
 .segmentado {
+  position: relative; isolation: isolate;
   display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
   padding: 5px;
   background: var(--superficie);
   border-radius: 16px;
+}
+/* Indicador que se desliza entre "Nuevo" y "Usado" (--i y --visible los pone
+   filtros.js). El botón marcado toma su propio fondo apenas termina el
+   deslizamiento, así el contraste no depende del indicador. */
+.segmentado::before {
+  content: "";
+  position: absolute; z-index: -1;
+  top: 5px; bottom: 5px; left: 5px;
+  width: calc(50% - 8px);
+  border-radius: 12px;
+  background: var(--primario);
+  box-shadow: 0 6px 16px -8px var(--primario);
+  opacity: var(--visible, 0);
+  transform: translateX(calc(var(--i, 0) * (100% + 6px)));
+  transition: transform 420ms var(--curva), opacity 200ms ease;
 }
 .segmento {
   min-height: 52px;
@@ -91,7 +128,11 @@
 .segmento[aria-pressed="true"] {
   background: var(--primario);
   color: var(--sobre-primario);
-  box-shadow: 0 6px 16px -8px var(--primario);
+  transition: background-color 0s 380ms, color 120ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .segmentado::before { transition: none; }
+  .segmento[aria-pressed="true"] { transition: none; }
 }
 @media (hover: hover) {
   .segmento[aria-pressed="false"]:hover { background: var(--superficie-2); }
@@ -149,11 +190,17 @@
   color: var(--texto-suave);
   font-size: 1rem; font-weight: 700; text-align: center;
 }
-.desplegable-opcion[aria-selected="true"] { color: var(--primario-texto); }
+.desplegable-opcion { transition: background-color var(--rapido); }
+.desplegable-opcion[aria-selected="true"] { color: var(--primario-texto); font-weight: 700; }
+/* Marca de elegido: un visto dibujado con bordes */
 .desplegable-opcion[aria-selected="true"]::after {
-  content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--primario); flex: none;
+  content: ""; flex: none;
+  width: 7px; height: 13px; margin: -4px 6px 0 2px;
+  border: solid var(--primario-texto); border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
 }
-.desplegable-opcion.activa { background: var(--superficie); }
+.desplegable-opcion.activa { background: var(--superficie); box-shadow: inset 3px 0 0 var(--primario-texto); }
+@media (hover: hover) { .desplegable-opcion:hover { background: var(--superficie); } }
 .desplegable-vacio { padding: 14px 12px; color: var(--texto-suave); }
 
 /* Chips */
@@ -167,8 +214,16 @@
   font-weight: 700;
   transition: background-color var(--medio) var(--curva), color var(--medio) var(--curva), border-color var(--medio) var(--curva), opacity var(--medio), transform var(--medio) var(--curva);
 }
-.chip[aria-pressed="true"] { background: var(--primario); border-color: var(--primario); color: var(--sobre-primario); }
-@media (hover: hover) { .chip[aria-pressed="false"]:hover { border-color: var(--primario-texto); } }
+.chip { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.chip[aria-pressed="true"] { background: var(--primario); border-color: var(--primario); color: var(--sobre-primario); box-shadow: 0 6px 16px -10px var(--primario); }
+.chip[aria-pressed="true"]::before {
+  content: ""; flex: none;
+  width: 6px; height: 11px; margin-top: -3px;
+  border: solid currentColor; border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+}
+@media (hover: hover) { .chip[aria-pressed="false"]:hover { border-color: var(--primario-texto); background: var(--superficie); } }
+@media (prefers-reduced-motion: no-preference) { .chip:active, .segmento:active { transform: scale(.97); } }
 .chips-vacio { color: var(--texto-suave); }
 
 .filtros-pie {
@@ -216,7 +271,7 @@
 .carrusel-equipos.ce-arrastrando .ce-ventana { cursor: grabbing; user-select: none; }
 .galeria--carrusel { display: block; position: relative; min-height: 136px; }
 .galeria--carrusel > .tarjeta {
-  position: absolute; top: 0; left: 50%;
+  position: absolute; top: 0; left: 0;
   width: min(300px, 68vw);
   transform-origin: 50% 50%;
   will-change: transform, opacity;
@@ -224,6 +279,18 @@
 /* Sin transición de transform/opacity: las mueve el JS cuadro a cuadro */
 .galeria--carrusel > .tarjeta { transition: box-shadow var(--medio) var(--curva), border-color var(--medio); }
 .galeria--carrusel > .tarjeta:not([data-centro]) { box-shadow: none; }
+/* Profundidad: las vecinas se desenfocan un poco y una capa del color del
+   fondo las desvanece según su distancia (son tarjetas inactivas: aria-hidden
+   y fuera del orden de tabulación). */
+.galeria--carrusel > .tarjeta { filter: blur(calc(min(var(--distancia, 0), 2) * 1.2px)); }
+.galeria--carrusel > .tarjeta::after {
+  content: ""; position: absolute; inset: -1px;
+  border-radius: inherit;
+  background: var(--fondo);
+  opacity: calc(min(var(--distancia, 0), 2) * .32);
+  pointer-events: none;
+}
+.galeria--carrusel > .tarjeta[data-centro] { box-shadow: var(--sombra-2); }
 .galeria--carrusel .tarjeta-boton { grid-template-columns: 1fr; align-items: start; padding: 14px; }
 .galeria--carrusel .tarjeta-medio { aspect-ratio: 4 / 4.2; }
 .galeria--carrusel img { -webkit-user-drag: none; user-select: none; }
@@ -262,7 +329,10 @@
 .tarjeta-medio {
   display: grid; place-items: center;
   aspect-ratio: 1;
-  background: var(--superficie);
+  /* Fondo de la foto: un degradado suave, más claro arriba al centro */
+  background:
+    radial-gradient(120% 80% at 50% 18%, color-mix(in srgb, var(--fondo) 75%, var(--superficie)) 0%, transparent 62%),
+    linear-gradient(180deg, var(--superficie) 0%, color-mix(in srgb, var(--superficie-2) 70%, var(--superficie)) 100%);
   border-radius: 14px;
   overflow: hidden;
 }
@@ -278,10 +348,12 @@
   font-size: max(1rem, calc(1.25rem * var(--t-titulo))); font-weight: 800; letter-spacing: -.02em;
 }
 .tarjeta-precio .desde { font-size: 1rem; font-weight: 600; color: var(--texto-suave); letter-spacing: 0; }
-.muestras { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 0; padding: 0; list-style: none; }
+.muestras { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 2px; padding: 0; list-style: none; }
+/* Muestras finas en forma de píldora */
+.tarjeta .muestra { width: 22px; height: 10px; }
 .muestra {
   width: 22px; height: 22px;
-  border-radius: 50%;
+  border-radius: 999px;
   /* Sin hexadecimal en la fuente: muestra neutra rayada (no se inventa el color) */
   background: var(--c, repeating-linear-gradient(45deg, #C9CDD3 0 3px, #E9EBEF 3px 6px));
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18), 0 0 0 2px var(--tarjeta), 0 0 0 3px var(--borde);
@@ -300,8 +372,37 @@
   .tarjeta-medio img, .tarjeta-medio svg { transition: transform 600ms var(--curva); }
 }
 
-.tarjeta--esqueleto { min-height: 136px; border-color: transparent; background: linear-gradient(100deg, var(--superficie) 40%, var(--superficie-2) 50%, var(--superficie) 60%) 0 0 / 300% 100%; animation: brillo 1.4s linear infinite; }
-@media (min-width: 640px) { .tarjeta--esqueleto { min-height: 380px; } }
+/* Tarjetas esqueleto mientras cargan los datos: la forma de una tarjeta (foto
+   y tres líneas) y un brillo que pasa por encima (::after). Mismo alto que
+   antes: sin saltos al llegar las tarjetas. */
+.tarjeta--esqueleto {
+  min-height: 136px;
+  overflow: hidden;
+  --hueso: var(--superficie-2);
+  background:
+    linear-gradient(var(--hueso), var(--hueso)) 12px 12px / 112px 112px no-repeat,
+    linear-gradient(var(--hueso), var(--hueso)) 138px 28px / 30% 14px no-repeat,
+    linear-gradient(var(--hueso), var(--hueso)) 138px 56px / 45% 18px no-repeat,
+    linear-gradient(var(--hueso), var(--hueso)) 138px 92px / 35% 16px no-repeat,
+    var(--tarjeta);
+}
+.tarjeta--esqueleto::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--fondo) 60%, transparent) 50%, transparent 70%) 0 0 / 300% 100%;
+  animation: brillo 1.4s linear infinite;
+}
+@media (min-width: 640px) {
+  .tarjeta--esqueleto {
+    min-height: 380px;
+    background:
+      linear-gradient(var(--hueso), var(--hueso)) 14px 14px / calc(100% - 28px) 62% no-repeat,
+      linear-gradient(var(--hueso), var(--hueso)) 14px 72% / 28% 14px no-repeat,
+      linear-gradient(var(--hueso), var(--hueso)) 14px 82% / 60% 18px no-repeat,
+      linear-gradient(var(--hueso), var(--hueso)) 14px 92% / 40% 16px no-repeat,
+      var(--tarjeta);
+  }
+}
+@media (prefers-reduced-motion: reduce) { .tarjeta--esqueleto::after { animation: none; } }
 @keyframes brillo { to { background-position: -150% 0; } }
 
 .aviso-carga {
@@ -638,7 +739,8 @@
 
 /* --- Aperturas --------------------------------------------------------------- */
 @media (prefers-reduced-motion: no-preference) {
-  .hoja[open] { animation: subir 380ms var(--curva); }
+  /* data-vt: la abre una View Transition; entonces no se suma esta animación */
+  .hoja[open]:not([data-vt]) { animation: subir 380ms var(--curva); }
   .popup[open] { animation: subir 340ms var(--curva); }
   .hoja[open]::backdrop, .popup[open]::backdrop { animation: aparecer 300ms ease; }
   .desplegable-panel { animation: desplegar 200ms var(--curva); }
@@ -647,8 +749,10 @@
     .popup[open] { animation: escalar 260ms var(--curva); }
   }
   @media (min-width: 900px) {
-    .hoja[open] { animation: escalar 300ms var(--curva); }
+    .hoja[open]:not([data-vt]) { animation: escalar 300ms var(--curva); }
   }
+  ::view-transition-group(equipo-foto) { animation-duration: 420ms; animation-timing-function: var(--curva); }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 260ms; }
 }
 @keyframes subir { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes escalar { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: none; } }

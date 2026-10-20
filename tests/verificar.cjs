@@ -831,6 +831,7 @@ async function llenarPopup(p) {
     const p = await nueva(1280, 900);
     await ir(p);
     await p.click(".tarjeta-boton >> nth=0"); // 18 Pro Max 256: Negro y Plata
+    await p.waitForFunction(() => document.querySelector("#hoja-detalle").open && !document.querySelector("#hoja-detalle[data-vt]"));
     await p.waitForTimeout(400);
     const color = () => p.textContent("#hoja-detalle [data-color-actual]");
     const precio = () => p.textContent("#hoja-detalle .precio-valor");
@@ -853,9 +854,9 @@ async function llenarPopup(p) {
     await p.$eval("#hoja-detalle .carrusel-pista", (el) => { el.style.scrollBehavior = "auto"; el.scrollLeft = el.clientWidth * 0.8; });
     await p.waitForTimeout(800);
     assert.equal(await color(), "Plata");
+    // Escape cierra (con una salida corta de ~180 ms).
     await p.keyboard.press("Escape");
-    await p.waitForTimeout(200);
-    assert.equal(await p.evaluate(() => document.querySelector("#hoja-detalle").open), false);
+    await p.waitForFunction(() => !document.querySelector("#hoja-detalle").open, null, { timeout: 2000 });
     await p.context().close();
   });
 
@@ -863,6 +864,8 @@ async function llenarPopup(p) {
     const p = await nueva(390, 844, { hasTouch: true, isMobile: true });
     await ir(p);
     await p.tap(".tarjeta-boton >> nth=0");
+    // La hoja está lista cuando terminó la transición de apertura (data-vt).
+    await p.waitForFunction(() => document.querySelector("#hoja-detalle").open && !document.querySelector("#hoja-detalle[data-vt]"));
     await p.waitForTimeout(500);
     const caja = await p.locator("#hoja-detalle .carrusel-pista").boundingBox();
     const cdp = await p.context().newCDPSession(p);
@@ -920,6 +923,8 @@ async function llenarPopup(p) {
     assert.equal(await region.getAttribute("aria-roledescription"), "carrusel");
     assert.deepEqual(await p.locator(".galeria--carrusel > .tarjeta .tarjeta-nombre").allTextContents(), ordenCuadricula, "mismas tarjetas y mismo orden");
     assert.deepEqual(await p.locator(".galeria--carrusel > .tarjeta").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label"))), ["1 de 5", "2 de 5", "3 de 5", "4 de 5", "5 de 5"]);
+    // Siguen siendo ítems de una lista (sin roles que un <li> no admite).
+    assert.deepEqual(await p.locator(".galeria--carrusel > .tarjeta[role]").count(), 0);
     assert.equal(await indicador(p), "1 de 5");
     assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
     // Flechas de 44 px o más, con foco visible.
@@ -1081,6 +1086,44 @@ async function llenarPopup(p) {
     assert.equal(await p.evaluate(() => document.getAnimations().length), 0);
     await p.context().close();
   });
+
+  // Capturas de diseño (solo con ICT_CAPTURAS): 360 y 1440 px × claro y oscuro
+  // × cuadrícula y carrusel × color por defecto y primario amarillo. Van a
+  // tests/capturas/diseno/<etapa>-…png (ICT_CAPTURAS_ETAPA, ej. "antes").
+  if (CAPTURAS) {
+    await caso("capturas de diseño (360 y 1440, claro y oscuro, cuadrícula y carrusel, color por defecto y amarillo)", async () => {
+      const etapa = process.env.ICT_CAPTURAS_ETAPA || "actual";
+      const dir = path.join(CAPTURAS, "diseno");
+      fs.mkdirSync(dir, { recursive: true });
+      for (const ancho of [360, 1440]) {
+        const p = await nueva(ancho, ancho === 360 ? 800 : 900);
+        await ir(p);
+        for (const tema of ["claro", "oscuro"]) {
+          for (const vista of ["cuadricula", "carrusel"]) {
+            for (const [color, primario] of [["defecto", "#1A73E8"], ["amarillo", "#FFD60A"]]) {
+              await editarDemo(p, (e, x) => Object.assign(e.tienda, { tema: x[0], vista_equipos: x[1], color_primario: x[2], whatsapp: "573001234567" }), [tema, vista, primario]);
+              await ir(p);
+              await p.waitForTimeout(700);
+              await p.screenshot({ path: path.join(dir, `${etapa}-${ancho}-${tema}-${vista}-${color}.png`), fullPage: true });
+            }
+          }
+          // Detalle abierto (hoja) y pop-up, en cuadrícula y color por defecto
+          await editarDemo(p, (e, x) => Object.assign(e.tienda, { tema: x, vista_equipos: "cuadricula", color_primario: "#1A73E8" }), tema);
+          await ir(p);
+          await p.click(".tarjeta-boton >> nth=0");
+          await p.waitForFunction(() => document.querySelector("#hoja-detalle").open && !document.querySelector("#hoja-detalle[data-vt]"));
+          await p.waitForTimeout(500);
+          await p.screenshot({ path: path.join(dir, `${etapa}-${ancho}-${tema}-detalle.png`) });
+          await p.click(ancho === 360 ? ".hoja-barra [data-comprar]" : "#hoja-detalle .detalle-cta [data-comprar]");
+          await p.waitForTimeout(700);
+          await p.screenshot({ path: path.join(dir, `${etapa}-${ancho}-${tema}-popup.png`) });
+          await p.keyboard.press("Escape");
+          await p.waitForTimeout(300);
+        }
+        await p.context().close();
+      }
+    });
+  }
 
   // ---------------------------------------------------------------- 12.11
   await caso("11. sin marca de Apple: ni manzana, ni imágenes, ni textos de la marca", async () => {
@@ -1328,7 +1371,13 @@ async function llenarPopup(p) {
 // Se ejecuta en la página: texto visible con contraste menor a 4,5:1
 // (3:1 si es grande). El fondo se busca subiendo hasta uno opaco.
 function contrasteMalo() {
-  const rgb = (c) => { const m = c.match(/[\d.]+/g); return m ? m.map(Number) : [0, 0, 0, 0]; };
+  // "rgb(r, g, b[, a])" o "color(srgb r g b[ / a])" (lo que da color-mix), en 0–255.
+  const rgb = (c) => {
+    const m = c.match(/[\d.]+/g);
+    if (!m) return [0, 0, 0, 0];
+    const v = m.map(Number);
+    return /^color\(srgb/.test(c) ? [v[0] * 255, v[1] * 255, v[2] * 255, v[3] ?? 1] : v;
+  };
   const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
   const mezclar = (a, b) => { const al = a[3] ?? 1; return [0, 1, 2].map((i) => a[i] * al + b[i] * (1 - al)); };
   function fondo(el) {

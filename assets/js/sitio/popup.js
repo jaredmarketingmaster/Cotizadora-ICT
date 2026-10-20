@@ -15,6 +15,7 @@ import { leerAtribucion, CLAVES_ATRIBUCION } from "./atribucion.js";
 import { evento, parametrosEquipo } from "./pixel.js";
 import { htmlMedio } from "./fotos.js";
 import { ICONO_WA } from "./detalle.js";
+import { cerrarConTransicion, cerrarConEscape } from "./transiciones.js";
 
 const CERRAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 const OK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -254,8 +255,9 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
   }
 
   dialogo.addEventListener("click", (e) => {
-    if (e.target.closest("[data-cerrar]") || e.target === dialogo) dialogo.close();
+    if (e.target.closest("[data-cerrar]") || e.target === dialogo) cerrarConTransicion(dialogo);
   });
+  cerrarConEscape(dialogo);
 
   return {
     // contexto: { tipo: "compra", equipo } o { tipo: "sin stock", busqueda, filtros, nombreModelo }

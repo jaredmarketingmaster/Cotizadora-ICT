@@ -262,7 +262,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `index.html` (≈130) | Sitio público, una sola página: <ul><li>Franja demo, encabezado con logo, nombre y título, y tarjeta de filtros (segmentado, lista desplegable y chips).</li><li>Contador y "Limpiar filtros", galería, estado vacío y detalle en línea.</li><li>Información de la tienda, pie, `<dialog id="hoja-detalle">` (detalle del equipo), barra fija de compra y `<dialog id="popup">`.</li><li>Carga Google Fonts (Inter) sin bloquear el pintado, `modulepreload` de los módulos y `assets/js/sitio/principal.js`.</li></ul> |
+| `index.html` (≈140) | Sitio público, una sola página: <ul><li>En el `<head>`, un script en línea aplica la **apariencia de la visita anterior** (`localStorage["cotizadora:apariencia"]`: tema, tamaño y colores) antes del primer pintado; valida cada valor. Las páginas legales tienen el mismo script.</li><li>La lista de equipos va dentro de `#vista-equipos`, con las flechas y el indicador del carrusel (ocultos en cuadrícula).</li><li>Franja demo, encabezado con logo, nombre y título, y tarjeta de filtros (segmentado, lista desplegable y chips).</li><li>Contador y "Limpiar filtros", galería, estado vacío y detalle en línea.</li><li>Información de la tienda, pie, `<dialog id="hoja-detalle">` (detalle del equipo), barra fija de compra y `<dialog id="popup">`.</li><li>Carga Google Fonts (Inter) sin bloquear el pintado, `modulepreload` de los módulos y `assets/js/sitio/principal.js`.</li></ul> |
 | `config.js` (≈34) | **Único archivo que cambia por tienda.** Contiene:<ul><li>`backend`: `"demo"` o `"supabase"`.</li><li>`supabase.url` y `supabase.anonKey`.</li><li>`metaPixelId`.</li><li>`ghlSeguimiento.src` y `ghlSeguimiento.id`, del script de seguimiento externo de GHL (opcional).</li></ul>Nada de lo que contiene es secreto. |
 | `README.md` | Guía para personas: probar en demo, GitHub Pages, poner una tienda en producción, GHL, píxel, decisiones, pruebas y pendientes. |
 | `CLAUDE.md` | Reglas y guía para las próximas sesiones de Claude Code: cómo verificar antes de cada commit y la obligación de mantener este documento. |
@@ -310,10 +310,11 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 |---|---|
 | `assets/js/sitio/principal.js` (≈328) | **Orquestador del sitio.** Sus tareas: <ul><li>Captura la atribución, inicia el píxel y el script de GHL.</li><li>Carga los datos y aplica el tema.</li><li>Dibuja marca, información y pie.</li><li>Arma los filtros y lee y escribe la URL.</li><li>Actualiza contador y galería, y decide el detalle en línea.</li><li>Abre la hoja de detalle (con gesto de deslizar para cerrar) y conecta la barra fija.</li><li>En demo, recarga si otra pestaña cambió los datos (evento `storage`).</li></ul> |
 | `assets/js/sitio/catalogo.js` (≈163) | **Lógica pura, sin DOM:** <ul><li>`prepararCatalogo`, que calcula la recencia de cada generación como el mayor `orden` de sus modelos.</li><li>`filtrar`, `contarEquipos` (cantidad de equipos: el stock es sí/no), `opcionesModelo` (agrupadas por generación, de la más nueva a la más vieja), `etiquetaGeneracion` ("Generación 11", "Generación XS y XR"; "Plegable" queda igual; el panel usa la misma) y `opcionesCapacidad`.</li><li>`prepararCatalogo` guarda también los colores (`cat.colores`, por id) y le pone a cada equipo `color` (el oficial), `color_nombre` (el que ve el cliente, con `nombreColor`) y `color_hex` (la muestra oficial o vacío). El resto del sitio (tarjetas, muestras, detalle, texto alternativo, WhatsApp y píxel) usa esos dos campos.</li><li>`encadenar`: limpia las elecciones que un cambio deja inválidas.</li><li>`tarjetas`: nuevos por modelo y capacidad, usados por unidad; orden: destacados, generación más nueva y precio.</li><li>`diapositivas`, `textoCondicion`, `textoAlternativo` y `describirBusqueda`.</li><li>`mensajeCompra`, `mensajeSinStock` y `enlaceWhatsApp`.</li></ul> |
-| `assets/js/sitio/filtros.js` (≈189) | Controles de los filtros: <ul><li>`iniciarSegmentado`: Nuevo/Usado, donde un segundo toque desmarca.</li><li>`iniciarChips`: almacenamiento.</li><li>`iniciarDesplegable`: lista propia con `role="listbox"`, grupos por generación, "Todos los modelos", cantidad por modelo, buscador si hay más de 8, teclado (flechas, Inicio/Fin, Enter, Escape, Tab) y cierre al tocar afuera.</li><li>`marcarLimpiado`: destello cuando un filtro se limpia solo.</li></ul> |
+| `assets/js/sitio/filtros.js` (≈189) | Controles de los filtros: <ul><li>`iniciarSegmentado`: Nuevo/Usado, donde un segundo toque desmarca; pone `--i` y `--visible` para el indicador que se desliza.</li><li>`iniciarChips`: almacenamiento.</li><li>`iniciarDesplegable`: lista propia con `role="listbox"`, grupos por generación, "Todos los modelos", cantidad por modelo, buscador si hay más de 8, teclado (flechas, Inicio/Fin, Enter, Escape, Tab) y cierre al tocar afuera.</li><li>`marcarLimpiado`: destello cuando un filtro se limpia solo.</li></ul> |
 | `assets/js/sitio/galeria.js` (≈125) | `crearGaleria(lista, api)`: tarjetas con clave estable. Al filtrar, las que salen se desvanecen y las que quedan se reacomodan con **FLIP** (Web Animations API). Sin animación si hay `prefers-reduced-motion`. Con `usarCarrusel(c)`, dibuja las tarjetas y le pasa el movimiento al carrusel. |
 | `assets/js/sitio/carrusel-equipos.js` (≈250) | Vista **Carrusel** de los equipos: `crearCarruselEquipos(region, lista)` → `{reconstruir, mover, actual}`. Posición continua `pos`; cada tarjeta se dibuja a la distancia más corta del bucle (transform, opacidad y escala). Bucle infinito; arrastre con inercia y ajuste; flechas; ← →; trackpad horizontal; toque en vecina = centrarla; indicador "N de M"; altura de la tarjeta más alta; con 2 tarjetas, una sola vecina (con fundido si cambia de lado); con 1, sin flechas ni bucle; `data-moviendo` en la región mientras se mueve. Sin animación con `prefers-reduced-motion`. |
 | `assets/js/sitio/detalle.js` (≈219) | `crearDetalle(...)`: carrusel y ficha. <ul><li>El carrusel usa scroll-snap y se mueve con el dedo, flechas, puntos, muestras de color y teclado; con varias fotos muestra miniaturas.</li><li>La ficha tiene nombre, etiqueta, variante, `etiqueta_precio` y precio (el elemento más grande), datos de usado, descripciones, "Ver ficha técnica" (solo filas con valor), pagos, entrega, garantía y el botón.</li><li>También exporta `htmlBarraCompra` e `ICONO_WA`.</li></ul> |
+| `assets/js/sitio/transiciones.js` (≈80) | Apertura y cierre de los diálogos del sitio: `abrirConTransicion(dialogo, mostrar, {origen, destino})` usa la **View Transitions API** (la foto de la tarjeta viaja al detalle; el diálogo lleva `data-vt` mientras dura) y, sin ella o con reduced-motion, abre directo con la animación de CSS de siempre. `cerrarConTransicion` hace una salida corta (baja en celular; se achica y desvanece en pantallas grandes) y después `close()`; `cerrarConEscape` lo usa con Escape. |
 | `assets/js/sitio/popup.js` (≈272) | `crearPopup(...)`: el pop-up "Antes de pasar a WhatsApp" completo. Ver sección 9. |
 | `assets/js/sitio/fotos.js` (≈19) | `htmlFoto`: `<img>` con `srcset` 640w/1600w, `loading="lazy"` o `fetchpriority="high"`. `htmlMedio`: la foto principal o la ilustración. |
 | `assets/js/sitio/atribucion.js` (≈31) | `CLAVES_ATRIBUCION` (`utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`, `ad_id`, `fbclid`), `capturarAtribucion` y `leerAtribucion`. Guarda en `sessionStorage["cotizadora:atribucion"]` el **primer valor por clave** de la sesión. |
@@ -361,7 +362,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈1440) | Suite de aceptación en **modo demo** con Playwright: **44 casos**. Ver sección 14. |
+| `tests/verificar.cjs` (≈1450) | Suite de aceptación en **modo demo** con Playwright: **44 casos** (45 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). | Ver sección 14. |
 | `tests/verificar-supabase.cjs` (≈311) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **9 casos**. Reemplaza `config.js` en el navegador y puede servir un supabase-js local (`ICT_SUPABASE_JS`). |
 | `tests/documentacion.mjs` | Verificador de este documento: falla si algún archivo versionado no aparece en la sección 5. |
 | `tests/sql/probar.sh` | Crea un Postgres temporal, carga la imitación de Supabase y todas las migraciones en orden, compara la semilla con `semilla.js` y corre `pruebas.sql`. Antes de cada migración corre `tests/sql/antes_<migración>.sql` si existe. |
@@ -620,7 +621,7 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
   3. Las nuevas aparecen escalonadas.
 - **Estado vacío:** "En este momento no tenemos ese equipo publicado." y el botón "Consultar por WhatsApp", que abre el pop-up como consulta "sin stock".
 - **Vista "Carrusel"** (`tienda.vista_equipos = "carrusel"`, desde `0011`): las mismas tarjetas, el mismo filtro y el mismo orden, una al centro y las vecinas más chicas y desvanecidas (máscara en los bordes). Ver `carrusel-equipos.js` en la sección 5.
-  - Accesibilidad: la región lleva `role="region"`, `aria-roledescription="carrusel"` y `aria-label="Equipos disponibles"`; cada tarjeta, `aria-roledescription="diapositiva"` y `aria-label="N de M"`; las vecinas van con `aria-hidden` y fuera del orden de tabulación; flechas de 48 px con foco visible; el indicador es `aria-live`.
+  - Accesibilidad: la región lleva `role="region"`, `aria-roledescription="carrusel"` y `aria-label="Equipos disponibles"`; cada tarjeta sigue siendo un ítem de la lista, con `aria-label="N de M"`; las vecinas van con `aria-hidden` y fuera del orden de tabulación; flechas de 48 px con foco visible; el indicador es `aria-live`.
   - Al cambiar un filtro se reconstruye y vuelve a la primera, con una transición suave.
   - El contador, el estado vacío y el detalle en línea funcionan igual que en la cuadrícula.
 
@@ -911,16 +912,31 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 - **Movimiento:**
   - Microinteracciones en filtros, galería (FLIP), carrusel y aperturas.
   - Con `prefers-reduced-motion` no hay animaciones ni desplazamientos, pero todo funciona igual.
+- **Rediseño premium (fase C, solo el sitio público):** misma estructura, mismos textos y mismos flujos; sin librerías.
+  - **Encabezado:** dos brillos decorativos (`::before` y `::after`) y entrada suave del título (sube y se enfoca; la opacidad no cambia, así no retrasa el LCP).
+  - **Filtros:** tarjeta de vidrio (tarjeta al 92 % con `backdrop-filter`); segmentado con un **indicador que se desliza** (el botón marcado toma su fondo al terminar, para que el contraste no dependa del indicador); lista de modelos con visto de elegido, opción activa marcada y hover; chips con visto y presión táctil.
+  - **Tarjetas:** fondo de la foto con un degradado suave; elevación al pasar el mouse en escritorio; precios con cifras tabulares; muestras finas en forma de píldora.
+  - **Carrusel:** profundidad con escala, desenfoque y una capa del color del fondo que desvanece a las vecinas (tarjetas inactivas); posiciones en píxeles enteros para que el texto no se vea borroso.
+  - **Hoja de detalle y pop-up:** apertura con View Transitions (la foto viaja de la tarjeta al detalle) y respaldo de CSS; salida corta al cerrar (botón, fondo, Escape o gesto).
+  - **Botón principal:** sombra de su color, filo de luz arriba, brillo que cruza al pasar el mouse (decorativo, detrás del texto) y presión táctil (`scale(.98)`).
+  - **Carga:** tarjetas esqueleto con la forma de una tarjeta (foto y líneas) y un brillo que pasa, del mismo alto que antes (sin saltos).
+  - **Pie:** el de B1.
+  - Con `prefers-reduced-motion`: sin traslados ni escalas (título, presión, indicador, carrusel, aperturas y cierres son directos); se mantienen colores y sombras.
 - **Rendimiento:**
   - Sin librerías en el sitio público.
   - Una sola llamada de datos (`datos_publicos`).
   - Imágenes con `srcset` y carga diferida.
   - `modulepreload` de los módulos.
-- **Mediciones** (Lighthouse móvil, 3 corridas con servidor que comprime):
-  - Rendimiento 91, accesibilidad 100 y buenas prácticas 100.
-  - LCP de 1,3 a 1,4 s.
-  - CLS de 0,19 con la franja demo y 0,049 sin ella.
-- **Peso del sitio público:** unos 153 KB sin comprimir y unos 37 KB con gzip en modo Supabase, sin fuentes ni fotos.
+- **Mediciones** (Lighthouse 12 móvil, 3 corridas por escenario, `serve` con compresión; antes = commit `9566ded`, después = fase C):
+
+  | Escenario | Antes | Después |
+  |---|---|---|
+  | Con franja demo | 91 / 100 / 100 · LCP 1,2–1,4 s · CLS 0,19 | 91 / 100 / 100 · LCP 1,3–1,4 s · CLS 0,19 |
+  | Sin franja, cuadrícula | 100 / 100 / 100 · LCP 1,2 s · CLS 0,049 | 99–100 / 100 / 100 · LCP 1,3–1,4 s · CLS 0,049 |
+  | Sin franja, carrusel | — | 100 / 100 / 100 · LCP 1,2–1,5 s · CLS 0,049 |
+
+  (rendimiento / accesibilidad / buenas prácticas). El CLS de 0,19 lo causa solo la franja de modo demo, que aparece cuando llegan los datos. Para medir sin franja, el Chromium de la medición se abre con el modo demo apagado en `localStorage` y Lighthouse corre con `--disable-storage-reset`.
+- **Peso del sitio público:** unos 170 KB sin comprimir y unos 56 KB con gzip (suma de cada archivo comprimido por separado, sin `demo.js` ni `semilla.js`, sin fuentes ni fotos). La fase C sumó unos 4 KB con gzip (el límite era 30 KB).
 
 ---
 
@@ -942,6 +958,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `ICT_SOLO="regex"`: corre solo los casos cuyo nombre coincide.
 - `ICT_BASE=URL`: por ejemplo `http://localhost:8081/Cotizadora-ICT`, para simular GitHub Pages.
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
+- `ICT_CAPTURAS=1`: además guarda capturas en `tests/capturas/` y corre el caso **capturas de diseño**: 360 y 1440 px × claro y oscuro × cuadrícula y carrusel × color por defecto y primario amarillo, más el detalle y el pop-up, en `tests/capturas/diseno/<etapa>-….png`. `ICT_CAPTURAS_ETAPA` pone la etapa (por ejemplo `antes` o `despues`). La carpeta no se sube al repo.
 
 ### 14.2 Qué cubre `tests/verificar.cjs` (44 casos, agrupados por tema)
 
@@ -1064,6 +1081,9 @@ bash tests/supabase-local/levantar.sh detener
 | Hexadecimales del "iPhone 16 / 16e" también en el 16 Plus | La tabla de la fuente es por serie y el 16 Plus tiene exactamente los mismos colores. |
 | Colores de la tienda solo en modelos sin colores oficiales | El 17 Pro y el 17 Pro Max no tienen colores en la fuente; sin esto no se podrían cargar. Los oficiales no se mezclan con inventados. |
 | Duplicar no copia "Más vendido" | El duplicado es otra variante y el máximo es 3: copiarlo haría fallar el guardado. El stock sí se copia (pedido de A2). |
+| View Transitions para abrir el detalle | Pedido de Jared. Se probó con cuadros grabados que la foto viaja bien aunque el diálogo esté en la capa superior; sin la API (o con reduced-motion) queda la animación de CSS. |
+| Vecinas del carrusel desvanecidas con una capa (`::after`) | Bajar la opacidad del texto lo dejaba bajo 4,5:1. Las vecinas son tarjetas inactivas (`aria-hidden`, fuera del tabulado): WCAG 1.4.3 exime el texto de componentes inactivos. La tarjeta del centro, que es la que se usa, cumple AA. |
+| Apariencia guardada para la próxima visita | Evita el parpadeo de claro a oscuro y el cambio de tamaño en las visitas siguientes; en la primera visita no hay dato guardado y se aplica cuando llegan los datos, como antes. |
 | Bucket propio para videos | Límite (20 MB) y tipos (MP4 y WebM) propios, sin aflojar las reglas de `fotos`. |
 | Duración del MP4 desde la caja `mvhd` | Funciona aunque el navegador no sepa reproducir el video (por ejemplo, Chromium sin códecs propietarios) y no descarga nada extra. |
 | MP4 en HEVC rechazado | El pedido es "MP4 (H.264)": HEVC no se ve en todos los navegadores. Se usa el mismo mensaje que para .mov. |
@@ -1151,6 +1171,23 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 20/10/2026 · C: rediseño premium del sitio público
+
+- **Pedido de Jared (fase C):** rediseño premium del sitio público (index, pop-up, hoja, las dos vistas y legales; no el panel), sin secciones nuevas ni textos nuevos, mismas estructura y flujos, inspirado en Apple sin copiarlo; Inter sin bloquear; que se vea premium con cualquier color, tamaño, vista y tema (probado con primario amarillo). Piezas: entrada suave del título, filtros de vidrio, segmentado con indicador que se desliza, estados claros en la lista de modelos y los chips, tarjetas (degradado, elevación, cifras tabulares, muestras en píldora), profundidad del carrusel, aperturas y cierres refinados con View Transitions y respaldo, botón principal con presencia, presión y brillo, esqueletos en lugar de spinner y el pie de B1. Límites: Lighthouse móvil ≥90 / 100 / 100, LCP no peor que +0,2 s, CLS <0,1 sin franja, fase C ≤30 KB gzip, reduced-motion sin traslados ni escalas, AA en todas partes (también en el vidrio).
+- **Referencia de calidad:** se usó la skill "adrian-saenz-hostinger-premium-website" solo como vara de calidad y robustez (contenido primero, sin depender de animaciones, `seguro()`); no se aplicó nada de lo que Jared pidió evitar (IIFE, librerías, loader, cursor propio, imágenes de stock, `.htaccess`).
+- **Hecho:** `sitio.css` y `base.css` (ver sección 13), `assets/js/sitio/transiciones.js` (nuevo), `principal.js` y `popup.js` (aperturas y cierres), `filtros.js` (indicador), `carrusel-equipos.js` (posiciones en píxeles enteros; desvanecido con capa; semántica de lista), `tema.js` e `index.html` / legales (apariencia de la visita anterior).
+- **Encontrado y corregido en el camino:**
+  - Lighthouse marcó en el carrusel `role="group"` en `<li>` (no permitido, y rompía la regla de listas): ahora cada tarjeta es un ítem de lista con `aria-label="N de M"`.
+  - El texto de las vecinas, desvanecido con opacidad, bajaba de 4,5:1: ahora las desvanece una capa encima (ver la decisión en la sección 16).
+  - La tarjeta del centro se veía borrosa en celular (posición en medio píxel).
+- **Pruebas cambiadas y por qué:**
+  - El verificador de contraste de `verificar.cjs` leía mal los colores `color(srgb …)` que produce `color-mix` (los tomaba como casi negros y daba 1,15:1): ahora los lee bien. Es más exacto, no más permisivo.
+  - Las pruebas que abrían la hoja y actuaban enseguida esperan a que termine la apertura (`data-vt`), y la de Escape espera el cierre animado en lugar de mirar a los 200 ms. Siguen exigiendo lo mismo.
+  - El caso del carrusel suma una comprobación: las tarjetas no llevan rol (un `<li>` no admite `role="group"`); sigue exigiendo "N de M".
+  - Caso nuevo de capturas de diseño (solo con `ICT_CAPTURAS`).
+- **Mediciones:** ver la tabla de la sección 13 (antes y después). Peso agregado por la fase C: unos 4 KB con gzip.
+- **Verificación:** `tests/sql/probar.sh` OK, `tests/verificar.cjs` 44/44 (tres corridas seguidas), `tests/verificar-supabase.cjs` 9/9, `tests/funciones/probar.sh` OK y `node tests/documentacion.mjs` OK.
 
 ### 20/10/2026 · B3: el video en el detalle
 
