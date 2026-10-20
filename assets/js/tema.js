@@ -1,10 +1,11 @@
 // =============================================================================
 // Tema de la tienda: variables CSS a partir de color_primario,
-// color_secundario y tema (claro u oscuro). El color del texto sobre cada color
+// color_secundario y tema (claro u oscuro), y el tamaño del texto. El color del texto sobre cada color
 // se calcula para cumplir contraste AA (4,5:1).
 // =============================================================================
 
 import { hexValido, textoSobre, ajustarParaTexto } from "./utils.js";
+import { TAMANOS_TEXTO } from "./datos/comun.js";
 
 export const FONDOS = { claro: "#FFFFFF", oscuro: "#0E1117" };
 // Fondos donde puede ir texto en el color primario (página, tarjeta y
@@ -20,6 +21,8 @@ export function variablesTema(tienda) {
   const secundario = hexValido(tienda?.color_secundario) ? tienda.color_secundario.toUpperCase() : "#0F172A";
   return {
     tema,
+    // Tamaño del texto del sitio (sitio.css lo lee de data-tamano; el panel no).
+    tamano: TAMANOS_TEXTO.includes(tienda?.tamano_texto) ? tienda.tamano_texto : "normal",
     vars: {
       "--primario": primario,
       "--sobre-primario": textoSobre(primario),
@@ -32,8 +35,9 @@ export function variablesTema(tienda) {
 }
 
 export function aplicarTema(tienda, raiz = document.documentElement) {
-  const { tema, vars } = variablesTema(tienda);
+  const { tema, tamano, vars } = variablesTema(tienda);
   raiz.dataset.tema = tema;
+  raiz.dataset.tamano = tamano;
   for (const [k, v] of Object.entries(vars)) raiz.style.setProperty(k, v);
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = vars["--secundario"];

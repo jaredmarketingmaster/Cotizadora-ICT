@@ -169,6 +169,16 @@ do $$ begin
   raise exception 'precio 0 no vale';
 exception when check_violation then null; end $$;
 do $$ begin
+  assert (select tamano_texto from public.tienda) = 'normal', 'tamaño del texto normal por defecto';
+  update public.tienda set tamano_texto = 'grande';
+  assert (select tamano_texto from public.tienda) = 'grande', 'tienda elige el tamaño del texto';
+  update public.tienda set tamano_texto = 'normal';
+end $$;
+do $$ begin
+  update public.tienda set tamano_texto = 'enorme';
+  raise exception 'tamaño de texto fuera de la lista no vale';
+exception when check_violation then null; end $$;
+do $$ begin
   update public.tienda set whatsapp = '3001234567';
   raise exception 'whatsapp sin 57 no vale';
 exception when check_violation then null; end $$;

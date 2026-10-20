@@ -30,7 +30,8 @@ export const CAMPOS_TIENDA = [
   "instagram_url", "facebook_url", "tiktok_url", "logo", "favicon",
   "color_primario", "color_secundario", "tema", "texto_entrega", "formas_pago",
   "texto_garantia_nuevos", "texto_garantia_usados", "etiqueta_precio",
-  "texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "modo_demo"
+  "texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "modo_demo",
+  "tamano_texto"
 ];
 
 export const CAMPOS_EQUIPO = [
@@ -38,6 +39,8 @@ export const CAMPOS_EQUIPO = [
   "fotos", "publicado", "destacado", "descripcion_extra", "es_demo",
   "bateria_porcentaje", "estado_estetico", "detalles", "incluye"
 ];
+
+export const TAMANOS_TEXTO = ["compacto", "normal", "grande"];
 
 export const ESTADOS_ESTETICOS = ["Como nuevo", "Excelente", "Muy bueno", "Bueno"];
 

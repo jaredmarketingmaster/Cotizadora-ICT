@@ -52,12 +52,13 @@ async function ir(p, ruta = "/") {
 }
 
 // Cambia el estado del back-end demo directamente (como si lo hiciera el panel).
-async function editarDemo(p, fn) {
-  await p.evaluate(([clave, cuerpo]) => {
+// fn se pasa como texto: los valores de afuera van en "arg".
+async function editarDemo(p, fn, arg = null) {
+  await p.evaluate(([clave, cuerpo, arg]) => {
     const e = JSON.parse(localStorage.getItem(clave));
-    new Function("e", cuerpo)(e);
+    new Function("e", "arg", cuerpo)(e, arg);
     localStorage.setItem(clave, JSON.stringify(e));
-  }, [CLAVE_DEMO, `(${fn.toString()})(e)`]);
+  }, [CLAVE_DEMO, `(${fn.toString()})(e, arg)`, arg]);
 }
 
 async function captura(p, nombre) {
@@ -573,13 +574,53 @@ async function llenarPopup(p) {
       }
       return { chicos, tactiles };
     });
-    let r = await revisar();
-    assert.deepEqual(r.chicos, [], "sitio: textos chicos");
-    assert.deepEqual(r.tactiles, [], "sitio: zonas táctiles");
-    await p.click("#detalle-en-linea [data-comprar]");
-    r = await revisar();
-    assert.deepEqual(r.chicos, [], "pop-up: textos chicos");
-    assert.deepEqual(r.tactiles, [], "pop-up: zonas táctiles");
+    // Los tres tamaños de texto de la tienda: nada baja de 16 px.
+    const medidas = {};
+    for (const tamano of ["normal", "compacto", "grande"]) {
+      await editarDemo(p, (e, t) => { e.tienda.tamano_texto = t; }, tamano);
+      await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=256-gb");
+      assert.equal(await p.getAttribute("html", "data-tamano"), tamano);
+      let r = await revisar();
+      assert.deepEqual(r.chicos, [], `sitio (${tamano}): textos chicos`);
+      assert.deepEqual(r.tactiles, [], `sitio (${tamano}): zonas táctiles`);
+      medidas[tamano] = await p.evaluate(() => ({
+        cuerpo: parseFloat(getComputedStyle(document.body).fontSize),
+        titulo: parseFloat(getComputedStyle(document.querySelector(".titulo")).fontSize),
+        precio: parseFloat(getComputedStyle(document.querySelector("#detalle-en-linea .precio-valor")).fontSize)
+      }));
+      await p.click("#detalle-en-linea [data-comprar]");
+      r = await revisar();
+      assert.deepEqual(r.chicos, [], `pop-up (${tamano}): textos chicos`);
+      assert.deepEqual(r.tactiles, [], `pop-up (${tamano}): zonas táctiles`);
+      await ir(p, "/privacidad/");
+      r = await revisar();
+      assert.deepEqual(r.chicos, [], `legales (${tamano}): textos chicos`);
+    }
+    // Compacto: el cuerpo sigue en 16 px y achica títulos y precios.
+    assert.equal(medidas.compacto.cuerpo, 16);
+    assert.ok(medidas.compacto.titulo < medidas.normal.titulo && medidas.compacto.precio < medidas.normal.precio, JSON.stringify(medidas));
+    // Grande: todo el texto ≈ +12 % (16 → 18 px).
+    assert.equal(medidas.normal.cuerpo, 16);
+    assert.equal(medidas.grande.cuerpo, 18);
+    assert.ok(medidas.grande.titulo > medidas.normal.titulo, JSON.stringify(medidas));
+    await p.context().close();
+  });
+
+  await caso("tamaño del texto: elegirlo en Mi tienda lo cambia en el sitio (el panel no cambia)", async () => {
+    const p = await nueva();
+    await entrarPanel(p, "tienda@demo.co");
+    await p.goto(`${BASE}/admin/#/tienda`);
+    await p.waitForSelector("#form-tienda");
+    assert.equal(await p.isChecked('input[name="tamano_texto"][value="normal"]'), true);
+    await p.check('input[name="tamano_texto"][value="grande"]', { force: true });
+    assert.equal(await p.getAttribute("#vista-previa", "data-tamano"), "grande");
+    await p.click("#guardar-tienda");
+    await p.waitForSelector("text=Guardado");
+    assert.equal(await p.evaluate(() => getComputedStyle(document.body).fontSize), "16px", "el panel no cambia de tamaño");
+    await ir(p);
+    assert.equal(await p.getAttribute("html", "data-tamano"), "grande");
+    assert.equal(await p.evaluate(() => getComputedStyle(document.body).fontSize), "18px");
+    assert.deepEqual(p.errores, []);
     await p.context().close();
   });
 

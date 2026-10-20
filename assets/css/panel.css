@@ -235,13 +235,17 @@ select.entrada { appearance: none; -webkit-appearance: none; padding-right: 40px
 .modelo-fila .entrada { min-height: 44px; max-width: 220px; }
 
 /* Vista previa de marca */
-.vista-previa { border-radius: 16px; overflow: hidden; border: 1px solid var(--borde); }
-.vista-previa-encabezado { padding: 18px; display: grid; gap: 14px; }
+.vista-previa { border-radius: 16px; overflow: hidden; border: 1px solid var(--borde); --t-titulo: 1; --t-espacio: 1; }
+/* Mismas escalas que sitio.css (tamaño del texto de la tienda) */
+.vista-previa[data-tamano="compacto"] { --t-titulo: .84; --t-espacio: .72; }
+.vista-previa[data-tamano="grande"] { font-size: 1.125rem; }
+.vista-previa .boton { font-size: 1em; }
+.vista-previa-encabezado { padding: calc(18px * var(--t-espacio)); display: grid; gap: calc(14px * var(--t-espacio)); }
 .vista-previa-marca { display: flex; align-items: center; gap: 10px; font-weight: 700; }
 .vista-previa-marca img { height: 32px; width: auto; max-width: 140px; object-fit: contain; }
 .vista-previa-marca .logo-generico { width: 32px; height: 32px; }
-.vista-previa-titulo { font-size: 1.375rem; font-weight: 800; letter-spacing: -.02em; }
-.vista-previa-cuerpo { padding: 18px; display: grid; gap: 10px; }
+.vista-previa-titulo { font-size: max(1em, calc(1.375em * var(--t-titulo))); font-weight: 800; letter-spacing: -.02em; }
+.vista-previa-cuerpo { padding: calc(18px * var(--t-espacio)); display: grid; gap: calc(10px * var(--t-espacio)); }
 .vista-previa .boton { pointer-events: none; }
 .contraste-nota { color: var(--texto-suave); font-size: 1rem; }
 

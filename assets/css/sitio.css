@@ -4,6 +4,15 @@
           info de la tienda · pie · barra fija · pop-up · animaciones
    ========================================================================== */
 
+/* --- Tamaño del texto (tienda.tamano_texto) ---------------------------------
+   Normal: la base. Grande: todo el texto ≈ +12 % (la raíz pasa a 112,5 %, así
+   16 px → 18 px). Compacto: solo achica títulos, precios grandes y espacios;
+   el texto común sigue en 16 px y los títulos usan max(1rem, …), así que nada
+   baja de 16 px. */
+:root { --t-titulo: 1; --t-espacio: 1; }
+:root[data-tamano="compacto"] { --t-titulo: .84; --t-espacio: .72; }
+:root[data-tamano="grande"] { font-size: 112.5%; }
+
 /* --- Franja demo ----------------------------------------------------------- */
 .franja-demo {
   padding: 10px var(--gutter);
@@ -20,7 +29,7 @@
   isolation: isolate;
   background: var(--secundario);
   color: var(--sobre-secundario);
-  padding: 20px 0 92px;
+  padding: calc(20px * var(--t-espacio)) 0 calc(92px * var(--t-espacio));
   overflow: hidden;
 }
 /* Brillo decorativo (va en ::before para no tocar el contraste del texto) */
@@ -42,9 +51,9 @@
 .marca-logo img { height: 40px; width: auto; max-width: 160px; object-fit: contain; }
 .marca-logo .logo-generico { width: 40px; height: 40px; }
 .titulo {
-  margin-top: clamp(28px, 6vw, 56px);
+  margin-top: calc(clamp(28px, 6vw, 56px) * var(--t-espacio));
   max-width: 15ch;
-  font-size: clamp(2.125rem, 7.2vw, 4rem);
+  font-size: max(1rem, calc(clamp(2.125rem, 7.2vw, 4rem) * var(--t-titulo)));
   font-weight: 800;
   letter-spacing: -.035em;
   line-height: 1.04;
@@ -52,11 +61,11 @@
 }
 
 /* --- Filtros --------------------------------------------------------------- */
-.filtros-envoltura { position: relative; z-index: 2; margin-top: -64px; }
+.filtros-envoltura { position: relative; z-index: 2; margin-top: calc(-64px * var(--t-espacio)); }
 .filtros {
   display: grid;
-  gap: 22px;
-  padding: clamp(18px, 3.5vw, 28px);
+  gap: calc(22px * var(--t-espacio));
+  padding: calc(clamp(18px, 3.5vw, 28px) * var(--t-espacio));
   background: var(--tarjeta);
   border: 1px solid var(--borde);
   border-radius: var(--radio);
@@ -181,13 +190,13 @@
 }
 
 /* --- Galería --------------------------------------------------------------- */
-.galeria-envoltura { padding-block: 28px 8px; outline: none; }
+.galeria-envoltura { padding-block: calc(28px * var(--t-espacio)) 8px; outline: none; }
 .galeria {
   position: relative;
-  display: grid; gap: 14px;
+  display: grid; gap: calc(14px * var(--t-espacio));
   margin: 0; padding: 0; list-style: none;
 }
-@media (min-width: 640px) { .galeria { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; } }
+@media (min-width: 640px) { .galeria { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(18px * var(--t-espacio)); } }
 @media (min-width: 960px) { .galeria { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 1200px) { .galeria { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
@@ -219,12 +228,12 @@
 .tarjeta-medio .ilustracion-telefono { width: 62%; height: auto; }
 .tarjeta-cuerpo { display: grid; gap: 6px; min-width: 0; }
 .tarjeta-etiquetas { display: flex; flex-wrap: wrap; gap: 6px; }
-.tarjeta-nombre { font-size: 1.125rem; font-weight: 800; letter-spacing: -.02em; }
+.tarjeta-nombre { font-size: max(1rem, calc(1.125rem * var(--t-titulo))); font-weight: 800; letter-spacing: -.02em; }
 .tarjeta-sub { color: var(--texto-suave); }
 .tarjeta-precio {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px;
   margin-top: 2px;
-  font-size: 1.25rem; font-weight: 800; letter-spacing: -.02em;
+  font-size: max(1rem, calc(1.25rem * var(--t-titulo))); font-weight: 800; letter-spacing: -.02em;
 }
 .tarjeta-precio .desde { font-size: 1rem; font-weight: 600; color: var(--texto-suave); letter-spacing: 0; }
 .muestras { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 0; padding: 0; list-style: none; }
@@ -266,10 +275,10 @@
   background: var(--superficie);
   border-radius: var(--radio);
 }
-.vacio-texto { font-size: 1.1875rem; font-weight: 700; max-width: 28ch; }
+.vacio-texto { font-size: max(1rem, calc(1.1875rem * var(--t-titulo))); font-weight: 700; max-width: 28ch; }
 
 /* --- Detalle --------------------------------------------------------------- */
-.detalle-en-linea { padding-block: 16px 32px; }
+.detalle-en-linea { padding-block: 16px calc(32px * var(--t-espacio)); }
 .detalle-en-linea > .detalle {
   padding: clamp(14px, 3vw, 28px);
   background: var(--tarjeta);
@@ -277,14 +286,14 @@
   border-radius: var(--radio);
   box-shadow: var(--sombra-2);
 }
-.detalle { display: grid; gap: 24px; }
+.detalle { display: grid; gap: calc(24px * var(--t-espacio)); }
 @media (min-width: 900px) {
-  .detalle { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 40px; align-items: start; }
+  .detalle { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: calc(40px * var(--t-espacio)); align-items: start; }
   .detalle-medios { position: sticky; top: 16px; }
 }
-.detalle-ficha { display: grid; gap: 18px; align-content: start; }
+.detalle-ficha { display: grid; gap: calc(18px * var(--t-espacio)); align-content: start; }
 .detalle-encabezado { display: grid; gap: 8px; }
-.detalle-nombre { font-size: clamp(1.625rem, 4vw, 2.25rem); font-weight: 800; letter-spacing: -.03em; }
+.detalle-nombre { font-size: max(1rem, calc(clamp(1.625rem, 4vw, 2.25rem) * var(--t-titulo))); font-weight: 800; letter-spacing: -.03em; }
 .detalle-variante { color: var(--texto-suave); font-size: 1.0625rem; font-weight: 600; }
 
 .precio-bloque {
@@ -296,7 +305,7 @@
 .precio-etiqueta { color: var(--texto-suave); font-weight: 600; }
 .precio-valor {
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
-  font-size: clamp(2.25rem, 8vw, 3rem);
+  font-size: max(1rem, calc(clamp(2.25rem, 8vw, 3rem) * var(--t-titulo)));
   font-weight: 800; letter-spacing: -.035em; line-height: 1.05;
 }
 .precio-valor .etiqueta-demo { font-size: 1rem; letter-spacing: .08em; }
@@ -474,7 +483,7 @@
 }
 .barra-precio { display: grid; line-height: 1.15; min-width: 0; }
 .barra-precio span { color: var(--texto-suave); font-size: 1rem; font-weight: 600; }
-.barra-precio strong { font-size: 1.25rem; font-weight: 800; letter-spacing: -.02em; white-space: nowrap; }
+.barra-precio strong { font-size: max(1rem, calc(1.25rem * var(--t-titulo))); font-weight: 800; letter-spacing: -.02em; white-space: nowrap; }
 .barra-compra .boton, .hoja-barra .boton { flex: 1; min-width: 0; }
 .hoja-barra { position: sticky; margin: 20px calc(-1 * var(--gutter)) 0; }
 @media (min-width: 900px) {
@@ -486,12 +495,12 @@
 
 /* --- Información de la tienda ---------------------------------------------- */
 .info-tienda {
-  margin-top: 40px;
-  padding-block: 40px;
+  margin-top: calc(40px * var(--t-espacio));
+  padding-block: calc(40px * var(--t-espacio));
   background: var(--superficie);
 }
 .info-grilla { display: grid; gap: 24px; }
-.info-tienda h2 { font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 800; }
+.info-tienda h2 { font-size: max(1rem, calc(clamp(1.5rem, 4vw, 2rem) * var(--t-titulo))); font-weight: 800; }
 .info-datos { display: grid; gap: 14px; margin: 18px 0 0; }
 .info-datos div { display: grid; gap: 2px; }
 .info-datos dt { color: var(--texto-suave); font-weight: 600; }
@@ -501,7 +510,7 @@
 @media (min-width: 900px) { .info-grilla { grid-template-columns: 1.2fr 1fr; align-items: start; } .info-acciones { justify-content: flex-end; } .redes { justify-content: flex-end; } }
 
 /* --- Pie --------------------------------------------------------------------- */
-.pie { padding-block: 32px calc(40px + env(safe-area-inset-bottom)); border-top: 1px solid var(--borde); }
+.pie { padding-block: calc(32px * var(--t-espacio)) calc(calc(40px * var(--t-espacio)) + env(safe-area-inset-bottom)); border-top: 1px solid var(--borde); }
 .pie-grilla { display: grid; gap: 10px; color: var(--texto-suave); }
 .pie-tienda { color: var(--texto); font-weight: 700; }
 .pie-enlaces { display: flex; flex-wrap: wrap; gap: 4px 20px; }
@@ -522,7 +531,7 @@
 .popup::backdrop { background: rgba(8, 10, 14, .6); backdrop-filter: blur(2px); }
 .popup-contenido { display: grid; gap: 18px; padding: 20px var(--gutter) calc(24px + env(safe-area-inset-bottom)); }
 .popup-cabecera { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.popup-titulo { font-size: 1.5rem; font-weight: 800; letter-spacing: -.025em; }
+.popup-titulo { font-size: max(1rem, calc(1.5rem * var(--t-titulo))); font-weight: 800; letter-spacing: -.025em; }
 .popup-texto { color: var(--texto-suave); margin-top: 6px; font-size: 1.0625rem; }
 .resumen {
   display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; align-items: center;
@@ -591,10 +600,10 @@
 @keyframes desplegar { from { opacity: 0; transform: translateY(-6px) scale(.98); } to { opacity: 1; transform: none; } }
 
 /* Página legal */
-.legal { padding-block: 32px 56px; max-width: 760px; }
-.legal h1 { font-size: clamp(1.75rem, 5vw, 2.5rem); font-weight: 800; margin-bottom: 20px; }
+.legal { padding-block: calc(32px * var(--t-espacio)) calc(56px * var(--t-espacio)); max-width: 760px; }
+.legal h1 { font-size: max(1rem, calc(clamp(1.75rem, 5vw, 2.5rem) * var(--t-titulo))); font-weight: 800; margin-bottom: 20px; }
 .legal-texto { display: grid; gap: 14px; }
-.legal-texto h2 { font-size: 1.375rem; margin-top: 12px; }
+.legal-texto h2 { font-size: max(1rem, calc(1.375rem * var(--t-titulo))); margin-top: 12px; }
 .legal-texto h3 { font-size: 1.125rem; margin-top: 8px; }
 .legal-texto ul, .legal-texto ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
 .legal-volver { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; color: var(--sobre-secundario); }

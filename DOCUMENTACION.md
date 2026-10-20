@@ -283,7 +283,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | Archivo | Qué es |
 |---|---|
 | `assets/css/base.css` (≈264) | Base compartida por el sitio y el panel: <ul><li>**Variables de diseño** (`--primario`, `--sobre-primario`, `--primario-texto`, `--secundario`, `--sobre-secundario`, superficies, bordes, textos, error, éxito, aviso, radios, sombras y curvas), con su versión `[data-tema="oscuro"]`.</li><li>Reinicio y foco visible.</li><li>Botones (`.boton--primario`, `--secundario`, `--suave`, `--peligro`, `--enlace`, `.boton-icono`), campos (`.entrada`, `.campo`, `.error-campo`, `.casilla`) y etiquetas (`.etiqueta-pildora`, `.etiqueta-demo`).</li><li>Spinner y reglas de `prefers-reduced-motion`.</li></ul> |
-| `assets/css/sitio.css` (≈610) | Sitio público: <ul><li>Franja demo y encabezado (el brillo decorativo va en `::before` para no tocar el contraste).</li><li>Filtros: segmentado, lista desplegable propia y chips.</li><li>Galería (1 → 2 → 3 → 4 columnas) y tarjetas.</li><li>Detalle y carrusel (scroll-snap).</li><li>Hoja: pantalla completa desde abajo en celular, ventana centrada en escritorio desde 900 px.</li><li>Barras de compra (apiladas por debajo de 480 px).</li><li>Información de la tienda, pie y pop-up.</li><li>Animaciones de apertura y páginas legales.</li></ul> |
+| `assets/css/sitio.css` (≈610) | Sitio público: <ul><li>Franja demo y encabezado (el brillo decorativo va en `::before` para no tocar el contraste).</li><li>Filtros: segmentado, lista desplegable propia y chips.</li><li>Galería (1 → 2 → 3 → 4 columnas) y tarjetas.</li><li>Detalle y carrusel (scroll-snap).</li><li>Hoja: pantalla completa desde abajo en celular, ventana centrada en escritorio desde 900 px.</li><li>Barras de compra (apiladas por debajo de 480 px).</li><li>Información de la tienda, pie y pop-up.</li><li>Animaciones de apertura y páginas legales.</li><li>**Tamaño del texto** (`data-tamano` en `<html>`): variables `--t-titulo` y `--t-espacio`; Grande pone la raíz en 112,5 %.</li></ul> |
 | `assets/css/panel.css` (≈307) | Panel, pensado primero para celular: <ul><li>Acceso y barra superior pegajosa.</li><li>Navegación en pastillas desplazables.</li><li>Bloques, estadísticas, avisos e interruptor.</li><li>Lista de inventario: tarjetas en celular, filas desde 1000 px.</li><li>Formulario por pasos y acciones pegajosas.</li><li>Fotos, filas de ficha, catálogo, vista previa de marca y recorte del logo.</li><li>Lista editable, usuarios, aviso flotante y ventana de confirmación.</li></ul> |
 
 ### 5.4 JavaScript compartido (`assets/js/`)
@@ -291,7 +291,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | Archivo | Exporta y para qué |
 |---|---|
 | `assets/js/utils.js` (≈241) | Utilidades sin dependencias: <ul><li>**Números:** `formatearMiles`, `formatearCOP`, `leerPrecio` ("5.299.000" → 5299000).</li><li>**Fechas:** `fechaCorta` (D/M/AAAA en America/Bogota).</li><li>**Texto:** `escaparHTML`, `plural`, `formatoBasico` (mini-markdown seguro para los legales: `##`, `**`, listas y enlaces http/mailto).</li><li>**Capacidades:** `CAPACIDADES_SUGERIDAS`, `slugCapacidad`, `capacidadDeSlug`, `capacidadEnGB`.</li><li>**Contacto:** `soloDigitos`, `celularValido` (10 dígitos que empiezan por 3), `formatearCelular` ("300 123 4567"), `correoValido`, `whatsappTiendaValido` (12 dígitos que empiezan por 57).</li><li>**Código:** `generarCodigo`, `codigoValido`. "COT-" más 4 caracteres de un alfabeto de 32 sin O, 0, I ni 1, con `crypto.getRandomValues`; como 256 % 32 = 0, el sorteo no tiene sesgo.</li><li>**Contraste WCAG:** `hexValido`, `luminancia`, `contraste`, `textoSobre` (blanco o casi negro, garantiza al menos 4,5:1) y `ajustarParaTexto` (oscurece o aclara un color hasta 4,5:1 sobre uno o varios fondos).</li><li>**Varios:** `sesion` (sessionStorage seguro), `seguro`, `reducirMovimiento`, `esperar`, `idEvento`.</li></ul> |
-| `assets/js/tema.js` (≈40) | `variablesTema(tienda)` y `aplicarTema(tienda)`: pasan `color_primario`, `color_secundario` y `tema` a variables CSS y calculan el texto con contraste AA. `--primario-texto` se ajusta contra **todas** las superficies del tema. También exporta `FONDOS`. |
+| `assets/js/tema.js` (≈45) | `variablesTema(tienda)` y `aplicarTema(tienda)`: pasan `color_primario`, `color_secundario` y `tema` a variables CSS y calculan el texto con contraste AA. También ponen `data-tamano` (`tamano_texto`) en `<html>`, que solo lee `sitio.css`. `--primario-texto` se ajusta contra **todas** las superficies del tema. También exporta `FONDOS`. |
 | `assets/js/ilustracion.js` (≈51) | `telefonoSVG(colorHex, titulo)`: teléfono genérico con el marco del color del equipo. `logoGenericoSVG()`: ícono para cuando no hay logo. |
 
 ### 5.5 Capa de datos (`assets/js/datos/`)
@@ -326,7 +326,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `assets/js/panel/panel.js` (≈283) | Arranque, acceso y rutas. <ul><li>**Acceso:** vistas de login, recuperación y "Cree su contraseña" o "Contraseña nueva", según `tipoDeEnlace()`.</li><li>`entrar()` y el router `enrutar()` por hash, que pregunta si hay cambios sin guardar (`ctx.sucio`) y llama `ctx.alSalir`.</li><li>La vista **Inicio**: estadísticas, fecha de precios, avisos de "Lo que falta" y modo demo para la agencia.</li><li>Define `ctx`, que tiene: `api`, `usuario`, `tienda`, `sucio`, `alSalir`, `esAgencia()`, `recargarTienda()` e `ir()`.</li></ul> |
 | `assets/js/panel/ui.js` (≈82) | Piezas de interfaz: `$`, `$$`, `esc`, `avisar` ("Guardado" o error), `confirmar` (promesa sobre `<dialog>`), `conBoton` (botón en espera más aviso), `campoTexto`, `interruptor`, `marcarError` y `enfocarPrimerError`. |
 | `assets/js/panel/inventario.js` (≈605) | Inventario. <ul><li>**Lista** con buscador y filtros (modelo, condición, publicado y los especiales "sin stock" y "sin foto").</li><li>**Edición rápida** de precio, el interruptor **Stock** ("Con stock" / "Sin stock") y publicado: se guarda al salir del campo, con Enter o al mover el interruptor.</li><li>Borrar con confirmación (borra también las fotos).</li><li>**Formulario** por pasos para agregar, completo para editar y duplicar, con validaciones.</li><li>**Fotos:** subir, cámara, arrastrar y soltar, reordenar, quitar y máximo 6.</li><li>Opción de activar el modelo si estaba inactivo.</li><li>Limpia las fotos subidas si se sale sin guardar.</li></ul> |
-| `assets/js/panel/tienda.js` (≈359) | Mi tienda: <ul><li>Datos de la tienda y redes.</li><li>Marca: logo con **recorte** (horizontal 3:1 o cuadrado, arrastrar, zoom y teclado), favicon de 128 px, colores con selector y hexadecimal, tema y **vista previa en vivo** con el contraste calculado.</li><li>Venta: etiqueta del precio, **lista editable** de formas de pago, entrega y garantías.</li></ul> |
+| `assets/js/panel/tienda.js` (≈359) | Mi tienda: <ul><li>Datos de la tienda y redes.</li><li>Marca: logo con **recorte** (horizontal 3:1 o cuadrado, arrastrar, zoom y teclado), favicon de 128 px, colores con selector y hexadecimal, tema, **tamaño del texto** (Compacto, Normal o Grande) y **vista previa en vivo** con el contraste calculado.</li><li>Venta: etiqueta del precio, **lista editable** de formas de pago, entrega y garantías.</li></ul> |
 | `assets/js/panel/fichas.js` (≈120) | Fichas técnicas: lista de modelos activos y editor por modelo. Tiene descripción, filas etiqueta/valor (agregar, editar, subir, bajar y borrar, con etiquetas sugeridas) y "Copiar ficha de otro modelo". |
 | `assets/js/panel/catalogo.js` (≈119) | Catálogo agrupado por generación con interruptor activo/inactivo. La **agencia** además renombra (el slug no cambia), reordena (intercambia el `orden`) y agrega modelos al final. |
 | `assets/js/panel/legales.js` (≈52) | Editores de privacidad, términos, autorización de datos y aviso de marca, con aviso si están vacíos y vista previa del formato básico. |
@@ -340,6 +340,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `supabase/migrations/0001_esquema.sql` (≈351) | Tablas, funciones de rol, disparadores, RLS, `datos_publicos()`, `borrar_datos_demo()`, buckets y reglas de almacenamiento. Ver sección 6. |
 | `supabase/migrations/0002_catalogo.sql` (≈42) | Inserta los **32 modelos** del catálogo maestro, en el orden del prompt, todos inactivos (`orden` 10, 20, …, 320). Cada modelo recibe su ficha vacía por disparador. |
 | `supabase/migrations/0003_demo.sql` (≈36) | Pone el nombre "Tienda de demostración" y `modo_demo = true`, activa los 4 modelos que usa la demo (con `activo_por_demo = true`) e inserta los 6 equipos demo. |
+| `supabase/migrations/0005_tamano_texto.sql` (≈13) | Agrega `tienda.tamano_texto`: `compacto`, `normal` (por defecto) o `grande`. |
 | `supabase/migrations/0004_en_stock.sql` (≈40) | El stock pasa de número a sí/no: agrega `equipos.en_stock` (verdadero por defecto), convierte `stock > 0` en verdadero y 0 en falso, rehace `equipos_leer` y `datos_publicos()` con `en_stock`, y quita `stock` y `usado_es_una_unidad`. |
 | `supabase/functions/_compartido/lead.ts` (≈53) | `armarLead(datos)`: valida y arma el pedido que va a GHL. Exporta también `CAMPOS_ATRIBUCION` y `CAMPOS_OCULTOS`. No depende de Deno. |
 | `supabase/functions/enviar-lead/index.ts` (≈73) | Función pública, sin JWT: valida y reenvía al Inbound Webhook de GHL. Ver sección 11.1. |
@@ -352,7 +353,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈715) | Suite de aceptación en **modo demo** con Playwright: **27 casos**. Ver sección 14. |
+| `tests/verificar.cjs` (≈770) | Suite de aceptación en **modo demo** con Playwright: **28 casos**. Ver sección 14. |
 | `tests/verificar-supabase.cjs` (≈311) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **9 casos**. Reemplaza `config.js` en el navegador y puede servir un supabase-js local (`ICT_SUPABASE_JS`). |
 | `tests/documentacion.mjs` | Verificador de este documento: falla si algún archivo versionado no aparece en la sección 5. |
 | `tests/sql/probar.sh` | Crea un Postgres temporal, carga la imitación de Supabase y todas las migraciones en orden, compara la semilla con `semilla.js` y corre `pruebas.sql`. Antes de cada migración corre `tests/sql/antes_<migración>.sql` si existe. |
@@ -388,6 +389,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
   - `logo` y `favicon`: rutas en el bucket "marca".
   - `color_primario` (por defecto `#1A73E8`) y `color_secundario` (`#0F172A`), ambos hexadecimales.
   - `tema`: `claro` u `oscuro`.
+  - `tamano_texto`: `compacto`, `normal` (por defecto) o `grande` (desde `0005`).
 - **Venta:**
   - `texto_entrega`.
   - `formas_pago`: `text[]`.
@@ -841,6 +843,11 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
   - `--secundario`: fondo del encabezado.
   - El texto sobre cada color se elige solo (`textoSobre`).
   - `--primario-texto`: el primario ajustado para usarlo como texto o enlace sobre todas las superficies del tema.
+- **Tamaño del texto** (`tienda.tamano_texto`, `data-tamano` en `<html>`, solo sitio, pop-up y legales):
+  - Normal: la base.
+  - Compacto: achica solo títulos, precios grandes y espacios (`--t-titulo` 0,84 y `--t-espacio` 0,72). Los títulos usan `max(1rem, …)`: nada baja de 16 px.
+  - Grande: la raíz pasa a 112,5 %, así todo el texto sube cerca de un 12 % (16 → 18 px).
+  - Se aplica cuando llegan los datos, igual que los colores.
 - **Temas:** claro y oscuro, con `data-tema` en `<html>`. Superficies:
   - Claro: `#FFFFFF`, `#F4F5F7` y `#E9EBEF`.
   - Oscuro: `#0E1117`, `#161A22` y `#202631`.
@@ -873,7 +880,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 ```bash
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 27 casos en modo demo (Playwright + Chromium)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 28 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (10 casos) + tipos
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
@@ -885,7 +892,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `ICT_BASE=URL`: por ejemplo `http://localhost:8081/Cotizadora-ICT`, para simular GitHub Pages.
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (27 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (28 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
@@ -903,7 +910,7 @@ node tests/documentacion.mjs                               # este documento cubr
 14. Gesto táctil real en el carrusel y cierre de la hoja con el gesto.
 15. Sin Apple: ni imágenes en el repo, ni la manzana U+F8FF, ni referencias, y solo recursos externos de Google Fonts.
 16. Contraste AA en 4 combinaciones: claro, oscuro, amarillo sobre blanco, y primario oscuro en tema oscuro.
-17. Textos de 16 px o más y zonas táctiles de 44 px, en el sitio y en el pop-up.
+17. Textos de 16 px o más y zonas táctiles de 44 px, en el sitio, el pop-up y las legales, con los **tres tamaños de texto**. Compacto deja el cuerpo en 16 px y achica títulos y precios; Grande pone el cuerpo en 18 px. Elegir el tamaño en Mi tienda lo cambia en el sitio y no en el panel.
 18. Lista de modelos con teclado y buscador cuando hay más de 8.
 19. `prefers-reduced-motion`: sin animaciones en curso y todo funciona.
 20. Copy: sin tuteo ni promesas, sin `Purchase`.
@@ -1072,6 +1079,17 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 20/10/2026 · A3: tamaño del texto (Compacto, Normal, Grande)
+
+- **Pedido de Jared (fase A, punto A3):** `tienda.tamano_texto` con Compacto, Normal (por defecto) y Grande; selector en Marca con vista previa en vivo; se aplica al sitio, al pop-up y a las legales, no al panel; nada debajo de 16 px; Compacto achica solo títulos, precios grandes y espacios; Grande, cerca de +12 %.
+- **Hecho:**
+  - `supabase/migrations/0005_tamano_texto.sql` con su `check`.
+  - `comun.js`: `TAMANOS_TEXTO` y el campo en `CAMPOS_TIENDA`. `demo.js`: versión 3 (migración que agrega el campo) y validación.
+  - `tema.js` pone `data-tamano`; `sitio.css` define `--t-titulo` y `--t-espacio` y los usa en títulos, precios grandes y espacios principales; Grande pone la raíz en 112,5 %.
+  - Panel (`tienda.js`, `panel.css`): selector "Tamaño del texto" con ayuda, y la vista previa usa las mismas escalas.
+- **Pruebas:** `pruebas.sql` (valor por defecto, cambio y valor inválido); `verificar.cjs`: el caso de 16 px recorre los tres tamaños en sitio, pop-up y legales y mide cuerpo, título y precio; caso nuevo del selector del panel → sitio. Ninguna prueba se debilitó.
+- **Verificación:** `tests/sql/probar.sh` OK y `tests/verificar.cjs` 28/28.
 
 ### 20/10/2026 · A2: el stock pasa a "Con stock" / "Sin stock"
 

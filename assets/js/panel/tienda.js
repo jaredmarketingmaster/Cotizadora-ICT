@@ -9,6 +9,8 @@ import { logoGenericoSVG } from "../ilustracion.js";
 import { $, $$, esc, avisar, conBoton, campoTexto, marcarError, enfocarPrimerError } from "./ui.js";
 import { cargarImagen, codificar } from "./imagenes.js";
 
+const TAMANOS = [["compacto", "Compacto"], ["normal", "Normal"], ["grande", "Grande"]];
+
 export async function dibujar(vista, ctx) {
   const { api } = ctx;
   const t = await ctx.recargarTienda();
@@ -66,6 +68,13 @@ export async function dibujar(vista, ctx) {
             ${["claro", "oscuro"].map((v) => `<label class="opcion-chip"><input type="radio" name="tema" value="${v}" ${t.tema === v ? "checked" : ""}><span>${v === "claro" ? "Claro" : "Oscuro"}</span></label>`).join("")}
           </div>
         </fieldset>
+        <fieldset class="campo" aria-describedby="tamano-ayuda">
+          <legend>Tamaño del texto</legend>
+          <div class="opciones-chip">
+            ${TAMANOS.map(([v, nombre]) => `<label class="opcion-chip"><input type="radio" name="tamano_texto" value="${v}" ${(t.tamano_texto || "normal") === v ? "checked" : ""}><span>${nombre}</span></label>`).join("")}
+          </div>
+          <p class="ayuda" id="tamano-ayuda">Se aplica al sitio, al pop-up y a las páginas legales. Compacto achica títulos, precios y espacios; Grande agranda todo el texto. Ningún texto queda por debajo de 16 px.</p>
+        </fieldset>
         <div>
           <p class="etiqueta" style="font-weight:600;margin-bottom:6px">Vista previa</p>
           <div class="vista-previa" id="vista-previa" aria-hidden="true"></div>
@@ -122,13 +131,15 @@ export async function dibujar(vista, ctx) {
     return {
       color_primario: $("#color_primario").value.trim().toUpperCase(),
       color_secundario: $("#color_secundario").value.trim().toUpperCase(),
-      tema: $('input[name="tema"]:checked').value
+      tema: $('input[name="tema"]:checked').value,
+      tamano_texto: $('input[name="tamano_texto"]:checked').value
     };
   }
   function pintarVista() {
     const c = datosColores();
     if (!hexValido(c.color_primario) || !hexValido(c.color_secundario)) return;
-    const { vars, tema } = variablesTema(c);
+    const { vars, tema, tamano } = variablesTema(c);
+    $("#vista-previa").dataset.tamano = tamano;
     const fondo = FONDOS[tema];
     const logoUrl = logo ? api.urlArchivo("marca", logo) : "";
     $("#vista-previa").innerHTML = `
@@ -296,7 +307,7 @@ export async function dibujar(vista, ctx) {
     $(`#${id}-picker`).addEventListener("input", (e) => { $(`#${id}`).value = e.target.value.toUpperCase(); pintarVista(); });
     $(`#${id}`).addEventListener("input", (e) => { if (hexValido(e.target.value.trim())) { $(`#${id}-picker`).value = e.target.value.trim().toLowerCase(); pintarVista(); } });
   }
-  form.addEventListener("change", (e) => { if (e.target.name === "tema") pintarVista(); });
+  form.addEventListener("change", (e) => { if (e.target.name === "tema" || e.target.name === "tamano_texto") pintarVista(); });
   $("#nombre").addEventListener("input", pintarVista);
   form.addEventListener("input", () => { ctx.sucio = true; });
 
