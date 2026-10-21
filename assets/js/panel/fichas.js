@@ -1,7 +1,7 @@
 // =============================================================================
-// Fichas técnicas: un formulario por modelo activo, con descripción y filas
-// etiqueta/valor que la tienda agrega, edita, reordena y borra.
-// No se precarga ninguna especificación.
+// Ficha técnica (pestaña de Catálogo): un formulario por modelo activo, con
+// descripción y filas etiqueta/valor que la tienda agrega, edita, reordena y
+// borra.
 // =============================================================================
 
 import { $, esc, conBoton, confirmar, campoTexto } from "./ui.js";
@@ -11,6 +11,7 @@ const SUGERIDAS = ["Pantalla", "Chip", "Cámaras", "Batería", "Desbloqueo", "Re
 export async function dibujar(vista, ctx, resto) {
   const { api } = ctx;
   const [modelos, fichas] = await Promise.all([api.listarModelos(), api.listarFichas()]);
+  if (!vista.isConnected) return; // se cambió de pestaña o de sección mientras cargaba
   const activos = modelos.filter((m) => m.activo).sort((a, b) => b.orden - a.orden);
   const fichaDe = (id) => fichas.find((f) => f.modelo_id === id) || { modelo_id: id, descripcion: "", especificaciones: [] };
   const llenas = (f) => f.descripcion.trim() || (f.especificaciones || []).length;
@@ -18,30 +19,30 @@ export async function dibujar(vista, ctx, resto) {
   const id = Number(resto[0]);
   if (!id) {
     vista.innerHTML = `
-      <div class="vista-cabecera"><h1>Fichas técnicas</h1><p>Una por cada modelo activo. Lo que quede vacío no se muestra en el sitio.</p></div>
+      <p>Una por cada modelo activo. Lo que quede vacío no se muestra en el sitio.</p>
       ${activos.length ? `<ul class="avisos avisos--neutro">${activos.map((m) => {
         const f = fichaDe(m.id);
         const n = (f.especificaciones || []).length;
-        return `<li><span>${esc(m.nombre)}<br><span class="ayuda">${llenas(f) ? `${n} fila${n === 1 ? "" : "s"}${f.descripcion.trim() ? " · con descripción" : ""}` : "Vacía"}</span></span><a class="boton boton--suave boton--chico" href="#/fichas/${m.id}">Editar</a></li>`;
-      }).join("")}</ul>` : '<p class="vacio-panel">No hay modelos activos. Actívelos en <a href="#/catalogo">Catálogo</a>.</p>'}`;
+        return `<li><span>${esc(m.nombre)}<br><span class="ayuda">${llenas(f) ? `${n} fila${n === 1 ? "" : "s"}${f.descripcion.trim() ? " · con descripción" : ""}` : "Vacía"}</span></span><a class="boton boton--suave boton--chico" href="#/catalogo/ficha/${m.id}">Editar</a></li>`;
+      }).join("")}</ul>` : '<p class="vacio-panel">No hay modelos activos. Actívelos en <a href="#/catalogo">Modelos y colores</a>.</p>'}`;
     return;
   }
 
   const modelo = modelos.find((m) => m.id === id);
-  if (!modelo) { vista.innerHTML = '<p class="popup-alerta">Ese modelo no existe.</p><a class="volver" href="#/fichas">← Fichas técnicas</a>'; return; }
+  if (!modelo) { vista.innerHTML = '<p class="popup-alerta">Ese modelo no existe.</p><a class="volver" href="#/catalogo/ficha">← Ficha técnica</a>'; return; }
   const ficha = fichaDe(id);
   let filas = (ficha.especificaciones || []).map((f) => ({ etiqueta: f.etiqueta || "", valor: f.valor || "" }));
   const otras = modelos.filter((m) => m.id !== id && llenas(fichaDe(m.id)));
 
   vista.innerHTML = `
-    <a class="volver" href="#/fichas">← Fichas técnicas</a>
-    <div class="vista-cabecera"><h1>${esc(modelo.nombre)}</h1>${modelo.activo ? "" : "<p>Este modelo está inactivo: su ficha no se ve en el sitio.</p>"}</div>
+    <a class="volver" href="#/catalogo/ficha">← Ficha técnica</a>
+    <div class="vista-cabecera"><h2>${esc(modelo.nombre)}</h2>${modelo.activo ? "" : "<p>Este modelo está inactivo: su ficha no se ve en el sitio.</p>"}</div>
     <form id="form-ficha" novalidate>
       <section class="bloque">
         ${campoTexto({ id: "f-descripcion", etiqueta: "Descripción", valor: ficha.descripcion, ayuda: "Texto libre de la tienda. Se muestra en la ficha de todos los equipos de este modelo.", multilinea: true, atributos: 'rows="4" maxlength="1500"' })}
       </section>
       <section class="bloque" aria-labelledby="t-filas">
-        <h2 id="t-filas">Especificaciones</h2>
+        <h3 id="t-filas">Especificaciones</h3>
         <p class="ayuda">Solo se muestran las filas que tienen etiqueta y valor. Cargue datos de una fuente verificada.</p>
         <ul class="filas-ficha" id="filas"></ul>
         <div class="zona-subida-botones" style="justify-content:flex-start">

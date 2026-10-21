@@ -11,7 +11,6 @@ const RUTAS = {
   inicio: () => ({ dibujar: vistaInicio }),
   inventario: () => import("./inventario.js"),
   tienda: () => import("./tienda.js"),
-  fichas: () => import("./fichas.js"),
   catalogo: () => import("./catalogo.js"),
   legales: () => import("./legales.js"),
   usuarios: () => import("./usuarios.js")
@@ -33,7 +32,9 @@ const ctx = {
     $("#barra-tienda").textContent = this.tienda.nombre || "Panel de la tienda";
     return this.tienda;
   },
-  ir(ruta) { location.hash = `#/${ruta}`; }
+  ir(ruta) { location.hash = `#/${ruta}`; },
+  // Cambia la dirección sin volver a dibujar la vista (pestañas).
+  marcarRuta(ruta) { history.replaceState(null, "", `#/${ruta}`); rutaAnterior = location.hash; }
 };
 
 // --- Acceso ------------------------------------------------------------------
@@ -156,7 +157,13 @@ async function entrar() {
 let rutaAnterior = "";
 async function enrutar() {
   if (!ctx.usuario) return;
-  const [nombre = "inicio", ...resto] = location.hash.replace(/^#\/?/, "").split("?")[0].split("/");
+  let [nombre = "inicio", ...resto] = location.hash.replace(/^#\/?/, "").split("?")[0].split("/");
+  // "Fichas técnicas" ahora es una pestaña de Catálogo.
+  if (nombre === "fichas") {
+    resto = ["ficha", ...resto];
+    nombre = "catalogo";
+    history.replaceState(null, "", `#/catalogo/${resto.join("/")}`);
+  }
   const params = new URLSearchParams(location.hash.split("?")[1] || "");
   if (ctx.sucio && location.hash !== rutaAnterior) {
     const salir = await confirmar({ titulo: "Hay cambios sin guardar", texto: "Si sale ahora, se pierden.", aceptar: "Salir sin guardar", peligro: true });

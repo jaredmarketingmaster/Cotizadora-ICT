@@ -891,6 +891,71 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  await caso("catálogo: pestañas con teclado y foco visible; #/fichas lleva a Ficha técnica; Fichas ya no está en el menú", async () => {
+    const p = await nueva(1280, 900);
+    await entrarPanel(p, "gestor@demo.co");
+    const menu = await p.locator(".navegacion a:visible").allTextContents();
+    assert.ok(menu.includes("Catálogo") && !menu.some((t) => /ficha/i.test(t)), menu.join(", "));
+    const estado = () => p.evaluate(() => ({
+      hash: location.hash,
+      tabs: [...document.querySelectorAll("[role=tablist] [role=tab]")].map((t) => `${t.textContent}:${t.getAttribute("aria-selected")}:${t.tabIndex}`),
+      foco: document.activeElement.textContent,
+      panel: document.querySelector("[role=tabpanel]").getAttribute("aria-labelledby"),
+      controla: [...document.querySelectorAll("[role=tab]")].every((t) => document.getElementById(t.getAttribute("aria-controls"))?.getAttribute("role") === "tabpanel"),
+      h1: document.querySelectorAll("h1").length,
+      actual: document.querySelector('.navegacion [aria-current="page"]')?.textContent
+    }));
+    // #/fichas (enlaces viejos) → Catálogo, pestaña Ficha técnica.
+    await p.goto(`${BASE}/admin/#/fichas`);
+    await p.waitForSelector('a[href^="#/catalogo/ficha/"]');
+    let e = await estado();
+    assert.equal(e.hash, "#/catalogo/ficha");
+    assert.deepEqual(e.tabs.slice(0, 2), ["Modelos y colores:false:-1", "Ficha técnica:true:0"]);
+    assert.equal(e.panel, "pestana-ficha");
+    assert.ok(e.controla);
+    assert.equal(e.h1, 1);
+    assert.equal(e.actual, "Catálogo");
+    const id = await p.evaluate(() => document.querySelector('a[href^="#/catalogo/ficha/"]').getAttribute("href").split("/").pop());
+    await p.goto(`${BASE}/admin/#/fichas/${id}`);
+    await p.waitForSelector("#form-ficha");
+    assert.equal(new URL(p.url()).hash, `#/catalogo/ficha/${id}`);
+    assert.equal(await p.locator("h1").count(), 1);
+    // Teclado: flechas (con vuelta), Inicio y Fin; el foco sigue en la pestaña.
+    await p.goto(`${BASE}/admin/#/catalogo`);
+    await p.waitForSelector("#lista-catalogo .modelo-fila");
+    await p.focus("#pestana-modelos");
+    await p.keyboard.press("ArrowRight");
+    await p.waitForSelector('a[href^="#/catalogo/ficha/"]');
+    e = await estado();
+    assert.equal(e.hash, "#/catalogo/ficha");
+    assert.equal(e.foco, "Ficha técnica");
+    assert.equal(e.panel, "pestana-ficha");
+    await p.keyboard.press("Home");
+    await p.waitForSelector("#lista-catalogo .modelo-fila");
+    assert.equal((await estado()).foco, "Modelos y colores");
+    await p.keyboard.press("ArrowLeft");
+    assert.equal((await estado()).foco, (await p.locator("[role=tab]").last().textContent()), "ArrowLeft en la primera va a la última");
+    await p.keyboard.press("End");
+    await p.keyboard.press("ArrowRight");
+    e = await estado();
+    assert.equal(e.foco, "Modelos y colores", "ArrowRight en la última vuelve a la primera");
+    assert.equal(e.hash, "#/catalogo");
+    // Foco visible: contorno de 3 px.
+    const contorno = await p.evaluate(() => { const s = getComputedStyle(document.activeElement); return `${s.outlineStyle} ${s.outlineWidth}`; });
+    assert.equal(contorno, "solid 3px");
+    // Cambios sin guardar: pregunta antes de cambiar de pestaña.
+    await p.goto(`${BASE}/admin/#/catalogo/ficha/${id}`);
+    await p.waitForSelector("#form-ficha");
+    await p.fill("#f-descripcion", "Texto de prueba");
+    await p.click("#pestana-modelos");
+    await p.waitForSelector("#confirmar[open]");
+    await p.click('#confirmar [value="no"]');
+    assert.equal((await estado()).hash, `#/catalogo/ficha/${id}`);
+    assert.equal(await p.inputValue("#f-descripcion"), "Texto de prueba");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("panel: validaciones (precio, batería, WhatsApp de la tienda, color)", async () => {
     const p = await nueva(390, 844);
     await entrarPanel(p, "gestor@demo.co");
@@ -941,7 +1006,7 @@ async function llenarPopup(p) {
       await p.waitForTimeout(500);
       await captura(p, `10-detalle-${ancho}`);
       await p.click("#cerrar-detalle");
-      for (const [correo, rutas] of [["gestor@demo.co", ["inicio", "inventario", "inventario/nuevo", "tienda", "fichas", "catalogo", "legales"]], ["administrador@demo.co", ["usuarios"]]]) {
+      for (const [correo, rutas] of [["gestor@demo.co", ["inicio", "inventario", "inventario/nuevo", "tienda", "catalogo", "catalogo/ficha", "catalogo/ficha/1", "legales"]], ["administrador@demo.co", ["usuarios"]]]) {
         await p.evaluate(() => sessionStorage.removeItem("cotizadora-demo:sesion"));
         await entrarPanel(p, correo);
         for (const r of rutas) {

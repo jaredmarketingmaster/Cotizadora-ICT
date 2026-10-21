@@ -13,11 +13,78 @@ import { hexValido } from "../utils.js";
 import { etiquetaGeneracion } from "../sitio/catalogo.js";
 import { $, esc, conBoton, campoTexto, marcarError, enfocarPrimerError, avisar, confirmar } from "./ui.js";
 
-export async function dibujar(vista, ctx) {
+// Pestañas del Catálogo. Cada una tiene su ruta (#/catalogo/…); #/fichas
+// lleva a "Ficha técnica" (panel.js).
+const PESTANAS = [
+  { id: "modelos", ruta: "catalogo", texto: "Modelos y colores", cargar: async () => ({ dibujar: dibujarModelos }) },
+  { id: "ficha", ruta: "catalogo/ficha", texto: "Ficha técnica", cargar: () => import("./fichas.js") }
+];
+
+export async function dibujar(vista, ctx, resto = []) {
+  let actual = PESTANAS.find((p) => p.id === resto[0]) || PESTANAS[0];
+  vista.innerHTML = `
+    <div class="vista-cabecera"><h1>Catálogo</h1></div>
+    <div class="pestanas" role="tablist" aria-label="Secciones del catálogo">
+      ${PESTANAS.map((p) => `<button type="button" class="pestana" role="tab" id="pestana-${p.id}" data-pestana="${p.id}" aria-controls="panel-catalogo" aria-selected="${p === actual}" tabindex="${p === actual ? 0 : -1}">${p.texto}</button>`).join("")}
+    </div>
+    <div class="panel-pestana" id="panel-catalogo" role="tabpanel" aria-labelledby="pestana-${actual.id}" tabindex="0"></div>`;
+  const lista = $(".pestanas", vista);
+  const panel = $("#panel-catalogo", vista);
+
+  let version = 0;
+  async function mostrar(p, sub = []) {
+    const mia = ++version;
+    for (const b of lista.querySelectorAll("[role=tab]")) {
+      const si = b.dataset.pestana === p.id;
+      b.setAttribute("aria-selected", String(si));
+      b.tabIndex = si ? 0 : -1;
+    }
+    panel.setAttribute("aria-labelledby", `pestana-${p.id}`);
+    // Cada vez, un contenedor nuevo: si se cambia de pestaña mientras carga,
+    // el anterior queda fuera de la página y su módulo no dibuja nada.
+    const contenedor = document.createElement("div");
+    contenedor.innerHTML = '<p class="subiendo"><span class="spinner" aria-hidden="true"></span>Cargando…</p>';
+    panel.replaceChildren(contenedor);
+    const modulo = await p.cargar();
+    if (mia !== version || !contenedor.isConnected) return;
+    await modulo.dibujar(contenedor, ctx, sub);
+  }
+
+  // Cambiar de pestaña no recarga la vista (el foco queda en la pestaña).
+  async function cambiar(p, enfocar) {
+    if (p === actual) { if (enfocar) $(`#pestana-${p.id}`).focus(); return; }
+    if (ctx.sucio && !(await confirmar({ titulo: "Hay cambios sin guardar", texto: "Si sale ahora, se pierden.", aceptar: "Salir sin guardar", peligro: true }))) {
+      $(`#pestana-${actual.id}`).focus();
+      return;
+    }
+    ctx.sucio = false;
+    actual = p;
+    ctx.marcarRuta(p.ruta);
+    if (enfocar) $(`#pestana-${p.id}`).focus();
+    await mostrar(p);
+  }
+  lista.addEventListener("click", (e) => {
+    const b = e.target.closest("[role=tab]");
+    if (b) cambiar(PESTANAS.find((p) => p.id === b.dataset.pestana), true);
+  });
+  lista.addEventListener("keydown", (e) => {
+    const i = PESTANAS.indexOf(actual);
+    const n = PESTANAS.length;
+    const destino = { ArrowRight: (i + 1) % n, ArrowLeft: (i - 1 + n) % n, Home: 0, End: n - 1 }[e.key];
+    if (destino === undefined) return;
+    e.preventDefault();
+    cambiar(PESTANAS[destino], true);
+  });
+
+  await mostrar(actual, resto.slice(1));
+}
+
+async function dibujarModelos(vista, ctx) {
   const { api } = ctx;
   // Solo el gestor llega aquí; la base lo exige igual (políticas de 0007).
   const completo = ctx.esGestor();
   let [modelos, colores] = await Promise.all([api.listarModelos(), api.listarColores()]);
+  if (!vista.isConnected) return; // se cambió de pestaña o de sección mientras cargaba
   const abiertos = new Set();
 
   function grupos() {
@@ -78,7 +145,7 @@ export async function dibujar(vista, ctx) {
   }
 
   vista.innerHTML = `
-    <div class="vista-cabecera"><h1>Catálogo</h1><p>Active solo los modelos que vende. Un modelo inactivo y sus equipos no se ven en el sitio.${completo ? " El orden define qué generación es más nueva." : ""}</p>
+    <div class="vista-cabecera"><p>Active solo los modelos que vende. Un modelo inactivo y sus equipos no se ven en el sitio.${completo ? " El orden define qué generación es más nueva." : ""}</p>
       <p class="ayuda">Los colores oficiales vienen de la fuente y su nombre no se cambia. Si a un color le falta la muestra (el hexadecimal), puede completarla.</p></div>
     ${completo ? `<details class="bloque">
       <summary style="font-weight:700;cursor:pointer;min-height:44px;display:flex;align-items:center">Agregar modelo</summary>
