@@ -17,7 +17,8 @@ import { $, esc, conBoton, campoTexto, marcarError, enfocarPrimerError, avisar, 
 // lleva a "Ficha técnica" (panel.js).
 const PESTANAS = [
   { id: "modelos", ruta: "catalogo", texto: "Modelos y colores", cargar: async () => ({ dibujar: dibujarModelos }) },
-  { id: "ficha", ruta: "catalogo/ficha", texto: "Ficha técnica", cargar: () => import("./fichas.js") }
+  { id: "ficha", ruta: "catalogo/ficha", texto: "Ficha técnica", cargar: () => import("./fichas.js") },
+  { id: "pagos", ruta: "catalogo/pagos", texto: "Formas de pago", cargar: () => import("./pagos.js") }
 ];
 
 export async function dibujar(vista, ctx, resto = []) {
@@ -40,6 +41,11 @@ export async function dibujar(vista, ctx, resto = []) {
       b.tabIndex = si ? 0 : -1;
     }
     panel.setAttribute("aria-labelledby", `pestana-${p.id}`);
+    // En celular las pestañas se desplazan: la elegida queda a la vista.
+    const elegida = $(`#pestana-${p.id}`, lista);
+    const r = elegida.getBoundingClientRect();
+    const rl = lista.getBoundingClientRect();
+    lista.scrollLeft += r.left - rl.left - (rl.width - r.width) / 2;
     // Cada vez, un contenedor nuevo: si se cambia de pestaña mientras carga,
     // el anterior queda fuera de la página y su módulo no dibuja nada.
     const contenedor = document.createElement("div");

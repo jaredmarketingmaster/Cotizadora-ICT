@@ -200,6 +200,35 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.context().close();
   });
 
+  await caso("panel → sitio: ficha técnica precargada y formas de pago (0012 y 0013), con las reglas del servidor", async () => {
+    const p = await pagina(1280);
+    await entrar(p, "gestor@local.co");
+    await p.goto(`${BASE}/admin/#/catalogo/pagos`);
+    await p.waitForSelector("#form-pagos");
+    await p.check('input[name="medio"][value="credito"]');
+    await p.click('label[for="p-cuotas"]');
+    await p.fill("#p-cuotas-max", "12");
+    await p.click('label[for="p-sin-interes"]');
+    await p.fill("#p-sin-interes-max", "6");
+    await p.click("#guardar-pagos");
+    await p.waitForSelector("#aviso-flotante.visible");
+    assert.equal(await p.textContent("#aviso-flotante"), "Guardado");
+    // El servidor rechaza lo mismo que el panel (validar_pagos) con su mensaje.
+    const error = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      try { await a.guardarTienda({ pagos_cuotas: true, pagos_cuotas_max: 6, pagos_sin_interes: true, pagos_sin_interes_max: 12 }); return ""; } catch (e) { return e.message; }
+    });
+    assert.equal(error, "Las cuotas sin interés no pueden ser más que el máximo de cuotas.");
+    const s = await p.context().newPage();
+    await s.goto(`${BASE}/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb`, { waitUntil: "networkidle" });
+    await s.waitForSelector("#detalle-en-linea .info-compra");
+    assert.deepEqual(await s.$$eval("#detalle-en-linea .info-compra li", (xs) => xs.map((x) => x.textContent)), ["Tarjeta de crédito: hasta 12 cuotas, hasta 6 sin interés."]);
+    const filas = await s.$$eval("#detalle-en-linea .ficha-tecnica dt", (xs) => xs.map((x) => x.textContent));
+    assert.deepEqual(filas, ["Año de lanzamiento", "Procesador", "Pantalla", "Cámaras traseras", "Versiones del modelo", "Materiales", "Puertos y carga"]);
+    await p.context().close();
+  });
+
   await caso("panel: agregar un equipo con foto (Storage simulado) y verlo en el sitio", async () => {
     const p = await pagina(390);
     await entrar(p, "gestor@local.co");

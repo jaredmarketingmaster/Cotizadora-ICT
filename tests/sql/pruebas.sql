@@ -80,6 +80,58 @@ do $$ begin
   update public.tienda set ficha_ocultas = '{}', mostrar_ficha = true;
 end $$;
 
+-- 0f. Migración 0013: formas_pago pasó a pagos_otras con sus valores, y las
+-- reglas de validar_pagos y de los checks.
+do $$
+begin
+  assert (select pagos_otras from public.tienda) = '{Addi,Sistecrédito}', 'la lista vieja pasó a pagos_otras';
+  assert not exists (select 1 from information_schema.columns where table_name = 'tienda' and column_name = 'formas_pago'), 'ya no hay formas_pago';
+  assert (select not pagos_cuotas and pagos_cuotas_max is null and pagos_medios = '{}' and pagos_pasarelas = '{}' from public.tienda), 'campos nuevos vacíos';
+  -- Una configuración completa y válida
+  update public.tienda set pagos_medios = '{transferencia,credito}', pagos_cuotas = true, pagos_cuotas_max = 12,
+    pagos_sin_interes = true, pagos_sin_interes_max = 6, pagos_cripto = true, pagos_cripto_cuales = 'USDT',
+    pagos_pasarelas = '{pse,otra}', pagos_pasarela_otra = 'Addi';
+  update public.tienda set pagos_sin_interes_max = 12;  -- igual al máximo: vale
+end $$;
+do $$
+declare
+  casos text[][] := array[
+    ['pagos_sin_interes_max = 13', 'Las cuotas sin interés no pueden ser más que el máximo de cuotas.'],
+    ['pagos_cuotas_max = 49, pagos_sin_interes_max = 6', 'Indique hasta cuántas cuotas acepta: de 2 a 48.'],
+    ['pagos_cuotas_max = 1, pagos_sin_interes = false, pagos_sin_interes_max = null', 'Indique hasta cuántas cuotas acepta: de 2 a 48.'],
+    ['pagos_cuotas_max = null', 'Indique hasta cuántas cuotas acepta: de 2 a 48.'],
+    ['pagos_sin_interes_max = null', 'Indique hasta cuántas cuotas sin interés ofrece: de 2 a 48.'],
+    ['pagos_sin_interes = false', 'Sin cuotas sin interés, deje vacío hasta cuántas.'],
+    ['pagos_cuotas = false', 'Sin pagos a cuotas, los datos de cuotas quedan vacíos.'],
+    ['pagos_cripto = false', 'Sin criptomonedas, deje vacío cuáles.'],
+    ['pagos_pasarela_otra = ''''', 'Escriba el nombre de la otra pasarela.'],
+    ['pagos_pasarelas = ''{pse}''', 'Sin «Otra» pasarela, deje vacío el nombre.']
+  ];
+  i int;
+begin
+  for i in 1 .. array_length(casos, 1) loop
+    begin
+      execute 'update public.tienda set ' || casos[i][1];
+      raise exception 'debió fallar: %', casos[i][1];
+    exception when check_violation then
+      assert sqlerrm = casos[i][2], format('%s → %s', casos[i][1], sqlerrm);
+    end;
+  end loop;
+end $$;
+do $$ begin
+  update public.tienda set pagos_medios = '{cheque}';
+  raise exception 'medio que no existe';
+exception when check_violation then null; end $$;
+do $$ begin
+  update public.tienda set pagos_pasarelas = '{paypal}', pagos_pasarela_otra = '';
+  raise exception 'pasarela que no existe';
+exception when check_violation then null; end $$;
+do $$ begin
+  -- Sin cuotas y todo vacío, otra vez válido
+  update public.tienda set pagos_cuotas = false, pagos_cuotas_max = null, pagos_sin_interes = false, pagos_sin_interes_max = null,
+    pagos_cripto = false, pagos_cripto_cuales = '', pagos_pasarelas = '{}', pagos_pasarela_otra = '', pagos_medios = '{}';
+end $$;
+
 -- Un equipo no publicado, uno sin stock y uno de un modelo inactivo.
 insert into public.equipos (modelo_id, condicion, capacidad, color_id, color_nombre_mostrar, precio, en_stock, publicado)
 select m.id, 'nuevo', '128 GB', c.id, 'Borrador', 1000000, true, false from public.modelos m join public.colores c on c.modelo_id = m.id and c.nombre_es = 'Visón' where m.slug = 'iphone-18-pro';

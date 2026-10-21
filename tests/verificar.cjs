@@ -813,7 +813,7 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
-  await caso("demo: los datos guardados de una versión vieja se migran (stock, tamaño, catálogo, colores, roles y fichas)", async () => {
+  await caso("demo: los datos guardados de una versión vieja se migran (stock, tamaño, catálogo, colores, roles, fichas y pagos)", async () => {
     const p = await nueva();
     await ir(p);
     // Arma un estado como el de la versión 1: 32 modelos, stock numérico, sin colores.
@@ -834,6 +834,9 @@ async function llenarPopup(p) {
       const id13 = e.modelos.find((m) => m.slug === "iphone-13").id;
       e.fichas.forEach((f) => { f.especificaciones = f.modelo_id === id13 ? [{ etiqueta: "Pantalla", valor: "Dato de la tienda" }] : []; });
       delete e.tienda.mostrar_ficha; delete e.tienda.ficha_ocultas;
+      // Formas de pago como antes de 0013: solo la lista libre
+      for (const k of Object.keys(e.tienda)) if (k.startsWith("pagos_")) delete e.tienda[k];
+      e.tienda.formas_pago = ["Addi", "Sistecrédito"];
       e.perfiles[0].rol = "agencia"; e.perfiles[0].correo = "agencia@demo.co";
       e.perfiles[1].rol = "tienda"; e.perfiles[1].correo = "tienda@demo.co";
       e.version = 1;
@@ -859,6 +862,10 @@ async function llenarPopup(p) {
     assert.equal(e.fichas.filter((f) => f.especificaciones.length).length, 42);
     assert.equal(e.tienda.mostrar_ficha, true);
     assert.deepEqual(e.tienda.ficha_ocultas, []);
+    // 0013: la lista vieja pasa a pagos_otras; lo demás, vacío
+    assert.deepEqual(e.tienda.pagos_otras, ["Addi", "Sistecrédito"]);
+    assert.ok(!("formas_pago" in e.tienda));
+    assert.deepEqual([e.tienda.pagos_cuotas, e.tienda.pagos_cuotas_max, e.tienda.pagos_medios], [false, null, []]);
     assert.deepEqual(e.equipos.map((q) => q.en_stock), [false, true, true, true, true, true]);
     assert.equal(new Set(e.modelos.map((m) => m.orden)).size, 42);
     assert.equal(e.modelos.find((m) => m.slug === "iphone-17e").orden > e.modelos.find((m) => m.slug === "iphone-17-pro-max").orden, true);
@@ -1058,6 +1065,83 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  await caso("formas de pago: la pestaña valida y guarda; el detalle las muestra en frases solo con lo marcado; Mi tienda ya no tiene la lista; Inicio avisa", async () => {
+    const p = await nueva(1280, 900);
+    await entrarPanel(p, "gestor@demo.co");
+    const avisos = () => p.$$eval(".avisos li span", (xs) => xs.map((x) => x.textContent));
+    let a = await avisos();
+    for (const t of ["Falta la ciudad", "Falta el correo de contacto", "Faltan las formas de pago"]) assert.ok(a.includes(t), `Inicio: ${t}`);
+    await p.goto(`${BASE}/admin/#/tienda`);
+    await p.waitForSelector("#form-tienda");
+    assert.equal(await p.locator("#pagos, #agregar-pago").count(), 0, "Mi tienda sin la lista de formas de pago");
+    assert.equal(await p.locator('#form-tienda a[href="#/catalogo/pagos"]').count(), 1);
+    await p.goto(`${BASE}/admin/#/catalogo/pagos`);
+    await p.waitForSelector("#form-pagos");
+    assert.equal(await p.getAttribute("#pestana-pagos", "aria-selected"), "true");
+    assert.equal(await p.isHidden("#caja-cuotas"), true, "sin cuotas, los campos de cuotas no se ven");
+    await p.check('input[name="medio"][value="transferencia"]');
+    await p.check('input[name="medio"][value="credito"]');
+    await p.click('label[for="p-cuotas"]');
+    await p.fill("#p-cuotas-max", "12");
+    await p.click('label[for="p-sin-interes"]');
+    await p.fill("#p-sin-interes-max", "13");
+    await p.click('label[for="p-cripto"]');
+    await p.fill("#p-cripto-cuales", "USDT, Bitcoin");
+    for (const v of ["pse", "nequi", "otra"]) await p.check(`input[name="pasarela"][value="${v}"]`);
+    await p.click("#agregar-pago");
+    await p.fill("#pago-0", "Contraentrega en Bogotá");
+    await p.click("#guardar-pagos");
+    assert.equal(await p.textContent("#p-sin-interes-max-error"), "No pueden ser más que el máximo de cuotas.");
+    assert.equal(await p.textContent("#p-pasarela-otra-error"), "Escriba el nombre de la pasarela.");
+    assert.equal(await p.evaluate(() => document.activeElement.id), "p-sin-interes-max", "foco al primer error");
+    await p.fill("#p-sin-interes-max", "6");
+    await p.fill("#p-pasarela-otra", "Addi");
+    const esperadas = ["Transferencia bancaria.", "Tarjeta de crédito: hasta 12 cuotas, hasta 6 sin interés.", "Criptomonedas: USDT, Bitcoin.", "Pago en línea con PSE, Nequi y Addi.", "Contraentrega en Bogotá"];
+    assert.deepEqual(await p.$$eval("#vista-pagos li", (xs) => xs.map((x) => x.textContent)), esperadas, "vista previa");
+    await p.click("#guardar-pagos");
+    await p.waitForSelector("text=Guardado");
+    const pagosSitio = async () => {
+      await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb");
+      await p.click(".tarjeta-boton >> nth=0");
+      await p.waitForFunction(() => document.querySelector("#hoja-detalle").open && !document.querySelector("#hoja-detalle[data-vt]"));
+      return p.$$eval("#hoja-detalle .info-compra section", (ss) => {
+        const s = ss.find((x) => x.querySelector("h3")?.textContent === "Formas de pago");
+        return s ? [...s.querySelectorAll("li")].map((li) => li.textContent) : [];
+      });
+    };
+    assert.deepEqual(await pagosSitio(), esperadas, "el detalle refleja lo marcado");
+    // Sin cuotas: los datos de cuotas quedan vacíos y la tarjeta de crédito va sola.
+    await p.goto(`${BASE}/admin/#/catalogo/pagos`);
+    await p.waitForSelector("#form-pagos");
+    assert.equal(await p.inputValue("#p-cuotas-max"), "12");
+    await p.click('label[for="p-cuotas"]');
+    await p.click("#guardar-pagos");
+    await p.waitForSelector("text=Guardado");
+    const t = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).tienda, CLAVE_DEMO);
+    assert.deepEqual([t.pagos_cuotas, t.pagos_cuotas_max, t.pagos_sin_interes, t.pagos_sin_interes_max], [false, null, false, null]);
+    assert.deepEqual((await pagosSitio()).slice(0, 2), ["Transferencia bancaria.", "Tarjeta de crédito."]);
+    // La capa de datos repite las reglas del SQL.
+    await p.goto(`${BASE}/admin/#/inicio`);
+    await p.waitForSelector(".estadisticas");
+    assert.ok(!(await avisos()).includes("Faltan las formas de pago"), "Inicio ya no avisa");
+    const errores = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      const r = [];
+      for (const c of [
+        { pagos_cuotas: true, pagos_cuotas_max: 6, pagos_sin_interes: true, pagos_sin_interes_max: 12 },
+        { pagos_cuotas: false, pagos_cuotas_max: 6 },
+        { pagos_cuotas: true, pagos_cuotas_max: 60 },
+        { pagos_medios: ["cheque"] }
+      ]) { try { await a.guardarTienda(c); r.push("guardó"); } catch (e) { r.push(e.message); } }
+      return r;
+    });
+    assert.deepEqual(errores, ["Las cuotas sin interés no pueden ser más que el máximo de cuotas.", "Sin pagos a cuotas, los datos de cuotas quedan vacíos.",
+      "Indique hasta cuántas cuotas acepta: de 2 a 48.", "Algún dato no tiene el formato correcto. Revise los campos."]);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("panel: validaciones (precio, batería, WhatsApp de la tienda, color)", async () => {
     const p = await nueva(390, 844);
     await entrarPanel(p, "gestor@demo.co");
@@ -1108,7 +1192,7 @@ async function llenarPopup(p) {
       await p.waitForTimeout(500);
       await captura(p, `10-detalle-${ancho}`);
       await p.click("#cerrar-detalle");
-      for (const [correo, rutas] of [["gestor@demo.co", ["inicio", "inventario", "inventario/nuevo", "tienda", "catalogo", "catalogo/ficha", "catalogo/ficha/1", "legales"]], ["administrador@demo.co", ["usuarios"]]]) {
+      for (const [correo, rutas] of [["gestor@demo.co", ["inicio", "inventario", "inventario/nuevo", "tienda", "catalogo", "catalogo/ficha", "catalogo/ficha/1", "catalogo/pagos", "legales"]], ["administrador@demo.co", ["usuarios"]]]) {
         await p.evaluate(() => sessionStorage.removeItem("cotizadora-demo:sesion"));
         await entrarPanel(p, correo);
         for (const r of rutas) {

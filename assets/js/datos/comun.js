@@ -45,11 +45,83 @@ export function rutaMiniatura(ruta) {
 export const CAMPOS_TIENDA = [
   "nombre", "ciudad", "direccion", "horario_texto", "whatsapp", "correo_contacto",
   "instagram_url", "facebook_url", "tiktok_url", "logo", "favicon",
-  "color_primario", "color_secundario", "tema", "texto_entrega", "formas_pago",
+  "color_primario", "color_secundario", "tema", "texto_entrega", "pagos_otras",
   "texto_garantia_nuevos", "texto_garantia_usados", "etiqueta_precio",
   "texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "modo_demo",
-  "tamano_texto", "vista_equipos", "mostrar_ficha", "ficha_ocultas"
+  "tamano_texto", "vista_equipos", "mostrar_ficha", "ficha_ocultas",
+  "pagos_medios", "pagos_cuotas", "pagos_cuotas_max", "pagos_sin_interes", "pagos_sin_interes_max",
+  "pagos_cripto", "pagos_cripto_cuales", "pagos_pasarelas", "pagos_pasarela_otra"
 ];
+
+// Formas de pago (0013). Las claves son las de los checks del SQL.
+export const MEDIOS_PAGO = [
+  { clave: "transferencia", texto: "Transferencia bancaria" },
+  { clave: "efectivo", texto: "Efectivo" },
+  { clave: "debito", texto: "Tarjeta débito" },
+  { clave: "credito", texto: "Tarjeta de crédito" }
+];
+export const PASARELAS_PAGO = [
+  { clave: "mercado_pago", texto: "Mercado Pago" },
+  { clave: "pse", texto: "PSE" },
+  { clave: "nequi", texto: "Nequi" },
+  { clave: "daviplata", texto: "Daviplata" },
+  { clave: "wompi", texto: "Wompi" },
+  { clave: "bold", texto: "Bold" },
+  { clave: "otra", texto: "Otra" }
+];
+export const MIN_CUOTAS = 2;
+export const MAX_CUOTAS = 48;
+
+// Las reglas de validar_pagos (0013), con los mismos mensajes. "" = bien.
+export function errorPagos(t) {
+  const entre = (n) => Number.isInteger(n) && n >= MIN_CUOTAS && n <= MAX_CUOTAS;
+  if (!(t.pagos_medios || []).every((m) => MEDIOS_PAGO.some((x) => x.clave === m)) ||
+      !(t.pagos_pasarelas || []).every((m) => PASARELAS_PAGO.some((x) => x.clave === m))) return "Algún dato no tiene el formato correcto. Revise los campos.";
+  if (t.pagos_cuotas) {
+    if (!entre(t.pagos_cuotas_max)) return "Indique hasta cuántas cuotas acepta: de 2 a 48.";
+    if (t.pagos_sin_interes) {
+      if (!entre(t.pagos_sin_interes_max)) return "Indique hasta cuántas cuotas sin interés ofrece: de 2 a 48.";
+      if (t.pagos_sin_interes_max > t.pagos_cuotas_max) return "Las cuotas sin interés no pueden ser más que el máximo de cuotas.";
+    } else if (t.pagos_sin_interes_max != null) return "Sin cuotas sin interés, deje vacío hasta cuántas.";
+  } else if (t.pagos_cuotas_max != null || t.pagos_sin_interes || t.pagos_sin_interes_max != null) {
+    return "Sin pagos a cuotas, los datos de cuotas quedan vacíos.";
+  }
+  if (!t.pagos_cripto && t.pagos_cripto_cuales) return "Sin criptomonedas, deje vacío cuáles.";
+  if (String(t.pagos_cripto_cuales || "").length > 120 || String(t.pagos_pasarela_otra || "").length > 60) return "Algún dato no tiene el formato correcto. Revise los campos.";
+  if ((t.pagos_pasarelas || []).includes("otra")) {
+    if (!String(t.pagos_pasarela_otra || "").trim()) return "Escriba el nombre de la otra pasarela.";
+  } else if (t.pagos_pasarela_otra) return "Sin «Otra» pasarela, deje vacío el nombre.";
+  return "";
+}
+
+function unirConY(lista) {
+  return lista.length < 2 ? lista.join("") : `${lista.slice(0, -1).join(", ")} y ${lista.at(-1)}`;
+}
+const sinPunto = (s) => String(s || "").trim().replace(/\.+$/, "");
+
+// Las formas de pago del sitio, en frases cortas y solo con lo que marcó la
+// tienda. Ej.: "Tarjeta de crédito: hasta 12 cuotas, hasta 6 sin interés."
+export function frasesPagos(t) {
+  const frases = [];
+  const medios = new Set(t?.pagos_medios || []);
+  let cuotas = "";
+  if (t?.pagos_cuotas && t.pagos_cuotas_max) {
+    const max = t.pagos_cuotas_max;
+    const sin = t.pagos_sin_interes ? t.pagos_sin_interes_max : null;
+    cuotas = sin ? (sin === max ? `hasta ${max} cuotas sin interés` : `hasta ${max} cuotas, hasta ${sin} sin interés`) : `hasta ${max} cuotas`;
+  }
+  for (const m of MEDIOS_PAGO) {
+    if (!medios.has(m.clave)) continue;
+    frases.push(m.clave === "credito" && cuotas ? `${m.texto}: ${cuotas}.` : `${m.texto}.`);
+  }
+  if (cuotas && !medios.has("credito")) frases.push(`Pago a cuotas: ${cuotas}.`);
+  if (t?.pagos_cripto) frases.push(sinPunto(t.pagos_cripto_cuales) ? `Criptomonedas: ${sinPunto(t.pagos_cripto_cuales)}.` : "Criptomonedas.");
+  const pasarelas = PASARELAS_PAGO.filter((p) => (t?.pagos_pasarelas || []).includes(p.clave))
+    .map((p) => (p.clave === "otra" ? sinPunto(t.pagos_pasarela_otra) : p.texto)).filter(Boolean);
+  if (pasarelas.length) frases.push(`Pago en línea con ${unirConY(pasarelas)}.`);
+  for (const o of t?.pagos_otras || []) if (String(o).trim()) frases.push(String(o).trim());
+  return frases;
+}
 
 export const CAMPOS_EQUIPO = [
   "modelo_id", "condicion", "capacidad", "color_id", "color_nombre_mostrar", "precio", "en_stock",

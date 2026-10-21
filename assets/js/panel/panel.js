@@ -5,6 +5,7 @@
 import { api as obtenerApi } from "../datos/api.js";
 import { aplicarTema } from "../tema.js";
 import { fechaCorta, plural, whatsappTiendaValido } from "../utils.js";
+import { frasesPagos } from "../datos/comun.js";
 import { $, $$, esc, avisar, confirmar, conBoton, campoTexto, marcarError, enfocarPrimerError, interruptor } from "./ui.js";
 
 const RUTAS = {
@@ -204,8 +205,12 @@ async function vistaInicio(vista) {
   const ocultosPorModelo = equipos.filter((q) => q.publicado && q.en_stock && !activos.has(q.modelo_id));
   const sinFoto = equipos.filter((q) => !q.es_demo && !(q.fotos || []).length);
   const avisos = [
+    !tienda.nombre.trim() && ["Falta el nombre de la tienda", "#/tienda"],
+    !tienda.ciudad.trim() && ["Falta la ciudad", "#/tienda"],
+    !tienda.correo_contacto.trim() && ["Falta el correo de contacto", "#/tienda"],
     !tienda.logo && ["Falta el logo", "#/tienda"],
     !whatsappTiendaValido(tienda.whatsapp) && ["Falta el WhatsApp", "#/tienda"],
+    !frasesPagos(tienda).length && ["Faltan las formas de pago", "#/catalogo/pagos"],
     (!tienda.texto_privacidad.trim() || !tienda.texto_terminos.trim() || !tienda.texto_autorizacion_datos.trim()) && ["Faltan los textos legales", "#/legales"],
     sinFoto.length && ["Hay equipos sin foto", "#/inventario?fotos=sin"],
     ocultosPorModelo.length && [`${plural(ocultosPorModelo.length, "equipo publicado no se ve", "equipos publicados no se ven")} porque su modelo está inactivo`, "#/catalogo"]

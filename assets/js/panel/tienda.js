@@ -102,11 +102,7 @@ export async function dibujar(vista, ctx) {
       <section class="bloque" aria-labelledby="t-venta">
         <h2 id="t-venta">Venta</h2>
         ${campoTexto({ id: "etiqueta_precio", etiqueta: "Etiqueta del precio", valor: t.etiqueta_precio, ayuda: "Por defecto «Precio». Puede ser, por ejemplo, «Precio de contado».", atributos: 'maxlength="40"' })}
-        <div class="campo">
-          <span class="etiqueta" id="pagos-titulo">Formas de pago</span>
-          <ul class="lista-editable" id="pagos" aria-labelledby="pagos-titulo"></ul>
-          <button type="button" class="boton boton--secundario" id="agregar-pago">Agregar forma de pago</button>
-        </div>
+        <p class="ayuda">Las formas de pago se configuran en <a href="#/catalogo/pagos">Catálogo → Formas de pago</a>.</p>
         ${campoTexto({ id: "texto_entrega", etiqueta: "Entrega", valor: t.texto_entrega, ayuda: "Ej. Retiro en tienda o envío a todo Colombia.", multilinea: true, atributos: 'rows="2" maxlength="300"' })}
         ${campoTexto({ id: "texto_garantia_nuevos", etiqueta: "Garantía de los nuevos (opcional)", valor: t.texto_garantia_nuevos, multilinea: true, atributos: 'rows="2" maxlength="400"' })}
         ${campoTexto({ id: "texto_garantia_usados", etiqueta: "Garantía de los usados (opcional)", valor: t.texto_garantia_usados, multilinea: true, atributos: 'rows="2" maxlength="400"' })}
@@ -118,31 +114,6 @@ export async function dibujar(vista, ctx) {
     </form>`;
 
   const form = $("#form-tienda");
-  let pagos = [...(t.formas_pago || [])];
-
-  // --- Formas de pago ---
-  function pintarPagos() {
-    $("#pagos").innerHTML = pagos.map((p, i) => `<li>
-      <label class="oculto-visual" for="pago-${i}">Forma de pago ${i + 1}</label>
-      <input class="entrada" id="pago-${i}" data-pago="${i}" value="${esc(p)}" maxlength="80" placeholder="Ej. Transferencia">
-      <button type="button" class="boton-icono" data-subir="${i}" aria-label="Subir la forma de pago ${i + 1}" ${i === 0 ? "disabled" : ""}>↑</button>
-      <button type="button" class="boton-icono" data-quitar-pago="${i}" aria-label="Quitar la forma de pago ${i + 1}">✕</button>
-    </li>`).join("");
-  }
-  $("#pagos").addEventListener("input", (e) => { if (e.target.dataset.pago) pagos[Number(e.target.dataset.pago)] = e.target.value; });
-  $("#pagos").addEventListener("click", (e) => {
-    const quitar = e.target.closest("[data-quitar-pago]");
-    const subir = e.target.closest("[data-subir]");
-    if (quitar) { pagos.splice(Number(quitar.dataset.quitarPago), 1); ctx.sucio = true; pintarPagos(); }
-    if (subir) {
-      const i = Number(subir.dataset.subir);
-      [pagos[i - 1], pagos[i]] = [pagos[i], pagos[i - 1]];
-      ctx.sucio = true; pintarPagos();
-      $(`[data-subir="${i - 1}"]`)?.focus();
-    }
-  });
-  $("#agregar-pago").addEventListener("click", () => { pagos.push(""); pintarPagos(); $(`#pago-${pagos.length - 1}`).focus(); });
-
   // --- Vista previa de colores ---
   function datosColores() {
     return {
@@ -349,7 +320,6 @@ export async function dibujar(vista, ctx) {
       logo, favicon, ...datosColores(),
       vista_equipos: $('input[name="vista_equipos"]:checked').value,
       etiqueta_precio: v("etiqueta_precio") || "Precio",
-      formas_pago: pagos.map((p) => p.trim()).filter(Boolean),
       texto_entrega: v("texto_entrega"), texto_garantia_nuevos: v("texto_garantia_nuevos"), texto_garantia_usados: v("texto_garantia_usados")
     };
     try {
@@ -358,8 +328,6 @@ export async function dibujar(vista, ctx) {
     if (viejos.length) api.borrarArchivos("marca", viejos.splice(0)).catch(() => {});
     nuevos.length = 0;
     ctx.sucio = false;
-    pagos = cambios.formas_pago;
-    pintarPagos();
     $("#whatsapp").value = whatsapp;
     await ctx.recargarTienda();
     aplicarTema(ctx.tienda);
@@ -371,7 +339,6 @@ export async function dibujar(vista, ctx) {
     if (sinUsar.length) api.borrarArchivos("marca", sinUsar).catch(() => {});
   };
 
-  pintarPagos();
   pintarLogo();
   pintarVista();
 }

@@ -7,7 +7,7 @@
 import { escaparHTML, formatearCOP, reducirMovimiento } from "../utils.js";
 import { textoCondicion, textoAlternativo, TEXTO_MAS_VENDIDO } from "./catalogo.js";
 import { htmlFoto, htmlMedio } from "./fotos.js";
-import { filasVisiblesFicha } from "../datos/comun.js";
+import { filasVisiblesFicha, frasesPagos } from "../datos/comun.js";
 
 const ICONO_ANT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const ICONO_SIG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -87,7 +87,8 @@ export function crearDetalle({ api, cat, tarjeta, lista, inicial, alComprar, alC
     const etiquetaPrecio = tienda.etiqueta_precio || "Precio";
     const descripcion = [ficha?.descripcion, q.descripcion_extra].map((t) => String(t || "").trim()).filter(Boolean);
     const garantia = usado ? tienda.texto_garantia_usados : tienda.texto_garantia_nuevos;
-    const pagos = (tienda.formas_pago || []).filter((p) => String(p).trim());
+    // Formas de pago en frases cortas, solo con lo que marcó la tienda (0013)
+    const pagos = frasesPagos(tienda);
     const datosUsado = usado ? [
       q.bateria_porcentaje != null && ["Batería", `${q.bateria_porcentaje}%`],
       q.estado_estetico && ["Estado estético", q.estado_estetico],

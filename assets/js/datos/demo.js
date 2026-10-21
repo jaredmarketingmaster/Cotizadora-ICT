@@ -9,7 +9,7 @@
 // =============================================================================
 
 import { CATALOGO, COLORES, DEMO_EQUIPOS, filasDeFuente } from "./semilla.js";
-import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, elegir } from "./comun.js";
+import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, elegir } from "./comun.js";
 import { hexValido, whatsappTiendaValido, sesion, esperar } from "../utils.js";
 
 const CLAVE = "cotizadora-demo:v1";
@@ -50,7 +50,7 @@ function estadoInicial() {
       id: 1, nombre: "Tienda de demostración", ciudad: "", direccion: "", horario_texto: "", whatsapp: "",
       correo_contacto: "", instagram_url: "", facebook_url: "", tiktok_url: "", logo: "", favicon: "",
       color_primario: "#1A73E8", color_secundario: "#0F172A", tema: "claro", texto_entrega: "",
-      formas_pago: [], texto_garantia_nuevos: "", texto_garantia_usados: "", etiqueta_precio: "Precio",
+      pagos_otras: [], ...PAGOS_VACIOS, texto_garantia_nuevos: "", texto_garantia_usados: "", etiqueta_precio: "Precio",
       texto_privacidad: "", texto_terminos: "", texto_autorizacion_datos: "", aviso_marca: "",
       precios_actualizados_en: t, modo_demo: true, tamano_texto: "normal", vista_equipos: "cuadricula",
       mostrar_ficha: true, ficha_ocultas: [], actualizado_en: t
@@ -65,7 +65,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 10;
+const VERSION = 11;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -140,7 +140,20 @@ const MIGRACIONES = {
       if (!f) { f = { modelo_id: m.id, descripcion: "", especificaciones: [], actualizado_en: ahora() }; e.fichas.push(f); }
       if (!(f.especificaciones || []).length) f.especificaciones = filasDeFuente(m.slug);
     }
+  },
+  // 0013_formas_pago.sql: formas_pago pasa a pagos_otras y se suman los
+  // campos estructurados, vacíos.
+  10(e) {
+    e.tienda.pagos_otras = e.tienda.formas_pago || [];
+    delete e.tienda.formas_pago;
+    Object.assign(e.tienda, PAGOS_VACIOS);
   }
+};
+
+// Valores por defecto de las formas de pago estructuradas (0013).
+const PAGOS_VACIOS = {
+  pagos_medios: [], pagos_cuotas: false, pagos_cuotas_max: null, pagos_sin_interes: false, pagos_sin_interes_max: null,
+  pagos_cripto: false, pagos_cripto_cuales: "", pagos_pasarelas: [], pagos_pasarela_otra: ""
 };
 
 function coloresOficiales(modelos) {
@@ -282,6 +295,9 @@ function validarTienda(t) {
       t.ficha_ocultas.some((c) => !CATEGORIAS_FICHA.some((x) => x.clave === c))) {
     throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
   }
+  // Como validar_pagos (0013)
+  const pagos = errorPagos(t);
+  if (pagos) throw new ErrorDatos(pagos);
 }
 
 // Como validar_color_equipo (0008): el color es del modelo y es obligatorio
