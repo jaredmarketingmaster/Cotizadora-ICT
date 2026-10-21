@@ -1,0 +1,47 @@
+# Fuentes de los textos legales
+
+Todo lo que los documentos afirman como requisito legal sale de esta lista. Los datos están en `assets/js/legal/paises/co.js` (Colombia) y `assets/js/legal/herramientas.js` (cookies de cada herramienta).
+
+**Cómo se verificó (21/10/2026):** desde el entorno de trabajo no se pudo abrir ninguna de estas páginas directamente (el proxy de red respondió 403 y la lectura web no resolvió los dominios). Se verificó con el buscador web, que devuelve extractos de las páginas. En cada fuente se indica qué quedó confirmado así y qué no.
+
+## Colombia
+
+| # | Tema | Dato que se usa | Fuente | Estado |
+|---|---|---|---|---|
+| 1 | Leyes y autoridad | Ley 1581 de 2012 y Decreto 1377 de 2013 (compilado en el Decreto 1074 de 2015). Autoridad: Superintendencia de Industria y Comercio (SIC), <https://www.sic.gov.co>. | Pedido de Jared. Texto de la ley: <https://cancilleria.gov.co/sites/default/files/Normograma/docs/ley_1581_2012.htm> | Confirmado por el buscador. |
+| 2 | Plazos de consultas y reclamos | Consultas: máximo 10 días hábiles, prorrogables hasta 5 días hábiles más avisando el motivo (art. 14). Reclamos: máximo 15 días hábiles, prorrogables hasta 8 días hábiles más (art. 15). Reclamo incompleto: se pide completarlo dentro de los 5 días siguientes. | <https://encolombia.com/derecho/leyes/ley-habeas-data/procedimientos-data/> y <https://leyonline.co/laws/ley-1581-de-2012/articulo-15-reclamos> | Confirmado por el buscador (transcripciones del texto de la ley). |
+| 3 | Transmisión a encargados | Comunicación de datos a un encargado, dentro o fuera de Colombia, para que los trate por cuenta del responsable (Decreto 1377, art. 3). Con contrato de transmisión no hace falta informar al titular ni pedir su consentimiento (art. 2.2.2.25.5.2 del Decreto 1074 de 2015). | <https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=53646> y <https://www.asuntoslegales.com.co/consultorio/contrato-de-transmision-internacional-de-datos-personales-3181592> | No se pudo abrir. Se usa tal como lo dio Jared. |
+| 4 | Países con nivel adecuado (SIC) | **Estados Unidos** figura en la lista (Circular Externa 005 de 2017). | <https://www.asuntoslegales.com.co/analisis/daniela-acosta-baena-2793560/responsabilidad-demostrada-en-la-transferencia-internacional-de-datos-personales-3601919>, <https://www.hklaw.com/en/insights/publications/2017/08/cambios-en-la-transferencia-de-datos-personales-a> y <https://www.cancilleria.gov.co/sites/default/files/Normograma/docs/circular_superindustria_0005_2017.htm> | Estados Unidos: confirmado por el buscador. **Argentina: no se pudo confirmar.** Los extractos de la lista de 2017 (36 países) no la incluyen, y no se encontró su inclusión en las Circulares 8 de 2017 ni 2 de 2018. Por eso los textos solo dicen que Estados Unidos está en la lista; la transmisión al proveedor en Argentina se apoya en el contrato de transmisión (fuente 3). |
+| 5 | Cookies | Si las cookies recogen datos personales se aplica la Ley 1581: autorización previa, expresa e informada. Un aviso de privacidad no reemplaza la autorización. | <https://www.asuntoslegales.com.co/consumidor/conozca-los-aspectos-legales-que-debe-tener-en-cuenta-al-usar-cookies-en-sitios-web-3375211> y <https://www.portafolio.co/negocios/empresas/sancionan-a-sodimac-por-infringir-ley-de-datos-personales-545023> | No se pudo abrir. Se usa tal como lo dio Jared (es la razón del banner con consentimiento previo). |
+| 6 | Horarios de mensajes publicitarios (Ley 2300 de 2023) | Lunes a viernes de 7:00 a 19:00 y sábados de 8:00 a 15:00; nunca domingos ni festivos. Sanciona la SIC. | <https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=213990> y <https://koa.co/leydejendefregar> | El buscador confirma que la ley limita los horarios de SMS, mensajería, correo y llamadas, pero no mostró las franjas. Se usan tal como las dio Jared. Solo aparecen en la guía de GHL. |
+| 7 | Retracto (Ley 1480 de 2011, art. 47) | 5 días hábiles desde la entrega del bien. Devolución del dinero sin descuentos ni retenciones. | <https://sedeelectronica.sic.gov.co/sites/default/files/normatividad/Concepto_12208265.pdf> y <https://www.asuntoslegales.com.co/consumidor/conozca-los-casos-en-los-que-puede-devolver-un-articulo-comprado-en-internet-4476538> | 5 días hábiles: confirmado por el buscador (concepto de la SIC). **Plazo de devolución: ver la nota de abajo.** |
+| 8 | Garantía legal | Corre desde la entrega. Si no se indica término, 1 año para productos nuevos. Un usado con la garantía legal vencida puede venderse sin garantía solo si eso se informa y el consumidor lo acepta por escrito. | <https://encolombia.com/derecho/leyes/estatuto-consumidor/garantias-consumidor/> | No se pudo abrir. Se usa tal como lo dio Jared. |
+| 9 | Reclamos de garantía | El proveedor responde dentro de los 15 días hábiles siguientes (Ley 1480, art. 58). | Pedido de Jared | No se pudo abrir. Se usa tal como lo dio Jared. |
+| 10 | Registro Nacional de Bases de Datos | Solo están obligadas las sociedades y entidades sin ánimo de lucro con activos de más de 100.000 UVT y las personas jurídicas públicas. | <https://www.hklaw.com/es/insights/publications/2025/01/obligaciones-del-registro-nacional-de-bases-de-datos-personales> | No se pudo abrir. Se usa tal como lo dio Jared. |
+| 11 | Derechos del titular (Ley 1581, art. 8) | Conocer, actualizar y rectificar; pedir prueba de la autorización; ser informado del uso; presentar quejas ante la SIC; revocar la autorización o pedir la supresión; acceder gratis. | <https://cancilleria.gov.co/sites/default/files/Normograma/docs/ley_1581_2012.htm> y <https://leyonline.co/laws/ley-1581-de-2012/articulo-8o-derechos-de-los> | Confirmado por el buscador (literales a a f). El texto oficial no se pudo abrir; se usa la lista del pedido. |
+
+### Nota sobre el plazo de devolución del retracto (fuente 7)
+
+El pedido decía "en máximo 30 días calendario". Al verificarlo, el buscador mostró que la **Ley 2439 de 2024 (art. 3)** cambió el artículo 47 de la Ley 1480: la devolución del dinero en el comercio electrónico **no puede pasar de 15 días calendario**. Según el mismo buscador, la **sentencia C-192 de 2026** de la Corte Constitucional extendió ese plazo de 15 días a todas las modalidades del artículo 47.
+
+- Fuentes: <https://www.forvismazars.com/co/es/insights/nuestras-publicaciones/tax-legal/ley-2439-de-2024>, <https://sidn.ramajudicial.gov.co/SIDN//NORMATIVA/TEXTOS_COMPLETOS/7_LEYES/LEYES%202024/Ley%202439%20de%202024.pdf> y <https://jurinfo.jep.gov.co/Normograma/compilacion/docs/C-192_2026.htm>. No se pudieron abrir; el dato sale de los extractos del buscador.
+- **Decisión:** los términos dicen "en máximo 15 días calendario". Cumple la norma nueva y también la anterior (15 es menos que 30). El texto no lo presenta como "lo que exige la ley", sino como el plazo en que la tienda devuelve el dinero. Está en `co.js` (`consumo.retracto.devolucionDias`) por si hay que cambiarlo.
+
+## Cookies de cada herramienta
+
+Solo se escribe una duración si está en la documentación del proveedor. Si no se pudo verificar, se nombra la cookie y se enlaza la política.
+
+| Herramienta | Cookies | Duración escrita | Fuente | Estado |
+|---|---|---|---|---|
+| Píxel de Meta | `_fbp`, `_fbc` | Ninguna | <https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/fbp-and-fbc> | Nombres: confirmados (documentación de Meta). La duración (90 días) solo apareció en sitios de terceros: no se escribe. |
+| Google Analytics 4 | `_ga`, `_ga_<ID>` | 2 años | <https://support.google.com/analytics/answer/11397207> | Confirmado por el buscador (ayuda oficial de Google). |
+| Google Tag Manager | Ninguna propia | — | <https://policies.google.com/privacy> | Solo terceros dicen que no guarda cookies propias: el texto dice "No guarda cookies propias en este sitio" porque el contenedor no las pone; las de las etiquetas que cargue son las de cada herramienta. |
+| Microsoft Clarity | `_clck`, `_clsk` | Ninguna | <https://learn.microsoft.com/en-us/clarity/setup-and-installation/cookie-list> | Nombres: confirmados (Microsoft Learn). Las duraciones de terceros no coinciden entre sí: no se escriben. |
+| Píxel de TikTok | `_ttp` | 13 meses desde su último uso | <https://ads.tiktok.com/help/article/using-cookies-with-tiktok-pixel> | Confirmado por el buscador (ayuda oficial de TikTok). |
+| Google Ads | `_gcl_au` | 90 días | <https://business.safety.google/adscookies/> | Confirmado por el buscador (lista oficial de cookies de Google). |
+
+**Microsoft Clarity, modo estricto:** según la documentación de Microsoft (<https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-masking>), el modo de enmascarado se elige en Clarity → Settings → Masking; no hay forma de activarlo desde el código del sitio. El sitio marca los campos del pop-up y su resumen con `data-clarity-mask="true"` (enmascarado por elemento) y el paso 5 del asistente pide elegir "Strict" en Clarity.
+
+**Global Privacy Control:** propiedad `navigator.globalPrivacyControl` (<https://www.w3.org/TR/2024/WD-gpc-20241203/>, <https://developer.mozilla.org/en-US/docs/Web/API/Navigator/globalPrivacyControl>).
+
+**Consent Mode v2 de Google:** modo básico, con `ad_storage`, `analytics_storage`, `ad_user_data` y `ad_personalization` en `denied` por defecto, y el script de Google cargado solo después de aceptar.

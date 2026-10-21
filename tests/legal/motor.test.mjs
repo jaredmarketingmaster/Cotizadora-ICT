@@ -1,0 +1,148 @@
+// Pruebas del motor legal (assets/js/legal/), sin navegador:
+//   node tests/legal/motor.test.mjs
+import assert from "node:assert/strict";
+import { faltantes, generar, publicar, conVigencia, contexto, PERFILES } from "../../assets/js/legal/motor.js";
+import { PAISES, PAISES_DISPONIBLES } from "../../assets/js/legal/paises/indice.js";
+import { formatoBasico } from "../../assets/js/utils.js";
+import { TIENDA_LEGAL_PRUEBA } from "./datos-prueba.mjs";
+
+let casos = 0;
+const caso = (nombre, fn) => { fn(); casos++; console.log(`ok   ${nombre}`); };
+const base = () => structuredClone(TIENDA_LEGAL_PRUEBA);
+// Texto visible de un documento (lo que ve el cliente, sin etiquetas).
+const visible = (md) => formatoBasico(md).replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ");
+const claves = (t) => faltantes(t).map((f) => f.campo);
+
+caso("una tienda completa no tiene faltantes; una vacía tiene uno por cada dato, con su paso", () => {
+  assert.deepEqual(faltantes(base()), []);
+  const f = faltantes({ legal_paises: [], legal_impuestos: [] });
+  const pasos = new Set(f.map((x) => x.paso));
+  for (const p of [0, 1, 2, 3, 4, 5]) assert.ok(pasos.has(p), `paso ${p}`);
+  assert.throws(() => generar({}), /Faltan datos/);
+});
+
+caso("los campos obligatorios cambian con el perfil y el tipo de persona", () => {
+  const t = base();
+  t.legal_tipo_persona = "juridica";
+  assert.deepEqual(claves(t).sort(), ["legal_matricula_camara", "legal_matricula_numero", "legal_representante"]);
+  const e = base();
+  e.legal_perfil = "emprendedor";
+  e.legal_direccion_local = "";
+  assert.deepEqual(claves(e), [], "sin local físico no pide la dirección del local");
+  e.legal_perfil = "no_oficial";
+  assert.deepEqual(claves(e), ["legal_direccion_local"]);
+  const o = base();
+  o.legal_perfil = "oficial";
+  assert.deepEqual(claves(o), ["legal_apple_detalle"], "oficial o autorizado: el detalle es obligatorio");
+});
+
+caso("validaciones: garantía de 12 meses o más con Colombia, IVA con porcentaje, documento e IDs con formato", () => {
+  const t = base();
+  t.legal_garantia_nuevos = 6;
+  assert.ok(claves(t).includes("legal_garantia_nuevos"));
+  t.legal_garantia_nuevos = 12;
+  t.legal_impuestos = [{ nombre: "IVA", porcentaje: null, incluido: true }];
+  assert.deepEqual(claves(t), ["legal_impuestos.0.porcentaje"]);
+  t.legal_impuestos = [{ nombre: "IVA", porcentaje: 19, incluido: null }];
+  assert.deepEqual(claves(t), ["legal_impuestos.0.incluido"]);
+  const d = base();
+  d.legal_doc_tipo = "nit";
+  d.legal_doc_numero = "900123456";
+  assert.deepEqual(claves(d), ["legal_doc_numero"], "el NIT lleva dígito de verificación");
+  const h = base();
+  h.ga4_activo = true; h.ga4_id = "UA-123";
+  h.clarity_activo = true; h.clarity_id = "abc123def4";
+  h.meta_pixel_id = "12a";
+  assert.deepEqual(claves(h).sort(), ["ga4_id", "meta_pixel_id"]);
+  const u = base();
+  u.legal_garantia_usados = "con"; u.legal_garantia_usados_meses = null;
+  assert.deepEqual(claves(u), ["legal_garantia_usados_meses"]);
+  const w = base();
+  w.legal_retracto_canal = "whatsapp"; w.whatsapp = "";
+  assert.deepEqual(claves(w), ["whatsapp"]);
+});
+
+caso("países: solo Colombia está disponible; Brasil necesita portugués", () => {
+  assert.deepEqual(PAISES_DISPONIBLES, ["co"]);
+  assert.equal(PAISES.find((p) => p.codigo === "br").estado, "portugues");
+  assert.equal(PAISES.length, 19);
+  const t = base();
+  t.legal_paises = ["co", "mx"];
+  assert.ok(claves(t).includes("legal_paises"));
+});
+
+caso("los documentos llevan los datos de la tienda y los plazos exactos, sin corchetes ni marcadores vacíos", () => {
+  const d = generar(base());
+  const p = visible(d.privacidad);
+  for (const x of ["Celulares La 70 S.A.S.", "NIT 900123456-7", "Calle 70 # 45-10, Medellín", "datos@lasetenta.co", "+57 300 123 4567",
+    "Ley 1581 de 2012", "Decreto 1377 de 2013", "Decreto 1074 de 2015", "máximo 10 días hábiles", "máximo 5 días hábiles más",
+    "máximo 15 días hábiles", "máximo 8 días hábiles más", "dentro de los 5 días siguientes", "www.sic.gov.co",
+    "Nuestro proveedor tecnológico, ubicado en Argentina", "HighLevel (GoHighLevel), en Estados Unidos",
+    "Pedir prueba de la autorización", "Presentar quejas ante la Superintendencia de Industria y Comercio", "Acceder gratis a sus datos",
+    "máximo 2 meses desde el último contacto", "normas contables, tributarias y de protección al consumidor",
+    "mayores de 18 años", "No le pedimos datos sensibles", "cifrados (hash)", "fbc", "fbp"]) assert.ok(p.includes(x), `privacidad: ${x}`);
+  const t = visible(d.terminos);
+  for (const x of ["5 días hábiles siguientes a la entrega", "artículo 47 de la Ley 1480 de 2011", "pesos colombianos", "sin descuentos ni retenciones, en máximo 15 días calendario",
+    "12 meses (un año) desde la entrega", "en máximo 15 días hábiles", "IVA (19 %)", "está incluido en el precio publicado",
+    "Ley 1480 de 2011", "Retiro en el local", "Medellín y su área metropolitana", "No vende los equipos ni responde por la compraventa",
+    "Apple e iPhone son marcas de Apple Inc.", "Las fotos de los equipos son de la tienda", "mayor de 18 años",
+    "se acuerda y se confirma por WhatsApp"]) assert.ok(t.includes(x), `términos: ${x}`);
+  const todos = Object.values(d).map(visible).join(" ");
+  assert.ok(!/[[\]{}]|undefined|null|NaN|\(\s*\)|:\s*\./.test(todos), "sin corchetes, llaves ni datos vacíos");
+  assert.ok(!/\bborrador\b|\babogad[oa]\b|\ben revisi[oó]n\b|\[PENDIENTE/i.test(todos), "sin avisos de borrador ni de abogado");
+  const a = visible(d.aviso);
+  assert.ok(a.includes("Celulares La 70") && a.includes("Ver la Política de privacidad") && a.length < 420, "aviso corto");
+});
+
+caso("la relación con Apple sigue al perfil", () => {
+  const t = base();
+  const indep = "es un comercio independiente. No está afiliado, patrocinado ni autorizado por Apple Inc. iPhone es una marca de Apple Inc.";
+  for (const p of PERFILES) {
+    const x = base();
+    x.legal_perfil = p.clave;
+    x.legal_apple_detalle = p.apple ? "Somos revendedor autorizado de Apple según el contrato 123." : "";
+    if (!p.local) x.legal_direccion_local = "";
+    const term = visible(generar(x).terminos);
+    assert.equal(term.includes(indep), !p.apple, p.clave);
+    assert.equal(term.includes("declara, bajo su responsabilidad, que esta información es cierta"), p.apple, p.clave);
+  }
+  assert.ok(visible(generar(t).terminos).includes(`La 70 ${indep}`));
+});
+
+caso("herramientas: las activas aparecen y las inactivas no; la regla de la API de Conversiones cambia el texto", () => {
+  const t = base();
+  let c = visible(generar(t).cookies);
+  assert.ok(c.includes("Píxel de Meta") && c.includes("_fbp"));
+  for (const x of ["Google Analytics 4", "Microsoft Clarity", "TikTok", "Google Ads", "Tag Manager"]) assert.ok(!c.includes(x), x);
+  Object.assign(t, { ga4_activo: true, ga4_id: "G-ABC123XYZ9", clarity_activo: true, clarity_id: "abc123def4", tiktok_activo: true, tiktok_id: "C1A2B3C4D5E6F7G8H9I0", gads_activo: true, gads_id: "AW-123456789", gtm_activo: true, gtm_id: "GTM-ABC1234" });
+  const d = generar(t);
+  c = visible(d.cookies);
+  for (const x of ["Google Analytics 4", "_ga (2 años)", "Microsoft Clarity", "_clck", "Píxel de TikTok", "_ttp (13 meses desde su último uso)", "Google Ads", "_gcl_au (90 días)", "Google Tag Manager"]) assert.ok(c.includes(x), x);
+  assert.ok(visible(d.privacidad).includes("Microsoft Corporation"));
+  assert.ok(visible(d.privacidad).includes("Solo enviamos ese evento si usted aceptó las cookies de publicidad."));
+  t.capi_solo_consentimiento = false;
+  assert.ok(visible(generar(t).privacidad).includes("aunque usted no haya aceptado las cookies de publicidad"));
+  assert.ok(formatoBasico(d.cookies).includes("<table>"), "una tabla por herramienta");
+});
+
+caso("versión: sube solo si cambia un texto; la vigencia va al pie", () => {
+  const t = base();
+  const v1 = publicar(t, null, "2026-10-21");
+  assert.equal(v1.version, 1);
+  assert.equal(publicar(t, v1, "2026-11-01"), v1, "sin cambios, la misma versión");
+  t.legal_garantia_nuevos = 24;
+  const v2 = publicar(t, v1, "2026-11-01");
+  assert.deepEqual([v2.version, v2.vigente_desde], [2, "2026-11-01"]);
+  assert.match(conVigencia(v2, "terminos"), /Vigente desde 1\/11\/2026 · versión 2\.$/);
+  t.legal_clausula_terminos = "Los equipos se entregan con su caja original.";
+  const v3 = publicar(t, v2, "2026-11-02");
+  assert.ok(visible(v3.documentos.terminos).includes("Condiciones adicionales de la tienda Los equipos se entregan con su caja original."));
+});
+
+caso("el contexto no deja pasar formato de la tienda a los textos", () => {
+  const t = base();
+  t.legal_entrega_zonas = "[Medellín] **todo**";
+  assert.equal(contexto(t).venta.zonas, "Medellín todo");
+});
+
+console.log(`\nOK: ${casos} casos del motor legal`);

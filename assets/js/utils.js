@@ -48,20 +48,36 @@ export function plural(n, uno, varios) {
 }
 
 // Formato básico para los textos legales, sin HTML del usuario:
-//   ## Título · **negrita** · - viñeta · 1. lista · [texto](https://…) · párrafos
+//   ## Título · ### Subtítulo · **negrita** · - viñeta · 1. lista ·
+//   [texto](https://…, mailto:… o una ruta relativa como ../cookies/) ·
+//   tablas con | (la segunda fila, | --- |, separa el encabezado) · párrafos
 export function formatoBasico(texto) {
   const lineas = String(texto ?? "").replace(/\r\n?/g, "\n").split("\n");
   const html = [];
   let lista = null;
   let parrafo = [];
+  let tabla = null;
 
+  // Los enlaces externos abren en otra pestaña; los relativos (páginas del
+  // mismo sitio), en la misma. Una ruta con otro esquema (javascript:) no es enlace.
   const enLinea = (t) => escaparHTML(t)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+)\)/g,
-      '<a href="$2" rel="noopener" target="_blank">$1</a>');
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+|(?:\.\.?\/|[a-z0-9-]+\/)[^\s):]*)\)/gi,
+      (_, txt, url) => /^(https?:|mailto:)/i.test(url)
+        ? `<a href="${url}" rel="noopener" target="_blank">${txt}</a>`
+        : `<a href="${url}">${txt}</a>`);
   const cerrarParrafo = () => {
     if (parrafo.length) html.push(`<p>${parrafo.map(enLinea).join("<br>")}</p>`);
     parrafo = [];
+  };
+  const celdas = (l) => l.replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
+  const cerrarTabla = () => {
+    if (tabla) {
+      const [cab, ...filas] = tabla;
+      html.push(`<div class="tabla-legal"><table><thead><tr>${cab.map((c) => `<th scope="col">${enLinea(c)}</th>`).join("")}</tr></thead>`
+        + `<tbody>${filas.map((f) => `<tr>${f.map((c, i) => (i === 0 ? `<th scope="row">${enLinea(c)}</th>` : `<td>${enLinea(c)}</td>`)).join("")}</tr>`).join("")}</tbody></table></div>`);
+    }
+    tabla = null;
   };
   const cerrarLista = () => {
     if (lista) html.push(`<${lista.tipo}>${lista.items.map((i) => `<li>${enLinea(i)}</li>`).join("")}</${lista.tipo}>`);
@@ -71,7 +87,14 @@ export function formatoBasico(texto) {
   for (const cruda of lineas) {
     const linea = cruda.trim();
     let m;
-    if (!linea) { cerrarParrafo(); cerrarLista(); continue; }
+    if (!linea) { cerrarParrafo(); cerrarLista(); cerrarTabla(); continue; }
+    if (linea.startsWith("|")) {
+      cerrarParrafo(); cerrarLista();
+      if (/^\|(\s*:?-{3,}:?\s*\|)+$/.test(linea)) continue;
+      (tabla ??= []).push(celdas(linea));
+      continue;
+    }
+    cerrarTabla();
     if ((m = linea.match(/^(#{2,3})\s+(.*)$/))) {
       cerrarParrafo(); cerrarLista();
       const nivel = m[1].length;
@@ -87,7 +110,7 @@ export function formatoBasico(texto) {
       parrafo.push(linea);
     }
   }
-  cerrarParrafo(); cerrarLista();
+  cerrarParrafo(); cerrarLista(); cerrarTabla();
   return html.join("\n");
 }
 
