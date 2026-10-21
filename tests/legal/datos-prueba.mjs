@@ -3,6 +3,7 @@
 // el sitio. tests/verificar.cjs la usa también para publicar los textos.
 export const TIENDA_LEGAL_PRUEBA = {
   nombre: "La 70",
+  pais: "co",
   whatsapp: "573001234567",
   legal_perfil: "no_oficial",
   legal_tipo_persona: "natural",

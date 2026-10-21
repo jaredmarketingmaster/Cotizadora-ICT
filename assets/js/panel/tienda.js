@@ -1,10 +1,11 @@
 // =============================================================================
-// Mi tienda: datos, redes, marca (logo con recorte, favicon, colores y tema con
+// Mi tienda: país (moneda, números, zona horaria y celular), datos, redes, marca (logo con recorte, favicon, colores y tema con
 // vista previa en vivo), datos de venta (entrega y garantía) y, fuera del
 // formulario, las reseñas (resenas.js; se guardan solas).
 // =============================================================================
 
-import { hexValido, soloDigitos, whatsappTiendaValido, correoValido, contraste, reducirMovimiento } from "../utils.js";
+import { hexValido, soloDigitos, correoValido, contraste, reducirMovimiento } from "../utils.js";
+import { PAISES_TIENDA, datosPais, whatsappValido } from "../datos/paises.js";
 import { variablesTema, aplicarTema, FONDOS } from "../tema.js";
 import { logoGenericoSVG } from "../ilustracion.js";
 import { $, $$, esc, avisar, conBoton, campoTexto, marcarError, enfocarPrimerError } from "./ui.js";
@@ -27,6 +28,17 @@ export async function dibujar(vista, ctx) {
   vista.innerHTML = `
     <div class="vista-cabecera"><h1>Mi tienda</h1><p>Todo lo que se ve en el sitio. Los campos vacíos no se muestran.</p></div>
     <form id="form-tienda" novalidate>
+      <section class="bloque" aria-labelledby="t-pais">
+        <h2 id="t-pais">País, moneda e idioma</h2>
+        <div class="campo">
+          <label for="pais">País de la tienda</label>
+          <select class="entrada" id="pais" aria-describedby="pais-ayuda">
+            ${Object.entries(PAISES_TIENDA).sort((a, b) => a[1].nombre.localeCompare(b[1].nombre, "es")).map(([c, p]) => `<option value="${c}" ${c === (t.pais || "co") ? "selected" : ""}>${esc(p.nombre)}</option>`).join("")}
+          </select>
+          <p class="ayuda" id="pais-ayuda"></p>
+        </div>
+      </section>
+
       <section class="bloque" aria-labelledby="t-datos">
         <h2 id="t-datos">Datos de la tienda</h2>
         <div class="grilla-2">
@@ -36,7 +48,7 @@ export async function dibujar(vista, ctx) {
         ${campoTexto({ id: "direccion", etiqueta: "Dirección", valor: t.direccion, ayuda: "Se usa también para el botón «Cómo llegar».", atributos: 'maxlength="160"' })}
         ${campoTexto({ id: "horario_texto", etiqueta: "Horario", valor: t.horario_texto, ayuda: "Ej. Lunes a sábado, 9:00 a. m. a 7:00 p. m.", multilinea: true, atributos: 'rows="3" maxlength="300"' })}
         <div class="grilla-2">
-          ${campoTexto({ id: "whatsapp", etiqueta: "WhatsApp de ventas", valor: t.whatsapp, ayuda: "Formato internacional sin «+»: 12 dígitos que empiezan por 57. Ej. 573001234567.", atributos: 'inputmode="numeric" autocomplete="off"' })}
+          ${campoTexto({ id: "whatsapp", etiqueta: "WhatsApp de ventas", valor: t.whatsapp, ayuda: ayudaWhatsapp(t.pais), atributos: 'inputmode="numeric" autocomplete="off"' })}
           ${campoTexto({ id: "correo_contacto", etiqueta: "Correo de contacto (opcional)", valor: t.correo_contacto, tipo: "email" })}
         </div>
       </section>
@@ -116,6 +128,15 @@ export async function dibujar(vista, ctx) {
     <div id="seccion-resenas"></div>`;
 
   const form = $("#form-tienda");
+  // --- País: moneda, prefijo y zona horaria ---
+  function pintarPais() {
+    const p = datosPais($("#pais").value);
+    $("#pais-ayuda").textContent = `Moneda: ${p.moneda} (${p.simbolo}). Prefijo del celular: +${p.celular.internacional}. Zona horaria: ${p.zona}. Define cómo se muestran los precios y las fechas, y cómo se validan los celulares.`;
+    $("#whatsapp-ayuda").textContent = ayudaWhatsapp(p.codigo);
+  }
+  $("#pais").addEventListener("change", () => { ctx.sucio = true; pintarPais(); });
+  pintarPais();
+
   // --- Vista previa de colores ---
   function datosColores() {
     return {
@@ -306,7 +327,8 @@ export async function dibujar(vista, ctx) {
     e.preventDefault();
     const v = (id) => $(`#${id}`).value.trim();
     const whatsapp = soloDigitos(v("whatsapp"));
-    marcarError(form, "whatsapp", !whatsapp || whatsappTiendaValido(whatsapp) ? "" : "Debe tener 12 dígitos y empezar por 57. Ej. 573001234567.");
+    const pais = $("#pais").value;
+    marcarError(form, "whatsapp", !whatsapp || whatsappValido(whatsapp, pais) ? "" : `No tiene el formato de ${datosPais(pais).nombre}. ${ayudaWhatsapp(pais)}`);
     marcarError(form, "correo_contacto", !v("correo_contacto") || correoValido(v("correo_contacto")) ? "" : "Revise el correo.");
     for (const id of ["instagram_url", "facebook_url", "tiktok_url"]) {
       marcarError(form, id, !v(id) || /^https?:\/\/\S+\.\S+/i.test(v(id)) ? "" : "Pegue el enlace completo, empezando por https://");
@@ -316,7 +338,7 @@ export async function dibujar(vista, ctx) {
     }
     if (enfocarPrimerError(form)) return;
     const cambios = {
-      nombre: v("nombre"), ciudad: v("ciudad"), direccion: v("direccion"), horario_texto: v("horario_texto"),
+      nombre: v("nombre"), pais, ciudad: v("ciudad"), direccion: v("direccion"), horario_texto: v("horario_texto"),
       whatsapp, correo_contacto: v("correo_contacto"),
       instagram_url: v("instagram_url"), facebook_url: v("facebook_url"), tiktok_url: v("tiktok_url"),
       logo, favicon, ...datosColores(),
@@ -345,6 +367,14 @@ export async function dibujar(vista, ctx) {
   pintarVista();
   const { dibujar: dibujarResenas } = await import("./resenas.js");
   await dibujarResenas($("#seccion-resenas"), ctx, t);
+}
+
+// El WhatsApp de la tienda, en formato internacional y sin "+".
+function ayudaWhatsapp(codigo) {
+  const c = datosPais(codigo).celular;
+  return c.verificado
+    ? `Formato internacional sin «+»: ${c.internacional} y el número. Ej. ${c.internacional}${c.ejemplo.replace(/\s/g, "")}.`
+    : `Formato internacional sin «+»: ${c.internacional} y el número, de 8 a 15 dígitos en total.`;
 }
 
 function selectorColor(id, etiqueta, valor) {

@@ -45,7 +45,7 @@ export function rutaMiniatura(ruta) {
 }
 
 export const CAMPOS_TIENDA = [
-  "nombre", "ciudad", "direccion", "horario_texto", "whatsapp", "correo_contacto",
+  "nombre", "pais", "ciudad", "direccion", "horario_texto", "whatsapp", "correo_contacto",
   "instagram_url", "facebook_url", "tiktok_url", "logo", "favicon",
   "color_primario", "color_secundario", "tema", "texto_entrega", "pagos_otras",
   "texto_garantia_nuevos", "texto_garantia_usados", "etiqueta_precio", "modo_demo",

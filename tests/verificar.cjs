@@ -1046,7 +1046,8 @@ async function llenarPopup(p) {
     assert.deepEqual(Object.fromEntries(Object.keys(LEGAL_INICIAL).map((k) => [k, e.tienda[k]])),
       { ...LEGAL_INICIAL, legal_clausula_privacidad: "Mi política propia.", legal_clausula_terminos: "Mi aviso de marca." });
     for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) assert.ok(!(k in e.tienda), k);
-    assert.equal(e.version, 14);
+    assert.equal(e.version, 15);
+    assert.equal(e.tienda.pais, "co", "0018: los datos viejos del demo son de Colombia");
     assert.deepEqual(e.equipos.map((q) => q.en_stock), [false, true, true, true, true, true]);
     assert.equal(new Set(e.modelos.map((m) => m.orden)).size, 42);
     assert.equal(e.modelos.find((m) => m.slug === "iphone-17e").orden > e.modelos.find((m) => m.slug === "iphone-17-pro-max").orden, true);
@@ -1696,6 +1697,38 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  await caso("B1: Mi tienda elige el país; el WhatsApp de la tienda sigue su formato (y la capa de datos lo exige)", async () => {
+    const p = await nueva(1280, 900);
+    await entrarPanel(p, "gestor@demo.co");
+    await p.goto(`${BASE}/admin/#/tienda`);
+    await p.waitForSelector("#pais");
+    assert.equal(await p.inputValue("#pais"), "co", "el demo es de Colombia");
+    assert.equal(await p.locator("#pais option").count(), 19);
+    assert.match(await p.textContent("#pais-ayuda"), /^Moneda: COP \(\$\)\. Prefijo del celular: \+57\. Zona horaria: America\/Bogota\./);
+    await p.selectOption("#pais", "ar");
+    assert.match(await p.textContent("#pais-ayuda"), /^Moneda: ARS \(\$\)\. Prefijo del celular: \+549\. Zona horaria: America\/Argentina\/Buenos_Aires\./);
+    assert.equal(await p.textContent("#whatsapp-ayuda"), "Formato internacional sin «+»: 549 y el número. Ej. 5491123456789.");
+    await p.fill("#whatsapp", "573001234567");
+    await p.click("#guardar-tienda");
+    assert.equal(await p.textContent("#whatsapp-error"), "No tiene el formato de Argentina. Formato internacional sin «+»: 549 y el número. Ej. 5491123456789.");
+    await p.fill("#whatsapp", "5491123456789");
+    await p.click("#guardar-tienda");
+    await p.waitForSelector("text=Guardado");
+    let t = await p.evaluate((c) => JSON.parse(localStorage.getItem(c)).tienda, CLAVE_DEMO);
+    assert.deepEqual([t.pais, t.whatsapp], ["ar", "5491123456789"]);
+    // Un país sin formato verificado: prefijo y número de 8 a 15 dígitos
+    await p.selectOption("#pais", "gt");
+    assert.equal(await p.textContent("#whatsapp-ayuda"), "Formato internacional sin «+»: 502 y el número, de 8 a 15 dígitos en total.");
+    // La capa de datos repite la regla del SQL
+    const r = await p.evaluate(async (base) => {
+      const a = await (await import(`${base}/assets/js/datos/api.js`)).api();
+      try { await a.guardarTienda({ pais: "co" }); return "ok"; } catch (e) { return e.message; }
+    }, BASE);
+    assert.equal(r, "El WhatsApp no tiene el formato del país de la tienda.");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("panel: validaciones (precio, batería, WhatsApp de la tienda, color)", async () => {
     const p = await nueva(390, 844);
     await entrarPanel(p, "gestor@demo.co");
@@ -1704,7 +1737,7 @@ async function llenarPopup(p) {
     await p.fill("#whatsapp", "3001234567");
     await p.fill("#color_primario", "azul");
     await p.click("#guardar-tienda");
-    assert.equal(await p.textContent("#whatsapp-error"), "Debe tener 12 dígitos y empezar por 57. Ej. 573001234567.");
+    assert.equal(await p.textContent("#whatsapp-error"), "No tiene el formato de Colombia. Formato internacional sin «+»: 57 y el número. Ej. 573001234567.");
     assert.equal(await p.textContent("#color_primario-error"), "Use el formato #RRGGBB, ej. #1A73E8.");
     await p.goto(`${BASE}/admin/#/inventario/nuevo`);
     // Hay cambios sin guardar en Mi tienda: el panel pregunta antes de salir.

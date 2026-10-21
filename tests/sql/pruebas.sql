@@ -153,6 +153,28 @@ begin
   assert (select 'legal_perfil' = any (public.legal_faltantes(t)) and 'meta_pixel_id' = any (public.legal_faltantes(t)) from public.tienda t), 'faltan datos';
 end $$;
 
+-- 0h. Migración 0018 (país): por defecto Argentina; la tienda con WhatsApp de
+-- Colombia (antes_0018) quedó en Colombia; el WhatsApp sigue el país.
+do $$
+begin
+  assert (select column_default from information_schema.columns where table_name = 'tienda' and column_name = 'pais') = '''ar''::text', 'Argentina por defecto';
+  assert (select pais from public.tienda) = 'co', 'la tienda con WhatsApp de Colombia queda en Colombia';
+  assert public.whatsapp_valido('ar', '5491123456789') and not public.whatsapp_valido('ar', '541123456789'), 'Argentina: 54 9 y el número';
+  assert public.whatsapp_valido('br', '5511912345678') and not public.whatsapp_valido('br', '551112345678'), 'Brasil: DDD y 9 dígitos';
+  assert public.whatsapp_valido('gt', '50212345678') and not public.whatsapp_valido('gt', '502'), 'general: prefijo y número';
+  begin
+    update public.tienda set pais = 'ar';
+    raise exception 'un WhatsApp de Colombia no vale en Argentina';
+  exception when check_violation then null; end;
+  begin
+    update public.tienda set pais = 'us';
+    raise exception 'país fuera de la lista';
+  exception when check_violation then null; end;
+  update public.tienda set pais = 'ar', whatsapp = '5491123456789';
+  assert (select pais = 'ar' from public.tienda), 'Argentina con su WhatsApp';
+  update public.tienda set pais = 'co', whatsapp = '573001234567';
+end $$;
+
 -- 0b. Migración 0006: el modelo que agregó la agencia (antes_0006) quedó al
 -- final, después del Duo, en el orden que tenía.
 do $$

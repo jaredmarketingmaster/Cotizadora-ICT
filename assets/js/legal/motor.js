@@ -13,6 +13,7 @@
 // =============================================================================
 
 import { frasesPagos, PLATAFORMA_POR_DEFECTO } from "../datos/comun.js";
+import { whatsappValido } from "../datos/paises.js";
 import { CODIGOS_PAISES, PAISES_DISPONIBLES, modulosDe, documentosDe } from "./paises/indice.js";
 import { activas, idValido, OPCIONALES, HERRAMIENTAS } from "./herramientas.js";
 import * as privacidad from "./plantillas/privacidad.js";
@@ -111,7 +112,7 @@ export function faltantes(t) {
     if (!Number.isInteger(t.legal_garantia_usados_meses) || t.legal_garantia_usados_meses < 1) falta(4, "legal_garantia_usados_meses", "Los meses de garantía de los equipos usados");
   } else if (t.legal_garantia_usados !== "sin") falta(4, "legal_garantia_usados", "La garantía de los equipos usados");
   if (t.legal_retracto_canal === "whatsapp") {
-    if (!/^57\d{10}$/.test(texto(t.whatsapp))) falta(0, "whatsapp", "El WhatsApp de la tienda (Mi tienda), para pedir el retracto");
+    if (!whatsappValido(texto(t.whatsapp), t.pais)) falta(0, "whatsapp", "El WhatsApp de la tienda (Mi tienda), para pedir el retracto");
   } else if (t.legal_retracto_canal !== "correo") falta(4, "legal_retracto_canal", "El canal para pedir el retracto");
   if (!(t.legal_entrega || []).length) falta(4, "legal_entrega", "Cómo se entregan los equipos");
   if (!texto(t.legal_entrega_zonas)) falta(4, "legal_entrega_zonas", "Las zonas de entrega");

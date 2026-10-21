@@ -10,7 +10,8 @@
 
 import { CATALOGO, COLORES, DEMO_EQUIPOS, filasDeFuente } from "./semilla.js";
 import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, MENSAJE_MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, LEGAL_INICIAL, errorLegales, elegir } from "./comun.js";
-import { hexValido, whatsappTiendaValido, sesion, esperar } from "../utils.js";
+import { hexValido, sesion, esperar } from "../utils.js";
+import { whatsappValido, CODIGOS_PAIS_TIENDA } from "./paises.js";
 
 const CLAVE = "cotizadora-demo:v1";
 const CLAVE_SESION = "cotizadora-demo:sesion";
@@ -47,7 +48,8 @@ function estadoInicial() {
   return {
     version: VERSION,
     tienda: {
-      id: 1, nombre: "Tienda de demostración", ciudad: "", direccion: "", horario_texto: "", whatsapp: "",
+      // El demo es una tienda de Colombia (sus precios de ejemplo están en pesos colombianos)
+      id: 1, nombre: "Tienda de demostración", pais: "co", ciudad: "", direccion: "", horario_texto: "", whatsapp: "",
       correo_contacto: "", instagram_url: "", facebook_url: "", tiktok_url: "", logo: "", favicon: "",
       color_primario: "#1A73E8", color_secundario: "#0F172A", tema: "claro", texto_entrega: "",
       pagos_otras: [], ...PAGOS_VACIOS, texto_garantia_nuevos: "", texto_garantia_usados: "", etiqueta_precio: "Precio",
@@ -67,7 +69,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 14;
+const VERSION = 15;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -180,6 +182,10 @@ const MIGRACIONES = {
       legal_clausula_aviso: propio(t.texto_autorizacion_datos, "0e0f5fbb")
     });
     for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) delete t[k];
+  },
+  // 0018_pais.sql: el país de la tienda. Los datos del demo eran de Colombia.
+  14(e) {
+    e.tienda.pais = "co";
   }
 };
 
@@ -329,7 +335,9 @@ function cambiarPerfil(e, userId, cambios) {
 // --- Validaciones (las mismas restricciones CHECK del SQL) -------------------
 
 function validarTienda(t) {
-  if (t.whatsapp && !whatsappTiendaValido(t.whatsapp)) throw new ErrorDatos("El WhatsApp debe tener 12 dígitos y empezar por 57.");
+  // Como 0018: el país es uno de la lista y el WhatsApp sigue su formato
+  if (!CODIGOS_PAIS_TIENDA.includes(t.pais)) throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
+  if (t.whatsapp && !whatsappValido(t.whatsapp, t.pais)) throw new ErrorDatos("El WhatsApp no tiene el formato del país de la tienda.");
   if (!hexValido(t.color_primario) || !hexValido(t.color_secundario)) throw new ErrorDatos("Los colores deben estar en formato hexadecimal, ej. #1A73E8.");
   if (!["claro", "oscuro"].includes(t.tema)) throw new ErrorDatos("El tema debe ser claro u oscuro.");
   if (!TAMANOS_TEXTO.includes(t.tamano_texto)) throw new ErrorDatos("El tamaño del texto debe ser compacto, normal o grande.");

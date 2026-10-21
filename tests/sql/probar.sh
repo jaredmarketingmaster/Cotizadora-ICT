@@ -48,6 +48,10 @@ done
       where m.slug not in ('iphone-prueba', 'iphone-13')),
     'legales', (select to_jsonb(t) from public.tienda t))" > "$DIR/semilla.json"
 node "$RAIZ/tests/sql/comparar-semilla.mjs" "$RAIZ" "$DIR/semilla.json"
+# El WhatsApp de la tienda según su país: el mismo criterio en SQL y en JS.
+node "$RAIZ/tests/sql/comparar-paises.mjs" sql "$RAIZ" > "$DIR/paises.sql"
+"${PSQL[@]}" -At -f "$DIR/paises.sql" > "$DIR/paises.json"
+node "$RAIZ/tests/sql/comparar-paises.mjs" comparar "$RAIZ" "$DIR/paises.json"
 # Lo que falta para publicar los legales: el mismo criterio en SQL y en JS.
 node "$RAIZ/tests/sql/comparar-faltantes.mjs" sql "$RAIZ" > "$DIR/faltantes.sql"
 "${PSQL[@]}" -At -f "$DIR/faltantes.sql" > "$DIR/faltantes.json"

@@ -319,6 +319,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 |---|---|
 | `assets/js/datos/api.js` (≈17) | `api()`: devuelve, una sola vez, el adaptador `demo` o `supabase` según `config.js`. Si se pide Supabase sin URL o clave, usa demo y avisa en la consola. |
 | `assets/js/datos/comun.js` (≈291) | Reglas compartidas por los dos adaptadores: <ul><li>`ErrorDatos`.</li><li>`equipoEsPublico`: publicado, con stock (`en_stock`) y de un modelo activo.</li><li>`LADO_GRANDE` = 1600 y `LADO_MINIATURA` = 640.</li><li>`rutaMiniatura`: `x.webp` → `x-640.webp`.</li><li>`CAMPOS_TIENDA`, `CAMPOS_EQUIPO`, `CAMPOS_COLOR`, `MAX_MAS_VENDIDOS` y `MENSAJE_MAS_VENDIDOS`, `nombreColor(color, mostrar)` (nombre que ve el cliente: el elegido por la tienda o el oficial en inglés, o el de la fuente), `TAMANOS_TEXTO`, `ESTADOS_ESTETICOS` y `elegir`.</li><li>**Ficha técnica (0012):** `CATEGORIAS_FICHA` (las 10 categorías fijas con su clave y nombre, en orden, más `otras` para las filas de la tienda), `MAX_ETIQUETA_FICHA` (60) y `MAX_VALOR_FICHA` (600), `especificacionesValidas` (las reglas de `validar_ficha`) y `filasVisiblesFicha(ficha, tienda)`: lo que muestra el sitio (nada si `mostrar_ficha` está apagado; si no, las categorías encendidas con valor en el orden fijo y al final las filas de la tienda).</li><li>**Legales (0016):** `LEGAL_INICIAL` (los campos del asistente con sus valores iniciales, iguales a los defaults del SQL; `CAMPOS_TIENDA` los incluye), `CAMPOS_LEGALES`, `PLATAFORMA_POR_DEFECTO` ("HighLevel (GoHighLevel)"), `CODIGOS_PAISES_SQL` (la lista del check de `legal_paises`; la prueba del motor la compara con `indice.js`) y `errorLegales(tienda)`: los checks de `0016` (largos, opciones, países, entregas, meses de 1 a 120, interruptores, `legal_publicado` objeto o vacío).</li><li>**Formas de pago (0013):** `MEDIOS_PAGO`, `PASARELAS_PAGO`, `MIN_CUOTAS` / `MAX_CUOTAS`, `errorPagos(tienda)` (las reglas de `validar_pagos`, con sus mensajes) y `frasesPagos(tienda)`: las frases del sitio ("Transferencia bancaria.", "Tarjeta de crédito: hasta 12 cuotas, hasta 6 sin interés.", "Pago a cuotas: …" si no marcó crédito, "Criptomonedas: USDT.", "Pago en línea con PSE, Nequi y Addi." y cada una de las otras, tal cual).</li><li>`mensajeDeError`: traduce los errores de Postgres al español; los mensajes de los disparadores (ya en español) pasan tal cual.</li></ul> |
+| `assets/js/datos/paises.js` (≈95) | **Datos de país de la tienda** (`tienda.pais`, ronda 3): `PAISES_TIENDA` con los 19 países (nombre, moneda ISO y símbolo, separador de miles, zona horaria IANA, prefijo y celular), `CODIGOS_PAIS_TIENDA`, `PAIS_POR_DEFECTO` (`ar`), `datosPais(codigo)`, `celularNacionalValido`, `celularInternacional`, `agruparCelular` y `whatsappValido(numero, pais)`. Seis países tienen el formato del celular verificado (Argentina, Brasil, Chile, Colombia, México y Perú; fuentes en la sección 9.10); los demás usan la validación general (prefijo + número, de 8 a 15 dígitos). Igual a `whatsapp_valido()` de `0018_pais.sql`. |
 | `assets/js/datos/semilla.js` (≈594) | `CATALOGO`: los **42 modelos** desde el iPhone 7, con slug, generación y orden de 10 en 10 por fecha de lanzamiento. `COLORES`: los 183 colores oficiales por slug (`[nombre_es, nombre_en, hex]`, vacío si la fuente no lo da). `DEMO_EQUIPOS`: los 6 equipos demo. `FICHAS`: las fichas técnicas de los 42 modelos, solo con lo que trae la fuente (`[clave, valor]` o `[null, valor, etiqueta]`), y `filasDeFuente(slug)`, que las devuelve como quedan en la base. `slugDe`. **Debe coincidir** con `0006_catalogo_colores.sql`, `0003_demo.sql` y `0012_fichas.sql`; la prueba SQL lo revisa. |
 | `assets/js/datos/demo.js` (≈822) | Back-end de demostración. Ver sección 7.2. |
 | `assets/js/datos/supabase.js` (≈371) | Back-end Supabase. Ver sección 7.3. |
@@ -367,6 +368,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `supabase/migrations/0002_catalogo.sql` (≈42) | Inserta los **32 modelos** del catálogo maestro, en el orden del prompt, todos inactivos (`orden` 10, 20, …, 320). Cada modelo recibe su ficha vacía por disparador. |
 | `supabase/migrations/0003_demo.sql` (≈36) | Pone el nombre "Tienda de demostración" y `modo_demo = true`, activa los 4 modelos que usa la demo (con `activo_por_demo = true`) e inserta los 6 equipos demo. |
 | `supabase/migrations/0011_vista_equipos.sql` (≈12) | `tienda.vista_equipos`: `cuadricula` (por defecto) o `carrusel`. |
+| `supabase/migrations/0018_pais.sql` (≈120) | `tienda.pais` (19 países, Argentina por defecto; queda en Colombia una tienda con datos de Colombia), `whatsapp_valido(pais, numero)` y el check `tienda_whatsapp_pais` (reemplaza al de "57 y 10 dígitos"); `legal_faltantes()` con el WhatsApp según el país. |
 | `supabase/migrations/0017_bloqueo_legal.sql` (≈39) | Sin `legal_publicado`: `proteger_tienda` no deja apagar el modo demo ("Publique los textos legales antes de quitar el modo demo.") y `borrar_datos_demo` no corre ("Publique los textos legales antes de borrar los datos de demostración."), con cualquier sesión. |
 | `supabase/migrations/0016_legales_asistente.sql` (≈203) | Legales con asistente: los campos `legal_*`, de herramientas (`meta_pixel_id`, `ga4_*`, `gtm_*`, `clarity_*`, `tiktok_*`, `gads_*`), `capi_solo_consentimiento`, `plataforma_sitio` y `legal_publicado`; pasa los textos propios de la tienda a las cláusulas y borra las columnas de `0015`; `legal_faltantes(tienda)` y el disparador `tienda_publicar_legales` (`publicar_legales`). Ver sección 6. |
 | `supabase/migrations/0015_legales.sql` (≈125) | Textos legales base (privacidad, términos y casilla del pop-up) solo donde estaban vacíos; `tienda.legales_revisados` y `tienda.legales_herramientas`. **Reemplazada por `0016`**, que descarta esos textos base (por su md5) y borra las columnas; no se edita porque ya corrió en producción. |
@@ -391,7 +393,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈2386) | Suite de aceptación en **modo demo** con Playwright: **63 casos** (64 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). Publica los textos legales de prueba al abrir el sitio o el panel (`nueva(..., {legales})`) y empieza con las cookies rechazadas (`{cookies}`; `null` = sin elegir). `ICT_LINEAS` muestra más líneas de cada falla. | Ver sección 14. |
+| `tests/verificar.cjs` (≈2386) | Suite de aceptación en **modo demo** con Playwright: **64 casos** (65 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). Publica los textos legales de prueba al abrir el sitio o el panel (`nueva(..., {legales})`) y empieza con las cookies rechazadas (`{cookies}`; `null` = sin elegir). `ICT_LINEAS` muestra más líneas de cada falla. | Ver sección 14. |
 | `tests/verificar-supabase.cjs` (≈534) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **12 casos**. Reemplaza `config.js` en el navegador, puede servir un supabase-js local (`ICT_SUPABASE_JS`) y empieza con las cookies rechazadas. |
 | `tests/legal/motor.test.mjs` | Pruebas del motor legal sin navegador (`node tests/legal/motor.test.mjs`): faltantes por perfil y tipo de persona, validaciones, países, datos y plazos en los textos, sin corchetes ni marcadores vacíos, relación con Apple por perfil, herramientas activas e inactivas, versión y vigencia. |
 | `tests/legal/datos-prueba.mjs` | `TIENDA_LEGAL_PRUEBA`: una tienda inventada con todos los datos legales completos, para las pruebas. No es de ninguna tienda real. |
@@ -406,6 +408,8 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `tests/sql/supabase_simulado.sql` | Roles `anon`, `authenticated` y `service_role`, esquema `auth` con `auth.uid()`, y `storage.buckets` y `storage.objects` mínimos. |
 | `tests/sql/pruebas.sql` | Asserts de catálogo y semilla, y de RLS por rol (anon, sin perfil, inactivo, gestor, administrador). También validaciones, fecha de precios, colores, modo demo, perfiles (nadie se quita a sí mismo; siempre un administrador activo, también sin sesión) y borrar demo. **Legales:** migración de `0016` (columnas viejas fuera, textos propios en las cláusulas, valores iniciales), checks, publicar incompleto o con marcas rechazado, versión y fecha que pone el disparador, sin despublicar, el administrador no edita, y el bloqueo de `0017`. |
 | `tests/sql/comparar-semilla.mjs` | Compara el JSON de la semilla del SQL con `semilla.js`: catálogo, colores, equipos demo, las fichas precargadas (filas, orden y textos) y los valores legales iniciales con `LEGAL_INICIAL` (`comun.js`). |
+| `tests/sql/comparar-paises.mjs` | Compara `whatsapp_valido()` del SQL con `whatsappValido()` de `paises.js` en 285 números de los 19 países. |
+| `tests/sql/antes_0018_pais.sql` | Un WhatsApp de Colombia antes de `0018`, para probar que la tienda queda en Colombia. |
 | `tests/sql/comparar-faltantes.mjs` | Arma 27 variantes de la tienda de prueba (completa, vacía, cada regla rota) y compara `legal_faltantes()` del SQL con `faltantes()` de `motor.js`. |
 | `tests/sql/antes_0016_legales_asistente.sql` | Un aviso de marca de la tienda, para probar que `0016` lo pasa a la cláusula de los términos después de sus términos (`antes_0015`). |
 | `tests/funciones/probar.sh` | Revisa los tipos de las dos funciones y prueba `enviar-lead` contra webhooks simulados: 14 casos (con los de consentimiento). |
@@ -430,9 +434,9 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 **`tienda`**: una sola fila (`id = 1`, con `check (id = 1)`).
 
-- **Datos:** `nombre`, `ciudad`, `direccion`, `horario_texto`.
+- **Datos:** `nombre`, `pais` (desde `0018`: uno de los 19 de `paises.js`, Argentina por defecto), `ciudad`, `direccion`, `horario_texto`.
 - **Contacto:**
-  - `whatsapp`: vacío o `^57[0-9]{10}$`.
+  - `whatsapp`: vacío o válido para el país (`whatsapp_valido(pais, whatsapp)`, desde `0018`; antes, `^57[0-9]{10}$`).
   - `correo_contacto`, `instagram_url`, `facebook_url`, `tiktok_url`.
 - **Marca:**
   - `logo` y `favicon`: rutas en el bucket "marca".
@@ -620,7 +624,7 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 - **Estado:** `localStorage["cotizadora-demo:v1"]`, un JSON con `tienda`, `modelos`, `fichas`, `equipos` y `perfiles`. Se comparte entre pestañas del mismo navegador.
 - **Fotos:** IndexedDB, base `cotizadora-demo`, almacén `archivos`. Se exponen como `blob:` URLs.
 - **Usuarios de prueba:** `gestor@demo.co` y `administrador@demo.co`, clave `demo1234` (desde la versión 5 de los datos; antes `tienda@demo.co` y `agencia@demo.co`, que `migrar()` convierte). La sesión va en `sessionStorage["cotizadora-demo:sesion"]`.
-- **Versión de los datos:** el JSON lleva `version` (hoy 14; la 14 es `0016_legales_asistente.sql`: los campos del asistente con `LEGAL_INICIAL`, los textos propios a las cláusulas, los textos base de `0015` descartados por su huella FNV-1a y las columnas viejas borradas; la 13 es `0015_legales.sql`: textos base donde estaban vacíos, herramientas y revisión en no; la 12 es `0014_resenas.sql`: interruptor apagado, título por defecto y lista vacía; la 10 es `0012_fichas.sql`, interruptores de la ficha y precarga de la fuente en las fichas sin filas; la 11 es `0013_formas_pago.sql`, `formas_pago` → `pagos_otras` y los campos nuevos vacíos). Si el navegador tiene una versión vieja, `migrar()` repite la migración SQL del mismo número (por ejemplo `stock` → `en_stock`) sin perder lo cargado.
+- **Versión de los datos:** el JSON lleva `version` (hoy 15; la 15 es `0018_pais.sql`: `tienda.pais` en Colombia, porque el demo es una tienda de Colombia; la 14 es `0016_legales_asistente.sql`: los campos del asistente con `LEGAL_INICIAL`, los textos propios a las cláusulas, los textos base de `0015` descartados por su huella FNV-1a y las columnas viejas borradas; la 13 es `0015_legales.sql`: textos base donde estaban vacíos, herramientas y revisión en no; la 12 es `0014_resenas.sql`: interruptor apagado, título por defecto y lista vacía; la 10 es `0012_fichas.sql`, interruptores de la ficha y precarga de la fuente en las fichas sin filas; la 11 es `0013_formas_pago.sql`, `formas_pago` → `pagos_otras` y los campos nuevos vacíos). Si el navegador tiene una versión vieja, `migrar()` repite la migración SQL del mismo número (por ejemplo `stock` → `en_stock`) sin perder lo cargado.
 - **Repite las reglas del SQL:**
   - Legales: `errorLegales` (checks de `0016`), la publicación de `publicar_legales` (`publicarLegales`, que carga el motor solo al publicar: faltantes, documentos sin marcas, sin despublicar, versión y fecha) y el bloqueo de `0017` (modo demo y borrar la demo).
   - Permisos por rol.
@@ -878,6 +882,22 @@ Mientras `legal_publicado` esté vacío:
 
 Al publicar, todo se habilita. En el sitio, el panel y los textos no hay avisos de "borrador" ni de "revisión de un abogado".
 
+### 9.10 País de la tienda (`tienda.pais`, ronda 3)
+
+- Se elige en Mi tienda → "País, moneda e idioma". Argentina es el valor por defecto de las tiendas nuevas; el demo es una tienda de Colombia.
+- `assets/js/datos/paises.js` tiene, por país, la moneda (ISO 4217 y símbolo), el separador de miles, la zona horaria y el celular.
+- **Formato del celular** (lo que escribe el cliente, sin el prefijo; y el WhatsApp de la tienda, en formato internacional):
+
+| País | Internacional | Número nacional | Fuente | Estado |
+|---|---|---|---|---|
+| Argentina | `54 9` | 10 dígitos: código de área sin el 0 y número sin el 15 | <https://en.wikipedia.org/wiki/Telephone_numbers_in_Argentina> y Cancillería argentina (<https://cancilleria.gob.ar/es/iniciativas/paba/telecomunicaciones>: "+54 9 11" para un celular de Buenos Aires) | Confirmado por el buscador. Falta un documento de ENACOM o de WhatsApp que lo diga. |
+| Brasil | `55` | DDD (2 dígitos) + 9 + 8 dígitos (el segundo dígito del número, de 1 a 9) | Anatel, Resolução 553/2010 (nono dígito; resúmenes de prensa) | Confirmado por el buscador (prensa sobre la resolución). |
+| Chile | `56` | 9 + 8 dígitos | <https://en.wikipedia.org/wiki/Telephone_numbers_in_Chile> y aviso de la UIT de SUBTEL (<https://itu.int/itudoc/itu-t/number/c/chl/76483_ww9-es.doc>) | Confirmado por el buscador; el plan técnico de SUBTEL no se pudo abrir. |
+| Colombia | `57` | 10 dígitos que empiezan por 3 | CRC, Resolución 5826 de 2019 (marcación de 10 dígitos; los fijos pasaron a 60X) | Los 10 dígitos, confirmados por el buscador; "empieza por 3" viene del prompt (no se encontró dicho en la fuente). |
+| México | `52` | 10 dígitos (sin el 1 de los celulares) | IFT, marcación a 10 dígitos desde 2019–2020 (prensa: Xataka, Zeta Tijuana) | Confirmado por el buscador. **Pendiente:** si WhatsApp todavía necesita `521` (no se encontró una fuente). |
+| Perú | `51` | 9 dígitos que empiezan por 9 | <https://en.wikipedia.org/wiki/Telephone_numbers_in_Peru> y prensa sobre el cambio del MTC | Confirmado por el buscador. |
+| Bolivia, Costa Rica, Cuba, Ecuador, El Salvador, Guatemala, Honduras, Nicaragua, Panamá, Paraguay, República Dominicana, Uruguay y Venezuela | El código del país (lista E.164 de la UIT) | Validación general: prefijo + número, de 8 a 15 dígitos en total | — | **Pendiente:** formato sin verificar. |
+
 ---
 
 ## 10. Panel de administración
@@ -920,7 +940,7 @@ Son las mismas que exige el SQL:
 - **Usados:** batería obligatoria de 0 a 100 y estado estético obligatorio.
 - **Más vendido:** como mucho 3. En la lista y en el paso Publicar se avisa "Ya tiene 3 equipos marcados como más vendidos. Desmarque uno para marcar este." antes de guardar. Duplicar no lo copia.
 - **Color:** uno de los colores oficiales del modelo (obligatorio si el modelo tiene colores; mensaje "Elija el color."). El nombre a mostrar es opcional, hasta 40 caracteres.
-- **Tienda:** WhatsApp de 12 dígitos que empiece por 57; correo válido; redes con `https://`.
+- **Tienda:** WhatsApp en formato internacional, según el país (ej. Colombia `57` y 10 dígitos que empiezan por 3; Argentina `549` y 10 dígitos); correo válido; redes con `https://`.
 
 **Cambios sin guardar:**
 
@@ -1115,7 +1135,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
 node tests/legal/motor.test.mjs                            # motor legal (13 casos, sin navegador)
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 63 casos en modo demo (Playwright + Chromium)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 64 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (14 casos) + tipos
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
@@ -1128,7 +1148,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 - `ICT_CAPTURAS=1`: además guarda capturas en `tests/capturas/` y corre el caso **capturas de diseño**: 360 y 1440 px × claro y oscuro × cuadrícula y carrusel × color por defecto y primario amarillo, más el detalle y el pop-up, en `tests/capturas/diseno/<etapa>-….png`. `ICT_CAPTURAS_ETAPA` pone la etapa (por ejemplo `antes` o `despues`). La carpeta no se sube al repo.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (63 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (64 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
@@ -1159,6 +1179,7 @@ node tests/documentacion.mjs                               # este documento cubr
 20. Copy: sin tuteo ni promesas (también en los textos legales), sin `Purchase`, y sin "borrador", "abogado" ni "en revisión" en lo que ve el cliente.
 21. Píxel (con publicidad aceptada): `PageView`, `ViewContent` y `Lead` con `eventID`, sin datos personales.
 22. Formatos: `$5.299.000`, fecha D/M/AAAA y código sin O/0/I/1.
+23. **País de la tienda (B1):** Mi tienda muestra los 19 países, la moneda, el prefijo y la zona horaria; el WhatsApp de la tienda sigue el formato del país (Argentina `549`; validación general en Guatemala), con su mensaje; la capa de datos lo exige.
 
 ### 14.3 "Supabase local" y `tests/verificar-supabase.cjs` (12 casos)
 
@@ -1230,7 +1251,7 @@ bash tests/supabase-local/levantar.sh detener
 ### 15.2 Producción, una tienda
 
 1. **Proyecto de Supabase.** Conviene la región São Paulo.
-2. **Migraciones:** correr **todas** las de `supabase/migrations/`, en orden de número, de `0001` a la última (hoy `0017`): `0001` esquema, `0002` catálogo, `0003` demo, `0004` stock sí/no, `0005` tamaño del texto, `0006` catálogo y colores, `0007` roles, `0008` color oficial, `0009` video, `0010` más vendido, `0011` vista de equipos, `0012` fichas, `0013` formas de pago, `0014` reseñas, `0015` legales (textos base, reemplazados por la siguiente), `0016` asistente de legales y `0017` bloqueo hasta publicar. Saltarse una rompe las siguientes (con la CLI, `supabase db push` las corre en orden). Crean también los buckets (`fotos` y `marca` en `0001`, `videos` en `0009`, `resenas` en `0014`) con sus reglas. Para actualizar una tienda ya publicada se corren solo las nuevas, en orden; nunca se edita una ya corrida. (El comentario de `0001_esquema.sql` que dice "0001 → 0002 → 0003" es de cuando eran tres; no se edita porque esa migración ya corrió.)
+2. **Migraciones:** correr **todas** las de `supabase/migrations/`, en orden de número, de `0001` a la última (hoy `0018`): `0001` esquema, `0002` catálogo, `0003` demo, `0004` stock sí/no, `0005` tamaño del texto, `0006` catálogo y colores, `0007` roles, `0008` color oficial, `0009` video, `0010` más vendido, `0011` vista de equipos, `0012` fichas, `0013` formas de pago, `0014` reseñas, `0015` legales (textos base, reemplazados por la siguiente), `0016` asistente de legales, `0017` bloqueo hasta publicar y `0018` país de la tienda. Saltarse una rompe las siguientes (con la CLI, `supabase db push` las corre en orden). Crean también los buckets (`fotos` y `marca` en `0001`, `videos` en `0009`, `resenas` en `0014`) con sus reglas. Para actualizar una tienda ya publicada se corren solo las nuevas, en orden; nunca se edita una ya corrida. (El comentario de `0001_esquema.sql` que dice "0001 → 0002 → 0003" es de cuando eran tres; no se edita porque esa migración ya corrió.)
 3. **Registro:** apagar "Allow new users to sign up".
 4. **Direcciones:** Site URL y Redirect URLs apuntando a `/admin/`.
 5. **Correo:** SMTP propio y las plantillas de `supabase/correos/`.
@@ -1304,6 +1325,8 @@ bash tests/supabase-local/levantar.sh detener
 | Sin conversor de HEIC | Pesa cerca de 1 MB. El iPhone convierte a JPEG al elegir la foto y Safari lee HEIC. |
 | `flowType: "implicit"` | Los enlaces de invitación y recuperación funcionan en otro navegador o celular. |
 | Google Fonts sin bloquear | El LCP bajó de 2,7 s a 1,4 s. |
+| Argentina por defecto y el demo en Colombia (ronda 3, B1) | Pedido de Jared: las tiendas nuevas son de Argentina. El demo queda en Colombia porque sus precios de ejemplo están en pesos colombianos y su legal es el único verificado. La migración deja en Colombia la tienda que ya tenía datos de Colombia. |
+| Validación general del celular en 13 países | Pedido: solo se usa un formato si está verificado en una fuente. Sin fuente, prefijo + número de 8 a 15 dígitos (el máximo de E.164). |
 | Rutas relativas y `.nojekyll` | El sitio funciona en cualquier subcarpeta, como `/Cotizadora-ICT/` en GitHub Pages. |
 
 ---
@@ -1339,6 +1362,7 @@ bash tests/supabase-local/levantar.sh detener
   - **Descripción:** ningún modelo (la fuente no trae).
   - Los datos del 18 Pro, 18 Pro Max y Duo son de modelos de lanzamiento reciente o futuro según la fuente: conviene revisarlos antes de publicar.
 - [ ] Confirmar con cada tienda si su precio es de contado, para `etiqueta_precio`.
+- [ ] **Formato del celular sin verificar** en 13 países (sección 9.10) y si WhatsApp todavía necesita `521` para México.
 - [ ] Crear en GHL los campos personalizados y el workflow con Inbound Webhook.
 
 **Pendientes por el cambio de plataforma:**
@@ -1379,6 +1403,15 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 21/10/2026 · Ronda 3, B1: país de la tienda
+
+- **Pedido de Jared:** campo `tienda.pais` (uno de los 19 países; Argentina por defecto para tiendas nuevas), en una sección nueva de Mi tienda "País, moneda e idioma"; los datos de cada país en un solo archivo (moneda, prefijo, zona horaria, formato de números); el celular de cada país con fuentes oficiales y, si no se puede verificar, validación general (8 a 15 dígitos) y pendiente; Argentina con 54 9 y el número sin 0 ni 15.
+- **Hecho:** `assets/js/datos/paises.js` (nuevo); `0018_pais.sql` (columna, `whatsapp_valido`, check y `legal_faltantes`); `demo.js` versión 15 (Colombia; misma regla); `comun.js` (campo); `motor.js` (WhatsApp según el país); panel `tienda.js` (sección y validación) y `panel.js` (Inicio).
+- **Fuentes:** sección 9.10 (verificados: Argentina, Brasil, Chile, Colombia, México y Perú; los otros 13, pendientes).
+- **Pruebas:** `pruebas.sql` (valor por defecto, migración con `antes_0018_pais.sql`, check por país), `comparar-paises.mjs` (nuevo: SQL = JS en 285 números), `verificar.cjs` (caso nuevo; la migración del demo llega a la versión 15; **cambiada:** el caso de validaciones del panel esperaba "Debe tener 12 dígitos y empezar por 57."; ahora el mensaje depende del país y para Colombia es "No tiene el formato de Colombia. Formato internacional sin «+»: 57 y el número. Ej. 573001234567.").
+- **Todavía no:** los precios, el pop-up, las fechas y el píxel siguen en Colombia hasta B2.
+- **Verificación:** `tests/sql/probar.sh` OK, casos tocados de `verificar.cjs` OK y `node tests/documentacion.mjs` OK.
 
 ### 21/10/2026 · Ronda 3, A3: Argentina en la lista de países adecuados de la SIC
 
