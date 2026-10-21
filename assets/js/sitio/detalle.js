@@ -5,7 +5,7 @@
 // =============================================================================
 
 import { escaparHTML, formatearCOP, reducirMovimiento } from "../utils.js";
-import { textoCondicion, textoAlternativo } from "./catalogo.js";
+import { textoCondicion, textoAlternativo, TEXTO_MAS_VENDIDO } from "./catalogo.js";
 import { htmlFoto, htmlMedio } from "./fotos.js";
 
 const ICONO_ANT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -82,6 +82,9 @@ export function crearDetalle({ api, cat, tarjeta, lista, inicial, alComprar, alC
   function dibujarFicha() {
     const q = equipo();
     const usado = condicion === "usado";
+    // Igual que la tarjeta: un nuevo es "más vendido" si lo es cualquiera de
+    // sus colores; un usado, si lo es esa unidad. Sin animación.
+    const masVendido = usado ? q.mas_vendido : lista.some((x) => x.mas_vendido);
     const etiquetaPrecio = tienda.etiqueta_precio || "Precio";
     const descripcion = [ficha?.descripcion, q.descripcion_extra].map((t) => String(t || "").trim()).filter(Boolean);
     const garantia = usado ? tienda.texto_garantia_usados : tienda.texto_garantia_nuevos;
@@ -95,7 +98,7 @@ export function crearDetalle({ api, cat, tarjeta, lista, inicial, alComprar, alC
 
     fichaEl.innerHTML = `
       <div class="detalle-encabezado">
-        <div class="tarjeta-etiquetas"><span class="etiqueta-pildora${usado ? " etiqueta-pildora--usado" : ""}">${textoCondicion(condicion)}</span></div>
+        <div class="tarjeta-etiquetas"><span class="etiqueta-pildora${usado ? " etiqueta-pildora--usado" : ""}">${textoCondicion(condicion)}</span>${masVendido ? `<span class="etiqueta-pildora etiqueta-pildora--mas-vendido">${TEXTO_MAS_VENDIDO}</span>` : ""}</div>
         <h2 class="detalle-nombre" id="${idTitulo}">${escaparHTML(modelo.nombre)}</h2>
         <p class="detalle-variante cifras">${[q.capacidad, q.color_nombre].filter(Boolean).map(escaparHTML).join(" · ")}</p>
       </div>

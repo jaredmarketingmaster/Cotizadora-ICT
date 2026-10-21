@@ -5,7 +5,7 @@
 // =============================================================================
 
 import { escaparHTML, formatearCOP, reducirMovimiento } from "../utils.js";
-import { textoCondicion } from "./catalogo.js";
+import { textoCondicion, TEXTO_MAS_VENDIDO } from "./catalogo.js";
 import { htmlMedio } from "./fotos.js";
 
 const SIZES = "(min-width: 1200px) 280px, (min-width: 960px) 30vw, (min-width: 640px) 45vw, 112px";
@@ -30,11 +30,14 @@ function htmlTarjeta(api, t, i) {
     sub = partes + (usado ? `<br>${usado}` : "");
   }
   const alt = [nombre, t.capacidad, t.condicion === "usado" && q.color_nombre && `color ${q.color_nombre}`].filter(Boolean).join(", ");
-  return `<li class="tarjeta" data-clave="${escaparHTML(t.clave)}">
+  // Más vendido: borde con una luz que recorre el contorno (span.tarjeta-brillo,
+  // decorativo) y la etiqueta junto a la condición.
+  return `<li class="tarjeta${t.masVendido ? " tarjeta--mas-vendido" : ""}" data-clave="${escaparHTML(t.clave)}">
+    ${t.masVendido ? '<span class="tarjeta-brillo" aria-hidden="true"><span></span></span>' : ""}
     <button type="button" class="tarjeta-boton" data-clave="${escaparHTML(t.clave)}">
       <span class="tarjeta-medio">${htmlMedio(api, q, alt, { sizes: SIZES, cargaInmediata: i < 2 })}</span>
       <span class="tarjeta-cuerpo">
-        <span class="tarjeta-etiquetas"><span class="etiqueta-pildora${t.condicion === "usado" ? " etiqueta-pildora--usado" : ""}">${textoCondicion(t.condicion)}</span></span>
+        <span class="tarjeta-etiquetas"><span class="etiqueta-pildora${t.condicion === "usado" ? " etiqueta-pildora--usado" : ""}">${textoCondicion(t.condicion)}</span>${t.masVendido ? `<span class="etiqueta-pildora etiqueta-pildora--mas-vendido">${TEXTO_MAS_VENDIDO}</span>` : ""}</span>
         <span class="tarjeta-nombre">${escaparHTML(nombre)}</span>
         <span class="tarjeta-sub cifras">${sub}</span>
         ${muestras}
@@ -55,7 +58,26 @@ export function crearGaleria(lista, api) {
     return tmp.content.firstElementChild;
   }
 
+  // "Más vendido": la luz del borde solo corre en las tarjetas que se ven
+  // (data-en-pantalla) y en 3 como máximo.
+  const MAX_BRILLOS = 3;
+  let observador = null;
+  function observarBrillos() {
+    observador?.disconnect();
+    const brillos = [...lista.querySelectorAll(":scope > .tarjeta--mas-vendido")].slice(0, MAX_BRILLOS);
+    if (!brillos.length || !("IntersectionObserver" in window)) return;
+    observador ??= new IntersectionObserver((entradas) => {
+      for (const e of entradas) e.target.toggleAttribute("data-en-pantalla", e.isIntersecting);
+    });
+    brillos.forEach((el) => observador.observe(el));
+  }
+
   async function dibujar(tarjetas) {
+    await dibujarTarjetas(tarjetas);
+    observarBrillos();
+  }
+
+  async function dibujarTarjetas(tarjetas) {
     const mia = ++version;
     animaciones.forEach((a) => a.cancel());
     animaciones = [];

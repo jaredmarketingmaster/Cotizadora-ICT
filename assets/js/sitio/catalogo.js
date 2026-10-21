@@ -112,6 +112,8 @@ export function tarjetas(equipos) {
     t.precioMin = Math.min(...t.equipos.map((q) => q.precio));
     t.desde = new Set(t.equipos.map((q) => q.precio)).size > 1;
     t.esDemo = t.equipos.some((q) => q.es_demo);
+    // "Más vendido": si cualquiera de sus equipos lo es. No cambia el orden.
+    t.masVendido = t.equipos.some((q) => q.mas_vendido);
   }
   // Destacados primero, después la generación más nueva, después el precio.
   return lista.sort((a, b) =>
@@ -132,6 +134,8 @@ export function diapositivas(cat, tarjeta) {
     .sort(ordenarEquipos);
   return { lista, inicial: Math.max(0, lista.findIndex((q) => q.id === tarjeta.equipos[0].id)) };
 }
+
+export const TEXTO_MAS_VENDIDO = "Más vendido";
 
 export function textoCondicion(condicion) {
   return condicion === "usado" ? "Usado" : "Nuevo";

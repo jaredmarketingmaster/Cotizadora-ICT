@@ -565,7 +565,7 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
-  await caso("más vendido: hasta 3 en la lista y en el formulario; el cuarto se rechaza; no se ve en el sitio", async () => {
+  await caso("más vendido: hasta 3 en la lista y en el formulario; el cuarto se rechaza; Duplicar no lo copia", async () => {
     const p = await nueva(1280, 900);
     await entrarPanel(p, "gestor@demo.co");
     await p.goto(`${BASE}/admin/#/inventario`);
@@ -613,9 +613,140 @@ async function llenarPopup(p) {
     await p.goto(`${BASE}/admin/#/inventario/nuevo?desde=${libre}`);
     await p.waitForSelector("#form-equipo");
     assert.equal(await p.isChecked("#e-mas-vendido"), false);
-    // Todavía no se muestra en el sitio.
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  // "Más vendido" en el sitio (reemplaza la comprobación vieja "no se ve en
+  // el sitio", que dejó de tener sentido con la fase B de la ronda 2).
+  const marcarMasVendido = (p, ids) => editarDemo(p, (e, x) => { for (const q of e.equipos) q.mas_vendido = x.includes(q.id); }, ids);
+  const estadoMasVendido = (p) => p.evaluate(() => [...document.querySelectorAll("#lista-equipos > .tarjeta")].map((li) => {
+    const luz = li.querySelector(".tarjeta-brillo > span");
+    const anim = luz?.getAnimations()[0];
+    return {
+      clave: li.dataset.clave,
+      marcada: li.classList.contains("tarjeta--mas-vendido"),
+      etiqueta: li.querySelector(".etiqueta-pildora--mas-vendido")?.textContent || "",
+      anillo: Boolean(li.querySelector(".tarjeta-brillo")),
+      corre: anim?.playState === "running",
+      propiedades: anim ? [...new Set(anim.effect.getKeyframes().flatMap((k) => Object.keys(k).filter((x) => !["offset", "computedOffset", "easing", "composite"].includes(x))))] : []
+    };
+  }));
+  const contrasteDe = (p, selector) => p.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    const rgb = (c) => c.match(/[\d.]+/g).map(Number);
+    const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+    const st = getComputedStyle(el);
+    const [a, b] = [lum(rgb(st.color)), lum(rgb(st.backgroundColor))].sort((x, y) => y - x);
+    return (a + 0.05) / (b + 0.05);
+  }, selector);
+
+  await caso("más vendido en el sitio: etiqueta, borde con luz y halo en la tarjeta; etiqueta en el detalle; AA; mismo orden", async () => {
+    const p = await nueva(360, 800);
     await ir(p);
-    assert.ok(!/más vendido/i.test(await p.textContent("body")));
+    const antes = (await estadoMasVendido(p)).map((t) => t.clave);
+    assert.ok(antes.length >= 5);
+    // Un color del primer grupo de nuevos (iPhone 18 Pro Max 256 GB) y un usado.
+    const ids = await p.evaluate((clave) => {
+      const e = JSON.parse(localStorage.getItem(clave));
+      const nuevo = e.equipos.find((q) => q.condicion === "nuevo" && q.capacidad === "256 GB" && q.modelo_id === e.equipos[0].modelo_id);
+      return [nuevo.id, e.equipos.find((q) => q.condicion === "usado").id];
+    }, CLAVE_DEMO);
+    for (const [tema, primario] of [["claro", "#1A73E8"], ["oscuro", "#1A73E8"], ["claro", "#FFD60A"]]) {
+      await marcarMasVendido(p, ids);
+      await editarDemo(p, (e, x) => Object.assign(e.tienda, { tema: x[0], color_primario: x[1] }), [tema, primario]);
+      await ir(p);
+      const t = await estadoMasVendido(p);
+      assert.deepEqual(t.map((x) => x.clave), antes, "el orden no cambia");
+      const marcadas = t.filter((x) => x.marcada);
+      assert.equal(marcadas.length, 2, "una tarjeta de nuevos (por cualquier color) y la del usado");
+      for (const x of marcadas) {
+        assert.equal(x.etiqueta, "Más vendido");
+        assert.ok(x.anillo, "borde con luz");
+        assert.deepEqual(x.propiedades, ["transform"], "la luz solo anima transform");
+      }
+      assert.ok(t.filter((x) => !x.marcada).every((x) => !x.etiqueta && !x.anillo), "las demás no cambian");
+      const ratio = await contrasteDe(p, ".tarjeta .etiqueta-pildora--mas-vendido");
+      assert.ok(ratio >= 4.5, `${tema} ${primario}: la etiqueta tiene ${ratio.toFixed(2)}:1`);
+      assert.deepEqual(await p.evaluate(contrasteMalo), [], `${tema} ${primario}`);
+      const halo = await p.$eval(".tarjeta--mas-vendido", (el) => getComputedStyle(el).boxShadow);
+      assert.ok((halo.match(/rgb/g) || []).length >= 2, "halo además de la sombra");
+    }
+    // La luz corre en la que se ve y se pausa fuera de la pantalla.
+    await p.evaluate(() => scrollTo(0, 0));
+    await p.$eval(".tarjeta--mas-vendido", (el) => el.scrollIntoView({ block: "center" }));
+    await p.waitForFunction(() => document.querySelector(".tarjeta--mas-vendido").hasAttribute("data-en-pantalla"));
+    assert.equal((await estadoMasVendido(p)).find((x) => x.marcada).corre, true, "corre en pantalla");
+    await p.evaluate(() => scrollTo(0, document.body.scrollHeight));
+    await p.waitForFunction(() => !document.querySelector(".tarjeta--mas-vendido").hasAttribute("data-en-pantalla"));
+    assert.equal((await estadoMasVendido(p)).find((x) => x.marcada).corre, false, "en pausa fuera de la pantalla");
+    // Detalle: la etiqueta, quieta.
+    await p.evaluate(() => scrollTo(0, 0));
+    await p.click(".tarjeta--mas-vendido .tarjeta-boton");
+    await p.waitForFunction(() => document.querySelector("#hoja-detalle").open && !document.querySelector("#hoja-detalle[data-vt]"));
+    const det = await p.$eval("#hoja-detalle .etiqueta-pildora--mas-vendido", (el) => ({ texto: el.textContent, anims: el.getAnimations({ subtree: true }).length, anillo: Boolean(el.closest("dialog").querySelector(".tarjeta-brillo")) }));
+    assert.deepEqual(det, { texto: "Más vendido", anims: 0, anillo: false });
+    assert.ok(await contrasteDe(p, "#hoja-detalle .etiqueta-pildora--mas-vendido") >= 4.5);
+    // En un nuevo, cambiar de color no la quita (es del modelo y capacidad).
+    if (await p.locator("#hoja-detalle .color-boton").count() > 1) {
+      await p.click("#hoja-detalle .color-boton >> nth=1");
+      await p.waitForTimeout(400);
+      assert.equal(await p.locator("#hoja-detalle .etiqueta-pildora--mas-vendido").count(), 1);
+    }
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("más vendido en el carrusel y con muchas: la del centro igual, las vecinas atenuadas; luz en 3 como máximo", async () => {
+    const p = await nueva(1440, 900);
+    await ir(p);
+    // Se fuerzan 5 marcadas (saltando el límite de la capa de datos) para
+    // comprobar que la luz corre en 3 como máximo.
+    const todos = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).equipos.map((q) => q.id), CLAVE_DEMO);
+    await marcarMasVendido(p, todos);
+    await ir(p);
+    await p.waitForTimeout(300);
+    const t = await estadoMasVendido(p);
+    assert.ok(t.filter((x) => x.marcada).length >= 4);
+    assert.equal(t.filter((x) => x.corre).length, 3, "la luz corre en 3");
+    // Carrusel: la del centro con etiqueta y anillo; las vecinas, con la capa que las desvanece encima.
+    await marcarMasVendido(p, todos.slice(0, 1));
+    await editarDemo(p, (e) => { e.tienda.vista_equipos = "carrusel"; });
+    await ir(p);
+    const c = await p.evaluate(() => {
+      const centro = document.querySelector(".galeria--carrusel > .tarjeta[data-centro]");
+      const vecina = document.querySelector(".galeria--carrusel > .tarjeta--mas-vendido:not([data-centro])");
+      return {
+        centro: centro.classList.contains("tarjeta--mas-vendido") && Boolean(centro.querySelector(".etiqueta-pildora--mas-vendido")),
+        capaCentro: +getComputedStyle(centro, "::after").opacity,
+        vecina: Boolean(vecina)
+      };
+    });
+    assert.ok(c.centro, "la del centro es la más vendida");
+    assert.equal(c.capaCentro, 0);
+    await p.click(".ce-siguiente");
+    await p.waitForFunction(() => !document.querySelector("#vista-equipos[data-moviendo]"));
+    const capaVecina = await p.$eval(".galeria--carrusel > .tarjeta--mas-vendido", (el) => +getComputedStyle(el, "::after").opacity);
+    assert.ok(capaVecina > 0.2, `la vecina queda atenuada (${capaVecina})`);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("más vendido con reduced-motion: etiqueta y anillo quietos, sin animaciones", async () => {
+    const p = await nueva(390, 844, { reducedMotion: "reduce" });
+    await ir(p);
+    const id = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).equipos[0].id, CLAVE_DEMO);
+    await marcarMasVendido(p, [id]);
+    await ir(p);
+    const r = await p.$eval(".tarjeta--mas-vendido", (li) => ({
+      etiqueta: li.querySelector(".etiqueta-pildora--mas-vendido").textContent,
+      anillo: getComputedStyle(li.querySelector(".tarjeta-brillo")).backgroundColor,
+      luz: +getComputedStyle(li.querySelector(".tarjeta-brillo > span")).opacity
+    }));
+    assert.equal(r.etiqueta, "Más vendido");
+    assert.notEqual(r.anillo, "rgba(0, 0, 0, 0)", "el anillo quieto se ve");
+    assert.equal(r.luz, 0, "sin luz que gira");
+    assert.equal(await p.evaluate(() => document.getAnimations().length), 0);
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });

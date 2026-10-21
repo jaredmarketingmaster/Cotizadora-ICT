@@ -370,8 +370,55 @@
   .tarjeta-boton { grid-template-columns: 1fr; align-items: start; padding: 14px; }
   .tarjeta-medio { aspect-ratio: 4 / 4.2; }
 }
+
+/* --- Más vendido ---------------------------------------------------------------
+   Etiqueta con el color primario (texto con contraste AA calculado en tema.js),
+   halo suave y un borde con una luz que recorre el contorno. La luz es un
+   cono que gira (solo transform) dentro de un anillo de 2 px recortado con
+   máscara; corre solo en las tarjetas que se ven (data-en-pantalla, máximo 3,
+   galeria.js). Con reduced-motion o sin máscara: el anillo quieto. */
+.etiqueta-pildora--mas-vendido { background: var(--primario); color: var(--sobre-primario); }
+.tarjeta--mas-vendido {
+  border-color: color-mix(in srgb, var(--primario) 45%, var(--borde));
+  box-shadow: var(--sombra-1), 0 12px 32px -14px color-mix(in srgb, var(--primario) 60%, transparent);
+}
+.tarjeta-brillo {
+  position: absolute; inset: -1px;
+  padding: 2px;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--primario) 55%, transparent);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.tarjeta-brillo > span {
+  position: absolute; left: 50%; top: 50%;
+  width: 250%; aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: conic-gradient(transparent 0 58%, color-mix(in srgb, var(--primario) 70%, #fff) 78%, #fff 84%, var(--primario) 90%, transparent 100%);
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tarjeta--mas-vendido .tarjeta-brillo > span { animation: brillo-gira 4.8s linear infinite paused; }
+  .tarjeta--mas-vendido[data-en-pantalla] .tarjeta-brillo > span { opacity: 1; animation-play-state: running; }
+}
+@keyframes brillo-gira {
+  from { transform: translate(-50%, -50%) rotate(0turn); }
+  to { transform: translate(-50%, -50%) rotate(1turn); }
+}
+@supports not ((mask-composite: exclude) or (-webkit-mask-composite: xor)) {
+  .tarjeta-brillo { display: none; }
+  .tarjeta--mas-vendido { border-color: var(--primario-texto); }
+}
+.galeria--carrusel > .tarjeta--mas-vendido[data-centro] {
+  box-shadow: var(--sombra-2), 0 14px 36px -14px color-mix(in srgb, var(--primario) 60%, transparent);
+}
+
 @media (hover: hover) {
   .tarjeta:hover { box-shadow: var(--sombra-2); border-color: var(--borde-fuerte); }
+  .tarjeta--mas-vendido:hover { box-shadow: var(--sombra-2), 0 14px 36px -14px color-mix(in srgb, var(--primario) 60%, transparent); }
 }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .tarjeta:hover { transform: translateY(-3px); }
