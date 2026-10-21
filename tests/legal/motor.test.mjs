@@ -96,6 +96,12 @@ caso("los documentos llevan los datos de la tienda y los plazos exactos, sin cor
   assert.ok(a.includes("Celulares La 70") && a.includes("Ver la Política de privacidad") && a.length < 420, "aviso corto");
 });
 
+caso("A1: la devolución del retracto dice su plazo, su ley y el medio de pago", () => {
+  const t = visible(generar(base()).terminos);
+  assert.ok(t.includes("en máximo 15 días calendario, según la Ley 2439 de 2024"), "plazo de la devolución con su ley");
+  assert.ok(t.includes("al mismo medio de pago que usted usó o por el medio que acordemos con usted. Le informamos las opciones disponibles."), "medio de la devolución");
+});
+
 caso("la relación con Apple sigue al perfil", () => {
   const t = base();
   const indep = "es un comercio independiente. No está afiliado, patrocinado ni autorizado por Apple Inc. iPhone es una marca de Apple Inc.";

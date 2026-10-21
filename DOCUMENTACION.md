@@ -837,7 +837,7 @@ La búsqueda se arma con `describirBusqueda`: el modelo o "iPhone", la condició
 Los textos legales **no se escriben a mano**: la tienda llena el asistente y el motor los genera.
 
 - **Motor** (`assets/js/legal/motor.js`): `faltantes(tienda)` dice qué falta (con el paso); `generar(tienda)` arma los cuatro documentos en el Markdown de `formatoBasico`; `publicar(tienda, anterior, hoy)` devuelve la versión que se publica (la misma si los textos no cambiaron). Nunca deja marcadores ni datos vacíos: si falta algo, no genera.
-- **Plantillas** (`assets/js/legal/plantillas/`): `privacidad.js` (12 secciones: responsable; datos; finalidades; encargados y transmisión —"nuestro proveedor tecnológico, ubicado en Argentina", la plataforma del sitio, Meta y las herramientas activas—; API de Conversiones; conservación —máximo 2 meses desde el último contacto para quien no compra; para quien compra, lo que exijan las normas contables, tributarias y de protección al consumidor—; derechos; cómo ejercerlos con plazos y la SIC; mayoría de edad; seguridad; cambios y vigencia; sección del país), `terminos.js` (quién vende y relación con Apple según el perfil, cotizador, precios e impuestos, garantía, retracto, entrega, homologados si aplica, mayoría de edad, marcas, proveedor tecnológico, ley aplicable, datos personales, cambios), `cookies.js` (qué son, necesarias, medición y publicidad con una tabla por herramienta activa, GPC, cómo cambiar) y `aviso.js` (2–3 líneas con el enlace).
+- **Plantillas** (`assets/js/legal/plantillas/`); el retracto de Colombia dice el plazo de la devolución (15 días calendario, Ley 2439 de 2024) y su medio (el medio de pago original o el que se acuerde). `privacidad.js` (12 secciones: responsable; datos; finalidades; encargados y transmisión —"nuestro proveedor tecnológico, ubicado en Argentina", la plataforma del sitio, Meta y las herramientas activas—; API de Conversiones; conservación —máximo 2 meses desde el último contacto para quien no compra; para quien compra, lo que exijan las normas contables, tributarias y de protección al consumidor—; derechos; cómo ejercerlos con plazos y la SIC; mayoría de edad; seguridad; cambios y vigencia; sección del país), `terminos.js` (quién vende y relación con Apple según el perfil, cotizador, precios e impuestos, garantía, retracto, entrega, homologados si aplica, mayoría de edad, marcas, proveedor tecnológico, ley aplicable, datos personales, cambios), `cookies.js` (qué son, necesarias, medición y publicidad con una tabla por herramienta activa, GPC, cómo cambiar) y `aviso.js` (2–3 líneas con el enlace).
 - **Cláusula propia:** cada documento puede llevar una al final, en "Condiciones adicionales de la tienda".
 - **Módulos por país** (`assets/js/legal/paises/`): `indice.js` lista los 18 países de Hispanoamérica y Brasil; solo Colombia está disponible (`co.js`: SIC, tipos de documento, plazos de la Ley 1581, derechos, transmisión, retracto, garantía, horarios de la Ley 2300). Brasil queda en "Necesita el sitio en portugués.".
 - **Cómo sumar un país:** 1) copiar `co.js` con los datos del otro país (con sus fuentes en `legal/FUENTES.md`); 2) importarlo en `indice.js` y ponerle `estado: "disponible"` y `modulo`; 3) migración nueva que cambie `legal_faltantes()` (países permitidos y sus tipos de documento) y, si hace falta, el check de `legal_doc_tipo`; 4) `errorLegales` y `faltantes()` iguales; 5) pruebas (motor y `comparar-faltantes.mjs`).
@@ -1114,7 +1114,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 ```bash
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
-node tests/legal/motor.test.mjs                            # motor legal (10 casos, sin navegador)
+node tests/legal/motor.test.mjs                            # motor legal (11 casos, sin navegador)
 NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 63 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (14 casos) + tipos
@@ -1379,6 +1379,14 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 21/10/2026 · Ronda 3, A1: el retracto dice el medio de la devolución
+
+- **Pedido de Jared:** la devolución del retracto (Colombia) se hace en máximo 15 días calendario (ya estaba) y por el medio de pago que prefiera el consumidor (Ley 2439 de 2024); la sentencia C-192 de 2026 extendió los 15 días a todas las modalidades del artículo 47.
+- **Verificado:** el texto de la ley (transcripción encontrada con el buscador) dice "al instrumento o medio de pago original, o a través del medio que acuerden las partes", con la obligación de informar las opciones. **No dice "el que prefiera el consumidor"**: se escribió como dice la ley.
+- **Hecho:** `co.js` (términos: "según la Ley 2439 de 2024" y "Medio de la devolución: al mismo medio de pago que usted usó o por el medio que acordemos con usted. Le informamos las opciones disponibles."); `legal/FUENTES.md` (fuente 12).
+- **Pruebas:** caso nuevo en `tests/legal/motor.test.mjs` (11 casos).
+- **Verificación:** `node tests/legal/motor.test.mjs` OK y `node tests/documentacion.mjs` OK.
 
 ### 21/10/2026 · Revisión de este documento después del módulo legal
 

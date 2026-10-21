@@ -46,6 +46,8 @@ export const CO = {
   consumo: {
     ley: "la Ley 1480 de 2011 (Estatuto del Consumidor)",
     leyNumero: "Ley 1480 de 2011",
+    // FUENTES 7 y 12: Ley 2439 de 2024 (art. 3, que modifica el art. 47) y
+    // sentencia C-192 de 2026.
     retracto: { diasHabiles: 5, devolucionDias: 15 },
     garantiaNuevosMinMeses: 12,
     garantiaReclamoDias: 15
@@ -104,7 +106,8 @@ export const CO = {
       `Como la compra se hace a distancia, usted puede retractarse dentro de los ${CO.consumo.retracto.diasHabiles} días hábiles siguientes a la entrega del equipo, según el artículo 47 de la ${CO.consumo.leyNumero}.`,
       "",
       `- **Cómo pedirlo:** ${ctx.venta.retractoCanal}.`,
-      `- **Devolución del dinero:** sin descuentos ni retenciones, en máximo ${CO.consumo.retracto.devolucionDias} días calendario.`
+      `- **Devolución del dinero:** sin descuentos ni retenciones, en máximo ${CO.consumo.retracto.devolucionDias} días calendario, según la Ley 2439 de 2024.`,
+      "- **Medio de la devolución:** al mismo medio de pago que usted usó o por el medio que acordemos con usted. Le informamos las opciones disponibles."
     ],
     leyAplicable: () => [
       `Las ventas a personas en Colombia se rigen por las leyes de Colombia, en especial ${CO.consumo.ley}. La autoridad de protección al consumidor es la ${SIC}: [${SITIO_SIC.replace("https://", "")}](${SITIO_SIC}).`
