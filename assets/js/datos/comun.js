@@ -25,12 +25,14 @@ export const LADO_GRANDE = 1600;
 export const BUCKETS = {
   fotos: { max: 10 * 1024 * 1024, tipos: ["image/webp", "image/jpeg", "image/png"] },
   marca: { max: 10 * 1024 * 1024, tipos: ["image/webp", "image/jpeg", "image/png", "image/svg+xml", "image/x-icon"] },
-  videos: { max: 20 * 1024 * 1024, tipos: ["video/mp4", "video/webm"] }
+  videos: { max: 20 * 1024 * 1024, tipos: ["video/mp4", "video/webm"] },
+  resenas: { max: 20 * 1024 * 1024, tipos: ["image/webp", "image/jpeg", "image/png", "video/mp4", "video/webm"] }
 };
 
 // Mensaje cuando Storage rechaza un archivo (por peso o por tipo).
 export function mensajeArchivo(bucket, motivo) {
   if (bucket === "videos") return motivo === "peso" ? "El video pesa más de 20 MB." : "Este formato puede no verse en todos los celulares. Súbalo en MP4.";
+  if (bucket === "resenas") return motivo === "peso" ? "El archivo pesa más de 20 MB." : "Ese tipo de archivo no se puede subir. Use una imagen, o un video en MP4.";
   return motivo === "peso" ? "La foto es muy pesada." : "No se pudo subir la foto. Inténtelo de nuevo.";
 }
 
@@ -50,8 +52,30 @@ export const CAMPOS_TIENDA = [
   "texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "modo_demo",
   "tamano_texto", "vista_equipos", "mostrar_ficha", "ficha_ocultas",
   "pagos_medios", "pagos_cuotas", "pagos_cuotas_max", "pagos_sin_interes", "pagos_sin_interes_max",
-  "pagos_cripto", "pagos_cripto_cuales", "pagos_pasarelas", "pagos_pasarela_otra"
+  "pagos_cripto", "pagos_cripto_cuales", "pagos_pasarelas", "pagos_pasarela_otra",
+  "mostrar_resenas", "titulo_resenas"
 ];
+
+// Reseñas (0014): hasta 12; imagen o video de hasta 30 segundos.
+export const CAMPOS_RESENA = ["tipo", "ruta", "texto", "origen", "origen_otro", "autorizado", "orden"];
+export const MAX_RESENAS = 12;
+export const MENSAJE_MAX_RESENAS = "Ya tiene 12 reseñas. Borre una para agregar otra.";
+export const MAX_SEGUNDOS_RESENA = 30;
+export const TITULO_RESENAS = "Lo que dicen nuestros clientes";
+export const ORIGENES_RESENA = [
+  { clave: "instagram", texto: "Instagram" },
+  { clave: "whatsapp", texto: "WhatsApp" },
+  { clave: "google", texto: "Google" },
+  { clave: "otro", texto: "Otro" }
+];
+// Como los checks de la tabla resenas
+export const RUTA_RESENA = { imagen: /^resenas\/[A-Za-z0-9_-]+\.(webp|jpg|png)$/, video: /^resenas\/[A-Za-z0-9_-]+\.(mp4|webm)$/ };
+
+// El origen que se muestra (texto, sin logos). "Otro" sin nombre no se muestra.
+export function textoOrigen(r) {
+  if (r?.origen === "otro") return String(r.origen_otro || "").trim();
+  return ORIGENES_RESENA.find((o) => o.clave === r?.origen)?.texto || "";
+}
 
 // Formas de pago (0013). Las claves son las de los checks del SQL.
 export const MEDIOS_PAGO = [

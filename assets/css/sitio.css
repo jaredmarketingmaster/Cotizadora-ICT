@@ -701,6 +701,72 @@
   .hoja .detalle-cta .boton--primario { display: none; }
 }
 
+/* --- Reseñas (resenas.js) -------------------------------------------------------
+   Celular: una fila que se desliza con el dedo (scroll-snap). Desde 900 px:
+   mosaico. El visor es un <dialog> a pantalla completa en celular. */
+.resenas { padding-block: calc(clamp(40px, 5vw, 64px) * var(--t-espacio)) calc(clamp(24px, 3vw, 40px) * var(--t-espacio)); }
+.resenas-titulo { font-size: max(1rem, calc(clamp(1.5rem, 4vw, 2rem) * var(--t-titulo))); font-weight: 800; letter-spacing: -.02em; }
+.resenas-lista {
+  display: grid; grid-auto-flow: column; grid-auto-columns: min(72vw, 280px); gap: 14px;
+  margin: 18px calc(-1 * var(--gutter)) 0; padding: 4px var(--gutter) 14px;
+  list-style: none;
+  overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gutter);
+  overscroll-behavior-x: contain;
+}
+.resena { scroll-snap-align: start; min-width: 0; }
+.resena-boton {
+  display: grid; align-content: start; gap: 10px;
+  width: 100%; height: 100%; padding: 10px;
+  border: 1px solid var(--borde); border-radius: var(--radio);
+  background: var(--tarjeta); color: var(--texto);
+  box-shadow: var(--sombra-1);
+  text-align: left; cursor: pointer;
+  transition: box-shadow var(--medio) var(--curva), border-color var(--medio);
+}
+@media (hover: hover) { .resena-boton:hover { box-shadow: var(--sombra-2); border-color: var(--borde-fuerte); } }
+.resena-medio {
+  display: grid; place-items: center;
+  aspect-ratio: 4 / 5; overflow: hidden;
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--superficie) 0%, var(--superficie-2) 100%);
+}
+.resena-medio img { width: 100%; height: 100%; object-fit: cover; }
+.resena-play { display: grid; justify-items: center; gap: 6px; color: var(--texto-suave); font-weight: 700; }
+.resena-play svg { width: 56px; height: 56px; color: var(--primario-texto); }
+.resena-texto { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.45; }
+.resena-origen { color: var(--texto-suave); font-weight: 600; }
+@media (min-width: 900px) {
+  .resenas-lista { grid-auto-flow: row; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); grid-auto-columns: auto; margin-inline: 0; padding-inline: 0; overflow: visible; }
+}
+
+.visor {
+  width: 100%; max-width: 100%; height: 100%; max-height: 100%;
+  margin: 0; padding: 0; border: 0;
+  background: var(--fondo); color: var(--texto);
+}
+.visor[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto auto; gap: 12px; padding: 0 var(--gutter) calc(16px + env(safe-area-inset-bottom)); }
+.visor::backdrop { background: rgba(8, 10, 14, .7); }
+.visor-barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; }
+.visor-titulo { font-weight: 700; }
+.visor-cerrar {
+  display: grid; place-items: center; width: 48px; height: 48px; padding: 0;
+  border: 1px solid var(--borde); border-radius: 50%; background: var(--tarjeta); color: var(--texto);
+}
+.visor-cerrar svg { width: 22px; height: 22px; }
+.visor-medio { display: grid; place-items: center; min-height: 0; overflow: hidden; border-radius: 14px; background: var(--superficie); }
+.visor-medio img, .visor-medio video { max-width: 100%; max-height: 100%; object-fit: contain; }
+.visor-medio video { width: 100%; background: #000; }
+.visor-texto { white-space: pre-line; line-height: 1.5; }
+.visor-origen { color: var(--texto-suave); font-weight: 600; }
+.visor-nav { display: flex; gap: 10px; }
+.visor-nav .boton { flex: 1; }
+@media (min-width: 900px) {
+  .visor { width: min(880px, calc(100vw - 64px)); height: min(860px, calc(100dvh - 64px)); margin: auto; border-radius: 24px; box-shadow: var(--sombra-3); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .visor[open] { animation: aparecer 220ms ease; }
+}
+
 /* --- Información de la tienda ---------------------------------------------- */
 .info-tienda {
   margin-top: calc(16px * var(--t-espacio));

@@ -751,6 +751,134 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  // Reseñas (0014)
+  const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+  const archivosResenas = (p) => p.evaluate(() => new Promise((r) => {
+    const pedido = indexedDB.open("cotizadora-demo");
+    pedido.onsuccess = () => { const k = pedido.result.transaction("archivos").objectStore("archivos").getAllKeys(); k.onsuccess = () => r(k.result.filter((x) => x.startsWith("resenas/")).sort()); };
+  }));
+  await caso("reseñas: ninguna de ejemplo; sin reseñas o con el interruptor apagado, la sección no existe y su módulo no se carga", async () => {
+    const p = await nueva(390, 844);
+    await ir(p);
+    const e = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)), CLAVE_DEMO);
+    assert.deepEqual([e.resenas, e.tienda.mostrar_resenas, e.tienda.titulo_resenas], [[], false, "Lo que dicen nuestros clientes"]);
+    const sinModulo = () => p.evaluate(() => !performance.getEntriesByType("resource").some((x) => /sitio\/resenas\.js/.test(x.name)));
+    assert.equal(await p.isHidden("#resenas"), true);
+    assert.ok(await sinModulo(), "no se carga resenas.js");
+    await editarDemo(p, (e) => { e.tienda.mostrar_resenas = true; });
+    await ir(p);
+    assert.equal(await p.isHidden("#resenas"), true, "encendida pero sin reseñas: no se ve");
+    assert.ok(await sinModulo());
+    // Con una reseña y el interruptor apagado, tampoco (ni en los datos públicos).
+    await editarDemo(p, (e) => { e.tienda.mostrar_resenas = false; e.resenas = [{ id: "r1", tipo: "imagen", ruta: "resenas/a.webp", texto: "x", origen: "", origen_otro: "", autorizado: true, orden: 0, creado_en: "2026-01-01T00:00:00Z" }]; });
+    await ir(p);
+    assert.equal(await p.isHidden("#resenas"), true);
+    const publicas = await p.evaluate(async () => (await (await import(new URL("assets/js/datos/api.js", location.href).href)).api()).cargarPublico().then((d) => d.resenas));
+    assert.deepEqual(publicas, []);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("reseñas: el panel exige la casilla, valida (30 s, formato), agrega, edita, ordena y borra; el sitio las muestra y el visor abre y cierra con Escape", async () => {
+    const p = await nueva(1280, 900);
+    await entrarPanel(p, "gestor@demo.co");
+    await p.goto(`${BASE}/admin/#/tienda`);
+    await p.waitForSelector("#form-resena");
+    // El aviso fijo va arriba de la carga.
+    const aviso = "Las capturas pueden tener datos personales de sus clientes. Tápelos o pida autorización antes de publicarlas.";
+    assert.equal(await p.textContent("#form-resena .aviso-datos"), aviso);
+    assert.ok(await p.evaluate(() => document.querySelector("#form-resena .aviso-datos").compareDocumentPosition(document.querySelector("#r-archivo")) & Node.DOCUMENT_POSITION_FOLLOWING));
+    assert.equal((await p.textContent('label[for="r-autorizado"]')).trim(), "Tengo autorización de esta persona o tapé su nombre, foto y número.");
+    const agregar = async (archivo, { casilla = true, texto = "", origen = "" } = {}) => {
+      await p.setInputFiles("#r-archivo", archivo);
+      if (texto) await p.fill("#r-texto", texto);
+      if (origen) await p.selectOption("#r-origen", origen);
+      if (casilla) await p.check("#r-autorizado"); else await p.uncheck("#r-autorizado");
+      await p.click("#r-agregar");
+      await p.waitForFunction(() => document.querySelector("#r-subiendo").hidden);
+      await p.waitForTimeout(150);
+      return [(await p.textContent("#r-archivo-error")).trim(), (await p.textContent("#r-autorizado-error")).trim()];
+    };
+    const videos = path.join(RAIZ, "tests", "videos");
+    const imagen = { name: "captura.png", mimeType: "image/png", buffer: PNG };
+    // Sin la casilla no se sube nada.
+    assert.deepEqual(await agregar(imagen, { casilla: false }), ["", "Marque la casilla para poder publicarla."]);
+    assert.equal(await p.evaluate(() => document.activeElement.id), "r-autorizado");
+    assert.deepEqual(await archivosResenas(p), []);
+    // Videos: más de 30 s, .mov y más de 20 MB no; uno de 20 s sí (el límite de los equipos es 15).
+    assert.equal((await agregar(path.join(videos, "31s.mp4")))[0], "El video dura más de 30 segundos. Súbalo más corto.");
+    assert.equal((await agregar(path.join(videos, "clip.mov")))[0], "Este formato puede no verse en todos los celulares. Súbalo en MP4.");
+    assert.equal((await agregar({ name: "pesado.mp4", mimeType: "video/mp4", buffer: Buffer.alloc(20 * 1024 * 1024 + 1) }))[0], "El video pesa más de 20 MB.");
+    assert.deepEqual(await archivosResenas(p), [], "nada de eso se subió");
+    assert.deepEqual(await agregar(imagen, { texto: "Me atendieron muy bien.", origen: "whatsapp" }), ["", ""]);
+    assert.deepEqual(await agregar(path.join(videos, "20s.mp4"), { texto: "Video de la entrega", origen: "instagram" }), ["", ""]);
+    assert.equal(await p.textContent("#r-cuenta"), "(2 de 12)");
+    const guardadas = await archivosResenas(p);
+    assert.equal(guardadas.length, 3, "imagen en dos tamaños y el video");
+    assert.ok(guardadas.some((x) => /-640\.(webp|jpg|png)$/.test(x)));
+    // Editar el texto y el origen; mover el video arriba.
+    const [idImagen, idVideo] = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).resenas.sort((a, b) => a.orden - b.orden).map((r) => r.id), CLAVE_DEMO);
+    await p.fill(`#rt-${idImagen}`, "Me atendieron muy bien y rápido.");
+    await p.press(`#rt-${idImagen}`, "Tab");
+    await p.waitForFunction(([clave, id]) => JSON.parse(localStorage.getItem(clave)).resenas.find((r) => r.id === id).texto.endsWith("rápido."), [CLAVE_DEMO, idImagen]);
+    await p.click(`.resena-fila[data-id="${idVideo}"] [data-mover="-1"]`);
+    await p.waitForFunction(([clave, id]) => JSON.parse(localStorage.getItem(clave)).resenas.find((r) => r.id === id).orden === 0, [CLAVE_DEMO, idVideo]);
+    // Encender y cambiar el título.
+    await p.click('label[for="r-mostrar"]');
+    await p.fill("#r-titulo", "Clientes felices");
+    await p.press("#r-titulo", "Tab");
+    await p.waitForFunction((clave) => { const t = JSON.parse(localStorage.getItem(clave)).tienda; return t.mostrar_resenas && t.titulo_resenas === "Clientes felices"; }, CLAVE_DEMO);
+    // Sitio: debajo de los equipos y antes de la información de la tienda.
+    await editarDemo(p, (e) => { e.tienda.ciudad = "Medellín"; });
+    await ir(p);
+    await p.waitForSelector("#resenas:not([hidden]) .resena-boton");
+    const orden = await p.evaluate(() => [...document.querySelectorAll("#galeria, #resenas, #info-tienda")].map((x) => x.id));
+    assert.deepEqual(orden, ["galeria", "resenas", "info-tienda"]);
+    assert.equal(await p.textContent("#resenas-titulo"), "Clientes felices");
+    const tarjetas = await p.$$eval("#resenas .resena-boton", (bs) => bs.map((b) => [b.querySelector(".resena-texto")?.textContent, b.querySelector(".resena-origen")?.textContent, b.querySelector("img")?.getAttribute("loading") || "video"]));
+    assert.deepEqual(tarjetas, [["Video de la entrega", "Instagram", "video"], ["Me atendieron muy bien y rápido.", "WhatsApp", "lazy"]]);
+    assert.equal(await p.locator("video").count(), 0, "ningún video en la página antes de tocar");
+    assert.deepEqual(await p.evaluate(contrasteMalo), []);
+    // Visor: abre a pantalla completa, el video sin descargar ni reproducirse solo; ← → y Escape.
+    await p.click("#resenas .resena-boton >> nth=0");
+    await p.waitForFunction(() => document.querySelector("#visor-resena").open);
+    assert.equal(await p.textContent("#visor-titulo"), "Reseña 1 de 2");
+    const v = await p.$eval("#visor-resena video", (x) => ({ preload: x.getAttribute("preload"), autoplay: x.autoplay, pausado: x.paused, controles: x.controls }));
+    assert.deepEqual(v, { preload: "none", autoplay: false, pausado: true, controles: true });
+    await p.keyboard.press("ArrowRight");
+    assert.equal(await p.textContent("#visor-titulo"), "Reseña 2 de 2");
+    assert.equal(await p.locator("#visor-resena video").count(), 0);
+    assert.equal(await p.textContent("#visor-resena .visor-origen"), "WhatsApp");
+    await p.keyboard.press("Escape");
+    await p.waitForFunction(() => !document.querySelector("#visor-resena").open);
+    assert.equal(await p.evaluate(() => document.activeElement.classList.contains("resena-boton")), true, "el foco vuelve a la reseña");
+    // Borrar: sale de la lista y se borran sus archivos.
+    await p.goto(`${BASE}/admin/#/tienda`);
+    await p.waitForSelector(".resena-fila");
+    await p.click(`.resena-fila[data-id="${idImagen}"] [data-borrar]`);
+    await p.click('#confirmar [value="si"]');
+    await p.waitForFunction(() => document.querySelectorAll(".resena-fila").length === 1);
+    await p.waitForFunction(() => new Promise((r) => { const q = indexedDB.open("cotizadora-demo"); q.onsuccess = () => { const k = q.result.transaction("archivos").objectStore("archivos").getAllKeys(); k.onsuccess = () => r(k.result.filter((x) => x.startsWith("resenas/")).length === 1); }; }));
+    // Hasta 12: la capa de datos rechaza la 13.ª y el panel deshabilita "Agregar".
+    const r = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      for (let i = 0; i < 11; i++) await a.agregarResena({ tipo: "imagen", ruta: `resenas/x${i}.webp`, autorizado: true, orden: 10 + i });
+      const errores = [];
+      try { await a.agregarResena({ tipo: "imagen", ruta: "resenas/x99.webp", autorizado: true, orden: 99 }); } catch (e) { errores.push(e.message); }
+      try { await a.guardarResena((await a.listarResenas())[0].id, { autorizado: false }); } catch (e) { errores.push(e.message); }
+      return errores;
+    });
+    assert.deepEqual(r, ["Ya tiene 12 reseñas. Borre una para agregar otra.", "Algún dato no tiene el formato correcto. Revise los campos."]);
+    await p.goto(`${BASE}/admin/#/inicio`);
+    await p.goto(`${BASE}/admin/#/tienda`);
+    await p.waitForSelector(".resena-fila");
+    assert.equal(await p.isDisabled("#r-agregar"), true);
+    assert.equal(await p.textContent("#r-cuenta"), "(12 de 12)");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("video en el detalle: miniatura con ícono, no se descarga hasta tocarla, se reproduce con controles y sin reproducción automática", async () => {
     const p = await nueva(1280, 900);
     await entrarPanel(p, "gestor@demo.co");

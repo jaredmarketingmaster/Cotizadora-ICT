@@ -534,4 +534,90 @@ do $$ begin
 end $$;
 reset role;
 
+-- 7. Reseñas (0014): ninguna de ejemplo; hasta 12; casilla obligatoria; el
+-- público solo las ve con el interruptor encendido; solo el gestor escribe.
+do $$
+begin
+  assert (select count(*) from public.resenas) = 0, 'no se crean reseñas de ejemplo';
+  assert (select not mostrar_resenas and titulo_resenas = 'Lo que dicen nuestros clientes' from public.tienda), 'apagadas y con el título por defecto';
+  assert (select file_size_limit = 20971520 and allowed_mime_types = array['image/webp', 'image/jpeg', 'image/png', 'video/mp4', 'video/webm'] and public
+          from storage.buckets where id = 'resenas'), 'bucket resenas: 20 MB, imágenes y videos, público';
+end $$;
+-- (antes de llegar a 12: si no, el límite respondería primero)
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+do $$ begin
+  insert into public.resenas (tipo, ruta, autorizado) values ('imagen', 'resenas/admin.webp', true);
+  raise exception 'el administrador no debería agregar reseñas';
+exception when insufficient_privilege then null; end $$;
+do $$ begin
+  insert into storage.objects (bucket_id, name) values ('resenas', 'resenas/admin.webp');
+  raise exception 'el administrador no debería subir al bucket resenas';
+exception when insufficient_privilege then null; end $$;
+reset role;
+set role anon;
+set request.jwt.claim.sub = '';
+do $$ begin
+  insert into public.resenas (tipo, ruta, autorizado) values ('imagen', 'resenas/anon.webp', true);
+  raise exception 'el público no debería agregar reseñas';
+exception when insufficient_privilege then null; end $$;
+reset role;
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+do $$
+declare i int;
+begin
+  for i in 1 .. 12 loop
+    insert into public.resenas (tipo, ruta, texto, autorizado, orden)
+    values (case when i % 2 = 0 then 'video' else 'imagen' end,
+            'resenas/r' || i || case when i % 2 = 0 then '.mp4' else '.webp' end, 'Texto ' || i, true, i);
+  end loop;
+  begin
+    insert into public.resenas (tipo, ruta, autorizado) values ('imagen', 'resenas/r13.webp', true);
+    raise exception 'la 13 debió fallar';
+  exception when check_violation then
+    assert sqlerrm = 'Ya tiene 12 reseñas. Borre una para agregar otra.', sqlerrm;
+  end;
+  -- Borrando una, se puede agregar otra
+  delete from public.resenas where ruta = 'resenas/r12.mp4';
+  insert into public.resenas (tipo, ruta, texto, autorizado, orden, origen, origen_otro) values ('video', 'resenas/r12.webm', 'Texto 12', true, 12, 'otro', 'Facebook');
+end $$;
+do $$ begin
+  insert into public.resenas (tipo, ruta, autorizado) values ('imagen', 'resenas/sin.webp', false);
+  raise exception 'sin la casilla debió fallar';
+exception when check_violation then null; end $$;
+do $$ begin
+  insert into public.resenas (tipo, ruta, autorizado) values ('video', 'resenas/x.webp', true);
+  raise exception 'un video con ruta de imagen debió fallar';
+exception when check_violation then null; end $$;
+do $$ begin
+  insert into public.resenas (tipo, ruta, autorizado, origen, origen_otro) values ('imagen', 'resenas/y.webp', true, 'instagram', 'Algo');
+  raise exception 'origen_otro sin "otro" debió fallar';
+exception when check_violation then null; end $$;
+do $$ begin
+  insert into storage.objects (bucket_id, name) values ('resenas', 'resenas/r1.webp');
+  assert (select count(*) from public.resenas) = 12, 'el gestor ve las 12 aunque estén apagadas';
+end $$;
+reset role;
+set role anon;
+set request.jwt.claim.sub = '';
+do $$ begin
+  assert (select count(*) from public.resenas) = 0, 'apagadas: el público no las lee';
+  assert public.datos_publicos() -> 'resenas' = '[]'::jsonb, 'apagadas: datos_publicos sin reseñas';
+  assert (select count(*) from storage.objects where bucket_id = 'resenas') = 1, 'los archivos se leen igual (como las fotos)';
+end $$;
+reset role;
+update public.tienda set mostrar_resenas = true;
+set role anon;
+do $$ begin
+  assert (select count(*) from public.resenas) = 12, 'encendidas: el público las lee';
+  assert jsonb_array_length(public.datos_publicos() -> 'resenas') = 12, 'encendidas: datos_publicos las trae';
+  assert (public.datos_publicos() -> 'resenas' -> 0 ->> 'texto') = 'Texto 1', 'en orden';
+  assert not (public.datos_publicos() -> 'resenas' -> 0 ? 'autorizado'), 'sin datos internos';
+end $$;
+reset role;
+delete from public.resenas;
+delete from storage.objects where bucket_id = 'resenas';
+update public.tienda set mostrar_resenas = false;
+
 \echo 'OK: todas las pruebas SQL pasaron'

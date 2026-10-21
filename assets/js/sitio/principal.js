@@ -70,6 +70,14 @@ function urlMapa(t) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 }
 
+// Reseñas: el módulo se carga solo si hay alguna para mostrar.
+async function dibujarResenasSiHay() {
+  const seccion = $("#resenas");
+  if (!cat.tienda.mostrar_resenas || !cat.resenas.length) { seccion.hidden = true; return; }
+  const { dibujarResenas } = await import("./resenas.js");
+  dibujarResenas({ seccion, dialogo: $("#visor-resena"), api, tienda: cat.tienda, resenas: cat.resenas });
+}
+
 function dibujarInfo(t) {
   const datos = [
     t.direccion && ["Dirección", [t.direccion, t.ciudad].filter(Boolean).join(", ")],
@@ -313,6 +321,7 @@ async function iniciar() {
   seguro(() => dibujarMarca(t), "marca");
   seguro(() => dibujarInfo(t), "info");
   seguro(() => dibujarPie(t), "pie");
+  dibujarResenasSiHay().catch((e) => console.error("reseñas", e));
 
   galeria = crearGaleria($("#lista-equipos"), api);
   seguro(() => aplicarVista(t), "vista de equipos");
@@ -350,6 +359,7 @@ async function iniciar() {
       if (e.key !== "cotizadora-demo:v1") return;
       cat = prepararCatalogo(await api.cargarPublico());
       aplicarTema(cat.tienda); dibujarMarca(cat.tienda); dibujarInfo(cat.tienda); dibujarPie(cat.tienda);
+      dibujarResenasSiHay().catch((e) => console.error("reseñas", e));
       aplicarVista(cat.tienda);
       quitarEnLinea();
       actualizar();

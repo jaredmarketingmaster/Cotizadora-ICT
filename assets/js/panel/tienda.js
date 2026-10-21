@@ -1,6 +1,7 @@
 // =============================================================================
 // Mi tienda: datos, redes, marca (logo con recorte, favicon, colores y tema con
-// vista previa en vivo) y datos de venta (formas de pago, entrega, garantía).
+// vista previa en vivo), datos de venta (entrega y garantía) y, fuera del
+// formulario, las reseñas (resenas.js; se guardan solas).
 // =============================================================================
 
 import { hexValido, soloDigitos, whatsappTiendaValido, correoValido, contraste, reducirMovimiento } from "../utils.js";
@@ -111,7 +112,8 @@ export async function dibujar(vista, ctx) {
       <div class="acciones-formulario">
         <button type="submit" class="boton boton--primario" id="guardar-tienda">Guardar</button>
       </div>
-    </form>`;
+    </form>
+    <div id="seccion-resenas"></div>`;
 
   const form = $("#form-tienda");
   // --- Vista previa de colores ---
@@ -341,6 +343,8 @@ export async function dibujar(vista, ctx) {
 
   pintarLogo();
   pintarVista();
+  const { dibujar: dibujarResenas } = await import("./resenas.js");
+  await dibujarResenas($("#seccion-resenas"), ctx, t);
 }
 
 function selectorColor(id, etiqueta, valor) {

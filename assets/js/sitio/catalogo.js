@@ -27,7 +27,7 @@ export function prepararCatalogo(datos) {
       const color = colores.get(q.color_id) || null;
       return { ...q, modelo: porId.get(q.modelo_id), color, color_nombre: nombreColor(color, q.color_nombre_mostrar), color_hex: color?.hex || "" };
     });
-  return { tienda: datos.tienda || {}, porId, porSlug, fichas, colores, equipos };
+  return { tienda: datos.tienda || {}, porId, porSlug, fichas, colores, equipos, resenas: datos.resenas || [] };
 }
 
 export function filtrar(equipos, { condicion = "", modelo = "", capacidad = "" } = {}) {

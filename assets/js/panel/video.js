@@ -3,7 +3,7 @@
 // convertir (se sube tal cual).
 // - Formatos: MP4 con H.264 o WebM. Un .mov, un MP4 en HEVC u otro formato se
 //   rechaza: puede no verse en todos los celulares.
-// - Hasta 15 segundos y 20 MB.
+// - Hasta 15 segundos (equipos) o el máximo que se pida (reseñas: 30) y 20 MB.
 // - Duración: del MP4 se lee la caja "mvhd" de sus metadatos (no hace falta
 //   que el navegador sepa reproducirlo); del WebM, la que informa <video>.
 // =============================================================================
@@ -93,7 +93,7 @@ function duracionConVideo(archivo) {
 
 // Valida el archivo. Devuelve { ext, segundos }. Lanza ErrorDatos con un
 // mensaje para el usuario si no sirve.
-export async function validarVideo(archivo) {
+export async function validarVideo(archivo, { maxSegundos = MAX_SEGUNDOS } = {}) {
   const tipo = tipoDe(archivo);
   if (!tipo) throw new ErrorDatos(MENSAJE_FORMATO);
   if (archivo.size > MAX_BYTES_VIDEO) throw new ErrorDatos("El video pesa más de 20 MB.");
@@ -105,6 +105,6 @@ export async function validarVideo(archivo) {
   } else {
     segundos = await duracionConVideo(archivo);
   }
-  if (segundos > MAX_SEGUNDOS + MARGEN) throw new ErrorDatos("El video dura más de 15 segundos. Súbalo más corto.");
+  if (segundos > maxSegundos + MARGEN) throw new ErrorDatos(`El video dura más de ${maxSegundos} segundos. Súbalo más corto.`);
   return { ext: tipo, segundos };
 }

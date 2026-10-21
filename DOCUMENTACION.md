@@ -262,7 +262,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `index.html` (≈140) | Sitio público, una sola página: <ul><li>En el `<head>`, un script en línea aplica la **apariencia de la visita anterior** (`localStorage["cotizadora:apariencia"]`: tema, tamaño y colores) antes del primer pintado; valida cada valor. Las páginas legales tienen el mismo script.</li><li>La lista de equipos va dentro de `#vista-equipos`, con las flechas y el indicador del carrusel (ocultos en cuadrícula).</li><li>Franja demo, encabezado con logo, nombre y título, y tarjeta de filtros (segmentado, lista desplegable y chips).</li><li>Contador y "Limpiar filtros", galería, estado vacío y detalle en línea.</li><li>Información de la tienda, pie, `<dialog id="hoja-detalle">` (detalle del equipo), barra fija de compra y `<dialog id="popup">`.</li><li>Carga Google Fonts (Inter) sin bloquear el pintado, `modulepreload` de los módulos y `assets/js/sitio/principal.js`.</li></ul> |
+| `index.html` (≈140) | Sitio público, una sola página: <ul><li>En el `<head>`, un script en línea aplica la **apariencia de la visita anterior** (`localStorage["cotizadora:apariencia"]`: tema, tamaño y colores) antes del primer pintado; valida cada valor. Las páginas legales tienen el mismo script.</li><li>La lista de equipos va dentro de `#vista-equipos`, con las flechas y el indicador del carrusel (ocultos en cuadrícula).</li><li>Franja demo, encabezado con logo, nombre y título, y tarjeta de filtros (segmentado, lista desplegable y chips).</li><li>Contador y "Limpiar filtros", galería, estado vacío y detalle en línea.</li><li>Sección `#resenas` (oculta hasta que haya reseñas para mostrar) entre los equipos y la información de la tienda, y `<dialog id="visor-resena">` (visor a pantalla completa).</li><li>Información de la tienda, pie, `<dialog id="hoja-detalle">` (detalle del equipo), barra fija de compra y `<dialog id="popup">`.</li><li>Carga Google Fonts (Inter) sin bloquear el pintado, `modulepreload` de los módulos y `assets/js/sitio/principal.js`.</li></ul> |
 | `config.js` (≈34) | **Único archivo que cambia por tienda.** Contiene:<ul><li>`backend`: `"demo"` o `"supabase"`.</li><li>`supabase.url` y `supabase.anonKey`.</li><li>`metaPixelId`.</li><li>`ghlSeguimiento.src` y `ghlSeguimiento.id`, del script de seguimiento externo de GHL (opcional).</li></ul>Nada de lo que contiene es secreto. |
 | `README.md` | Guía para personas: probar en demo, GitHub Pages, poner una tienda en producción, GHL, píxel, decisiones, pruebas y pendientes. |
 | `CLAUDE.md` | Reglas y guía para las próximas sesiones de Claude Code: cómo verificar antes de cada commit y la obligación de mantener este documento. |
@@ -314,6 +314,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `assets/js/sitio/galeria.js` (≈125) | `crearGaleria(lista, api)`: tarjetas con clave estable. Al filtrar, las que salen se desvanecen y las que quedan se reacomodan con **FLIP** (Web Animations API). Sin animación si hay `prefers-reduced-motion`. Con `usarCarrusel(c)`, dibuja las tarjetas y le pasa el movimiento al carrusel. **Más vendido:** la tarjeta lleva la clase `tarjeta--mas-vendido`, la etiqueta y `span.tarjeta-brillo` (decorativo); un `IntersectionObserver` pone `data-en-pantalla` en las 3 primeras como máximo, y solo en esas corre la luz. |
 | `assets/js/sitio/carrusel-equipos.js` (≈250) | Vista **Carrusel** de los equipos: `crearCarruselEquipos(region, lista)` → `{reconstruir, mover, actual}`. Posición continua `pos`; cada tarjeta se dibuja a la distancia más corta del bucle (transform, opacidad y escala). Bucle infinito; arrastre con inercia y ajuste; flechas; ← →; trackpad horizontal; toque en vecina = centrarla; indicador "N de M"; altura de la tarjeta más alta; con 2 tarjetas, una sola vecina (con fundido si cambia de lado); con 1, sin flechas ni bucle; `data-moviendo` en la región mientras se mueve. Sin animación con `prefers-reduced-motion`. |
 | `assets/js/sitio/detalle.js` (≈219) | `crearDetalle(...)`: carrusel y ficha. <ul><li>El carrusel usa scroll-snap y se mueve con el dedo, flechas, puntos, muestras de color y teclado; con varias fotos muestra miniaturas.</li><li>La ficha tiene nombre, etiqueta (y "Más vendido", quieta, si el modelo y capacidad lo es en un nuevo, o la unidad en un usado), variante, `etiqueta_precio` y precio (el elemento más grande), datos de usado, descripciones, "Ver ficha técnica" (solo filas con valor), pagos, entrega, garantía y el botón.</li><li>También exporta `htmlBarraCompra` e `ICONO_WA`.</li></ul> |
+| `assets/js/sitio/resenas.js` (≈100) | **Reseñas del sitio** (`0014`). `dibujarResenas({seccion, dialogo, api, tienda, resenas})`: solo si `mostrar_resenas` y hay alguna (si no, la sección queda oculta). Celular: fila con scroll-snap; desde 900 px: mosaico. Cada reseña es un botón con la imagen (miniatura de 640 px, carga diferida) o un recuadro "Video", el texto (4 líneas) y el origen en texto. El visor: título "Reseña N de M", imagen grande o `<video controls playsinline preload="none">` creado al abrir (no se descarga nada hasta que el cliente toca reproducir; sin reproducción automática), texto, origen, "Anterior" / "Siguiente", ← y →, Escape, el botón o tocar afuera para cerrar, y el foco vuelve a la reseña. `principal.js` lo importa **solo si hay reseñas para mostrar**. |
 | `assets/js/sitio/transiciones.js` (≈80) | Apertura y cierre de los diálogos del sitio: `abrirConTransicion(dialogo, mostrar, {origen, destino})` usa la **View Transitions API** (la foto de la tarjeta viaja al detalle; el diálogo lleva `data-vt` mientras dura) y, sin ella o con reduced-motion, abre directo con la animación de CSS de siempre. `cerrarConTransicion` hace una salida corta (baja en celular; se achica y desvanece en pantallas grandes) y después `close()`; `cerrarConEscape` lo usa con Escape. |
 | `assets/js/sitio/popup.js` (≈272) | `crearPopup(...)`: el pop-up "Antes de pasar a WhatsApp" completo. Ver sección 9. |
 | `assets/js/sitio/fotos.js` (≈19) | `htmlFoto`: `<img>` con `srcset` 640w/1600w, `loading="lazy"` o `fetchpriority="high"`. `htmlMedio`: la foto principal o la ilustración. |
@@ -335,7 +336,8 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `assets/js/panel/legales.js` (≈52) | Editores de privacidad, términos, autorización de datos y aviso de marca, con aviso si están vacíos y vista previa del formato básico. |
 | `assets/js/panel/usuarios.js` (≈100) | Solo administrador: invitar (correo y rol), **asignar rol** (selector por usuario), desactivar con confirmación y reactivar. Su propia fila no tiene controles. |
 | `assets/js/panel/imagenes.js` (≈85) | Fotos en el navegador, sin librerías: <ul><li>`validarArchivo`: jpg, png, webp o heic de hasta 10 MB.</li><li>`comprimirFoto`: devuelve `{grande ≤1600px, miniatura ≤640px, ext}` en WebP, o JPEG si el navegador no codifica WebP.</li><li>`codificar`, `cargarImagen` y `MAX_BYTES`.</li></ul>El HEIC se rechaza con un aviso claro si el navegador no lo lee. |
-| `assets/js/panel/video.js` (≈110) | Video corto del equipo, validado en el navegador antes de subir y **sin comprimir**: <ul><li>`validarVideo(archivo)`: MP4 o WebM; hasta 20 MB; hasta 15 s (con 0,1 s de margen). Devuelve `{ext, segundos}`.</li><li>MP4: `leerMp4` lee la caja `mvhd` (duración) y busca `avc1`/`avc3` en `moov` (H.264); no hace falta que el navegador sepa reproducirlo.</li><li>WebM: la duración que informa `<video>` (si dice Infinity, busca el final).</li><li>.mov, MP4 en HEVC u otro formato: "Este formato puede no verse en todos los celulares. Súbalo en MP4." (`MENSAJE_FORMATO`).</li></ul> |
+| `assets/js/panel/resenas.js` (≈210) | **Reseñas en Mi tienda** (`0014`), fuera del formulario: todo se guarda solo. Interruptor "Mostrar reseñas en el sitio" y "Título de la sección"; lista (hasta 12) con miniatura, texto y origen editables, subir, bajar y borrar (borra también sus archivos); "Agregar una reseña" con el **aviso fijo** "Las capturas pueden tener datos personales de sus clientes. Tápelos o pida autorización antes de publicarlas." arriba de la carga, archivo (imagen comprimida como las fotos, en dos tamaños, o video validado con `validarVideo(archivo, {maxSegundos: 30})`), texto y origen opcionales (Instagram, WhatsApp, Google u Otro con "¿Cuál?") y la casilla **obligatoria** "Tengo autorización de esta persona o tapé su nombre, foto y número.". Si algo falla después de subir, borra lo subido. Con 12, "Agregar reseña" queda deshabilitado. |
+| `assets/js/panel/video.js` (≈110) | Video corto del equipo, validado en el navegador antes de subir y **sin comprimir**: <ul><li>`validarVideo(archivo, {maxSegundos})`: MP4 o WebM; hasta 20 MB; hasta 15 s por defecto (equipos) o el máximo que se pida (reseñas: 30), con 0,1 s de margen. Devuelve `{ext, segundos}`.</li><li>MP4: `leerMp4` lee la caja `mvhd` (duración) y busca `avc1`/`avc3` en `moov` (H.264); no hace falta que el navegador sepa reproducirlo.</li><li>WebM: la duración que informa `<video>` (si dice Infinity, busca el final).</li><li>.mov, MP4 en HEVC u otro formato: "Este formato puede no verse en todos los celulares. Súbalo en MP4." (`MENSAJE_FORMATO`).</li></ul> |
 
 ### 5.8 Supabase (`supabase/`)
 
@@ -345,6 +347,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `supabase/migrations/0002_catalogo.sql` (≈42) | Inserta los **32 modelos** del catálogo maestro, en el orden del prompt, todos inactivos (`orden` 10, 20, …, 320). Cada modelo recibe su ficha vacía por disparador. |
 | `supabase/migrations/0003_demo.sql` (≈36) | Pone el nombre "Tienda de demostración" y `modo_demo = true`, activa los 4 modelos que usa la demo (con `activo_por_demo = true`) e inserta los 6 equipos demo. |
 | `supabase/migrations/0011_vista_equipos.sql` (≈12) | `tienda.vista_equipos`: `cuadricula` (por defecto) o `carrusel`. |
+| `supabase/migrations/0014_resenas.sql` (≈110) | Reseñas: `tienda.mostrar_resenas` (no por defecto) y `tienda.titulo_resenas`; tabla `resenas` (hasta 12 con `resenas_limitar`, imagen o video, texto, origen, `autorizado` obligatorio, orden) con RLS (el público lee solo con el interruptor encendido; el gestor escribe); bucket `resenas` (20 MB, imágenes y videos) y las políticas de archivos con él; `datos_publicos()` suma `resenas`. **No crea ninguna reseña.** |
 | `supabase/migrations/0013_formas_pago.sql` (≈65) | Formas de pago estructuradas en `tienda` (medios, cuotas, criptomonedas, pasarelas); `formas_pago` pasa a `pagos_otras` con sus valores; disparador `tienda_validar_pagos`. |
 | `supabase/migrations/0012_fichas.sql` (≈110) | Ficha técnica: `tienda.mostrar_ficha` (sí por defecto) y `tienda.ficha_ocultas` (categorías apagadas, con check); clave opcional por fila y disparador `fichas_validar`; precarga de las fichas de los 42 modelos **solo con lo que trae la fuente** y solo en fichas sin filas. |
 | `supabase/migrations/0010_mas_vendido.sql` (≈30) | `equipos.mas_vendido` y el disparador `equipos_mas_vendido` (`limitar_mas_vendidos`): no deja marcar un cuarto, con un candado por transacción para que dos marcas a la vez no pasen de 3. Todavía no se muestra en el sitio. |
@@ -365,7 +368,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈1450) | Suite de aceptación en **modo demo** con Playwright: **53 casos** (54 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). | Ver sección 14. |
+| `tests/verificar.cjs` (≈1450) | Suite de aceptación en **modo demo** con Playwright: **55 casos** (56 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). | Ver sección 14. |
 | `tests/verificar-supabase.cjs` (≈311) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **9 casos**. Reemplaza `config.js` en el navegador y puede servir un supabase-js local (`ICT_SUPABASE_JS`). |
 | `tests/documentacion.mjs` | Verificador de este documento: falla si algún archivo versionado no aparece en la sección 5. |
 | `tests/sql/probar.sh` | Crea un Postgres temporal, carga la imitación de Supabase y todas las migraciones en orden, compara la semilla con `semilla.js` y corre `pruebas.sql`. Antes de cada migración corre `tests/sql/antes_<migración>.sql` si existe. |
@@ -383,6 +386,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `tests/supabase-local/levantar.sh` | Levanta el "Supabase local" completo (ver sección 14.3) y deja `/tmp/cotizadora-supabase-local/entorno`. Con el argumento `detener`, lo apaga. |
 | `tests/supabase-local/pasarela.mjs` | Pasarela en el puerto 54321 que imita las rutas de Supabase. Tiene Storage en memoria (lee la parte del archivo de los envíos multipart de supabase-js y exige el límite y los tipos de cada bucket: 413 y 415), sirve las plantillas de correo y agrega `Authorization` desde la `apikey`. |
 | `tests/videos/corto.mp4`, `tests/videos/largo.mp4`, `tests/videos/corto.webm`, `tests/videos/hevc.mp4`, `tests/videos/clip.mov` | Videos de prueba hechos con ffmpeg (patrón de prueba, sin personas ni marcas): H.264 de 3 s y de 16 s, WebM VP8 de 3 s, HEVC de 3 s y .mov de 3 s. Pesan entre 15 y 75 KB. |
+| `tests/videos/20s.mp4`, `tests/videos/31s.mp4` | Videos H.264 de 20 s y 31 s (gris liso, 64 × 64, hechos con ffmpeg) para el límite de 30 s de las reseñas. Pesan unos 4 y 6 KB. |
 | `tests/supabase-local/roles.sql` | Roles y esquema `auth` que Supabase ya trae. |
 | `tests/supabase-local/despues_de_auth.sql` | Permisos y Storage simulado, después de las migraciones de GoTrue. |
 | `tests/supabase-local/jwt.mjs` | Firma JWT HS256 (`anon` o `service_role`) para el entorno local. |
@@ -408,6 +412,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
   - `tema`: `claro` u `oscuro`.
   - `tamano_texto`: `compacto`, `normal` (por defecto) o `grande` (desde `0005`).
   - `vista_equipos`: `cuadricula` (por defecto) o `carrusel` (desde `0011`).
+  - `mostrar_resenas` (no por defecto) y `titulo_resenas` ("Lo que dicen nuestros clientes" por defecto, hasta 80), desde `0014`.
   - `mostrar_ficha` (sí por defecto) y `ficha_ocultas` (`text[]`, claves de categorías apagadas; solo las de `CATEGORIAS_FICHA`), desde `0012`.
 - **Venta:**
   - `texto_entrega`.
@@ -443,6 +448,13 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 - `oficial`: vino de la fuente. Los de la tienda (`false`) solo existen en modelos sin colores oficiales.
 - `hex_de_fuente`: el hexadecimal vino de la fuente y no se cambia.
 - Único: `(modelo_id, nombre_es)`.
+
+**`resenas`** (desde `0014`): hasta 12.
+
+- `id` (uuid), `tipo` (`imagen` o `video`), `ruta` (`resenas/<uuid>.webp|jpg|png` para imágenes, `resenas/<uuid>.mp4|webm` para videos; lo exige un check).
+- `texto` (hasta 300), `origen` (`''`, `instagram`, `whatsapp`, `google` u `otro`) y `origen_otro` (hasta 40, solo con `otro`).
+- `autorizado`: siempre verdadero (check): es la casilla obligatoria del panel.
+- `orden`, `creado_en`.
 
 **`fichas`**: una por modelo.
 
@@ -495,6 +507,7 @@ Son `security definer`:
 | `tienda_actualizado`, `fichas_actualizado`, `equipos_actualizado` | Ponen `actualizado_en = now()`. |
 | `equipos_precio` | Al insertar o cambiar el `precio` de un equipo, actualiza `tienda.precios_actualizados_en`. Cambiar el stock no la toca. |
 | `modelos_ficha` | Cada modelo nuevo nace con su ficha vacía. |
+| `resenas_limitar` | Antes de agregar una reseña, si ya hay 12: "Ya tiene 12 reseñas. Borre una para agregar otra." (`23514`). Usa `pg_advisory_xact_lock`. |
 | `tienda_validar_pagos` | Formas de pago (`0013`), con estos mensajes (`23514`): "Indique hasta cuántas cuotas acepta: de 2 a 48.", "Indique hasta cuántas cuotas sin interés ofrece: de 2 a 48.", "Las cuotas sin interés no pueden ser más que el máximo de cuotas.", "Sin cuotas sin interés, deje vacío hasta cuántas.", "Sin pagos a cuotas, los datos de cuotas quedan vacíos.", "Sin criptomonedas, deje vacío cuáles.", "Escriba el nombre de la otra pasarela." y "Sin «Otra» pasarela, deje vacío el nombre." |
 | `fichas_validar` | Formato de las filas de la ficha (`0012`); error `23514` "Alguna fila de la ficha técnica no tiene el formato correcto." |
 | `modelos_proteger` | Con sesión, solo el gestor cambia el catálogo (todo: nombre, slug, generación, orden y activo). Si alguien cambia `activo`, pone `activo_por_demo = false`. |
@@ -516,13 +529,14 @@ Desde `0007`:
 | `colores` | lee los de modelos activos | lee todos; completa el hexadecimal que falta; agrega y borra los de la tienda | como el público |
 | `equipos` | lee solo **publicados, con stock (`en_stock`) y de modelo activo** | todo | como el público |
 | `perfiles` | sin acceso (permiso revocado) | lee el suyo | lee todos y cambia rol y estado |
-| `storage.objects` (`fotos` y `marca`) | lee | sube, cambia y borra | lee |
+| `resenas` (desde `0014`) | lee **solo con `mostrar_resenas` encendido** | lee todas, agrega, edita y borra | como el público |
+| `storage.objects` (`fotos`, `marca`, `videos` y `resenas`) | lee | sube, cambia y borra | lee |
 
 Un usuario autenticado **sin perfil o con el perfil inactivo** ve lo mismo que el público y no escribe nada.
 
 ### 6.5 Funciones SQL de la API
 
-- **`datos_publicos()`** (`security invoker`, respeta la RLS): devuelve en **una sola llamada** `{tienda, modelos activos, fichas y colores de modelos activos, equipos publicados con stock}`. El sitio público la usa por `POST /rest/v1/rpc/datos_publicos`.
+- **`datos_publicos()`** (`security invoker`, respeta la RLS): devuelve en **una sola llamada** `{tienda, modelos activos, fichas y colores de modelos activos, equipos publicados con stock, resenas}` (`resenas` desde `0014`: solo con el interruptor encendido, en orden y sin `autorizado`). El sitio público la usa por `POST /rest/v1/rpc/datos_publicos`.
 - **`borrar_datos_demo()`** (solo gestor):
   1. Borra los equipos con `es_demo`.
   2. Apaga los modelos con `activo_por_demo`.
@@ -534,7 +548,9 @@ Un usuario autenticado **sin perfil o con el perfil inactivo** ve lo mismo que e
   - `fotos`: webp, jpeg o png, hasta 10 MB.
   - `marca`: además svg e ico.
   - `videos` (desde `0009`): `video/mp4` y `video/webm`, hasta 20 MB. Es un bucket propio para no ampliar los tipos ni el límite de `fotos`.
+  - `resenas` (desde `0014`): imágenes (webp, jpeg, png) y videos (mp4, webm), hasta 20 MB.
 - **Rutas de videos:** `equipos/<uuid>.mp4|webm` (lo exige el check de `equipos.video`).
+- **Rutas de reseñas:** `resenas/<uuid>.webp` y `resenas/<uuid>-640.webp` (imágenes) o `resenas/<uuid>.mp4|webm`.
 - **Rutas de fotos:** `equipos/<uuid>.webp` y `equipos/<uuid>-640.webp`.
 - **Logo:** `logo-<timestamp>.webp|png`. **Favicon:** `favicon-<timestamp>.png`.
 
@@ -549,7 +565,7 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 | Método | Uso |
 |---|---|
 | `iniciar()` | Prepara el adaptador. En demo carga las fotos de IndexedDB; en Supabase crea el cliente. |
-| `cargarPublico()` | Devuelve `{tienda, modelos, fichas, equipos}` filtrados como para el público. |
+| `cargarPublico()` | Devuelve `{tienda, modelos, fichas, colores, equipos, resenas}` filtrados como para el público. |
 | `urlArchivo(bucket, ruta)` | Da la URL pública de un archivo. |
 | `enviarLead(payload)` | Devuelve `{ok}`. |
 | `sesionActual()`, `iniciarSesion(correo, clave)`, `cerrarSesion()`, `recuperarClave(correo)`, `cambiarClave(nueva)`, `tipoDeEnlace()`, `alCambiarSesion(fn)` | Autenticación. `tipoDeEnlace()` devuelve `"invite"` o `"recovery"` si se llegó desde un correo. |
@@ -558,6 +574,7 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 | `listarColores()`, `guardarColor(id, cambios)`, `agregarColor(datos)`, `borrarColor(id)` | Colores del catálogo, con las reglas de `colores_proteger`. |
 | `listarFichas()`, `guardarFicha(modeloId, {descripcion, especificaciones})` | Las fichas. |
 | `listarEquipos()`, `crearEquipo(datos)`, `actualizarEquipo(id, cambios)`, `borrarEquipo(id)` | El inventario. |
+| `listarResenas()`, `agregarResena(datos)`, `guardarResena(id, cambios)`, `borrarResena(id)` | Reseñas (`0014`), con las reglas del SQL (máximo 12, casilla, rutas, origen). |
 | `subirArchivo(bucket, ruta, blob)`, `borrarArchivos(bucket, rutas)` | Los archivos. |
 | `borrarDatosDemo()` | Solo gestor. |
 | `listarUsuarios()`, `invitarUsuario(correo, rol)`, `cambiarEstadoUsuario(userId, activo)`, `cambiarRolUsuario(userId, rol)` | Solo administrador (`listarUsuarios` devuelve a los demás solo su propio perfil). El rol se cambia directo en `perfiles`; invitar y el estado van por la función `usuarios`. |
@@ -568,7 +585,7 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 - **Estado:** `localStorage["cotizadora-demo:v1"]`, un JSON con `tienda`, `modelos`, `fichas`, `equipos` y `perfiles`. Se comparte entre pestañas del mismo navegador.
 - **Fotos:** IndexedDB, base `cotizadora-demo`, almacén `archivos`. Se exponen como `blob:` URLs.
 - **Usuarios de prueba:** `gestor@demo.co` y `administrador@demo.co`, clave `demo1234` (desde la versión 5 de los datos; antes `tienda@demo.co` y `agencia@demo.co`, que `migrar()` convierte). La sesión va en `sessionStorage["cotizadora-demo:sesion"]`.
-- **Versión de los datos:** el JSON lleva `version` (hoy 11: la 10 es `0012_fichas.sql`, interruptores de la ficha y precarga de la fuente en las fichas sin filas; la 11 es `0013_formas_pago.sql`, `formas_pago` → `pagos_otras` y los campos nuevos vacíos). Si el navegador tiene una versión vieja, `migrar()` repite la migración SQL del mismo número (por ejemplo `stock` → `en_stock`) sin perder lo cargado.
+- **Versión de los datos:** el JSON lleva `version` (hoy 12; la 12 es `0014_resenas.sql`: interruptor apagado, título por defecto y lista vacía; la 10 es `0012_fichas.sql`, interruptores de la ficha y precarga de la fuente en las fichas sin filas; la 11 es `0013_formas_pago.sql`, `formas_pago` → `pagos_otras` y los campos nuevos vacíos). Si el navegador tiene una versión vieja, `migrar()` repite la migración SQL del mismo número (por ejemplo `stock` → `en_stock`) sin perder lo cargado.
 - **Repite las reglas del SQL:**
   - Permisos por rol.
   - Las restricciones CHECK.
@@ -664,7 +681,9 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 
 **Video del equipo (B3):** si el equipo tiene video, aparece como una miniatura más, al final, con el ícono de reproducir (si el equipo no tiene fotos, también aparece la miniatura de la ilustración). El `<video>` recién se crea al tocarla, con `controls`, `playsinline` y `preload="none"`, y se reproduce porque el cliente lo tocó; no hay reproducción automática al cargar. Volver a una foto o cambiar de color lo quita.
 
-### 8.5 Información de la tienda y pie
+### 8.5 Reseñas, información de la tienda y pie
+
+- **Reseñas** (`0014`, `resenas.js`): entre los equipos y la información de la tienda, solo si la tienda las muestra y hay alguna; si no, la sección no existe y su módulo ni se carga. Ver el mapa de archivos para el visor. No hay reseñas de ejemplo, tampoco en el modo demo.
 
 - **Información:**
   - Dirección y ciudad, y horario.
@@ -790,7 +809,7 @@ La búsqueda se arma con `describirBusqueda`: el modelo o "iPhone", la condició
 | `#/inventario/nuevo` | Formulario **por pasos**: modelo → condición → capacidad → color → precio y stock (interruptor) → fotos → datos del usado (solo si es usado) → publicar (con resumen). |
 | `#/inventario/nuevo?desde=<id>` | **Duplicar**: copia todo menos las fotos. |
 | `#/inventario/<id>` | Editar el equipo (formulario completo). |
-| `#/tienda` | Mi tienda. |
+| `#/tienda` | Mi tienda (al final, la sección **Reseñas**, que se guarda sola). |
 | `#/catalogo` | Catálogo, pestaña **Modelos y colores**. |
 | `#/catalogo/ficha` y `#/catalogo/ficha/<modeloId>` | Catálogo, pestaña **Ficha técnica** (lista y editor de un modelo). |
 | `#/catalogo/pagos` | Catálogo, pestaña **Formas de pago**. |
@@ -969,7 +988,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 ```bash
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 53 casos en modo demo (Playwright + Chromium)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 55 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (10 casos) + tipos
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
@@ -982,7 +1001,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 - `ICT_CAPTURAS=1`: además guarda capturas en `tests/capturas/` y corre el caso **capturas de diseño**: 360 y 1440 px × claro y oscuro × cuadrícula y carrusel × color por defecto y primario amarillo, más el detalle y el pop-up, en `tests/capturas/diseno/<etapa>-….png`. `ICT_CAPTURAS_ETAPA` pone la etapa (por ejemplo `antes` o `despues`). La carpeta no se sube al repo.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (53 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (55 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
@@ -999,6 +1018,7 @@ node tests/documentacion.mjs                               # este documento cubr
 12b. **Pestañas de Catálogo:** "Fichas técnicas" ya no está en el menú; `#/fichas` y `#/fichas/<id>` llevan a la pestaña Ficha técnica; roles ARIA (`tablist`, `tab`, `tabpanel`, `aria-controls`, `aria-selected`, `tabindex` móvil); flechas con vuelta, Inicio y Fin con el foco en la pestaña; contorno de foco de 3 px; con cambios sin guardar, pregunta antes de cambiar de pestaña.
 12c. **Ficha técnica** (2 casos): las 42 fichas del demo son iguales a la fuente y el sitio las muestra tal cual, en el orden fijo y con sus saltos de línea; apagar "Mostrar la ficha técnica en el sitio" la saca del sitio; apagar categorías las saca; el editor muestra los valores de la fuente (batería vacía), corrige una categoría, completa otra y agrega una fila propia que va al final; "Otras filas de la tienda" apagada la oculta; la capa de datos rechaza una categoría inexistente o repetida, un valor de más de 600 caracteres y una categoría oculta que no existe. La migración de datos viejos del demo precarga las fichas vacías y no toca la que cargó la tienda.
 12d. **Formas de pago:** Inicio avisa ciudad, correo y formas de pago; Mi tienda ya no tiene la lista; la pestaña esconde lo que depende de un interruptor apagado, marca "no más que el máximo" y el nombre de "Otra" con foco al primer error, muestra la vista previa y guarda; el detalle muestra exactamente las frases de lo marcado; sin cuotas se guardan vacías y la tarjeta de crédito va sola; la capa de datos repite las reglas. La migración de datos viejos pasa la lista a `pagos_otras`.
+12e. **Reseñas** (2 casos): el demo no trae ninguna; apagadas o sin reseñas, la sección no aparece, `resenas.js` no se carga y `cargarPublico` no las da. En el panel: aviso fijo arriba de la carga y texto exacto de la casilla; sin la casilla no se sube nada (foco en la casilla); videos de 31 s, .mov y más de 20 MB rechazados sin subir nada; una imagen (dos tamaños) y un video de 20 s se agregan; editar texto, mover, encender y cambiar el título; en el sitio, el orden de las secciones, el título, el orden, las imágenes diferidas, ningún `<video>` antes de tocar, AA; el visor con `preload="none"`, sin reproducción automática, ← y Escape, y el foco vuelve; borrar quita la reseña y sus archivos; la 13.ª se rechaza y "Agregar" queda deshabilitado; `autorizado: false` se rechaza.
 13. Carrusel: dedo, flechas, puntos, muestras, teclado y Escape. **Video en el detalle:** miniatura con ícono; sin `<video>` en la página hasta tocarla; al tocarla, `preload="none"`, `controls`, sin `autoplay` y se reproduce; volver a la foto lo quita.
 14. Gesto táctil real en el carrusel y cierre de la hoja con el gesto.
 14b. **Vista Carrusel** (8 casos): elegirla en Mi tienda cambia el sitio (mismas tarjetas, orden, contador y detalle; tocar una vecina la centra, la del centro abre el detalle; flechas de 44 px o más con foco visible); bucle en los dos sentidos con flechas, teclado, mouse, trackpad y dedo; 1 tarjeta sin flechas ni bucle, 2 tarjetas con una sola vecina, el filtro vuelve a la primera y el estado vacío; sin scroll horizontal y con altura estable a 320, 360, 768 y 1440 px; con reduced-motion, sin animaciones.
@@ -1012,7 +1032,7 @@ node tests/documentacion.mjs                               # este documento cubr
 21. Píxel: `PageView`, `ViewContent` y `Lead` con `eventID`, sin datos personales.
 22. Formatos: `$5.299.000`, fecha D/M/AAAA y código sin O/0/I/1.
 
-### 14.3 "Supabase local" y `tests/verificar-supabase.cjs` (9 casos)
+### 14.3 "Supabase local" y `tests/verificar-supabase.cjs` (11 casos)
 
 **Cómo levantarlo y probarlo:**
 
@@ -1035,12 +1055,14 @@ bash tests/supabase-local/levantar.sh detener
 | 2525 | SMTP simulado |
 | 54321 | Pasarela |
 
-**Los 9 casos:**
+**Los 11 casos:**
 
 1. El sitio carga con la RPC.
 2. El pop-up pasa por la función y llega al webhook con todos los campos.
 3. Permisos del panel: el gestor no ve Usuarios y el servidor (función y tabla) le niega gestionarlos; colores.
 4. Un precio cambiado en el panel se ve en el sitio, con la fecha.
+4b. **Ficha técnica y formas de pago:** el gestor guarda cuotas en Catálogo → Formas de pago; el servidor rechaza "sin interés" mayor que el máximo con el mismo mensaje del panel; el sitio muestra la frase y la ficha precargada por la RPC, en el orden fijo.
+4c. **Reseñas:** el gestor sube una imagen y un video de 20 s al bucket `resenas` desde el panel; apagadas, la tabla no las da al público (REST) ni el sitio las muestra; encendidas, sí; la miniatura se sirve desde Storage; el video **no se pide al abrir el visor** y sí al reproducirlo; Storage rechaza un .mov en `resenas`.
 5. Crear un equipo con foto y **video** (Storage simulado); en el sitio, **ningún pedido al video hasta tocar su miniatura**, y al tocarla se pide; el video queda en el bucket `videos` y se sirve como `video/mp4`; Storage rechaza un tipo no permitido aunque se salte el panel.
 6. El gestor borra la demo.
 7. **Invitación:** el administrador (que solo ve Usuarios y al que el servidor le niega lo demás) invita; el correo en español, el enlace, "Cree su contraseña" y el ingreso como gestor.
@@ -1110,6 +1132,10 @@ bash tests/supabase-local/levantar.sh detener
 | "Versiones del modelo" = opciones de almacenamiento | Propuesta aprobada por Jared: la fuente no tiene otra columna que sirva. Los colores no van en la ficha (ya están en el detalle). |
 | Textos que no son datos quedan vacíos | "Datos de catálogo en consolidación", "Lanzamiento reciente" y "Diseño tipo libro (\"Fold\")" (columna de dimensiones) no son medidas: la categoría queda vacía y se anota en la sección 17. |
 | Filas de la tienda al final, con su propio interruptor | Las categorías fijas tienen orden; lo que agrega la tienda no tiene categoría, así que va después y se apaga junto ("Otras filas de la tienda"). |
+| Reseñas fuera del formulario de Mi tienda | Cada una lleva un archivo que se sube al elegirlo; guardarlas solas evita archivos huérfanos y el "Guardar" de Mi tienda no espera subidas largas. |
+| Origen "Otro" con "¿Cuál?" | "Otro" solo no le dice nada al cliente: se muestra el nombre que escriba la tienda; sin nombre, no se muestra origen. Sin logos (pedido). |
+| Los videos de reseñas sin imagen de portada | Con `preload="none"` el navegador no baja ni un cuadro; generar una portada al subir obligaría a decodificar el video en el panel (y no todos los navegadores pueden con H.264). Se muestra un recuadro "Video". |
+| `resenas.js` se carga solo si hay reseñas | Las tiendas que no las usan no pagan ese peso. |
 | Duplicar no copia "Más vendido" | El duplicado es otra variante y el máximo es 3: copiarlo haría fallar el guardado. El stock sí se copia (pedido de A2). |
 | View Transitions para abrir el detalle | Pedido de Jared. Se probó con cuadros grabados que la foto viaja bien aunque el diálogo esté en la capa superior; sin la API (o con reduced-motion) queda la animación de CSS. |
 | Vecinas del carrusel desvanecidas con una capa (`::after`) | Bajar la opacidad del texto lo dejaba bajo 4,5:1. Las vecinas son tarjetas inactivas (`aria-hidden`, fuera del tabulado): WCAG 1.4.3 exime el texto de componentes inactivos. La tarjeta del centro, que es la que se usa, cumple AA. |
@@ -1152,6 +1178,7 @@ bash tests/supabase-local/levantar.sh detener
 **Pendientes del documento del prompt:**
 
 - [ ] Textos de privacidad, términos y autorización de datos (Ley 1581). Los redacta el abogado.
+- [ ] Que el abogado confirme si publicar capturas de clientes (aun tapadas) necesita autorización por escrito; el panel pide la casilla en cada reseña, pero no guarda la autorización.
 - [ ] Confirmar en apple.com/co los nombres del catálogo (desde el iPhone 7, iPhone Air e iPhone Duo).
 - [ ] **Datos que faltan en la fuente del catálogo** (quedaron vacíos; no se completaron de memoria):
   - Hexadecimal de **todos** los colores de: iPhone 7, 7 Plus, 8, 8 Plus, X, XS, XS Max, XR, 11, 11 Pro, 11 Pro Max, SE (2.ª), 12 mini, 12, 12 Pro, 12 Pro Max, 13 mini, 13, 13 Pro, 13 Pro Max, SE (3.ª), 14, 14 Plus, 14 Pro, 14 Pro Max, 15, 15 Plus, 15 Pro, 15 Pro Max, 16 Pro, 16 Pro Max y Duo. Solo 32 de 183 colores tienen hexadecimal.
@@ -1208,6 +1235,14 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
 
+### 21/10/2026 · D: reseñas en Mi tienda y en el sitio
+
+- **Pedido de Jared (ronda 2, punto D):** en Mi tienda, interruptor "Mostrar reseñas en el sitio" (apagado por defecto), título editable ("Lo que dicen nuestros clientes" por defecto), hasta 12 reseñas ordenables, cada una imagen (comprimida como las fotos) o video (MP4/WebM, 30 s, 20 MB, misma validación que los videos de equipos, que siguen en 15 s), texto y origen opcionales (Instagram, WhatsApp, Google, Otro; en texto, sin logos), casilla obligatoria "Tengo autorización de esta persona o tapé su nombre, foto y número." y el aviso fijo "Las capturas pueden tener datos personales de sus clientes. Tápelos o pida autorización antes de publicarlas.". Bucket "resenas" con las reglas de las fotos y tabla con RLS (el público lee solo con el interruptor). En el sitio, debajo de los equipos y antes de la información de la tienda: carrusel o mosaico, visor a pantalla completa con Escape, imágenes diferidas, videos con `preload="none"` que se reproducen solo al tocarlos; sin sección si no hay o está apagado. **Sin reseñas, testimonios, nombres ni textos de ejemplo, tampoco en demo.**
+- **Hecho:** `supabase/migrations/0014_resenas.sql`, `assets/js/panel/resenas.js` y `assets/js/sitio/resenas.js` (nuevos); `comun.js` (campos, límites, orígenes, `textoOrigen`, bucket); `demo.js` versión 12 y `supabase.js` (métodos de reseñas); `video.js` (`maxSegundos`); `tienda.js` (sección al final); `index.html` (sección y visor); `principal.js` y `catalogo.js` del sitio; `panel.css` y `sitio.css`; `tests/supabase-local/pasarela.mjs` (bucket simulado `resenas`); videos de prueba `tests/videos/20s.mp4` y `31s.mp4`.
+- **Decisiones:** ver la sección 16 (fuera del formulario, "Otro" con nombre, sin portada de video, módulo bajo demanda).
+- **Pruebas:** `pruebas.sql` (ninguna de ejemplo, bucket, límite de 12 con su mensaje, casilla, rutas, origen, RLS por rol y con el interruptor, `datos_publicos`); `verificar.cjs` (2 casos nuevos, ver 14.2, 12e); `verificar-supabase.cjs` (caso nuevo, ver 14.3, 4c). Ninguna prueba se quitó ni se debilitó.
+- **Verificación:** `tests/sql/probar.sh` OK, `tests/verificar.cjs` 55/55, `tests/verificar-supabase.cjs` 11/11 y `node tests/documentacion.mjs` OK.
+
 ### 21/10/2026 · C3: formas de pago estructuradas
 
 - **Pedido de Jared (ronda 2, punto C3):** en Catálogo → Formas de pago, cuotas (acepta sí/no; hasta cuántas, de 2 a 48; sin interés sí/no; hasta cuántas sin interés, no más que el máximo), medios (transferencia, efectivo, débito, crédito), criptomonedas sí/no y "¿Cuáles?", pasarelas (Mercado Pago, PSE, Nequi, Daviplata, Wompi, Bold y "Otra" con texto) y "Otras formas de pago" = la lista libre de Mi tienda (la migración mueve los valores y Mi tienda deja de mostrarla). Validaciones en el SQL y en el demo; el detalle del sitio arma frases cortas solo con lo marcado; Inicio avisa lo que falta de Mi tienda y de Formas de pago.
@@ -1219,7 +1254,7 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ### 21/10/2026 · C2: ficha técnica precargada de la fuente, con interruptores
 
 - **Pedido de Jared (ronda 2, punto C2):** interruptor general "Mostrar la ficha técnica en el sitio" (sí por defecto) y uno por categoría (año de lanzamiento, procesador, pantalla, cámaras traseras, cámara frontal, batería y versiones del modelo, más las demás categorías de la fuente con su nombre); precargar las fichas de los 42 modelos **solo con el texto de la fuente** (lo que falta queda vacío y se anota); editor por modelo dentro de la pestaña; en el sitio, "Ver ficha técnica" solo con el interruptor encendido, solo categorías activas con valor, en orden, con estilo premium.
-- **Hecho:** `supabase/migrations/0012_fichas.sql` (nuevo); `comun.js` (`CATEGORIAS_FICHA`, `especificacionesValidas`, `filasVisiblesFicha`, campos de la tienda); `semilla.js` (`FICHAS`, `filasDeFuente`); `demo.js` versión 10 (misma migración y mismas reglas); panel `fichas.js` y `panel.css`; sitio `detalle.js` y `sitio.css`.
+- **Hecho:** `supabase/migrations/0012_fichas.sql` (nuevo); `README.md` y `CLAUDE.md` (la ficha ya no nace vacía); `comun.js` (`CATEGORIAS_FICHA`, `especificacionesValidas`, `filasVisiblesFicha`, campos de la tienda); `semilla.js` (`FICHAS`, `filasDeFuente`); `demo.js` versión 10 (misma migración y mismas reglas); panel `fichas.js` y `panel.css`; sitio `detalle.js` y `sitio.css`.
 - **Fuente:** los tres archivos de Jared (aprobado: "usa los tres archivos y aplica tus propuestas"). HTML para el iPhone 7 a 16 Pro Max, `info_complementaria.md` para el 16e, 17, Air, 17 Pro, 17 Pro Max, 17e, 18 Pro, 18 Pro Max y Duo. 367 filas en total. Las decisiones de formato están en la sección 16 y lo que falta, en la 17.
 - **Pruebas cambiadas y por qué:** `pruebas.sql` exigía "fichas vacías" (regla del prompt original). Este pedido la reemplaza: ahora exige que no haya descripciones de la fuente y, en un bloque nuevo, que haya 41 fichas precargadas, que la de la tienda (`antes_0012_fichas.sql`) no se toque, que no haya batería y las reglas de `validar_ficha` y de `ficha_ocultas`. `comparar-semilla.mjs` compara además las fichas del SQL con `semilla.js`. En `verificar.cjs`: 2 casos nuevos y el de migración de datos viejos suma las fichas.
 - **Verificación:** `tests/sql/probar.sh` OK, `tests/verificar.cjs` 52/52, `tests/verificar-supabase.cjs` 9/9 y `node tests/documentacion.mjs` OK.

@@ -22,7 +22,8 @@ const archivos = new Map();
 const BUCKETS = {
   fotos: { max: 10485760, tipos: ["image/webp", "image/jpeg", "image/png"] },
   marca: { max: 10485760, tipos: ["image/webp", "image/jpeg", "image/png", "image/svg+xml", "image/x-icon"] },
-  videos: { max: 20971520, tipos: ["video/mp4", "video/webm"] }
+  videos: { max: 20971520, tipos: ["video/mp4", "video/webm"] },
+  resenas: { max: 20971520, tipos: ["image/webp", "image/jpeg", "image/png", "video/mp4", "video/webm"] }
 };
 
 function cors(res) {

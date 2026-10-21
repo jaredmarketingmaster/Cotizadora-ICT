@@ -97,6 +97,14 @@
 
     <section class="contenedor detalle-en-linea" id="detalle-en-linea" aria-label="Detalle del equipo" hidden></section>
 
+    <!-- Reseñas: solo si la tienda las muestra y hay alguna (assets/js/sitio/resenas.js) -->
+    <section class="resenas" id="resenas" aria-labelledby="resenas-titulo" hidden>
+      <div class="contenedor">
+        <h2 class="resenas-titulo" id="resenas-titulo"></h2>
+        <ul class="resenas-lista"></ul>
+      </div>
+    </section>
+
     <section class="info-tienda" id="info-tienda" aria-labelledby="info-titulo" hidden>
       <div class="contenedor info-grilla">
         <div>
@@ -136,5 +144,18 @@
 
   <!-- Pop-up de datos -->
   <dialog class="popup" id="popup" aria-labelledby="popup-titulo"></dialog>
+  <dialog class="visor" id="visor-resena" aria-labelledby="visor-titulo">
+    <div class="visor-barra">
+      <p class="visor-titulo cifras" id="visor-titulo"></p>
+      <button type="button" class="visor-cerrar" aria-label="Cerrar"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="visor-medio"></div>
+    <p class="visor-texto" hidden></p>
+    <p class="visor-origen" hidden></p>
+    <div class="visor-nav" hidden>
+      <button type="button" class="boton boton--secundario" data-paso="-1">Anterior</button>
+      <button type="button" class="boton boton--secundario" data-paso="1">Siguiente</button>
+    </div>
+  </dialog>
 </body>
 </html>

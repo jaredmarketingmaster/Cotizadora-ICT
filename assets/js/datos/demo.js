@@ -9,7 +9,7 @@
 // =============================================================================
 
 import { CATALOGO, COLORES, DEMO_EQUIPOS, filasDeFuente } from "./semilla.js";
-import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, elegir } from "./comun.js";
+import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, MENSAJE_MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, elegir } from "./comun.js";
 import { hexValido, whatsappTiendaValido, sesion, esperar } from "../utils.js";
 
 const CLAVE = "cotizadora-demo:v1";
@@ -53,19 +53,21 @@ function estadoInicial() {
       pagos_otras: [], ...PAGOS_VACIOS, texto_garantia_nuevos: "", texto_garantia_usados: "", etiqueta_precio: "Precio",
       texto_privacidad: "", texto_terminos: "", texto_autorizacion_datos: "", aviso_marca: "",
       precios_actualizados_en: t, modo_demo: true, tamano_texto: "normal", vista_equipos: "cuadricula",
-      mostrar_ficha: true, ficha_ocultas: [], actualizado_en: t
+      mostrar_ficha: true, ficha_ocultas: [], mostrar_resenas: false, titulo_resenas: TITULO_RESENAS, actualizado_en: t
     },
     modelos,
     fichas: modelos.map((m) => ({ modelo_id: m.id, descripcion: "", especificaciones: filasDeFuente(m.slug), actualizado_en: t })),
     colores,
     equipos,
+    // Sin reseñas: no se crean ni de ejemplo (0014)
+    resenas: [],
     perfiles: USUARIOS_DEMO.map((u, i) => ({ user_id: `demo-${i + 1}`, correo: u.correo, rol: u.rol, activo: true, clave: CLAVE_DEMO, creado_en: t }))
   };
 }
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 11;
+const VERSION = 12;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -147,6 +149,13 @@ const MIGRACIONES = {
     e.tienda.pagos_otras = e.tienda.formas_pago || [];
     delete e.tienda.formas_pago;
     Object.assign(e.tienda, PAGOS_VACIOS);
+  },
+  // 0014_resenas.sql: el interruptor apagado, el título por defecto y la
+  // lista vacía.
+  11(e) {
+    e.tienda.mostrar_resenas = false;
+    e.tienda.titulo_resenas = TITULO_RESENAS;
+    e.resenas = e.resenas || [];
   }
 };
 
@@ -298,6 +307,20 @@ function validarTienda(t) {
   // Como validar_pagos (0013)
   const pagos = errorPagos(t);
   if (pagos) throw new ErrorDatos(pagos);
+  // 0014
+  if (typeof t.mostrar_resenas !== "boolean" || typeof t.titulo_resenas !== "string" || t.titulo_resenas.length > 80) {
+    throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
+  }
+}
+
+// Como los checks de la tabla resenas (0014)
+function validarResena(r) {
+  const bien = ["imagen", "video"].includes(r.tipo) && RUTA_RESENA[r.tipo].test(r.ruta) &&
+    typeof r.texto === "string" && r.texto.length <= 300 &&
+    (r.origen === "" || ORIGENES_RESENA.some((o) => o.clave === r.origen)) &&
+    typeof r.origen_otro === "string" && r.origen_otro.length <= 40 && (r.origen === "otro" || r.origen_otro === "") &&
+    r.autorizado === true && Number.isInteger(r.orden);
+  if (!bien) throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
 }
 
 // Como validar_color_equipo (0008): el color es del modelo y es obligatorio
@@ -365,7 +388,12 @@ export const demo = {
       modelos: modelosActivos,
       fichas: e.fichas.filter((f) => ids.has(f.modelo_id)),
       colores: e.colores.filter((c) => ids.has(c.modelo_id)).sort((a, b) => a.modelo_id - b.modelo_id || a.orden - b.orden),
-      equipos: e.equipos.filter((q) => equipoEsPublico(q, porId))
+      equipos: e.equipos.filter((q) => equipoEsPublico(q, porId)),
+      // Como datos_publicos (0014): solo con el interruptor encendido
+      resenas: e.tienda.mostrar_resenas
+        ? [...e.resenas].sort((a, b) => a.orden - b.orden || a.creado_en.localeCompare(b.creado_en))
+          .map(({ id, tipo, ruta, texto, origen, origen_otro }) => ({ id, tipo, ruta, texto, origen, origen_otro }))
+        : []
     });
   },
 
@@ -554,6 +582,48 @@ export const demo = {
     Object.assign(f, { descripcion: descripcion ?? "", especificaciones: especificaciones ?? [], actualizado_en: ahora() });
     escribir(e);
     return copia(f);
+  },
+
+  // ---------------- Reseñas (0014) ----------------
+  async listarResenas() {
+    await red();
+    const e = leer();
+    // Como resenas_leer: el público, solo con el interruptor encendido
+    if (!esGestor(e) && !e.tienda.mostrar_resenas) return [];
+    return copia([...e.resenas].sort((a, b) => a.orden - b.orden || a.creado_en.localeCompare(b.creado_en)));
+  },
+
+  async agregarResena(datos) {
+    await red();
+    const e = leer();
+    exigirGestor(e, "cambiar las reseñas");
+    if (e.resenas.length >= MAX_RESENAS) throw new ErrorDatos(MENSAJE_MAX_RESENAS);
+    const r = { id: uuid(), texto: "", origen: "", origen_otro: "", orden: 0, ...elegir(datos, CAMPOS_RESENA), creado_en: ahora() };
+    validarResena(r);
+    e.resenas.push(r);
+    escribir(e);
+    return copia(r);
+  },
+
+  async guardarResena(id, cambios) {
+    await red();
+    const e = leer();
+    exigirGestor(e, "cambiar las reseñas");
+    const r = e.resenas.find((x) => x.id === id);
+    if (!r) throw new ErrorDatos("Esa reseña ya no existe.");
+    const nueva = { ...r, ...elegir(cambios, CAMPOS_RESENA) };
+    validarResena(nueva);
+    Object.assign(r, nueva);
+    escribir(e);
+    return copia(r);
+  },
+
+  async borrarResena(id) {
+    await red();
+    const e = leer();
+    exigirGestor(e, "cambiar las reseñas");
+    e.resenas = e.resenas.filter((x) => x.id !== id);
+    escribir(e);
   },
 
   // ---------------- Inventario ----------------

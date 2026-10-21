@@ -392,3 +392,20 @@ select.entrada { appearance: none; -webkit-appearance: none; padding-right: 40px
 /* Un fieldset con aspecto de bloque: la leyenda va adentro, como un h2 */
 .bloque--grupo > legend { float: left; width: 100%; margin: 0 0 4px; padding: 0; font-size: 1.1875rem; font-weight: 800; }
 .bloque--grupo > legend + * { clear: both; }
+
+/* Reseñas (resenas.js) */
+.aviso-datos { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--aviso-fondo); color: var(--aviso); font-weight: 700; }
+.nueva-resena { display: grid; gap: 14px; margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--borde); }
+.nueva-resena h3, #t-resenas-lista { font-size: 1.0625rem; font-weight: 800; }
+.lista-resenas { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.resena-fila {
+  display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px;
+  padding: 12px; border: 1px solid var(--borde); border-radius: var(--radio); background: var(--fondo);
+}
+.resena-medio { display: grid; place-items: center; width: 72px; height: 72px; overflow: hidden; border-radius: 10px; background: var(--superficie); }
+.resena-medio img { width: 100%; height: 100%; object-fit: cover; }
+.resena-video { font-size: 1.5rem; color: var(--texto-suave); }
+.resena-campos { display: grid; gap: 10px; min-width: 0; }
+.resena-tipo { font-weight: 700; }
+.resena-botones { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; }
+@media (min-width: 720px) { .resena-fila { grid-template-columns: 96px minmax(0, 1fr) auto; } .resena-medio { width: 96px; height: 96px; } .resena-botones { grid-column: auto; flex-direction: column; justify-content: flex-start; } }

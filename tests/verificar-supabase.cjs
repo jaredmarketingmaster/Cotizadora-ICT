@@ -229,6 +229,66 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.context().close();
   });
 
+  await caso("reseñas (0014): el gestor sube imagen y video al bucket resenas; el público las ve solo encendidas; el video no se pide hasta reproducirlo", async () => {
+    const p = await pagina(1280);
+    await entrar(p, "gestor@local.co");
+    await p.goto(`${BASE}/admin/#/tienda`);
+    await p.waitForSelector("#form-resena");
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+    const agregar = async (archivo, texto) => {
+      await p.setInputFiles("#r-archivo", archivo);
+      await p.fill("#r-texto", texto);
+      await p.check("#r-autorizado");
+      await p.click("#r-agregar");
+      await p.waitForFunction((n) => document.querySelectorAll(".resena-fila").length === n, texto === "Imagen" ? 1 : 2, { timeout: 15000 });
+    };
+    await agregar({ name: "a.png", mimeType: "image/png", buffer: png }, "Imagen");
+    await agregar(path.join(__dirname, "videos", "20s.mp4"), "Video");
+    // Apagadas: ni la RPC ni la tabla las dan al público.
+    const anon = async () => {
+      const r = await fetch(`${ENTORNO.URL}/rest/v1/resenas?select=id`, { headers: { apikey: ENTORNO.ANON } });
+      return (await r.json()).length;
+    };
+    assert.equal(await anon(), 0, "apagadas: el público no las lee");
+    const s = await p.context().newPage();
+    const pedidos = [];
+    s.on("request", (r) => { if (/\/storage\/v1\/object\/public\/resenas\/.+\.mp4/.test(r.url())) pedidos.push(r.url()); });
+    await s.goto(`${BASE}/`, { waitUntil: "networkidle" });
+    assert.equal(await s.isHidden("#resenas"), true);
+    // Encendidas
+    await p.click('label[for="r-mostrar"]');
+    await p.waitForSelector("#aviso-flotante.visible");
+    assert.equal(await anon(), 2, "encendidas: el público las lee");
+    await s.goto(`${BASE}/`, { waitUntil: "networkidle" });
+    await s.waitForSelector("#resenas:not([hidden]) .resena-boton");
+    const img = await s.getAttribute("#resenas .resena-boton img", "src");
+    assert.match(img, /\/storage\/v1\/object\/public\/resenas\/resenas\/[\w-]+-640\.\w+$/);
+    assert.equal((await s.request.get(img)).status(), 200);
+    await s.click("#resenas .resena-boton >> nth=1");
+    await s.waitForSelector("#visor-resena video");
+    await s.waitForTimeout(600);
+    assert.equal(pedidos.length, 0, "el video no se pide al abrir el visor");
+    await s.$eval("#visor-resena video", (v) => v.play().catch(() => {}));
+    await s.waitForTimeout(800);
+    assert.ok(pedidos.length >= 1, "al reproducirlo, se pide");
+    // Storage rechaza en "resenas" un tipo no permitido aunque se salte el panel.
+    const subida = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      return a.subirArchivo("resenas", "resenas/intruso.mov", new Blob(["x"], { type: "video/quicktime" })).then(() => "subió", (e) => e.message);
+    });
+    assert.notEqual(subida, "subió");
+    // Se dejan como estaban: apagadas y sin reseñas.
+    await p.click('label[for="r-mostrar"]');
+    for (let i = 0; i < 2; i++) {
+      await p.click(".resena-fila [data-borrar] >> nth=0");
+      await p.click('#confirmar [value="si"]');
+      await p.waitForFunction((n) => document.querySelectorAll(".resena-fila").length === n, 1 - i);
+    }
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("panel: agregar un equipo con foto (Storage simulado) y verlo en el sitio", async () => {
     const p = await pagina(390);
     await entrar(p, "gestor@local.co");

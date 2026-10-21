@@ -5,7 +5,7 @@
 // =============================================================================
 
 import { CONFIG } from "../../../config.js";
-import { ErrorDatos, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, elegir, mensajeDeError, mensajeArchivo } from "./comun.js";
+import { ErrorDatos, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, CAMPOS_RESENA, elegir, mensajeDeError, mensajeArchivo } from "./comun.js";
 
 const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm";
 const URL_BASE = String(CONFIG.supabase.url || "").replace(/\/+$/, "");
@@ -261,6 +261,34 @@ export const supabase = {
       .select().single();
     fallo(error);
     return data;
+  },
+
+  // ---------------- Reseñas (las reglas están en 0014) ----------------
+  async listarResenas() {
+    const c = await cliente();
+    const { data, error } = await c.from("resenas").select("*").order("orden").order("creado_en");
+    fallo(error);
+    return data;
+  },
+
+  async agregarResena(datos) {
+    const c = await cliente();
+    const { data, error } = await c.from("resenas").insert(elegir(datos, CAMPOS_RESENA)).select().single();
+    fallo(error);
+    return data;
+  },
+
+  async guardarResena(id, cambios) {
+    const c = await cliente();
+    const { data, error } = await c.from("resenas").update(elegir(cambios, CAMPOS_RESENA)).eq("id", id).select().single();
+    fallo(error);
+    return data;
+  },
+
+  async borrarResena(id) {
+    const c = await cliente();
+    const { error } = await c.from("resenas").delete().eq("id", id);
+    fallo(error);
   },
 
   // ---------------- Inventario ----------------

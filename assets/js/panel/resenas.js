@@ -1,0 +1,203 @@
+// =============================================================================
+// Reseñas (Mi tienda, 0014). Va fuera del formulario de Mi tienda: cada cambio
+// se guarda solo (el interruptor y el título al cambiarlos; cada reseña al
+// agregarla, editarla, moverla o borrarla).
+// - Hasta 12. Cada una: imagen (comprimida como las fotos) o video (MP4 o
+//   WebM, hasta 30 segundos y 20 MB, validado con video.js), texto y origen
+//   opcionales, y la casilla de autorización obligatoria.
+// - Aviso fijo sobre los datos personales de las capturas, arriba de la carga.
+// =============================================================================
+
+import { rutaMiniatura, MAX_RESENAS, MAX_SEGUNDOS_RESENA, ORIGENES_RESENA, TITULO_RESENAS } from "../datos/comun.js";
+import { $, esc, conBoton, confirmar, campoTexto, interruptor, marcarError, enfocarPrimerError } from "./ui.js";
+import { comprimirFoto } from "./imagenes.js";
+import { validarVideo } from "./video.js";
+
+const AVISO = "Las capturas pueden tener datos personales de sus clientes. Tápelos o pida autorización antes de publicarlas.";
+const AUTORIZACION = "Tengo autorización de esta persona o tapé su nombre, foto y número.";
+const id = () => crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2);
+const opcionesOrigen = (elegido) => `<option value="">Sin origen</option>${ORIGENES_RESENA.map((o) => `<option value="${o.clave}" ${o.clave === elegido ? "selected" : ""}>${o.texto}</option>`).join("")}`;
+
+export async function dibujar(caja, ctx, tienda) {
+  const { api } = ctx;
+  let resenas = await api.listarResenas();
+  if (!caja.isConnected) return;
+
+  caja.innerHTML = `
+    <section class="bloque" aria-labelledby="t-resenas">
+      <h2 id="t-resenas">Reseñas</h2>
+      <p class="ayuda">Se guardan solas. Aparecen en el sitio debajo de los equipos.</p>
+      ${interruptor({ id: "r-mostrar", etiqueta: "Mostrar reseñas en el sitio", marcado: tienda.mostrar_resenas })}
+      ${campoTexto({ id: "r-titulo", etiqueta: "Título de la sección", valor: tienda.titulo_resenas || TITULO_RESENAS, atributos: 'maxlength="80"' })}
+
+      <h3 id="t-resenas-lista">Reseñas cargadas <span class="ayuda cifras" id="r-cuenta"></span></h3>
+      <ul class="lista-resenas" id="r-lista" aria-labelledby="t-resenas-lista"></ul>
+
+      <form class="nueva-resena" id="form-resena" novalidate aria-labelledby="t-nueva-resena">
+        <h3 id="t-nueva-resena">Agregar una reseña</h3>
+        <p class="aviso-datos" role="note">${AVISO}</p>
+        <div class="campo">
+          <label for="r-archivo">Imagen o video</label>
+          <input class="entrada" type="file" id="r-archivo" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm" aria-describedby="r-archivo-ayuda r-archivo-error">
+          <p class="ayuda" id="r-archivo-ayuda">Una captura o una foto, o un video MP4 de hasta ${MAX_SEGUNDOS_RESENA} segundos y 20 MB.</p>
+          <p class="error-campo" id="r-archivo-error"></p>
+        </div>
+        ${campoTexto({ id: "r-texto", etiqueta: "Texto (opcional)", multilinea: true, ayuda: "Por ejemplo, lo que dijo la persona. Sin su nombre ni su número.", atributos: 'rows="3" maxlength="300"' })}
+        <div class="grilla-2">
+          <div class="campo">
+            <label for="r-origen">Origen (opcional)</label>
+            <select class="entrada" id="r-origen">${opcionesOrigen("")}</select>
+          </div>
+          <div id="r-origen-otro-caja" hidden>${campoTexto({ id: "r-origen-otro", etiqueta: "¿Cuál?", atributos: 'maxlength="40"' })}</div>
+        </div>
+        <div class="campo">
+          <label class="casilla" for="r-autorizado"><input type="checkbox" id="r-autorizado" aria-describedby="r-autorizado-error"><span>${AUTORIZACION}</span></label>
+          <p class="error-campo" id="r-autorizado-error"></p>
+        </div>
+        <p class="subiendo" id="r-subiendo" hidden></p>
+        <button type="submit" class="boton boton--primario" id="r-agregar">Agregar reseña</button>
+      </form>
+    </section>`;
+
+  const lista = $("#r-lista", caja);
+  const form = $("#form-resena", caja);
+  const url = (r) => api.urlArchivo("resenas", r.tipo === "imagen" ? rutaMiniatura(r.ruta) : r.ruta);
+
+  function pintar() {
+    $("#r-cuenta", caja).textContent = `(${resenas.length} de ${MAX_RESENAS})`;
+    lista.innerHTML = resenas.length ? resenas.map((r, i) => `<li class="resena-fila" data-id="${r.id}">
+      <span class="resena-medio">${r.tipo === "imagen"
+        ? `<img src="${esc(url(r))}" alt="" loading="lazy">`
+        : '<span class="resena-video" aria-hidden="true">▶</span>'}</span>
+      <div class="resena-campos">
+        <p class="resena-tipo">${r.tipo === "imagen" ? "Imagen" : "Video"} ${i + 1}</p>
+        ${campoTexto({ id: `rt-${r.id}`, etiqueta: "Texto", valor: r.texto, multilinea: true, atributos: `rows="2" maxlength="300" data-texto` })}
+        <div class="grilla-2">
+          <div class="campo"><label for="ro-${r.id}">Origen</label><select class="entrada" id="ro-${r.id}" data-origen>${opcionesOrigen(r.origen)}</select></div>
+          ${r.origen === "otro" ? campoTexto({ id: `rx-${r.id}`, etiqueta: "¿Cuál?", valor: r.origen_otro, atributos: 'maxlength="40" data-origen-otro' }) : ""}
+        </div>
+      </div>
+      <div class="resena-botones">
+        <button type="button" class="boton-icono" data-mover="-1" aria-label="Subir la reseña ${i + 1}" ${i === 0 ? "disabled" : ""}>↑</button>
+        <button type="button" class="boton-icono" data-mover="1" aria-label="Bajar la reseña ${i + 1}" ${i === resenas.length - 1 ? "disabled" : ""}>↓</button>
+        <button type="button" class="boton boton--peligro boton--chico" data-borrar>Borrar</button>
+      </div>
+    </li>`).join("") : '<li class="vacio-panel">Todavía no hay reseñas.</li>';
+    const lleno = resenas.length >= MAX_RESENAS;
+    $("#r-agregar", caja).disabled = lleno;
+    $("#r-archivo", caja).disabled = lleno;
+    if (lleno) $("#r-archivo-error", caja).textContent = `Ya tiene ${MAX_RESENAS} reseñas. Borre una para agregar otra.`;
+  }
+
+  // --- Interruptor y título ---
+  $("#r-mostrar", caja).addEventListener("change", async (e) => {
+    try { await conBoton(null, () => api.guardarTienda({ mostrar_resenas: e.target.checked })); } catch { e.target.checked = !e.target.checked; }
+  });
+  $("#r-titulo", caja).addEventListener("change", async (e) => {
+    const titulo = e.target.value.trim() || TITULO_RESENAS;
+    e.target.value = titulo;
+    try { await conBoton(null, () => api.guardarTienda({ titulo_resenas: titulo })); } catch { /* aviso mostrado */ }
+  });
+
+  // --- Cada reseña: texto, origen, orden y borrar ---
+  lista.addEventListener("change", async (e) => {
+    const fila = e.target.closest(".resena-fila");
+    if (!fila) return;
+    const r = resenas.find((x) => x.id === fila.dataset.id);
+    let cambios = null;
+    if (e.target.dataset.texto !== undefined) cambios = { texto: e.target.value.trim() };
+    if (e.target.dataset.origen !== undefined) cambios = { origen: e.target.value, origen_otro: "" };
+    if (e.target.dataset.origenOtro !== undefined) cambios = { origen_otro: e.target.value.trim() };
+    if (!cambios) return;
+    try {
+      Object.assign(r, await conBoton(null, () => api.guardarResena(r.id, cambios)));
+      if ("origen" in cambios) { pintar(); $(`#ro-${r.id}`, caja)?.focus(); }
+    } catch { pintar(); }
+  });
+  lista.addEventListener("click", async (e) => {
+    const fila = e.target.closest(".resena-fila");
+    if (!fila) return;
+    const i = resenas.findIndex((x) => x.id === fila.dataset.id);
+    const r = resenas[i];
+    if (e.target.closest("[data-borrar]")) {
+      if (!(await confirmar({ titulo: "¿Borrar esta reseña?", texto: "Se borra también el archivo. No se puede deshacer.", aceptar: "Borrar", peligro: true }))) return;
+      try {
+        await conBoton(null, () => api.borrarResena(r.id), { exito: "Reseña borrada" });
+        api.borrarArchivos("resenas", r.tipo === "imagen" ? [r.ruta, rutaMiniatura(r.ruta)] : [r.ruta]).catch(() => {});
+        resenas.splice(i, 1);
+        $("#r-archivo-error", caja).textContent = "";
+        pintar();
+      } catch { /* aviso mostrado */ }
+      return;
+    }
+    const b = e.target.closest("[data-mover]");
+    if (!b) return;
+    const j = i + Number(b.dataset.mover);
+    if (!resenas[j]) return;
+    [resenas[i], resenas[j]] = [resenas[j], resenas[i]];
+    try {
+      // Se guarda el orden de todas (0, 1, 2…), así queda siempre parejo.
+      await conBoton(null, async () => {
+        for (const [k, x] of resenas.entries()) if (x.orden !== k) Object.assign(x, await api.guardarResena(x.id, { orden: k }));
+      });
+    } catch { resenas = await api.listarResenas(); }
+    pintar();
+    lista.querySelector(`.resena-fila[data-id="${r.id}"] [data-mover="${b.dataset.mover}"]`)?.focus();
+  });
+
+  // --- Agregar ---
+  $("#r-origen", caja).addEventListener("change", (e) => { $("#r-origen-otro-caja", caja).hidden = e.target.value !== "otro"; });
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const archivo = $("#r-archivo", caja).files[0];
+    const esVideo = Boolean(archivo && (/^video\//.test(archivo.type) || /\.(mp4|webm|mov)$/i.test(archivo.name)));
+    marcarError(form, "r-archivo", archivo ? "" : "Elija una imagen o un video.");
+    marcarError(form, "r-autorizado", $("#r-autorizado", caja).checked ? "" : "Marque la casilla para poder publicarla.");
+    if (enfocarPrimerError(form)) return;
+    const estado = $("#r-subiendo", caja);
+    const boton = $("#r-agregar", caja);
+    const subidas = [];
+    estado.hidden = false;
+    boton.disabled = true;
+    try {
+      let ruta;
+      if (esVideo) {
+        estado.innerHTML = '<span class="spinner" aria-hidden="true"></span>Revisando el video…';
+        // Se valida antes de subir: no se sube nada que no sirva.
+        const { ext } = await validarVideo(archivo, { maxSegundos: MAX_SEGUNDOS_RESENA });
+        estado.innerHTML = '<span class="spinner" aria-hidden="true"></span>Subiendo el video…';
+        ruta = `resenas/${id()}.${ext}`;
+        await api.subirArchivo("resenas", ruta, archivo);
+        subidas.push(ruta);
+      } else {
+        estado.innerHTML = '<span class="spinner" aria-hidden="true"></span>Subiendo la imagen…';
+        const { grande, miniatura, ext } = await comprimirFoto(archivo);
+        ruta = `resenas/${id()}.${ext}`;
+        await api.subirArchivo("resenas", ruta, grande);
+        subidas.push(ruta);
+        await api.subirArchivo("resenas", rutaMiniatura(ruta), miniatura);
+        subidas.push(rutaMiniatura(ruta));
+      }
+      const origen = $("#r-origen", caja).value;
+      const nueva = await conBoton(null, () => api.agregarResena({
+        tipo: esVideo ? "video" : "imagen", ruta, texto: $("#r-texto", caja).value.trim(),
+        origen, origen_otro: origen === "otro" ? $("#r-origen-otro", caja).value.trim() : "",
+        autorizado: true, orden: resenas.length ? Math.max(...resenas.map((x) => x.orden)) + 1 : 0
+      }), { exito: "Reseña agregada" });
+      resenas.push(nueva);
+      form.reset();
+      $("#r-origen-otro-caja", caja).hidden = true;
+      pintar();
+    } catch (err) {
+      // Si algo falló después de subir, no quedan archivos sueltos.
+      if (subidas.length) api.borrarArchivos("resenas", subidas).catch(() => {});
+      marcarError(form, "r-archivo", err.message);
+      $("#r-archivo", caja).focus();
+    } finally {
+      estado.hidden = true;
+      boton.disabled = resenas.length >= MAX_RESENAS;
+    }
+  });
+
+  pintar();
+}
