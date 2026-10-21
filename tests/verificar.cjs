@@ -1729,6 +1729,48 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  await caso("B2: con la tienda en Argentina, Brasil o México cambian el precio, el prefijo y el celular del pop-up, el lead, la moneda del píxel y la fecha", async () => {
+    const p = await nueva(390, 844, { cookies: { medicion: false, publicidad: true } });
+    await p.route("https://connect.facebook.net/**", (r) => r.fulfill({ contentType: "text/javascript", body: "" }));
+    await ir(p);
+    await editarDemo(p, (e) => Object.assign(e.tienda, { pais: "ar", whatsapp: "5491123456789", precios_actualizados_en: "2026-03-05T02:30:00Z" }));
+    await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb");
+    assert.equal((await p.textContent("#detalle-en-linea .precio-valor")).replace(/DEMO/, "").trim(), "$7.000.000");
+    // 02:30 UTC del 5/3 es el 4/3 en Buenos Aires (UTC-3)
+    assert.equal(await p.textContent("#pie-precios"), "Precios actualizados al 4/3/2026");
+    await p.click("#detalle-en-linea [data-comprar]");
+    await p.waitForSelector("#p-telefono");
+    assert.equal(await p.textContent(".telefono .prefijo"), "+54 9");
+    assert.equal(await p.getAttribute("#p-telefono", "placeholder"), "11 2345 6789");
+    assert.equal(await p.textContent("#p-telefono-prefijo"), "Número de Argentina, con el prefijo +54 9 ya puesto.");
+    await p.fill("#p-nombre", "Juan Pérez");
+    await p.fill("#p-correo", "juan@correo.co");
+    await p.check("#p-autorizacion");
+    await p.click("#p-telefono");
+    await p.keyboard.type("011");
+    await p.click("[data-enviar]");
+    assert.equal(await p.textContent("#p-telefono-error"), "Revise su celular: escríbalo sin el +54 9, como 11 2345 6789.");
+    await p.fill("#p-telefono", "");
+    await p.keyboard.type("1123456789");
+    assert.equal(await p.inputValue("#p-telefono"), "11 2345 6789");
+    await p.click("[data-enviar]");
+    await p.waitForSelector("text=Su pedido está listo");
+    const lead = JSON.parse(await p.evaluate(() => sessionStorage.getItem("cotizadora-demo:ultimo-lead")));
+    assert.equal(lead.telefono, "+5491123456789");
+    assert.match(lead.fecha_consentimiento, /-03:00$/);
+    assert.ok((await p.getAttribute("[data-abrir-wa]", "href")).startsWith("https://wa.me/5491123456789?text="));
+    const cola = await p.evaluate(() => window.fbq.queue.map((a) => JSON.parse(JSON.stringify([...a]))));
+    assert.equal(cola.find((a) => a[1] === "Lead")[2].currency, "ARS");
+    // Brasil y México: símbolo y separador de miles
+    for (const [pais, whatsapp, precio] of [["br", "5511912345678", "R$\u00A07.000.000"], ["mx", "525512345678", "$7,000,000"]]) {
+      await editarDemo(p, (e, x) => Object.assign(e.tienda, { pais: x[0], whatsapp: x[1] }), [pais, whatsapp]);
+      await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb");
+      assert.equal((await p.textContent("#detalle-en-linea .precio-valor")).replace(/DEMO/, "").trim(), precio, pais);
+    }
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("panel: validaciones (precio, batería, WhatsApp de la tienda, color)", async () => {
     const p = await nueva(390, 844);
     await entrarPanel(p, "gestor@demo.co");
@@ -2369,14 +2411,14 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
-  await caso("formatos: $ con punto de miles, fecha D/M/AAAA, código sin O/0/I/1", async () => {
+  await caso("formatos: $ con punto de miles (demo de Colombia), fecha D/M/AAAA, código sin O/0/I/1", async () => {
     const pf = await nueva();
     await ir(pf);
     const r = await pf.evaluate(async () => {
       const u = await import(new URL("assets/js/utils.js", location.href).href);
       const codigos = Array.from({ length: 3000 }, () => u.generarCodigo());
       return {
-        cop: [u.formatearCOP(5299000), u.formatearCOP(1000), u.formatearCOP(999)],
+        cop: [u.formatearPrecio(5299000), u.formatearPrecio(1000), u.formatearPrecio(999)],
         fecha: u.fechaCorta("2026-03-05T04:59:00Z"),
         malos: codigos.filter((c) => /[O0I1]/.test(c.slice(4)) || !/^COT-[A-Z2-9]{4}$/.test(c)).length
       };

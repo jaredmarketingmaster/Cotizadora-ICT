@@ -4,7 +4,7 @@
 // Con prefers-reduced-motion el cambio es directo.
 // =============================================================================
 
-import { escaparHTML, formatearCOP, reducirMovimiento } from "../utils.js";
+import { escaparHTML, formatearPrecio, reducirMovimiento } from "../utils.js";
 import { textoCondicion, TEXTO_MAS_VENDIDO } from "./catalogo.js";
 import { htmlMedio } from "./fotos.js";
 
@@ -41,7 +41,7 @@ function htmlTarjeta(api, t, i) {
         <span class="tarjeta-nombre">${escaparHTML(nombre)}</span>
         <span class="tarjeta-sub cifras">${sub}</span>
         ${muestras}
-        <span class="tarjeta-precio cifras">${t.desde ? '<span class="desde">Desde</span>' : ""}${formatearCOP(t.precioMin)}${t.esDemo ? ' <span class="etiqueta-demo">DEMO</span>' : ""}</span>
+        <span class="tarjeta-precio cifras">${t.desde ? '<span class="desde">Desde</span>' : ""}${formatearPrecio(t.precioMin)}${t.esDemo ? ' <span class="etiqueta-demo">DEMO</span>' : ""}</span>
       </span>
     </button>
   </li>`;

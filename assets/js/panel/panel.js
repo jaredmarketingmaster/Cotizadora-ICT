@@ -6,7 +6,7 @@ import { CONFIG } from "../../../config.js";
 import { api as obtenerApi } from "../datos/api.js";
 import { aplicarTema } from "../tema.js";
 import { fechaCorta, plural } from "../utils.js";
-import { whatsappValido } from "../datos/paises.js";
+import { whatsappValido, fijarPais } from "../datos/paises.js";
 import { frasesPagos } from "../datos/comun.js";
 import { $, $$, esc, avisar, confirmar, conBoton, campoTexto, marcarError, enfocarPrimerError, interruptor } from "./ui.js";
 import { republicarAlGuardar } from "./legales.js";
@@ -33,6 +33,7 @@ const ctx = {
   inicio() { return this.esAdministrador() ? "usuarios" : "inicio"; },
   async recargarTienda() {
     this.tienda = await this.api.leerTienda();
+    fijarPais(this.tienda.pais);
     aplicarTema(this.tienda);
     $("#barra-tienda").textContent = this.tienda.nombre || "Panel de la tienda";
     return this.tienda;

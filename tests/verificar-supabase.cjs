@@ -96,6 +96,8 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
   await caso("sitio: carga los datos públicos con la RPC; sin legales publicados, \"Página en preparación.\" y el pop-up no envía", async () => {
     const p = await pagina();
     await p.goto(`${BASE}/`, { waitUntil: "networkidle" });
+    // 0018: una tienda nueva es de Argentina
+    assert.equal(await p.evaluate(async (base) => (await (await import(`${base}/assets/js/datos/paises.js`)).paisActual()), BASE), "ar");
     assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
     assert.equal(await p.locator(".galeria > .tarjeta").count(), 5);
     assert.ok(await p.isVisible("#franja-demo"));
@@ -125,7 +127,8 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
       r.push(await intentar(() => a.borrarDatosDemo()));
       r.push(await intentar(() => a.guardarTienda({ modo_demo: false })));
       const legales = Object.fromEntries(Object.entries(TIENDA_LEGAL_PRUEBA).filter(([k]) => /^(legal_|meta_pixel_id|ga4_|gtm_|clarity_|tiktok_|gads_|capi_|plataforma_)/.test(k)));
-      let t = await a.guardarTienda({ ...legales, meta_pixel_id: "" });
+      // La tienda local nace en Argentina (0018); la de prueba es de Colombia.
+      let t = await a.guardarTienda({ ...legales, pais: "co", meta_pixel_id: "" });
       r.push(await intentar(() => a.guardarTienda({ legal_publicado: { version: 9, vigente_desde: "2020-01-01", huella: "x", documentos: generar({ ...t, meta_pixel_id: "123456789012345" }) } })));
       r.push(await intentar(() => a.guardarTienda({ legal_perfil: "distribuidor" })));
       t = await a.guardarTienda({ meta_pixel_id: "123456789012345" });

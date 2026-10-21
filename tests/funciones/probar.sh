@@ -40,7 +40,9 @@ const esperado = { name: "Juan Pérez", email: "juan@correo.co", phone: "+573001
 for (const [k, v] of Object.entries(esperado)) if (r[k] !== v) { console.log("FALLA campo " + k + ": " + JSON.stringify(r[k])); process.exit(1); }
 for (const k of ["utm_medium", "utm_term", "utm_content"]) if (!(k in r)) { console.log("FALLA falta " + k); process.exit(1); }
 console.log("ok   el webhook recibió todos los campos");' "$TMP/ok.json" || fallas=$((fallas+1))
-probar "teléfono inválido" 18090 "${BUENO/+573001234567/+572001234567}" 400
+probar "teléfono inválido (corto)" 18090 "${BUENO/+573001234567/+5730012}" 400
+probar "teléfono sin +" 18090 "${BUENO/+573001234567/573001234567}" 400
+probar "teléfono de Argentina" 18090 "${BUENO/+573001234567/+5491123456789}" 200
 probar "correo inválido" 18090 "${BUENO/juan@correo.co/juan}" 400
 probar "código inválido" 18090 "${BUENO/COT-AB2C/COT-AB1C}" 400
 probar "JSON roto" 18090 "{" 400

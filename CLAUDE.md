@@ -29,7 +29,7 @@ Cómo se hace cumplir:
 1. Español de Colombia y trato de **"usted"** en todo: sitio, panel, errores, `aria-label`. Nada de "tú" ni voseo.
 2. Sin logo, imágenes, íconos ni tipografías de Apple. Los marcadores de posición son el SVG genérico de `ilustracion.js`.
 3. No inventar especificaciones, precios, colores, garantías, plazos ni promesas. Lo que no cargó la tienda no se muestra.
-4. Moneda: `$5.299.000`, con `formatearCOP`. Fechas: D/M/AAAA, hora de Colombia, con `fechaCorta`. No usar `Intl` para números.
+4. Moneda y fechas del país de la tienda (`tienda.pais`, `assets/js/datos/paises.js`): `formatearPrecio` (`$5.299.000` en Colombia) y `fechaCorta` (D/M/AAAA en su zona horaria). No usar `Intl` para números.
 5. Nada de la tienda en el código: todo sale de la base y se edita desde el panel. `config.js` solo lleva la conexión y el script de GHL (los ID del píxel y de las demás herramientas van en Legales → Herramientas).
 6. Datos personales de clientes: **nunca** en Supabase ni en el píxel. Solo van a GHL por la función `enviar-lead`.
 7. No disparar `Purchase`. No abrir pop-ups que nadie pidió.
@@ -74,7 +74,8 @@ node tests/documentacion.mjs                               # DOCUMENTACION.md cu
 bash tests/sql/probar.sh                                   # SQL y RLS (Postgres local)
 python3 -m http.server 8080 &
 node tests/legal/motor.test.mjs                            # motor legal
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 64 casos, modo demo
+node tests/paises.test.mjs                                 # datos de país
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 65 casos, modo demo
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 ```
 

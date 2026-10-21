@@ -4,7 +4,7 @@
 // dedo) y se mueve también con flechas, puntos, muestras y teclado.
 // =============================================================================
 
-import { escaparHTML, formatearCOP, reducirMovimiento } from "../utils.js";
+import { escaparHTML, formatearPrecio, reducirMovimiento } from "../utils.js";
 import { textoCondicion, textoAlternativo, TEXTO_MAS_VENDIDO } from "./catalogo.js";
 import { htmlFoto, htmlMedio } from "./fotos.js";
 import { filasVisiblesFicha, frasesPagos } from "../datos/comun.js";
@@ -104,7 +104,7 @@ export function crearDetalle({ api, cat, tarjeta, lista, inicial, alComprar, alC
       </div>
       <div class="precio-bloque">
         <span class="precio-etiqueta">${escaparHTML(etiquetaPrecio)}</span>
-        <p class="precio-valor cifras">${formatearCOP(q.precio)}${q.es_demo ? '<span class="etiqueta-demo">DEMO</span>' : ""}</p>
+        <p class="precio-valor cifras">${formatearPrecio(q.precio)}${q.es_demo ? '<span class="etiqueta-demo">DEMO</span>' : ""}</p>
       </div>
       ${datosUsado.length ? `<dl class="datos-usado">${datosUsado.map(([k, v, c]) => `<div${c ? ` class="${c}"` : ""}><dt>${k}</dt><dd>${escaparHTML(v)}</dd></div>`).join("")}</dl>` : ""}
       ${descripcion.map((t) => `<p class="detalle-texto">${escaparHTML(t)}</p>`).join("")}
@@ -244,6 +244,6 @@ export function crearDetalle({ api, cat, tarjeta, lista, inicial, alComprar, alC
 
 // Barra de compra (precio + botón) para celular.
 export function htmlBarraCompra(tienda, q) {
-  return `<div class="barra-precio cifras"><span>${escaparHTML(tienda.etiqueta_precio || "Precio")}</span><strong>${formatearCOP(q.precio)}${q.es_demo ? ' <span class="etiqueta-demo">DEMO</span>' : ""}</strong></div>
+  return `<div class="barra-precio cifras"><span>${escaparHTML(tienda.etiqueta_precio || "Precio")}</span><strong>${formatearPrecio(q.precio)}${q.es_demo ? ' <span class="etiqueta-demo">DEMO</span>' : ""}</strong></div>
     <button type="button" class="boton boton--primario boton--grande" data-comprar>${ICONO_WA}Comprar por WhatsApp</button>`;
 }

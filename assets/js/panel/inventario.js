@@ -4,7 +4,8 @@
 // formulario por pasos para agregar, edición completa, duplicar y borrar.
 // =============================================================================
 
-import { formatearCOP, formatearMiles, leerPrecio, CAPACIDADES_SUGERIDAS, capacidadEnGB } from "../utils.js";
+import { formatearPrecio, formatearMiles, leerPrecio, CAPACIDADES_SUGERIDAS, capacidadEnGB } from "../utils.js";
+import { datosPais, paisActual } from "../datos/paises.js";
 import { rutaMiniatura, ESTADOS_ESTETICOS, nombreColor, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS } from "../datos/comun.js";
 import { telefonoSVG } from "../ilustracion.js";
 import { etiquetaGeneracion } from "../sitio/catalogo.js";
@@ -299,7 +300,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
 
       <fieldset class="bloque" data-paso="precio">
         <legend>Precio y stock</legend>
-        ${campoTexto({ id: "e-precio", etiqueta: "Precio en pesos", valor: q.precio ? formatearMiles(q.precio) : "", ayuda: "Número entero, sin decimales. Ej. 5.299.000", atributos: 'inputmode="numeric" autocomplete="off"' })}
+        ${campoTexto({ id: "e-precio", etiqueta: `Precio (${datosPais(paisActual()).moneda})`, valor: q.precio ? formatearMiles(q.precio) : "", ayuda: "Número entero, sin decimales. Ej. 5.299.000", atributos: 'inputmode="numeric" autocomplete="off"' })}
         ${interruptor({ id: "e-stock", etiqueta: "Stock", marcado: q.en_stock, estados: ["Con stock", "Sin stock"] })}
         <p class="ayuda">Sin stock, el equipo deja de verse en el sitio, sin borrarse.</p>
       </fieldset>
@@ -425,7 +426,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     const precio = leerPrecio(valor("#e-precio"));
     const color = nombreColor(listaColores.find((c) => c.id === colorSel()), valor("#e-color-mostrar"));
     $("#resumen-equipo").innerHTML = `Resumen: <strong>${esc([m?.nombre, condicion() === "usado" ? "Usado" : "Nuevo", capacidad(), color].filter(Boolean).join(" · "))}</strong>
-      ${precio ? ` · ${formatearCOP(precio)}` : ""} · ${$("#e-stock").checked ? "con stock" : "sin stock"} · ${fotos.length} foto${fotos.length === 1 ? "" : "s"}${video ? " · con video" : ""}`;
+      ${precio ? ` · ${formatearPrecio(precio)}` : ""} · ${$("#e-stock").checked ? "con stock" : "sin stock"} · ${fotos.length} foto${fotos.length === 1 ? "" : "s"}${video ? " · con video" : ""}`;
   }
 
   // Error de un grupo de opciones: el foco va a la primera opción.

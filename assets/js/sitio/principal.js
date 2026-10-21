@@ -20,6 +20,7 @@ import { crearPopup } from "./popup.js";
 import { capturarAtribucion } from "./atribucion.js";
 import { abrirConTransicion, cerrarConTransicion, cerrarConEscape } from "./transiciones.js";
 import { evento, parametrosEquipo } from "./pixel.js";
+import { fijarPais } from "../datos/paises.js";
 import { iniciarConsentimiento, alCambiar, permitido } from "./consentimiento.js";
 
 const $ = (s) => document.querySelector(s);
@@ -312,6 +313,7 @@ async function iniciar() {
     $("#lista-equipos").innerHTML = "";
     return;
   }
+  fijarPais(datos.tienda?.pais);
   cat = prepararCatalogo(datos);
   const t = cat.tienda;
   seguro(() => aplicarTema(t), "tema");

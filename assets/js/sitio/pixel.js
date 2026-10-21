@@ -7,6 +7,8 @@
 // nombre, correo ni teléfono.
 // =============================================================================
 
+import { datosPais, paisActual } from "../datos/paises.js";
+
 let activo = false;
 
 export function iniciarPixel(id) {
@@ -41,6 +43,6 @@ export function parametrosEquipo(q) {
     content_ids: [q.id],
     content_type: "product",
     value: q.precio,
-    currency: "COP"
+    currency: datosPais(paisActual()).moneda
   };
 }

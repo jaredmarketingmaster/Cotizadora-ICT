@@ -1,19 +1,14 @@
 // =============================================================================
-// Utilidades compartidas por el sitio y el panel. Sin dependencias.
+// Utilidades compartidas por el sitio y el panel. La única dependencia es
+// datos/paises.js (el país de la tienda define los formatos).
 // =============================================================================
 
-// --- Números y moneda --------------------------------------------------------
-// Formato colombiano: punto de miles, sin decimales. No se usa Intl porque en
-// "es" puede no agrupar los números de 4 cifras.
-export function formatearMiles(n) {
-  const entero = Math.round(Number(n) || 0);
-  const signo = entero < 0 ? "-" : "";
-  return signo + String(Math.abs(entero)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-}
+import { formatearNumero, formatearPrecio, fechaCortaPais } from "./datos/paises.js";
 
-export function formatearCOP(n) {
-  return "$" + formatearMiles(n);
-}
+// --- Números y moneda --------------------------------------------------------
+// Con el separador de miles del país de la tienda y sin decimales (ver paises.js).
+export const formatearMiles = (n) => formatearNumero(n);
+export { formatearPrecio };
 
 // "5.299.000", "$ 5299000" o "5,299,000" → 5299000. null si no es un entero > 0.
 export function leerPrecio(texto) {
@@ -24,17 +19,8 @@ export function leerPrecio(texto) {
 }
 
 // --- Fechas ------------------------------------------------------------------
-// D/M/AAAA en hora de Colombia.
-export function fechaCorta(fecha) {
-  if (!fecha) return "";
-  const d = new Date(fecha);
-  if (Number.isNaN(d.getTime())) return "";
-  const partes = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Bogota", day: "numeric", month: "numeric", year: "numeric"
-  }).formatToParts(d);
-  const p = Object.fromEntries(partes.map((x) => [x.type, x.value]));
-  return `${p.day}/${p.month}/${p.year}`;
-}
+// D/M/AAAA en la zona horaria del país de la tienda.
+export const fechaCorta = (fecha) => fechaCortaPais(fecha);
 
 // --- Texto -------------------------------------------------------------------
 export function escaparHTML(texto) {
@@ -140,24 +126,11 @@ export function soloDigitos(texto) {
   return String(texto ?? "").replace(/\D/g, "");
 }
 
-// Celular colombiano: 10 dígitos que empiezan por 3.
-export function celularValido(digitos) {
-  return /^3\d{9}$/.test(digitos);
-}
-
-// "3001234567" → "300 123 4567" (también con el número a medio escribir)
-export function formatearCelular(digitos) {
-  const d = soloDigitos(digitos).slice(0, 10);
-  return [d.slice(0, 3), d.slice(3, 6), d.slice(6)].filter(Boolean).join(" ");
-}
+// El celular del cliente y el WhatsApp de la tienda dependen del país: ver
+// celularNacionalValido, agruparCelular y whatsappValido en datos/paises.js.
 
 export function correoValido(correo) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(correo ?? "").trim());
-}
-
-// WhatsApp de la tienda: 12 dígitos que empiezan por 57.
-export function whatsappTiendaValido(numero) {
-  return /^57\d{10}$/.test(String(numero ?? ""));
 }
 
 // --- Código de cotización ----------------------------------------------------

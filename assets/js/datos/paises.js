@@ -21,7 +21,7 @@
 
 export const PAISES_TIENDA = {
   ar: { nombre: "Argentina", moneda: "ARS", simbolo: "$", miles: ".", zona: "America/Argentina/Buenos_Aires", prefijo: "54",
-    celular: { verificado: true, internacional: "549", nacional: /^[1-9]\d{9}$/, grupos: [2, 4, 4], ejemplo: "11 2345 6789" } },
+    celular: { verificado: true, internacional: "549", visible: "+54 9", nacional: /^[1-9]\d{9}$/, grupos: [2, 4, 4], ejemplo: "11 2345 6789" } },
   bo: { nombre: "Bolivia", moneda: "BOB", simbolo: "Bs", espacio: true, miles: ".", zona: "America/La_Paz", prefijo: "591" },
   br: { nombre: "Brasil", moneda: "BRL", simbolo: "R$", espacio: true, miles: ".", zona: "America/Sao_Paulo", prefijo: "55",
     celular: { verificado: true, internacional: "55", nacional: /^[1-9]{2}9[1-9]\d{7}$/, grupos: [2, 5, 4], ejemplo: "11 91234 5678" } },
@@ -51,10 +51,60 @@ export const CODIGOS_PAIS_TIENDA = Object.keys(PAISES_TIENDA);
 export const PAIS_POR_DEFECTO = "ar";
 
 // Los que no tienen formato verificado: prefijo + número, de 8 a 15 dígitos.
-const GENERAL = { verificado: false, nacional: null, grupos: [3, 3, 4] };
+const GENERAL = { verificado: false, nacional: null, grupos: [3, 3, 4], ejemplo: "" };
 export function datosPais(codigo) {
   const p = PAISES_TIENDA[codigo] || PAISES_TIENDA.co;
-  return { codigo: PAISES_TIENDA[codigo] ? codigo : "co", ...p, celular: { ...GENERAL, internacional: p.prefijo, ...p.celular } };
+  const celular = { ...GENERAL, internacional: p.prefijo, ...p.celular };
+  celular.visible = celular.visible || `+${celular.internacional}`;
+  return { codigo: PAISES_TIENDA[codigo] ? codigo : "co", ...p, celular };
+}
+
+// --- País de la tienda en uso ---------------------------------------------------
+// El sitio y el panel lo fijan al cargar la tienda; los formatos lo usan por
+// defecto. Antes de cargar, Colombia (el demo).
+let actual = "co";
+export function fijarPais(codigo) { actual = PAISES_TIENDA[codigo] ? codigo : "co"; }
+export const paisActual = () => actual;
+
+// --- Números y precios ----------------------------------------------------------
+// Separador de miles del país; sin decimales (los precios son enteros). No se
+// usa Intl porque en español puede no agrupar los números de 4 cifras.
+export function formatearNumero(n, codigo = actual) {
+  const entero = Math.round(Number(n) || 0);
+  const signo = entero < 0 ? "-" : "";
+  const miles = datosPais(codigo).miles === " " ? "\u00A0" : datosPais(codigo).miles;
+  return signo + String(Math.abs(entero)).replace(/\B(?=(\d{3})+(?!\d))/g, miles);
+}
+
+// "$5.299.000" (Colombia y Argentina), "R$ 5.299.000" (Brasil), "$5,299,000" (México).
+export function formatearPrecio(n, codigo = actual) {
+  const p = datosPais(codigo);
+  return p.simbolo + (p.espacio ? "\u00A0" : "") + formatearNumero(n, codigo);
+}
+
+// --- Fechas ------------------------------------------------------------------------
+// D/M/AAAA en la zona horaria del país.
+export function fechaCortaPais(fecha, codigo = actual) {
+  if (!fecha) return "";
+  const d = new Date(fecha);
+  if (Number.isNaN(d.getTime())) return "";
+  const p = partesFecha(d, datosPais(codigo).zona);
+  return `${Number(p.day)}/${Number(p.month)}/${p.year}`;
+}
+
+// Fecha y hora del país con su zona: "2026-10-21T14:03:05-05:00".
+export function fechaConZona(ahora = new Date(), codigo = actual) {
+  const p = partesFecha(ahora, datosPais(codigo).zona);
+  const desfase = (p.timeZoneName || "GMT").replace("GMT", "") || "+00:00";
+  return `${p.year}-${p.month}-${p.day}T${p.hour === "24" ? "00" : p.hour}:${p.minute}:${p.second}${desfase}`;
+}
+
+function partesFecha(d, zona) {
+  const partes = new Intl.DateTimeFormat("en-US", {
+    timeZone: zona, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZoneName: "longOffset"
+  }).formatToParts(d);
+  return Object.fromEntries(partes.map((x) => [x.type, x.value]));
 }
 
 // --- Celular de un cliente (lo que escribe en el pop-up, sin el prefijo) ----------

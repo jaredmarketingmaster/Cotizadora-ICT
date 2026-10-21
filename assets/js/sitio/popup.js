@@ -11,9 +11,9 @@
 // =============================================================================
 
 import {
-  escaparHTML, formatearCOP, formatearCelular, soloDigitos, celularValido, correoValido,
-  generarCodigo, whatsappTiendaValido, formatoBasico
+  escaparHTML, formatearPrecio, soloDigitos, correoValido, generarCodigo, formatoBasico
 } from "../utils.js";
+import { datosPais, paisActual, celularNacionalValido, celularInternacional, agruparCelular, whatsappValido, fechaConZona } from "../datos/paises.js";
 import { textoAlternativo, textoCondicion, mensajeCompra, mensajeSinStock, enlaceWhatsApp } from "./catalogo.js";
 import { leerAtribucion, CLAVES_ATRIBUCION } from "./atribucion.js";
 import { evento, parametrosEquipo } from "./pixel.js";
@@ -28,7 +28,10 @@ const OK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5
 const ERRORES = {
   nombre: "Escriba su nombre.",
   correo: "Revise su correo.",
-  telefono: "Escriba un celular de 10 dígitos que empiece por 3, sin el +57.",
+  // Colombia: texto literal del prompt. Los demás países, con su prefijo.
+  telefono: () => (paisActual() === "co"
+    ? "Escriba un celular de 10 dígitos que empiece por 3, sin el +57."
+    : `Revise su celular: escríbalo sin el ${datosPais(paisActual()).celular.visible}${datosPais(paisActual()).celular.ejemplo ? `, como ${datosPais(paisActual()).celular.ejemplo}` : ""}.`),
   autorizacion: "Para continuar, acepte la autorización de datos."
 };
 
@@ -38,7 +41,7 @@ const OCULTOS = ["modelo", "condicion", "capacidad", "color", "precio_cotizado",
 function formatearConCursor(input) {
   const pos = input.selectionStart ?? input.value.length;
   const digitosAntes = soloDigitos(input.value.slice(0, pos)).length;
-  input.value = formatearCelular(input.value);
+  input.value = agruparCelular(input.value, paisActual());
   let n = 0;
   let nueva = input.value.length;
   for (let i = 0; i < input.value.length; i++) {
@@ -46,11 +49,6 @@ function formatearConCursor(input) {
     if (/\d/.test(input.value[i])) n++;
   }
   if (document.activeElement === input) input.setSelectionRange(nueva, nueva);
-}
-
-// Fecha y hora de Colombia con su zona: 2026-10-21T14:03:05-05:00.
-export function fechaConZona(ahora = new Date()) {
-  return `${new Date(ahora.getTime() - 5 * 3600 * 1000).toISOString().slice(0, 19)}-05:00`;
 }
 
 export function crearPopup({ dialogo, api, obtenerTienda }) {
@@ -68,7 +66,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
         <div>
           <p class="resumen-nombre">${escaparHTML(q.modelo.nombre)} · ${textoCondicion(q.condicion)}</p>
           <p class="resumen-sub cifras">${[q.capacidad, q.color_nombre].filter(Boolean).map(escaparHTML).join(" · ")}</p>
-          <p class="resumen-precio cifras">${formatearCOP(q.precio)}${q.es_demo ? ' <span class="etiqueta-demo">DEMO</span>' : ""}</p>
+          <p class="resumen-precio cifras">${formatearPrecio(q.precio)}${q.es_demo ? ' <span class="etiqueta-demo">DEMO</span>' : ""}</p>
         </div>
       </div>`;
     }
@@ -79,6 +77,8 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
   function dibujarFormulario() {
     const tienda = obtenerTienda();
     if (!tienda.legal_publicado) { dibujarSinLegales(); return; }
+    const pais = datosPais(paisActual());
+    const cel = pais.celular;
     dialogo.innerHTML = `
       <div class="popup-contenido">
         <div class="popup-cabecera">
@@ -89,7 +89,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
           <button type="button" class="boton-icono" data-cerrar aria-label="Cerrar">${CERRAR}</button>
         </div>
         ${resumenHTML()}
-        ${whatsappTiendaValido(tienda.whatsapp) ? "" : '<p class="popup-alerta" role="alert">Esta tienda todavía no tiene WhatsApp configurado.</p>'}
+        ${whatsappValido(tienda.whatsapp, tienda.pais) ? "" : '<p class="popup-alerta" role="alert">Esta tienda todavía no tiene WhatsApp configurado.</p>'}
         <form class="popup-form" id="form-cotizacion" name="cotizadora-ict" action="#" method="post" novalidate data-clarity-mask="true">
           <div class="campo">
             <label for="p-nombre">Su nombre</label>
@@ -104,10 +104,10 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
           <div class="campo">
             <label for="p-telefono">Su WhatsApp</label>
             <div class="telefono">
-              <span class="prefijo" aria-hidden="true">+57</span>
-              <input class="entrada cifras" id="p-telefono" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="300 123 4567" required aria-describedby="p-telefono-prefijo p-telefono-error" maxlength="12">
+              <span class="prefijo" aria-hidden="true">${escaparHTML(cel.visible)}</span>
+              <input class="entrada cifras" id="p-telefono" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="${escaparHTML(cel.ejemplo)}" required aria-describedby="p-telefono-prefijo p-telefono-error" maxlength="18">
             </div>
-            <span class="oculto-visual" id="p-telefono-prefijo">Número de Colombia, con el prefijo +57 ya puesto.</span>
+            <span class="oculto-visual" id="p-telefono-prefijo">Número de ${escaparHTML(pais.nombre)}, con el prefijo ${escaparHTML(cel.visible)} ya puesto.</span>
             <p class="error-campo" id="p-telefono-error"></p>
           </div>
           <input type="hidden" name="phone" value="">
@@ -174,7 +174,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
     let error = "";
     if (id === "p-nombre" && el.value.trim().length < 2) error = ERRORES.nombre;
     if (id === "p-correo" && !correoValido(el.value)) error = ERRORES.correo;
-    if (id === "p-telefono" && !celularValido(soloDigitos(el.value))) error = ERRORES.telefono;
+    if (id === "p-telefono" && !celularNacionalValido(soloDigitos(el.value), paisActual())) error = ERRORES.telefono();
     if (id === "p-autorizacion" && !el.checked) error = ERRORES.autorizacion;
     el.setAttribute("aria-invalid", String(Boolean(error)));
     f.querySelector(`#${id}-error`).textContent = error;
@@ -196,7 +196,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
     const f = dialogo.querySelector("form");
     const nombre = f.querySelector("#p-nombre").value.trim().replace(/\s+/g, " ");
     const correo = f.querySelector("#p-correo").value.trim();
-    const telefono = "+57" + soloDigitos(f.querySelector("#p-telefono").value);
+    const telefono = "+" + celularInternacional(soloDigitos(f.querySelector("#p-telefono").value), paisActual());
     const atrib = leerAtribucion();
     const compra = contexto.tipo === "compra";
     const q = contexto.equipo;
@@ -248,7 +248,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
     datos = armarDatos();
     copiarAlFormulario(datos);
     const tienda = obtenerTienda();
-    enlace = whatsappTiendaValido(tienda.whatsapp) ? enlaceWhatsApp(tienda.whatsapp, mensaje(datos)) : "";
+    enlace = whatsappValido(tienda.whatsapp, tienda.pais) ? enlaceWhatsApp(tienda.whatsapp, mensaje(datos)) : "";
 
     boton.disabled = true;
     boton.innerHTML = '<span class="spinner" aria-hidden="true"></span>Enviando…';

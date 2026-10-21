@@ -4,7 +4,7 @@
 // Funciones puras (sin DOM), para poder probarlas solas.
 // =============================================================================
 
-import { capacidadEnGB, formatearCOP } from "../utils.js";
+import { capacidadEnGB, formatearPrecio } from "../utils.js";
 import { nombreColor } from "../datos/comun.js";
 
 // Recencia de cada generación = el mayor "orden" de sus modelos en el catálogo.
@@ -156,7 +156,7 @@ export function mensajeCompra(q, codigo, nombre) {
     "Hola, quiero comprar este equipo:",
     `${q.modelo.nombre} ${textoCondicion(q.condicion)}`,
     [q.capacidad, q.color_nombre].filter(Boolean).join(" · "),
-    `Precio: ${formatearCOP(q.precio)}`
+    `Precio: ${formatearPrecio(q.precio)}`
   ];
   if (q.condicion === "usado") {
     const usado = [

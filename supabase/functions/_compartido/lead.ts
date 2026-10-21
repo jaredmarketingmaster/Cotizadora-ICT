@@ -26,7 +26,8 @@ export function armarLead(datos: Datos): { lead?: Datos; error?: string } {
 
   if (nombre.length < 2) return { error: "nombre" };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) return { error: "correo" };
-  if (!/^\+573\d{9}$/.test(telefono)) return { error: "telefono" };
+  // E.164: + y de 8 a 15 dígitos (el formato de cada país lo valida el pop-up).
+  if (!/^\+\d{8,15}$/.test(telefono)) return { error: "telefono" };
   if (tipo !== "compra" && tipo !== "sin stock") return { error: "tipo_consulta" };
   if (!/^COT-[ABCDEFGHJKLMNPQRSTUVWXYZ2-9]{4}$/.test(codigo)) return { error: "codigo_cotizacion" };
   // Consentimiento (0016): la autorización de datos es obligatoria; la versión

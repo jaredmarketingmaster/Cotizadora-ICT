@@ -201,8 +201,8 @@ Vienen del prompt y de las decisiones de Jared. Cualquier cambio debe respetarla
 1. **Idioma:** español de Colombia y trato de **"usted"** en todo el texto visible: sitio, panel, errores, `aria-label` y correos. Nada de "tú" ni voseo.
 2. **Marca:** sin logo, imágenes, renders, íconos ni tipografías de Apple. Los marcadores de posición son una silueta genérica de teléfono en SVG (`assets/js/ilustracion.js`), sin manzana, sin cámaras y sin copiar ningún modelo.
 3. **Datos:** no inventar especificaciones, precios, colores, garantías, plazos ni tiempos de respuesta. **Si un campo está vacío, no se muestra.** Tampoco se escriben promesas que la tienda no cargó, como "envío gratis" o "garantía de 12 meses".
-4. **Moneda:** pesos colombianos con el formato `$5.299.000` (punto de miles, sin decimales). Se guardan como enteros. Para formatear se usa `formatearCOP`; **no** se usa `Intl`, que en español puede no agrupar los números de 4 cifras.
-5. **Fechas:** D/M/AAAA en hora de Colombia, con `fechaCorta`.
+4. **Moneda:** la del país de la tienda (desde la ronda 3), sin decimales: `$5.299.000` en Colombia y Argentina, `R$ 5.299.000` en Brasil, `$5,299,000` en México. Se guardan como enteros. Para formatear se usa `formatearPrecio`; **no** se usa `Intl` para números, que en español puede no agrupar los números de 4 cifras.
+5. **Fechas:** D/M/AAAA en la zona horaria del país de la tienda, con `fechaCorta`.
 6. **Nada de la tienda en el código.** Todo sale de la base y se edita desde el panel. `config.js` solo lleva la conexión y el script de GHL (desde `0016`, los ID de las herramientas, incluido el del píxel, van en Legales).
 6b. **Legales:** la tienda es la responsable del tratamiento; el proveedor tecnológico es el encargado y en los textos públicos se nombra solo como "nuestro proveedor tecnológico, ubicado en Argentina" (nunca su nombre, documento ni domicilio, en ningún archivo). Nada se afirma como requisito legal si no está en `legal/FUENTES.md`. Ninguna herramienta de medición o publicidad se carga sin consentimiento. Sin avisos de "borrador" ni de "revisión de un abogado".
 7. **Datos personales de clientes** (nombre, correo, WhatsApp): **nunca** en Supabase ni en el píxel de Meta. Solo van a GHL, a través de la función `enviar-lead`.
@@ -300,7 +300,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Exporta y para qué |
 |---|---|
-| `assets/js/utils.js` (≈278) | Utilidades sin dependencias: <ul><li>**Números:** `formatearMiles`, `formatearCOP`, `leerPrecio` ("5.299.000" → 5299000).</li><li>**Fechas:** `fechaCorta` (D/M/AAAA en America/Bogota).</li><li>**Texto:** `escaparHTML`, `plural`, `formatoBasico` (mini-markdown seguro para los legales: `##`, `###`, `**`, listas, enlaces https/mailto (nueva pestaña) y rutas relativas como `../cookies/` (misma pestaña), y tablas con `|` que salen como `<div class="tabla-legal"><table>` con la primera columna en `<th scope="row">`).</li><li>**Capacidades:** `CAPACIDADES_SUGERIDAS`, `slugCapacidad`, `capacidadDeSlug`, `capacidadEnGB`.</li><li>**Contacto:** `soloDigitos`, `celularValido` (10 dígitos que empiezan por 3), `formatearCelular` ("300 123 4567"), `correoValido`, `whatsappTiendaValido` (12 dígitos que empiezan por 57).</li><li>**Código:** `generarCodigo`, `codigoValido`. "COT-" más 4 caracteres de un alfabeto de 32 sin O, 0, I ni 1, con `crypto.getRandomValues`; como 256 % 32 = 0, el sorteo no tiene sesgo.</li><li>**Contraste WCAG:** `hexValido`, `luminancia`, `contraste`, `textoSobre` (blanco o casi negro, garantiza al menos 4,5:1), `ajustarParaTexto` (oscurece o aclara un color hasta 4,5:1 sobre uno o varios fondos; si en una dirección no alcanza, prueba la otra) y `mezclar`.</li><li>**Varios:** `sesion` (sessionStorage seguro), `seguro`, `reducirMovimiento`, `esperar`, `idEvento`.</li></ul> |
+| `assets/js/utils.js` (≈270) | Utilidades; su única dependencia es `datos/paises.js`: <ul><li>**Números:** `formatearMiles` (con el separador del país de la tienda), `formatearPrecio` (de `paises.js`) y `leerPrecio` ("5.299.000" o "5,299,000" → 5299000).</li><li>**Fechas:** `fechaCorta` (D/M/AAAA en la zona horaria del país).</li><li>**Texto:** `escaparHTML`, `plural`, `formatoBasico` (mini-markdown seguro para los legales: `##`, `###`, `**`, listas, enlaces https/mailto (nueva pestaña) y rutas relativas como `../cookies/` (misma pestaña), y tablas con `|` que salen como `<div class="tabla-legal"><table>` con la primera columna en `<th scope="row">`).</li><li>**Capacidades:** `CAPACIDADES_SUGERIDAS`, `slugCapacidad`, `capacidadDeSlug`, `capacidadEnGB`.</li><li>**Contacto:** `soloDigitos` y `correoValido`. El celular y el WhatsApp dependen del país: `paises.js`.</li><li>**Código:** `generarCodigo`, `codigoValido`. "COT-" más 4 caracteres de un alfabeto de 32 sin O, 0, I ni 1, con `crypto.getRandomValues`; como 256 % 32 = 0, el sorteo no tiene sesgo.</li><li>**Contraste WCAG:** `hexValido`, `luminancia`, `contraste`, `textoSobre` (blanco o casi negro, garantiza al menos 4,5:1), `ajustarParaTexto` (oscurece o aclara un color hasta 4,5:1 sobre uno o varios fondos; si en una dirección no alcanza, prueba la otra) y `mezclar`.</li><li>**Varios:** `sesion` (sessionStorage seguro), `seguro`, `reducirMovimiento`, `esperar`, `idEvento`.</li></ul> |
 | `assets/js/tema.js` (≈45) | `variablesTema(tienda)` y `aplicarTema(tienda)`: pasan `color_primario`, `color_secundario` y `tema` a variables CSS y calculan el texto con contraste AA. También ponen `data-tamano` (`tamano_texto`) en `<html>`, que solo lee `sitio.css`, y `--sobre-secundario-suave` (texto suave del pie, 4,5:1 o más sobre el secundario). `--primario-texto` se ajusta contra **todas** las superficies del tema. También exporta `FONDOS`. |
 | `assets/js/ilustracion.js` (≈51) | `telefonoSVG(colorHex, titulo)`: teléfono genérico con el marco del color del equipo. `logoGenericoSVG()`: ícono para cuando no hay logo. |
 | `assets/js/legal/motor.js` (≈227) | **Motor legal, puro (sin DOM ni red).** <ul><li>`DOCUMENTOS` (privacidad, términos, cookies y aviso, cada uno con su campo de cláusula propia), `PERFILES` (seis perfiles de tienda, con `apple` y `local`), `ENTREGAS`, `PASOS` del asistente y `PLATAFORMA_POR_DEFECTO`.</li><li>`faltantes(tienda)`: lista `{paso, campo, texto}` de lo que falta o no es válido; cambia con el perfil, el tipo de persona y los países.</li><li>`contexto(tienda)`: datos limpios para las plantillas (`limpio` quita `[ ] * _` y `#`, para que la tienda no meta formato).</li><li>`generar(tienda)`: los cuatro documentos en Markdown; falla con "Faltan datos para generar los textos legales." si falta algo.</li><li>`MARCAS` (`[PENDIENTE` o `{{`: una cláusula propia con eso falta corregirla, paso 6), `huella` (FNV-1a de los textos), `hoyColombia`, `publicar(tienda, anterior, hoy)` (sube la versión solo si cambió algún texto) y vuelve a exportar `fechaDMA` y `conVigencia` de `vigencia.js`.</li></ul> |
@@ -319,7 +319,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 |---|---|
 | `assets/js/datos/api.js` (≈17) | `api()`: devuelve, una sola vez, el adaptador `demo` o `supabase` según `config.js`. Si se pide Supabase sin URL o clave, usa demo y avisa en la consola. |
 | `assets/js/datos/comun.js` (≈291) | Reglas compartidas por los dos adaptadores: <ul><li>`ErrorDatos`.</li><li>`equipoEsPublico`: publicado, con stock (`en_stock`) y de un modelo activo.</li><li>`LADO_GRANDE` = 1600 y `LADO_MINIATURA` = 640.</li><li>`rutaMiniatura`: `x.webp` → `x-640.webp`.</li><li>`CAMPOS_TIENDA`, `CAMPOS_EQUIPO`, `CAMPOS_COLOR`, `MAX_MAS_VENDIDOS` y `MENSAJE_MAS_VENDIDOS`, `nombreColor(color, mostrar)` (nombre que ve el cliente: el elegido por la tienda o el oficial en inglés, o el de la fuente), `TAMANOS_TEXTO`, `ESTADOS_ESTETICOS` y `elegir`.</li><li>**Ficha técnica (0012):** `CATEGORIAS_FICHA` (las 10 categorías fijas con su clave y nombre, en orden, más `otras` para las filas de la tienda), `MAX_ETIQUETA_FICHA` (60) y `MAX_VALOR_FICHA` (600), `especificacionesValidas` (las reglas de `validar_ficha`) y `filasVisiblesFicha(ficha, tienda)`: lo que muestra el sitio (nada si `mostrar_ficha` está apagado; si no, las categorías encendidas con valor en el orden fijo y al final las filas de la tienda).</li><li>**Legales (0016):** `LEGAL_INICIAL` (los campos del asistente con sus valores iniciales, iguales a los defaults del SQL; `CAMPOS_TIENDA` los incluye), `CAMPOS_LEGALES`, `PLATAFORMA_POR_DEFECTO` ("HighLevel (GoHighLevel)"), `CODIGOS_PAISES_SQL` (la lista del check de `legal_paises`; la prueba del motor la compara con `indice.js`) y `errorLegales(tienda)`: los checks de `0016` (largos, opciones, países, entregas, meses de 1 a 120, interruptores, `legal_publicado` objeto o vacío).</li><li>**Formas de pago (0013):** `MEDIOS_PAGO`, `PASARELAS_PAGO`, `MIN_CUOTAS` / `MAX_CUOTAS`, `errorPagos(tienda)` (las reglas de `validar_pagos`, con sus mensajes) y `frasesPagos(tienda)`: las frases del sitio ("Transferencia bancaria.", "Tarjeta de crédito: hasta 12 cuotas, hasta 6 sin interés.", "Pago a cuotas: …" si no marcó crédito, "Criptomonedas: USDT.", "Pago en línea con PSE, Nequi y Addi." y cada una de las otras, tal cual).</li><li>`mensajeDeError`: traduce los errores de Postgres al español; los mensajes de los disparadores (ya en español) pasan tal cual.</li></ul> |
-| `assets/js/datos/paises.js` (≈95) | **Datos de país de la tienda** (`tienda.pais`, ronda 3): `PAISES_TIENDA` con los 19 países (nombre, moneda ISO y símbolo, separador de miles, zona horaria IANA, prefijo y celular), `CODIGOS_PAIS_TIENDA`, `PAIS_POR_DEFECTO` (`ar`), `datosPais(codigo)`, `celularNacionalValido`, `celularInternacional`, `agruparCelular` y `whatsappValido(numero, pais)`. Seis países tienen el formato del celular verificado (Argentina, Brasil, Chile, Colombia, México y Perú; fuentes en la sección 9.10); los demás usan la validación general (prefijo + número, de 8 a 15 dígitos). Igual a `whatsapp_valido()` de `0018_pais.sql`. |
+| `assets/js/datos/paises.js` (≈95) | **Datos de país de la tienda** (`tienda.pais`, ronda 3): `PAISES_TIENDA` con los 19 países (nombre, moneda ISO y símbolo, separador de miles, zona horaria IANA, prefijo y celular), `CODIGOS_PAIS_TIENDA`, `PAIS_POR_DEFECTO` (`ar`), `datosPais(codigo)` (con `celular.visible`: "+57", "+54 9"), `celularNacionalValido`, `celularInternacional`, `agruparCelular` y `whatsappValido(numero, pais)`. **El país en uso** (B2): `fijarPais(codigo)` (lo llaman el sitio, el panel y las páginas legales al cargar la tienda) y `paisActual()`; con él, `formatearNumero`, `formatearPrecio`, `fechaCortaPais` y `fechaConZona` ("2026-10-21T14:03:05-05:00", con el desfase de la zona en esa fecha). Seis países tienen el formato del celular verificado (Argentina, Brasil, Chile, Colombia, México y Perú; fuentes en la sección 9.10); los demás usan la validación general (prefijo + número, de 8 a 15 dígitos). Igual a `whatsapp_valido()` de `0018_pais.sql`. |
 | `assets/js/datos/semilla.js` (≈594) | `CATALOGO`: los **42 modelos** desde el iPhone 7, con slug, generación y orden de 10 en 10 por fecha de lanzamiento. `COLORES`: los 183 colores oficiales por slug (`[nombre_es, nombre_en, hex]`, vacío si la fuente no lo da). `DEMO_EQUIPOS`: los 6 equipos demo. `FICHAS`: las fichas técnicas de los 42 modelos, solo con lo que trae la fuente (`[clave, valor]` o `[null, valor, etiqueta]`), y `filasDeFuente(slug)`, que las devuelve como quedan en la base. `slugDe`. **Debe coincidir** con `0006_catalogo_colores.sql`, `0003_demo.sql` y `0012_fichas.sql`; la prueba SQL lo revisa. |
 | `assets/js/datos/demo.js` (≈822) | Back-end de demostración. Ver sección 7.2. |
 | `assets/js/datos/supabase.js` (≈371) | Back-end Supabase. Ver sección 7.3. |
@@ -336,10 +336,10 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `assets/js/sitio/detalle.js` (≈219) | `crearDetalle(...)`: carrusel y ficha. <ul><li>El carrusel usa scroll-snap y se mueve con el dedo, flechas, puntos, muestras de color y teclado; con varias fotos muestra miniaturas.</li><li>La ficha tiene nombre, etiqueta (y "Más vendido", quieta, si el modelo y capacidad lo es en un nuevo, o la unidad en un usado), variante, `etiqueta_precio` y precio (el elemento más grande), datos de usado, descripciones, "Ver ficha técnica" (solo filas con valor), pagos, entrega, garantía y el botón.</li><li>También exporta `htmlBarraCompra` e `ICONO_WA`.</li></ul> |
 | `assets/js/sitio/resenas.js` (≈100) | **Reseñas del sitio** (`0014`). `dibujarResenas({seccion, dialogo, api, tienda, resenas})`: solo si `mostrar_resenas` y hay alguna (si no, la sección queda oculta). Celular: fila con scroll-snap; desde 900 px: mosaico. Cada reseña es un botón con la imagen (miniatura de 640 px, carga diferida) o un recuadro "Video", el texto (4 líneas) y el origen en texto. El visor: título "Reseña N de M", imagen grande o `<video controls playsinline preload="none">` creado al abrir (no se descarga nada hasta que el cliente toca reproducir; sin reproducción automática), texto, origen, "Anterior" / "Siguiente", ← y →, Escape, el botón o tocar afuera para cerrar, y el foco vuelve a la reseña. `principal.js` lo importa **solo si hay reseñas para mostrar**. |
 | `assets/js/sitio/transiciones.js` (≈80) | Apertura y cierre de los diálogos del sitio: `abrirConTransicion(dialogo, mostrar, {origen, destino})` usa la **View Transitions API** (la foto de la tarjeta viaja al detalle; el diálogo lleva `data-vt` mientras dura) y, sin ella o con reduced-motion, abre directo con la animación de CSS de siempre. `cerrarConTransicion` hace una salida corta (baja en celular; se achica y desvanece en pantallas grandes) y después `close()`; `cerrarConEscape` lo usa con Escape. |
-| `assets/js/sitio/popup.js` (≈314) | `crearPopup(...)`: el pop-up "Antes de pasar a WhatsApp" completo, con el aviso corto, las dos casillas y los campos de consentimiento del pedido; sin textos legales publicados no pide datos (`dibujarSinLegales`). `fechaConZona()`: fecha y hora de Colombia con `-05:00`. Ver sección 9. |
+| `assets/js/sitio/popup.js` (≈314) | `crearPopup(...)`: el pop-up "Antes de pasar a WhatsApp" completo, con el aviso corto, las dos casillas y los campos de consentimiento del pedido; sin textos legales publicados no pide datos (`dibujarSinLegales`). El prefijo, el ejemplo, la validación y el agrupado del celular salen del país de la tienda. Ver sección 9. |
 | `assets/js/sitio/fotos.js` (≈19) | `htmlFoto`: `<img>` con `srcset` 640w/1600w, `loading="lazy"` o `fetchpriority="high"`. `htmlMedio`: la foto principal o la ilustración. |
 | `assets/js/sitio/atribucion.js` (≈31) | `CLAVES_ATRIBUCION` (`utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`, `ad_id`, `fbclid`), `capturarAtribucion` y `leerAtribucion`. Guarda en `sessionStorage["cotizadora:atribucion"]` el **primer valor por clave** de la sesión. |
-| `assets/js/sitio/pixel.js` (≈46) | Píxel de Meta. Lo llama solo `consentimiento.js`: `iniciarPixel(id)` (con publicidad aceptada; carga y manda `PageView`, o `consent grant` si ya estaba) y `retirarPixel()` (`fbq("consent", "revoke")`; desde ahí no sale nada). `evento(nombre, parametros, eventID)` solo con el píxel activo. `parametrosEquipo(q)`: `content_name`, `content_ids`, `content_type`, `value` y `currency: "COP"`. |
+| `assets/js/sitio/pixel.js` (≈46) | Píxel de Meta. Lo llama solo `consentimiento.js`: `iniciarPixel(id)` (con publicidad aceptada; carga y manda `PageView`, o `consent grant` si ya estaba) y `retirarPixel()` (`fbq("consent", "revoke")`; desde ahí no sale nada). `evento(nombre, parametros, eventID)` solo con el píxel activo. `parametrosEquipo(q)`: `content_name`, `content_ids`, `content_type`, `value` y `currency` (la moneda del país de la tienda). |
 | `assets/js/sitio/legal.js` (≈26) | Script de `/privacidad/`, `/terminos/` y `/cookies/`: carga la tienda, aplica el tema, muestra el logo y el documento publicado con `conVigencia` (sin publicar: "Página en preparación.") e inicia el consentimiento **sin cargar herramientas ni mostrar el banner** (solo el botón "Preferencias de cookies" del pie). |
 | `assets/js/sitio/consentimiento.js` (≈276) | **Consentimiento de cookies: el único módulo que decide qué se carga.** <ul><li>`iniciarConsentimiento({tienda, cargar, protegido, rutaCookies, preguntar})`, `estado()` (`{elegido, medicion, publicidad, fecha}`, lo que va en el lead), `permitido(categoria)`, `alCambiar(fn)` y `gpc()`.</li><li>Elección en `localStorage["cotizadora:cookies"]` por 6 meses (183 días); vencida, se vuelve a preguntar.</li><li>Cargadores por herramienta (IDs de la tienda): Meta (vía `pixel.js`), GA4 y Google Ads (`gtag.js` una vez), GTM, Clarity (`consentv2`) y TikTok (código base). Google con **Consent Mode v2 básico**: todo `denied` por defecto y `update` según la elección, y el script solo después de aceptar.</li><li>Al retirar una categoría: Meta `consent revoke`, Google `consent update` en `denied`, Clarity `consentv2` en `denied`, y se borran las cookies propias de esa categoría (`_ga*`, `_clck`, `_clsk` o `_fbp`, `_fbc`, `_gcl_*`, `_ttp`). Lo ya cargado en la página no se descarga; desde la próxima no se carga.</li><li>**GPC** (`navigator.globalPrivacyControl`): publicidad rechazada y su interruptor deshabilitado.</li><li>**Banner:** región con título "Cookies", texto corto con enlace a la Política de cookies, "Aceptar todas", "Rechazar todas" y "Configurar" (iguales); Configurar muestra Necesarias (siempre activas), Medición y Publicidad (solo las categorías con herramientas activas, con sus nombres) y "Guardar mi elección". Escape lo cierra si ya había elección; el foco vuelve al botón del pie.</li><li>`mostrarSinTapar`: la primera vez, el banner aparece solo si cabe debajo de los filtros; si no (360 × 800), espera a que la persona baje.</li></ul> |
 
@@ -393,9 +393,10 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈2386) | Suite de aceptación en **modo demo** con Playwright: **64 casos** (65 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). Publica los textos legales de prueba al abrir el sitio o el panel (`nueva(..., {legales})`) y empieza con las cookies rechazadas (`{cookies}`; `null` = sin elegir). `ICT_LINEAS` muestra más líneas de cada falla. | Ver sección 14. |
+| `tests/verificar.cjs` (≈2386) | Suite de aceptación en **modo demo** con Playwright: **65 casos** (66 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). Publica los textos legales de prueba al abrir el sitio o el panel (`nueva(..., {legales})`) y empieza con las cookies rechazadas (`{cookies}`; `null` = sin elegir). `ICT_LINEAS` muestra más líneas de cada falla. | Ver sección 14. |
 | `tests/verificar-supabase.cjs` (≈534) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **12 casos**. Reemplaza `config.js` en el navegador, puede servir un supabase-js local (`ICT_SUPABASE_JS`) y empieza con las cookies rechazadas. |
 | `tests/legal/motor.test.mjs` | Pruebas del motor legal sin navegador (`node tests/legal/motor.test.mjs`): faltantes por perfil y tipo de persona, validaciones, países, datos y plazos en los textos, sin corchetes ni marcadores vacíos, relación con Apple por perfil, herramientas activas e inactivas, versión y vigencia. |
+| `tests/paises.test.mjs` | Pruebas de `paises.js` sin navegador (`node tests/paises.test.mjs`): los 19 países son los del índice legal; precio en ARS, COP, BRL y MXN; fecha corta y fecha con zona; celular por país (prefijo, validación, agrupado, número internacional); WhatsApp de la tienda. |
 | `tests/legal/datos-prueba.mjs` | `TIENDA_LEGAL_PRUEBA`: una tienda inventada con todos los datos legales completos, para las pruebas. No es de ninguna tienda real. |
 | `tests/documentacion.mjs` | Verificador de este documento: falla si algún archivo versionado no aparece en la sección 5. |
 | `tests/sql/probar.sh` | Crea un Postgres temporal, carga la imitación de Supabase y todas las migraciones en orden, compara la semilla con `semilla.js` (y los valores legales iniciales con `LEGAL_INICIAL`), compara `legal_faltantes()` con `faltantes()` del motor (`comparar-faltantes.mjs`) y corre `pruebas.sql`. Antes de cada migración corre `tests/sql/antes_<migración>.sql` si existe. |
@@ -412,7 +413,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `tests/sql/antes_0018_pais.sql` | Un WhatsApp de Colombia antes de `0018`, para probar que la tienda queda en Colombia. |
 | `tests/sql/comparar-faltantes.mjs` | Arma 27 variantes de la tienda de prueba (completa, vacía, cada regla rota) y compara `legal_faltantes()` del SQL con `faltantes()` de `motor.js`. |
 | `tests/sql/antes_0016_legales_asistente.sql` | Un aviso de marca de la tienda, para probar que `0016` lo pasa a la cláusula de los términos después de sus términos (`antes_0015`). |
-| `tests/funciones/probar.sh` | Revisa los tipos de las dos funciones y prueba `enviar-lead` contra webhooks simulados: 14 casos (con los de consentimiento). |
+| `tests/funciones/probar.sh` | Revisa los tipos de las dos funciones y prueba `enviar-lead` contra webhooks simulados: 16 casos (con los de consentimiento y el teléfono de otro país). |
 | `tests/funciones/servir.ts` | Corre una función de Supabase en un puerto fijo (`Deno.serve` no lee `PORT`). |
 | `tests/funciones/webhook-simulado.mjs` | Webhook de GHL falso: guarda el último cuerpo recibido y responde con el código de `ESTADO`. |
 | `tests/supabase-local/levantar.sh` | Levanta el "Supabase local" completo (ver sección 14.3) y deja `/tmp/cotizadora-supabase-local/entorno`. Con el argumento `detener`, lo apaga. |
@@ -750,7 +751,7 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 - **Campos**, todos con etiqueta visible y obligatorios:
   - "Su nombre": `name="name"`.
   - "Su correo": `name="email"`.
-  - "Su WhatsApp": con el prefijo **+57 fijo**. Se formatea mientras se escribe ("300 123 4567") y el cursor se conserva en el dígito.
+  - "Su WhatsApp": con el prefijo **del país de la tienda, fijo** ("+57" en Colombia, "+54 9" en Argentina). Se agrupa mientras se escribe ("300 123 4567", "11 2345 6789") y el cursor se conserva en el dígito. El ejemplo del campo y la validación también son del país (sección 9.10).
   - Arriba de las casillas, el **aviso de privacidad corto** publicado (`documentos.aviso`), con el enlace a la política (se abre en otra pestaña).
   - Casilla **obligatoria**, sin marcar: "Soy mayor de 18 años y autorizo el tratamiento de mis datos para recibir mi cotización y ser contactado sobre ella por WhatsApp y correo, según la Política de privacidad." (`name="autorizacion_datos"`, con enlace).
   - Casilla **opcional**, sin marcar: "Quiero recibir promociones y novedades de [nombre de la tienda] por WhatsApp y correo." (`name="promociones"`). No bloquea el envío.
@@ -759,7 +760,7 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 - **Errores**, al salir del campo o al enviar; el foco va al primer error:
   - "Escriba su nombre."
   - "Revise su correo."
-  - "Escriba un celular de 10 dígitos que empiece por 3, sin el +57."
+  - "Escriba un celular de 10 dígitos que empiece por 3, sin el +57." (Colombia, literal del prompt; en otro país: "Revise su celular: escríbalo sin el +54 9, como 11 2345 6789.")
   - "Para continuar, acepte la autorización de datos."
 - **Campos ocultos:** `phone` (+57…) y los campos personalizados de GHL, para el script de seguimiento externo.
 - **Trampa anti-bots:** un campo `sitio_web` invisible.
@@ -781,7 +782,7 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 **El pedido** que el navegador manda (`armarDatos`):
 
 ```json
-{ "nombre", "correo", "telefono": "+573001234567",
+{ "nombre", "correo", "telefono": "+573001234567",   ← el prefijo del país (Argentina: +549…)
   "modelo", "condicion": "Nuevo|Usado", "capacidad", "color",
   "precio_cotizado": 6200000, "equipo_id", "tipo_consulta": "compra|sin stock",
   "codigo_cotizacion": "COT-AB2C",
@@ -831,7 +832,7 @@ La búsqueda se arma con `describirBusqueda`: el modelo o "iPhone", la condició
 - Solo se carga si la persona **aceptó las cookies de publicidad** (lo decide `consentimiento.js`).
 - **Eventos:**
   - `PageView` al cargar.
-  - `ViewContent` al abrir un detalle, con `content_name` = modelo, capacidad y color; `content_ids` = [equipo_id]; `value` = precio; `currency` = "COP".
+  - `ViewContent` al abrir un detalle, con `content_name` = modelo, capacidad y color; `content_ids` = [equipo_id]; `value` = precio; `currency` = la moneda del país de la tienda ("COP", "ARS", …).
   - `Lead` al confirmarse el envío, con los mismos parámetros y `eventID`. Si es una consulta sin stock, solo lleva `content_name`.
 - Si la persona retira el permiso, `fbq("consent", "revoke")` y no sale nada más.
 - **Nunca** `Purchase`, nunca datos personales. La suite lo verifica.
@@ -974,7 +975,7 @@ Se publica **sin verificación de JWT** (`--no-verify-jwt`), porque la llama el 
 
 1. Atiende CORS y solo acepta `POST`.
 2. Si `ORIGENES_PERMITIDOS` está definido y el origen no está en la lista, responde 403.
-3. Valida con `armarLead`: nombre de 2 caracteres o más, correo, teléfono `^\+573\d{9}$`, `tipo_consulta` igual a `compra` o `sin stock`, código con el formato `COT-XXXX`, `consentimiento_datos` en `true`, `version_politica` entero de 1 o más y `fecha_consentimiento` ISO con zona horaria. Si algo falla, responde 400 con el campo.
+3. Valida con `armarLead`: nombre de 2 caracteres o más, correo, teléfono E.164 `^\+\d{8,15}$` (desde la ronda 3; el formato de cada país lo valida el pop-up), `tipo_consulta` igual a `compra` o `sin stock`, código con el formato `COT-XXXX`, `consentimiento_datos` en `true`, `version_politica` entero de 1 o más y `fecha_consentimiento` ISO con zona horaria. Si algo falla, responde 400 con el campo.
 4. Hace `POST` a `GHL_WEBHOOK_URL`, con un tiempo máximo de 10 s.
 5. **Responde:**
    - `{ok: true}` si GHL respondió 2xx.
@@ -1135,9 +1136,10 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
 node tests/legal/motor.test.mjs                            # motor legal (13 casos, sin navegador)
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 64 casos en modo demo (Playwright + Chromium)
+node tests/paises.test.mjs                                 # datos de país (sin navegador)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 65 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
-DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (14 casos) + tipos
+DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (16 casos) + tipos
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
 ```
 
@@ -1148,7 +1150,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 - `ICT_CAPTURAS=1`: además guarda capturas en `tests/capturas/` y corre el caso **capturas de diseño**: 360 y 1440 px × claro y oscuro × cuadrícula y carrusel × color por defecto y primario amarillo, más el detalle y el pop-up, en `tests/capturas/diseno/<etapa>-….png`. `ICT_CAPTURAS_ETAPA` pone la etapa (por ejemplo `antes` o `despues`). La carpeta no se sube al repo.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (64 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (65 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
@@ -1180,6 +1182,7 @@ node tests/documentacion.mjs                               # este documento cubr
 21. Píxel (con publicidad aceptada): `PageView`, `ViewContent` y `Lead` con `eventID`, sin datos personales.
 22. Formatos: `$5.299.000`, fecha D/M/AAAA y código sin O/0/I/1.
 23. **País de la tienda (B1):** Mi tienda muestra los 19 países, la moneda, el prefijo y la zona horaria; el WhatsApp de la tienda sigue el formato del país (Argentina `549`; validación general en Guatemala), con su mensaje; la capa de datos lo exige.
+24. **Formatos por país (B2):** con la tienda en Argentina, el detalle, el pie (fecha en la zona de Buenos Aires), el prefijo "+54 9", el ejemplo y el error del celular, el agrupado, el lead (`+549…`, `-03:00`), el enlace de WhatsApp y la moneda del píxel (`ARS`); Brasil (`R$ 7.000.000`) y México (`$7,000,000`).
 
 ### 14.3 "Supabase local" y `tests/verificar-supabase.cjs` (12 casos)
 
@@ -1206,7 +1209,7 @@ bash tests/supabase-local/levantar.sh detener
 
 **Los 12 casos:**
 
-1. El sitio carga con la RPC; sin legales publicados, el pop-up no envía y las tres páginas dicen "Página en preparación.".
+1. El sitio carga con la RPC (la tienda nueva es de Argentina, `0018`); sin legales publicados, el pop-up no envía y las tres páginas dicen "Página en preparación.".
 1c. **Legales:** el servidor no deja borrar la demo ni apagarla sin publicar, rechaza publicar incompleto y un perfil inválido; el gestor publica y el servidor pone versión 1 y la fecha de hoy (aunque le manden otra); un cambio sube a la versión 2 y `/terminos/` lo muestra.
 2. El pop-up pasa por la función y llega al webhook con todos los campos, también los de consentimiento.
 3. Permisos del panel: el gestor no ve Usuarios y el servidor (función y tabla) le niega gestionarlos; colores.
@@ -1403,6 +1406,14 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 21/10/2026 · Ronda 3, B2: los formatos salen del país de la tienda
+
+- **Pedido de Jared:** todo lo fijo de Colombia sale del país: `formatearCOP` pasa a un formateador por moneda; el prefijo +57 y la validación del celular del pop-up; la validación del WhatsApp de la tienda; `fechaCorta` con la zona horaria del país; la moneda del píxel; los textos con "COP". Los precios siguen siendo enteros.
+- **Hecho:** `paises.js` (`fijarPais`, `paisActual`, `formatearNumero`, `formatearPrecio`, `fechaCortaPais`, `fechaConZona`, `celular.visible`); `utils.js` (sin `formatearCOP`, `celularValido`, `formatearCelular` ni `whatsappTiendaValido`); sitio `principal.js`, `legal.js`, `popup.js` (prefijo, ejemplo, validación, agrupado, número internacional, fecha con zona), `pixel.js`, `galeria.js`, `catalogo.js`, `detalle.js`; panel `panel.js` e `inventario.js` ("Precio (COP)"); `lead.ts` (teléfono E.164 de cualquier país).
+- **Decisión:** el mensaje de error del celular de Colombia sigue literal del prompt; los demás países usan "Revise su celular: escríbalo sin el +54 9, como 11 2345 6789.". El servidor acepta cualquier teléfono E.164 (`+` y 8 a 15 dígitos), porque el lead no dice de qué país es la tienda: el formato de cada país lo valida el pop-up.
+- **Pruebas:** `tests/paises.test.mjs` (nuevo, 5 casos); `verificar.cjs` (caso nuevo B2; **cambiado:** el caso de formatos usaba `formatearCOP`, ahora `formatearPrecio` con el demo de Colombia y el mismo resultado); `tests/funciones/probar.sh` (**cambiado:** "teléfono inválido" usaba `+572001234567`, que ahora es un E.164 válido; se reemplazó por uno corto y uno sin `+`, y se suma uno de Argentina que pasa: 16 casos); `verificar-supabase.cjs` (la tienda local nace en Argentina y la de prueba se pasa a Colombia al cargar los legales).
+- **Verificación:** casos tocados de `verificar.cjs` OK, `tests/funciones/probar.sh` OK, `tests/verificar-supabase.cjs` 12/12, `node tests/paises.test.mjs` OK y `node tests/documentacion.mjs` OK.
 
 ### 21/10/2026 · Ronda 3, B1: país de la tienda
 

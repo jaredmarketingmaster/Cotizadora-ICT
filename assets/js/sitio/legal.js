@@ -8,11 +8,13 @@ import { logoGenericoSVG } from "../ilustracion.js";
 import { formatoBasico, escaparHTML } from "../utils.js";
 import { conVigencia } from "../legal/vigencia.js";
 import { iniciarConsentimiento } from "./consentimiento.js";
+import { fijarPais } from "../datos/paises.js";
 
 const caja = document.getElementById("legal-texto");
 try {
   const api = await obtenerApi();
   const { tienda } = await api.cargarPublico();
+  fijarPais(tienda.pais);
   aplicarTema(tienda);
   const logo = tienda.logo ? api.urlArchivo("marca", tienda.logo) : "";
   document.getElementById("marca-logo").innerHTML = logo ? `<img src="${escaparHTML(logo)}" alt="" width="160" height="40">` : logoGenericoSVG();
