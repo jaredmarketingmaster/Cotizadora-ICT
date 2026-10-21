@@ -991,8 +991,16 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
   | Sin franja, cuadrícula | 100 / 100 / 100 · LCP 1,2 s · CLS 0,049 | 99–100 / 100 / 100 · LCP 1,3–1,4 s · CLS 0,049 |
   | Sin franja, carrusel | — | 100 / 100 / 100 · LCP 1,2–1,5 s · CLS 0,049 |
 
+  **Ronda 2 (A a F)**, mismas condiciones; antes = commit `735b4e7`, después = `9a69a67`:
+
+  | Escenario | Antes | Después |
+  |---|---|---|
+  | Con franja demo | 91 / 100 / 100 · LCP 1,4–1,5 s · CLS 0,19 | 91 / 100 / 100 · LCP 1,3–1,4 s · CLS 0,19 |
+  | Sin franja, cuadrícula | 99–100 / 100 / 100 · LCP 1,2–1,6 s · CLS 0,049 | 100 / 100 / 100 · LCP 1,1–1,4 s · CLS 0,045 |
+  | Sin franja, carrusel | 100 / 100 / 100 · LCP 1,2–1,5 s · CLS 0,049 | 99–100 / 100 / 100 · LCP 1,4 s · CLS 0,045 |
+
   (rendimiento / accesibilidad / buenas prácticas). El CLS de 0,19 lo causa solo la franja de modo demo, que aparece cuando llegan los datos. Para medir sin franja, el Chromium de la medición se abre con el modo demo apagado en `localStorage` y Lighthouse corre con `--disable-storage-reset`.
-- **Peso del sitio público:** unos 170 KB sin comprimir y unos 56 KB con gzip (suma de cada archivo comprimido por separado, sin `demo.js` ni `semilla.js`, sin fuentes ni fotos). La fase C sumó unos 4 KB con gzip (el límite era 30 KB).
+- **Peso del sitio público:** unos 170 KB sin comprimir y unos 56 KB con gzip (suma de cada archivo comprimido por separado, sin `demo.js` ni `semilla.js`, sin fuentes ni fotos). La fase C sumó unos 4 KB con gzip (el límite era 30 KB). La ronda 2 lo llevó a unos 198 KB sin comprimir y 65 KB con gzip (+8 KB); de eso, `resenas.js` (2 KB con gzip) solo se descarga si la tienda muestra reseñas.
 
 ---
 
@@ -1263,6 +1271,12 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 21/10/2026 · Cierre de la ronda 2 (A a F): verificación final
+
+- **Suites:** `tests/sql/probar.sh` OK (semilla, fichas y textos legales iguales en SQL y JS); `tests/funciones/probar.sh` OK; `tests/verificar.cjs` 57/57 dos veces seguidas y 58/58 con `ICT_CAPTURAS`; `tests/verificar-supabase.cjs` 11/11; `node tests/documentacion.mjs` OK; revisión de tuteo sin resultados.
+- **Lighthouse móvil** (3 corridas por escenario): ver la tabla de la sección 13. Sin franja: 100 / 100 / 100, LCP 1,1–1,4 s (antes 1,2–1,6 s), CLS 0,045 (antes 0,049).
+- **Capturas:** `tests/capturas/diseno/antes-*.png`, `a-despues-*.png` (después de A) y `despues-*.png` (final), a 360 y 1440 px, claro y oscuro, cuadrícula y carrusel, color por defecto y amarillo, más detalle y pop-up. No se suben al repo.
 
 ### 21/10/2026 · F: instrucciones de despliegue al día
 
