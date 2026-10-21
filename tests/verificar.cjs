@@ -813,7 +813,7 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
-  await caso("demo: los datos guardados de una versión vieja se migran (stock, tamaño, catálogo, colores y roles)", async () => {
+  await caso("demo: los datos guardados de una versión vieja se migran (stock, tamaño, catálogo, colores, roles y fichas)", async () => {
     const p = await nueva();
     await ir(p);
     // Arma un estado como el de la versión 1: 32 modelos, stock numérico, sin colores.
@@ -830,13 +830,17 @@ async function llenarPopup(p) {
       e.equipos[2].color_nombre = "Color que no existe";
       delete e.colores;
       delete e.tienda.tamano_texto;
+      // Fichas vacías como antes de 0012, salvo una que cargó la tienda
+      const id13 = e.modelos.find((m) => m.slug === "iphone-13").id;
+      e.fichas.forEach((f) => { f.especificaciones = f.modelo_id === id13 ? [{ etiqueta: "Pantalla", valor: "Dato de la tienda" }] : []; });
+      delete e.tienda.mostrar_ficha; delete e.tienda.ficha_ocultas;
       e.perfiles[0].rol = "agencia"; e.perfiles[0].correo = "agencia@demo.co";
       e.perfiles[1].rol = "tienda"; e.perfiles[1].correo = "tienda@demo.co";
       e.version = 1;
     });
     await ir(p);
     const e = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)), CLAVE_DEMO);
-    assert.equal(e.version >= 5, true);
+    assert.equal(e.version >= 10, true);
     assert.deepEqual(e.perfiles.map((x) => `${x.correo}:${x.rol}`), ["administrador@demo.co:administrador", "gestor@demo.co:gestor"]);
     // 0008: color oficial por nombre; el nombre viejo queda si no es el oficial;
     // sin coincidencia, sin color y con el nombre conservado.
@@ -848,6 +852,13 @@ async function llenarPopup(p) {
     assert.equal(e.modelos.length, 42);
     assert.equal(e.colores.length, 183);
     assert.equal(e.tienda.tamano_texto, "normal");
+    // 0012: fichas de la fuente donde estaban vacías; la de la tienda no se toca
+    const fichaDe = (slug) => e.fichas.find((f) => f.modelo_id === e.modelos.find((m) => m.slug === slug).id);
+    assert.deepEqual(fichaDe("iphone-13").especificaciones, [{ etiqueta: "Pantalla", valor: "Dato de la tienda" }]);
+    assert.equal(fichaDe("iphone-7").especificaciones[0].valor, "Septiembre 2016");
+    assert.equal(e.fichas.filter((f) => f.especificaciones.length).length, 42);
+    assert.equal(e.tienda.mostrar_ficha, true);
+    assert.deepEqual(e.tienda.ficha_ocultas, []);
     assert.deepEqual(e.equipos.map((q) => q.en_stock), [false, true, true, true, true, true]);
     assert.equal(new Set(e.modelos.map((m) => m.orden)).size, 42);
     assert.equal(e.modelos.find((m) => m.slug === "iphone-17e").orden > e.modelos.find((m) => m.slug === "iphone-17-pro-max").orden, true);
@@ -952,6 +963,97 @@ async function llenarPopup(p) {
     await p.click('#confirmar [value="no"]');
     assert.equal((await estado()).hash, `#/catalogo/ficha/${id}`);
     assert.equal(await p.inputValue("#f-descripcion"), "Texto de prueba");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  // Ficha técnica (0012): precargada de la fuente, interruptores y editor.
+  const filasSitio = (p) => p.$$eval("#hoja-detalle .ficha-tecnica dl > div", (ds) => ds.map((d) => [d.dataset.clave || "", d.querySelector("dt").textContent, d.querySelector("dd").textContent]));
+  const abrirFicha = async (p) => {
+    await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb");
+    await p.click(".tarjeta-boton >> nth=0");
+    await p.waitForFunction(() => document.querySelector("#hoja-detalle").open && !document.querySelector("#hoja-detalle[data-vt]"));
+  };
+  await caso("ficha técnica: precargada tal cual la fuente, en el orden fijo; el interruptor general y los de categoría cambian el sitio", async () => {
+    const p = await nueva(390, 844);
+    await ir(p);
+    const fuente = await p.evaluate(async () => (await import(new URL("assets/js/datos/semilla.js", location.href).href)).filasDeFuente("iphone-18-pro-max"));
+    await abrirFicha(p);
+    await p.click("#hoja-detalle .ficha-tecnica summary");
+    assert.equal((await p.textContent("#hoja-detalle .ficha-tecnica summary")).trim(), "Ver ficha técnica");
+    assert.deepEqual(await filasSitio(p), fuente.map((f) => [f.clave, f.etiqueta, f.valor]), "las filas de la fuente, sin cambios");
+    assert.deepEqual(fuente.map((f) => f.clave), ["lanzamiento", "procesador", "pantalla", "camaras_traseras", "versiones", "materiales", "puertos"],
+      "18 Pro Max: sin cámara frontal, batería ni dimensiones en la fuente");
+    assert.equal(await p.locator("#hoja-detalle .ficha-tecnica dd").first().evaluate((el) => getComputedStyle(el).whiteSpace), "pre-line");
+    // Todas las fichas del demo coinciden con la fuente
+    const iguales = await p.evaluate(async (clave) => {
+      const { filasDeFuente } = await import(new URL("assets/js/datos/semilla.js", location.href).href);
+      const e = JSON.parse(localStorage.getItem(clave));
+      return e.modelos.every((m) => JSON.stringify(e.fichas.find((f) => f.modelo_id === m.id).especificaciones) === JSON.stringify(filasDeFuente(m.slug)));
+    }, CLAVE_DEMO);
+    assert.ok(iguales, "fichas del demo = fuente");
+    // Panel: apagar la ficha la saca del sitio; apagar una categoría la saca de la lista.
+    await entrarPanel(p, "gestor@demo.co");
+    await p.goto(`${BASE}/admin/#/catalogo/ficha`);
+    await p.waitForSelector("#i-mostrar-ficha");
+    assert.equal(await p.isChecked("#i-mostrar-ficha"), true);
+    assert.deepEqual(await p.$$eval("#categorias-ficha [data-categoria]", (xs) => xs.map((x) => x.checked)), Array(11).fill(true));
+    await p.click('label[for="i-mostrar-ficha"]');
+    await p.waitForFunction((clave) => JSON.parse(localStorage.getItem(clave)).tienda.mostrar_ficha === false, CLAVE_DEMO);
+    assert.equal(await p.locator("#categorias-ficha").evaluate((f) => f.disabled), true);
+    await abrirFicha(p);
+    assert.equal(await p.locator("#hoja-detalle .ficha-tecnica").count(), 0, "sin ficha en el sitio");
+    await p.goto(`${BASE}/admin/#/catalogo/ficha`);
+    await p.waitForSelector("#i-mostrar-ficha");
+    await p.click('label[for="i-mostrar-ficha"]');
+    await p.click('label[for="i-cat-pantalla"]');
+    await p.click('label[for="i-cat-lanzamiento"]');
+    await p.waitForFunction((clave) => JSON.parse(localStorage.getItem(clave)).tienda.ficha_ocultas.join() === "lanzamiento,pantalla", CLAVE_DEMO);
+    await abrirFicha(p);
+    assert.deepEqual((await filasSitio(p)).map((f) => f[0]), ["procesador", "camaras_traseras", "versiones", "materiales", "puertos"]);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("ficha técnica: el editor corrige una categoría y agrega filas propias (al final); la capa de datos valida el formato", async () => {
+    const p = await nueva(1280, 900);
+    await entrarPanel(p, "gestor@demo.co");
+    const id = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).modelos.find((m) => m.slug === "iphone-18-pro-max").id, CLAVE_DEMO);
+    await p.goto(`${BASE}/admin/#/catalogo/ficha/${id}`);
+    await p.waitForSelector("#form-ficha");
+    const fuente = await p.evaluate(async () => (await import(new URL("../assets/js/datos/semilla.js", location.href).href)).filasDeFuente("iphone-18-pro-max"));
+    for (const f of fuente) assert.equal(await p.inputValue(`#fc-${f.clave}`), f.valor, f.clave);
+    assert.equal(await p.inputValue("#fc-bateria"), "", "batería vacía: la fuente no la trae");
+    await p.fill("#fc-procesador", "Procesador corregido por la tienda");
+    await p.fill("#fc-camara_frontal", "Dato que agregó la tienda");
+    await p.click("#agregar-fila");
+    await p.fill("#fe-0", "Desbloqueo");
+    await p.fill("#fv-0", "Face ID");
+    await p.click("#guardar-ficha");
+    await p.waitForSelector("text=Guardado");
+    await abrirFicha(p);
+    const filas = await filasSitio(p);
+    assert.deepEqual(filas.map((f) => f[0]), ["lanzamiento", "procesador", "pantalla", "camaras_traseras", "camara_frontal", "versiones", "materiales", "puertos", ""]);
+    assert.deepEqual(filas[1].slice(1), ["Procesador", "Procesador corregido por la tienda"]);
+    assert.deepEqual(filas.at(-1).slice(1), ["Desbloqueo", "Face ID"], "las filas de la tienda van al final");
+    // "Otras filas de la tienda" apagada: la fila propia no se ve.
+    await editarDemo(p, (e) => { e.tienda.ficha_ocultas = ["otras"]; });
+    await abrirFicha(p);
+    assert.ok(!(await filasSitio(p)).some((f) => f[1] === "Desbloqueo"));
+    // La capa de datos rechaza una categoría que no existe o repetida, y un valor muy largo.
+    await p.goto(`${BASE}/admin/#/inicio`);
+    await p.waitForSelector(".estadisticas");
+    const errores = await p.evaluate(async (id) => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      const r = [];
+      for (const especificaciones of [[{ clave: "colores", etiqueta: "Colores", valor: "x" }], [{ clave: "pantalla", etiqueta: "P", valor: "a" }, { clave: "pantalla", etiqueta: "P", valor: "b" }], [{ etiqueta: "X", valor: "x".repeat(601) }]]) {
+        try { await a.guardarFicha(id, { descripcion: "", especificaciones }); r.push("guardó"); } catch (e) { r.push(e.message); }
+      }
+      try { await a.guardarTienda({ ficha_ocultas: ["colores"] }); r.push("guardó"); } catch (e) { r.push(e.message); }
+      return r;
+    }, id);
+    assert.deepEqual(errores, [...Array(3).fill("Alguna fila de la ficha técnica no tiene el formato correcto."), "Algún dato no tiene el formato correcto. Revise los campos."]);
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });

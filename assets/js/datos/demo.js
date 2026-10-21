@@ -8,8 +8,8 @@
 // No sirve para producción: cada navegador tiene su propia copia.
 // =============================================================================
 
-import { CATALOGO, COLORES, DEMO_EQUIPOS } from "./semilla.js";
-import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, elegir } from "./comun.js";
+import { CATALOGO, COLORES, DEMO_EQUIPOS, filasDeFuente } from "./semilla.js";
+import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, elegir } from "./comun.js";
 import { hexValido, whatsappTiendaValido, sesion, esperar } from "../utils.js";
 
 const CLAVE = "cotizadora-demo:v1";
@@ -52,10 +52,11 @@ function estadoInicial() {
       color_primario: "#1A73E8", color_secundario: "#0F172A", tema: "claro", texto_entrega: "",
       formas_pago: [], texto_garantia_nuevos: "", texto_garantia_usados: "", etiqueta_precio: "Precio",
       texto_privacidad: "", texto_terminos: "", texto_autorizacion_datos: "", aviso_marca: "",
-      precios_actualizados_en: t, modo_demo: true, tamano_texto: "normal", vista_equipos: "cuadricula", actualizado_en: t
+      precios_actualizados_en: t, modo_demo: true, tamano_texto: "normal", vista_equipos: "cuadricula",
+      mostrar_ficha: true, ficha_ocultas: [], actualizado_en: t
     },
     modelos,
-    fichas: modelos.map((m) => ({ modelo_id: m.id, descripcion: "", especificaciones: [], actualizado_en: t })),
+    fichas: modelos.map((m) => ({ modelo_id: m.id, descripcion: "", especificaciones: filasDeFuente(m.slug), actualizado_en: t })),
     colores,
     equipos,
     perfiles: USUARIOS_DEMO.map((u, i) => ({ user_id: `demo-${i + 1}`, correo: u.correo, rol: u.rol, activo: true, clave: CLAVE_DEMO, creado_en: t }))
@@ -64,7 +65,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 9;
+const VERSION = 10;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -128,6 +129,17 @@ const MIGRACIONES = {
   // 0011_vista_equipos.sql
   8(e) {
     e.tienda.vista_equipos = "cuadricula";
+  },
+  // 0012_fichas.sql: interruptores de la ficha y precarga de la fuente en las
+  // fichas sin filas (lo que ya cargó la tienda no se toca).
+  9(e) {
+    e.tienda.mostrar_ficha = true;
+    e.tienda.ficha_ocultas = [];
+    for (const m of e.modelos) {
+      let f = e.fichas.find((x) => x.modelo_id === m.id);
+      if (!f) { f = { modelo_id: m.id, descripcion: "", especificaciones: [], actualizado_en: ahora() }; e.fichas.push(f); }
+      if (!(f.especificaciones || []).length) f.especificaciones = filasDeFuente(m.slug);
+    }
   }
 };
 
@@ -265,6 +277,11 @@ function validarTienda(t) {
   if (!["claro", "oscuro"].includes(t.tema)) throw new ErrorDatos("El tema debe ser claro u oscuro.");
   if (!TAMANOS_TEXTO.includes(t.tamano_texto)) throw new ErrorDatos("El tamaño del texto debe ser compacto, normal o grande.");
   if (!VISTAS_EQUIPOS.includes(t.vista_equipos)) throw new ErrorDatos("La vista de los equipos debe ser cuadrícula o carrusel.");
+  // Como los checks de 0012
+  if (typeof t.mostrar_ficha !== "boolean" || !Array.isArray(t.ficha_ocultas) ||
+      t.ficha_ocultas.some((c) => !CATEGORIAS_FICHA.some((x) => x.clave === c))) {
+    throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
+  }
 }
 
 // Como validar_color_equipo (0008): el color es del modelo y es obligatorio
@@ -514,6 +531,8 @@ export const demo = {
     await red();
     const e = leer();
     exigirGestor(e);
+    // Como validar_ficha (0012)
+    if (!especificacionesValidas(especificaciones ?? [])) throw new ErrorDatos("Alguna fila de la ficha técnica no tiene el formato correcto.");
     let f = e.fichas.find((x) => x.modelo_id === modeloId);
     if (!f) { f = { modelo_id: modeloId }; e.fichas.push(f); }
     Object.assign(f, { descripcion: descripcion ?? "", especificaciones: especificaciones ?? [], actualizado_en: ahora() });

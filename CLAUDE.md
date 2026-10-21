@@ -53,7 +53,7 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
   - `supabase.js`: fetch directo en el sitio público, supabase-js desde el CDN en el panel.
 
   **Los dos tienen la misma interfaz y las mismas reglas.** Si se cambia una regla del SQL (permisos, validaciones, fecha de precios), hay que cambiarla también en `demo.js`.
-- La semilla está dos veces: en `supabase/migrations/0006_catalogo_colores.sql` (catálogo y colores) y `0003_demo.sql`, y en `assets/js/datos/semilla.js`. `tests/sql/probar.sh` revisa que coincidan.
+- La semilla está dos veces: en `supabase/migrations/0006_catalogo_colores.sql` (catálogo y colores), `0003_demo.sql` y `0012_fichas.sql` (fichas técnicas), y en `assets/js/datos/semilla.js`. `tests/sql/probar.sh` revisa que coincidan.
 - El catálogo y los colores salen solo de los archivos de Jared. Lo que no está queda vacío: nunca completar de memoria.
 - Roles: **administrador** solo gestiona accesos (Usuarios); **gestor** hace todo lo demás (incluido el catálogo completo y el modo demo). Siempre queda un administrador activo.
 - La seguridad real está en el SQL: RLS con `es_gestor()` / `es_administrador()`, disparadores (`modelos_proteger`, `tienda_proteger`, `perfiles_proteger`, `colores_proteger`) y `borrar_datos_demo` solo para el gestor. La función `usuarios` solo acepta administradores activos. El panel solo oculta lo que el rol no puede hacer.
@@ -92,7 +92,7 @@ Está en la sección "Pendientes" del README:
 
 - Textos legales.
 - Confirmar los nombres del catálogo.
-- Fuente de las fichas técnicas.
+- Completar en las fichas técnicas lo que la fuente no trae.
 - Plan de Supabase.
 - SMTP.
 - Probar en GHL el webhook y, si se quiere, el script de seguimiento externo.

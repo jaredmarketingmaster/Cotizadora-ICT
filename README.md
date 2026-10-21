@@ -68,7 +68,7 @@ python3 -m http.server 8080
 | Rol | Qué hace |
 |---|---|
 | **Administrador** | Solo gestiona los accesos: invita, asigna roles, desactiva y reactiva usuarios. No ve ni edita la tienda, el inventario ni el catálogo. |
-| **Gestor** | Todo lo demás: Mi tienda, Inventario, Fichas, Catálogo completo, Legales, modo demo y "Borrar datos de demostración". No ve Usuarios. |
+| **Gestor** | Todo lo demás: Mi tienda, Inventario, Catálogo completo (modelos y colores, y ficha técnica), Legales, modo demo y "Borrar datos de demostración". No ve Usuarios. |
 
 Siempre queda al menos un administrador activo, y nadie puede cambiarse su propio rol ni desactivarse. Todo esto lo exige la base de datos (RLS y disparadores), no solo el panel. Si la misma persona necesita las dos cosas, usa dos usuarios.
 
@@ -214,7 +214,7 @@ No pude abrir la documentación de GHL desde este entorno: su dominio está bloq
 - **Textos de relleno:** si la tienda no cargó la autorización de datos, la casilla dice "Autorizo el tratamiento de mis datos personales." más el enlace a la política. La casilla no puede quedar sin texto. Es propuesta mía: el texto real lo redacta el abogado.
 - **Si la tienda no tiene WhatsApp:** el pop-up avisa "Esta tienda todavía no tiene WhatsApp configurado." y no ofrece el botón.
 - **HEIC:** el iPhone normalmente lo convierte a JPEG al elegir la foto, y Safari también lo lee. En otros navegadores, un `.heic` se rechaza con un aviso. No agregué un conversor, porque pesa cerca de 1 MB.
-- **El texto de "Ver ficha técnica"** y las especificaciones solo se muestran si tienen valor. No se precarga ninguna.
+- **Ficha técnica:** viene precargada con lo que traen los archivos de Jared (migración `0012`); lo que no traen queda vacío. En el sitio, "Ver ficha técnica" solo aparece si la tienda la muestra, y solo con las categorías encendidas que tienen valor.
 
 ## Pruebas
 
@@ -258,7 +258,7 @@ Del documento del prompt:
 
 - [ ] [PENDIENTE: textos de privacidad, términos y autorización de datos (Ley 1581). Los redacta el abogado.]
 - [ ] [PENDIENTE: confirmar en apple.com/co los nombres del catálogo maestro, en especial del 11 al 17, iPhone Air e iPhone Duo.]
-- [ ] [PENDIENTE: definir quién carga las fichas técnicas y desde qué fuente verificada.]
+- [ ] [PENDIENTE: completar en las fichas técnicas lo que la fuente no trae (batería en todos, y otros datos que lista la sección 17 de DOCUMENTACION.md).]
 - [ ] [PENDIENTE: confirmar con cada tienda si su precio es de contado, para configurar etiqueta_precio.]
 - [ ] [PENDIENTE: crear en GHL los campos personalizados (condicion, equipo_id, tipo_consulta y los demás) y el workflow con Inbound Webhook.]
 

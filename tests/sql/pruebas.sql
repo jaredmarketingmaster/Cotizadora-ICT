@@ -39,6 +39,47 @@ begin
   assert not exists (select 1 from information_schema.columns where table_name = 'equipos' and column_name in ('color_nombre', 'color_hex')), 'sin color propio en equipos';
 end $$;
 
+-- 0e. Migración 0012: fichas precargadas desde la fuente (las compara con
+-- semilla.js comparar-semilla.mjs) sin pisar lo que la tienda ya tenía, y las
+-- reglas de validar_ficha y de la tienda.
+do $$
+begin
+  assert (select descripcion || '|' || especificaciones::text from public.fichas f join public.modelos m on m.id = f.modelo_id where m.slug = 'iphone-13')
+    = 'Descripción de la tienda|[{"valor": "Dato de la tienda", "etiqueta": "Pantalla"}]', 'la ficha de la tienda no se toca';
+  assert (select count(*) from public.fichas f join public.modelos m on m.id = f.modelo_id
+          where m.slug <> 'iphone-13' and m.slug <> 'iphone-prueba' and jsonb_array_length(f.especificaciones) > 0) = 41, '41 fichas precargadas';
+  assert (select f.especificaciones -> 0 ->> 'valor' from public.fichas f join public.modelos m on m.id = f.modelo_id where m.slug = 'iphone-7') = 'Septiembre 2016', 'iPhone 7: lanzamiento';
+  assert not exists (select 1 from public.fichas, jsonb_array_elements(especificaciones) x where x ->> 'clave' = 'bateria'), 'la fuente no trae batería';
+  assert (select mostrar_ficha and ficha_ocultas = '{}' from public.tienda), 'ficha visible y sin categorías ocultas por defecto';
+end $$;
+do $$ begin
+  update public.fichas set especificaciones = '[{"clave": "color", "etiqueta": "Color", "valor": "x"}]' where modelo_id = (select id from public.modelos where slug = 'iphone-7');
+  raise exception 'clave que no es una categoría';
+exception when check_violation then null; end $$;
+do $$ begin
+  update public.fichas set especificaciones = '[{"clave": "pantalla", "etiqueta": "Pantalla", "valor": "a"}, {"clave": "pantalla", "etiqueta": "Pantalla", "valor": "b"}]' where modelo_id = (select id from public.modelos where slug = 'iphone-7');
+  raise exception 'clave repetida';
+exception when check_violation then null; end $$;
+do $$ begin
+  update public.fichas set especificaciones = '[{"etiqueta": "Pantalla", "valor": 6}]' where modelo_id = (select id from public.modelos where slug = 'iphone-7');
+  raise exception 'valor que no es texto';
+exception when check_violation then null; end $$;
+do $$ begin
+  update public.fichas set especificaciones = jsonb_build_array(jsonb_build_object('etiqueta', 'Pantalla', 'valor', repeat('x', 601))) where modelo_id = (select id from public.modelos where slug = 'iphone-7');
+  raise exception 'valor de más de 600';
+exception when check_violation then null; end $$;
+do $$ begin
+  update public.tienda set ficha_ocultas = '{colores}';
+  raise exception 'categoría oculta que no existe';
+exception when check_violation then null; end $$;
+do $$ begin
+  -- Válidas: filas de la tienda sin clave (o con clave null) y categorías conocidas
+  update public.fichas set especificaciones = especificaciones || '[{"etiqueta": "Desbloqueo", "valor": "Face ID"}, {"clave": null, "etiqueta": "Otra", "valor": "x"}]'::jsonb
+    where modelo_id = (select id from public.modelos where slug = 'iphone-16');
+  update public.tienda set ficha_ocultas = '{pantalla,otras}', mostrar_ficha = false;
+  update public.tienda set ficha_ocultas = '{}', mostrar_ficha = true;
+end $$;
+
 -- Un equipo no publicado, uno sin stock y uno de un modelo inactivo.
 insert into public.equipos (modelo_id, condicion, capacidad, color_id, color_nombre_mostrar, precio, en_stock, publicado)
 select m.id, 'nuevo', '128 GB', c.id, 'Borrador', 1000000, true, false from public.modelos m join public.colores c on c.modelo_id = m.id and c.nombre_es = 'Visón' where m.slug = 'iphone-18-pro';
@@ -74,7 +115,9 @@ begin
   assert (select count(*) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug in ('iphone-17-pro', 'iphone-17-pro-max')) = 0, '17 Pro sin colores en la fuente';
   assert (select string_agg(nombre_es || '/' || nombre_en || '/' || hex, '|' order by c.orden) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-17e')
     = 'Negro//#2C2D30|Blanco//#F5F6F8|Rosa pálido/Soft Pink/#EBCBD2', 'colores del 17e tal como la fuente';
-  assert (select count(*) from public.fichas where descripcion <> '' or especificaciones <> '[]') = 0, 'fichas vacías';
+  -- Antes de 0012 las fichas nacían vacías; ahora llevan lo que trae la fuente
+  -- (ver 0e). La fuente no trae descripciones: la única es la de antes_0012.
+  assert (select count(*) from public.fichas where descripcion <> '') = 1, 'sin descripciones de la fuente';
   assert (select count(*) from public.modelos where activo and not activo_por_demo) = 0, 'solo activos por demo';
   assert (select count(*) from public.equipos where es_demo) = 6, '6 equipos demo';
   -- Por fecha de lanzamiento, el 17e (marzo de 2026) va después del 17 Pro Max.

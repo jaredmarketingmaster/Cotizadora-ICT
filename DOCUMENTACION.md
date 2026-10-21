@@ -299,8 +299,8 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | Archivo | Qué es |
 |---|---|
 | `assets/js/datos/api.js` (≈17) | `api()`: devuelve, una sola vez, el adaptador `demo` o `supabase` según `config.js`. Si se pide Supabase sin URL o clave, usa demo y avisa en la consola. |
-| `assets/js/datos/comun.js` (≈62) | Reglas compartidas por los dos adaptadores: <ul><li>`ErrorDatos`.</li><li>`equipoEsPublico`: publicado, con stock (`en_stock`) y de un modelo activo.</li><li>`LADO_GRANDE` = 1600 y `LADO_MINIATURA` = 640.</li><li>`rutaMiniatura`: `x.webp` → `x-640.webp`.</li><li>`CAMPOS_TIENDA`, `CAMPOS_EQUIPO`, `CAMPOS_COLOR`, `MAX_MAS_VENDIDOS` y `MENSAJE_MAS_VENDIDOS`, `nombreColor(color, mostrar)` (nombre que ve el cliente: el elegido por la tienda o el oficial en inglés, o el de la fuente), `TAMANOS_TEXTO`, `ESTADOS_ESTETICOS` y `elegir`.</li><li>`mensajeDeError`: traduce los errores de Postgres al español; los mensajes de los disparadores (ya en español) pasan tal cual.</li></ul> |
-| `assets/js/datos/semilla.js` (≈115) | `CATALOGO`: los **42 modelos** desde el iPhone 7, con slug, generación y orden de 10 en 10 por fecha de lanzamiento. `COLORES`: los 183 colores oficiales por slug (`[nombre_es, nombre_en, hex]`, vacío si la fuente no lo da). `DEMO_EQUIPOS`: los 6 equipos demo. `slugDe`. **Debe coincidir** con `0006_catalogo_colores.sql` y `0003_demo.sql`; la prueba SQL lo revisa. |
+| `assets/js/datos/comun.js` (≈62) | Reglas compartidas por los dos adaptadores: <ul><li>`ErrorDatos`.</li><li>`equipoEsPublico`: publicado, con stock (`en_stock`) y de un modelo activo.</li><li>`LADO_GRANDE` = 1600 y `LADO_MINIATURA` = 640.</li><li>`rutaMiniatura`: `x.webp` → `x-640.webp`.</li><li>`CAMPOS_TIENDA`, `CAMPOS_EQUIPO`, `CAMPOS_COLOR`, `MAX_MAS_VENDIDOS` y `MENSAJE_MAS_VENDIDOS`, `nombreColor(color, mostrar)` (nombre que ve el cliente: el elegido por la tienda o el oficial en inglés, o el de la fuente), `TAMANOS_TEXTO`, `ESTADOS_ESTETICOS` y `elegir`.</li><li>**Ficha técnica (0012):** `CATEGORIAS_FICHA` (las 10 categorías fijas con su clave y nombre, en orden, más `otras` para las filas de la tienda), `MAX_ETIQUETA_FICHA` (60) y `MAX_VALOR_FICHA` (600), `especificacionesValidas` (las reglas de `validar_ficha`) y `filasVisiblesFicha(ficha, tienda)`: lo que muestra el sitio (nada si `mostrar_ficha` está apagado; si no, las categorías encendidas con valor en el orden fijo y al final las filas de la tienda).</li><li>`mensajeDeError`: traduce los errores de Postgres al español; los mensajes de los disparadores (ya en español) pasan tal cual.</li></ul> |
+| `assets/js/datos/semilla.js` (≈115) | `CATALOGO`: los **42 modelos** desde el iPhone 7, con slug, generación y orden de 10 en 10 por fecha de lanzamiento. `COLORES`: los 183 colores oficiales por slug (`[nombre_es, nombre_en, hex]`, vacío si la fuente no lo da). `DEMO_EQUIPOS`: los 6 equipos demo. `FICHAS`: las fichas técnicas de los 42 modelos, solo con lo que trae la fuente (`[clave, valor]` o `[null, valor, etiqueta]`), y `filasDeFuente(slug)`, que las devuelve como quedan en la base. `slugDe`. **Debe coincidir** con `0006_catalogo_colores.sql`, `0003_demo.sql` y `0012_fichas.sql`; la prueba SQL lo revisa. |
 | `assets/js/datos/demo.js` (≈436) | Back-end de demostración. Ver sección 7.2. |
 | `assets/js/datos/supabase.js` (≈304) | Back-end Supabase. Ver sección 7.3. |
 
@@ -329,7 +329,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `assets/js/panel/ui.js` (≈82) | Piezas de interfaz: `$`, `$$`, `esc`, `avisar` ("Guardado" o error), `confirmar` (promesa sobre `<dialog>`), `conBoton` (botón en espera más aviso), `campoTexto`, `interruptor`, `marcarError` y `enfocarPrimerError`. |
 | `assets/js/panel/inventario.js` (≈605) | Inventario. <ul><li>**Lista** con buscador y filtros (modelo, condición, publicado y los especiales "sin stock" y "sin foto").</li><li>**Edición rápida** de precio, el interruptor **Stock** ("Con stock" / "Sin stock"), publicado y **Más vendido** (máximo 3; el cuarto avisa sin llamar a la base): se guarda al salir del campo, con Enter o al mover el interruptor.</li><li>Borrar con confirmación (borra también las fotos).</li><li>**Formulario** por pasos para agregar, completo para editar y duplicar, con validaciones.</li><li>**Fotos:** subir, cámara, arrastrar y soltar, reordenar, quitar y máximo 6.</li><li>**Color:** el paso Color muestra solo los colores oficiales del modelo (muestra y nombre en inglés, o el de la fuente) y el campo opcional "Nombre que verá el cliente". No se crean colores ni se escribe un hexadecimal desde el equipo. Cambiar el modelo borra el color elegido. Si el modelo no tiene colores, se puede guardar sin color.</li><li>Opción de activar el modelo si estaba inactivo.</li><li>Limpia las fotos subidas si se sale sin guardar.</li></ul> |
 | `assets/js/panel/tienda.js` (≈359) | Mi tienda: <ul><li>Datos de la tienda y redes.</li><li>Marca: logo con **recorte** (horizontal 3:1 o cuadrado, arrastrar, zoom y teclado), favicon de 128 px, colores con selector y hexadecimal, tema, **tamaño del texto** (Compacto, Normal o Grande) y **vista previa en vivo** con el contraste calculado.</li><li>**Diseño del sitio:** cómo se ven los equipos, "Cuadrícula" o "Carrusel", cada una con su explicación.</li><li>Venta: etiqueta del precio, **lista editable** de formas de pago, entrega y garantías.</li></ul> |
-| `assets/js/panel/fichas.js` (≈120) | **Pestaña "Ficha técnica" de Catálogo** (`#/catalogo/ficha` y `#/catalogo/ficha/<modeloId>`; los títulos son `h2`, el `h1` es "Catálogo"): lista de modelos activos y editor por modelo. Tiene descripción, filas etiqueta/valor (agregar, editar, subir, bajar y borrar, con etiquetas sugeridas) y "Copiar ficha de otro modelo". |
+| `assets/js/panel/fichas.js` (≈170) | **Pestaña "Ficha técnica" de Catálogo** (`#/catalogo/ficha` y `#/catalogo/ficha/<modeloId>`; los títulos son `h2`, el `h1` es "Catálogo"). <ul><li>**Lista:** interruptor "Mostrar la ficha técnica en el sitio" (`tienda.mostrar_ficha`), un interruptor por categoría (`tienda.ficha_ocultas`; se guardan al moverlos y se deshabilitan con la ficha apagada) y los modelos activos con cuántos datos tiene su ficha.</li><li>**Editor de un modelo:** descripción, un campo por categoría fija (precargado de la fuente; la tienda lo corrige o completa) y "Otras filas de la tienda" (agregar, editar, subir, bajar y borrar, con etiquetas sugeridas). "Copiar ficha de otro modelo" copia todo.</li></ul> |
 | `assets/js/panel/catalogo.js` (≈275) | **Catálogo con pestañas** (`role="tablist"`, flechas con vuelta, Inicio y Fin; el foco queda en la pestaña; cambiar de pestaña no recarga la vista, cambia la dirección con `ctx.marcarRuta` y pregunta si hay cambios sin guardar). Cada pestaña dibuja en un contenedor nuevo, así una que termina de cargar tarde no pisa a la actual. Pestaña **Modelos y colores**: agrupada por generación con interruptor activo/inactivo; renombra (el slug no cambia), reordena (intercambia el `orden`) y agrega modelos al final. **Colores** de cada modelo (desplegable): muestra, nombre en español y en inglés (solo lectura), hexadecimal de la fuente fijo y campo para completar el que falta; en modelos sin colores oficiales, el gestor agrega y borra colores de la tienda. |
 | `assets/js/panel/legales.js` (≈52) | Editores de privacidad, términos, autorización de datos y aviso de marca, con aviso si están vacíos y vista previa del formato básico. |
 | `assets/js/panel/usuarios.js` (≈100) | Solo administrador: invitar (correo y rol), **asignar rol** (selector por usuario), desactivar con confirmación y reactivar. Su propia fila no tiene controles. |
@@ -344,6 +344,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `supabase/migrations/0002_catalogo.sql` (≈42) | Inserta los **32 modelos** del catálogo maestro, en el orden del prompt, todos inactivos (`orden` 10, 20, …, 320). Cada modelo recibe su ficha vacía por disparador. |
 | `supabase/migrations/0003_demo.sql` (≈36) | Pone el nombre "Tienda de demostración" y `modo_demo = true`, activa los 4 modelos que usa la demo (con `activo_por_demo = true`) e inserta los 6 equipos demo. |
 | `supabase/migrations/0011_vista_equipos.sql` (≈12) | `tienda.vista_equipos`: `cuadricula` (por defecto) o `carrusel`. |
+| `supabase/migrations/0012_fichas.sql` (≈110) | Ficha técnica: `tienda.mostrar_ficha` (sí por defecto) y `tienda.ficha_ocultas` (categorías apagadas, con check); clave opcional por fila y disparador `fichas_validar`; precarga de las fichas de los 42 modelos **solo con lo que trae la fuente** y solo en fichas sin filas. |
 | `supabase/migrations/0010_mas_vendido.sql` (≈30) | `equipos.mas_vendido` y el disparador `equipos_mas_vendido` (`limitar_mas_vendidos`): no deja marcar un cuarto, con un candado por transacción para que dos marcas a la vez no pasen de 3. Todavía no se muestra en el sitio. |
 | `supabase/migrations/0009_video.sql` (≈40) | Un video opcional por equipo: `equipos.video` (ruta con check) y bucket propio `videos` (público, 20 MB, `video/mp4` y `video/webm`); las reglas de Storage suman ese bucket (lee todo el mundo; sube, cambia y borra el gestor). |
 | `supabase/migrations/0008_color_oficial.sql` (≈85) | Cada equipo usa un color oficial de su modelo: `equipos.color_id` (FK a `colores`) y `color_nombre_mostrar`; migra los equipos existentes por nombre (español o inglés; "Glacier" → Glaciar) conservando el nombre que veía el cliente; borra `color_nombre` y `color_hex`; disparador `equipos_color` (`validar_color_equipo`). |
@@ -362,16 +363,17 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈1450) | Suite de aceptación en **modo demo** con Playwright: **50 casos** (51 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). | Ver sección 14. |
+| `tests/verificar.cjs` (≈1450) | Suite de aceptación en **modo demo** con Playwright: **52 casos** (53 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). | Ver sección 14. |
 | `tests/verificar-supabase.cjs` (≈311) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **9 casos**. Reemplaza `config.js` en el navegador y puede servir un supabase-js local (`ICT_SUPABASE_JS`). |
 | `tests/documentacion.mjs` | Verificador de este documento: falla si algún archivo versionado no aparece en la sección 5. |
 | `tests/sql/probar.sh` | Crea un Postgres temporal, carga la imitación de Supabase y todas las migraciones en orden, compara la semilla con `semilla.js` y corre `pruebas.sql`. Antes de cada migración corre `tests/sql/antes_<migración>.sql` si existe. |
 | `tests/sql/antes_0007_roles.sql` | Los usuarios de prueba con los roles viejos (agencia y tienda), para probar que `0007` los convierte. `pruebas.sql` los sigue usando. |
 | `tests/sql/antes_0006_catalogo_colores.sql` | Un modelo de la agencia (orden 330) antes de `0006`, para probar que queda al final. |
+| `tests/sql/antes_0012_fichas.sql` | Una ficha que la tienda ya había cargado (iPhone 13), para probar que la precarga de `0012` no la pisa. |
 | `tests/sql/antes_0004_en_stock.sql` | Datos con el esquema viejo (stock 4 y stock 0) para probar que `0004` los convierte bien. `pruebas.sql` los revisa y los borra. |
 | `tests/sql/supabase_simulado.sql` | Roles `anon`, `authenticated` y `service_role`, esquema `auth` con `auth.uid()`, y `storage.buckets` y `storage.objects` mínimos. |
 | `tests/sql/pruebas.sql` | Asserts de catálogo y semilla, y de RLS por rol (anon, sin perfil, inactivo, gestor, administrador). También validaciones, fecha de precios, colores, modo demo, perfiles (nadie se quita a sí mismo; siempre un administrador activo, también sin sesión) y borrar demo. |
-| `tests/sql/comparar-semilla.mjs` | Compara el JSON de la semilla del SQL con `semilla.js`. |
+| `tests/sql/comparar-semilla.mjs` | Compara el JSON de la semilla del SQL con `semilla.js`: catálogo, colores, equipos demo y las fichas precargadas (filas, orden y textos). |
 | `tests/funciones/probar.sh` | Revisa los tipos de las dos funciones y prueba `enviar-lead` contra webhooks simulados: 10 casos. |
 | `tests/funciones/servir.ts` | Corre una función de Supabase en un puerto fijo (`Deno.serve` no lee `PORT`). |
 | `tests/funciones/webhook-simulado.mjs` | Webhook de GHL falso: guarda el último cuerpo recibido y responde con el código de `ESTADO`. |
@@ -403,6 +405,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
   - `tema`: `claro` u `oscuro`.
   - `tamano_texto`: `compacto`, `normal` (por defecto) o `grande` (desde `0005`).
   - `vista_equipos`: `cuadricula` (por defecto) o `carrusel` (desde `0011`).
+  - `mostrar_ficha` (sí por defecto) y `ficha_ocultas` (`text[]`, claves de categorías apagadas; solo las de `CATEGORIAS_FICHA`), desde `0012`.
 - **Venta:**
   - `texto_entrega`.
   - `formas_pago`: `text[]`.
@@ -437,7 +440,8 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 - `modelo_id`: PK y FK, con `on delete cascade`.
 - `descripcion`.
-- `especificaciones`: JSONB, siempre un **array** de `{etiqueta, valor}`.
+- `especificaciones`: JSONB, siempre un **array** de `{clave?, etiqueta, valor}`. `clave` (desde `0012`) es una de las categorías fijas: `lanzamiento`, `procesador`, `pantalla`, `camaras_traseras`, `camara_frontal`, `bateria`, `versiones`, `materiales`, `puertos`, `dimensiones`; sin clave, la fila es de la tienda. `fichas_validar` exige texto en etiqueta (≤60) y valor (≤600), claves conocidas y sin repetir.
+- Desde `0012` vienen **precargadas** de la fuente (ver sección 17 para lo que falta).
 - `actualizado_en`.
 
 **`equipos`**: el inventario.
@@ -483,6 +487,7 @@ Son `security definer`:
 | `tienda_actualizado`, `fichas_actualizado`, `equipos_actualizado` | Ponen `actualizado_en = now()`. |
 | `equipos_precio` | Al insertar o cambiar el `precio` de un equipo, actualiza `tienda.precios_actualizados_en`. Cambiar el stock no la toca. |
 | `modelos_ficha` | Cada modelo nuevo nace con su ficha vacía. |
+| `fichas_validar` | Formato de las filas de la ficha (`0012`); error `23514` "Alguna fila de la ficha técnica no tiene el formato correcto." |
 | `modelos_proteger` | Con sesión, solo el gestor cambia el catálogo (todo: nombre, slug, generación, orden y activo). Si alguien cambia `activo`, pone `activo_por_demo = false`. |
 | `tienda_proteger` | Solo el gestor cambia `modo_demo`. |
 | `perfiles_proteger` | Con sesión, nadie cambia su propio rol ni se desactiva a sí mismo. **Siempre** (también con la clave de servicio) debe quedar al menos un administrador activo; bloquea con `for update` las filas de los otros administradores para que dos cambios a la vez no dejen cero. |
@@ -554,7 +559,7 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 - **Estado:** `localStorage["cotizadora-demo:v1"]`, un JSON con `tienda`, `modelos`, `fichas`, `equipos` y `perfiles`. Se comparte entre pestañas del mismo navegador.
 - **Fotos:** IndexedDB, base `cotizadora-demo`, almacén `archivos`. Se exponen como `blob:` URLs.
 - **Usuarios de prueba:** `gestor@demo.co` y `administrador@demo.co`, clave `demo1234` (desde la versión 5 de los datos; antes `tienda@demo.co` y `agencia@demo.co`, que `migrar()` convierte). La sesión va en `sessionStorage["cotizadora-demo:sesion"]`.
-- **Versión de los datos:** el JSON lleva `version` (hoy 2). Si el navegador tiene una versión vieja, `migrar()` repite la migración SQL del mismo número (por ejemplo `stock` → `en_stock`) sin perder lo cargado.
+- **Versión de los datos:** el JSON lleva `version` (hoy 10; la 10 es `0012_fichas.sql`: interruptores de la ficha y precarga de la fuente en las fichas sin filas). Si el navegador tiene una versión vieja, `migrar()` repite la migración SQL del mismo número (por ejemplo `stock` → `en_stock`) sin perder lo cargado.
 - **Repite las reglas del SQL:**
   - Permisos por rol.
   - Las restricciones CHECK.
@@ -642,6 +647,7 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
   - Contador "1/2".
 - **Si un color tiene varias fotos,** se ven como miniaturas.
 - **Al cambiar de diapositiva** se actualizan la ficha, el precio y la barra.
+- **Ficha técnica** ("Ver ficha técnica", plegada): solo si la tienda la muestra (`mostrar_ficha`); solo las categorías encendidas que tienen dato, en el orden fijo (año de lanzamiento, procesador, pantalla, cámaras traseras, cámara frontal, batería, versiones del modelo, materiales, puertos y carga, dimensiones y peso) y al final las filas de la tienda. En celular, el nombre de la categoría arriba y el dato abajo; desde 480 px, dos columnas. Los datos de varias líneas conservan sus saltos.
 - **Barra de compra fija en celular,** con el precio y "Comprar por WhatsApp":
   - Dentro de la hoja.
   - Sobre la página mientras el detalle en línea está en pantalla (IntersectionObserver).
@@ -953,7 +959,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 ```bash
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 50 casos en modo demo (Playwright + Chromium)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 52 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (10 casos) + tipos
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
@@ -966,7 +972,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 - `ICT_CAPTURAS=1`: además guarda capturas en `tests/capturas/` y corre el caso **capturas de diseño**: 360 y 1440 px × claro y oscuro × cuadrícula y carrusel × color por defecto y primario amarillo, más el detalle y el pop-up, en `tests/capturas/diseno/<etapa>-….png`. `ICT_CAPTURAS_ETAPA` pone la etapa (por ejemplo `antes` o `despues`). La carpeta no se sube al repo.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (50 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (52 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
@@ -981,6 +987,7 @@ node tests/documentacion.mjs                               # este documento cubr
 11. Validaciones del panel. **Más vendido:** tres se marcan en la lista; el cuarto avisa y no se guarda (también en la capa de datos y en el formulario); desmarcando uno, se puede; Duplicar no lo copia. **En el sitio** (3 casos): etiqueta "Más vendido" con 4,5:1 o más, anillo con luz y halo en la tarjeta (por cualquier color del grupo o por la unidad usada), mismo orden de tarjetas, la luz anima solo `transform`, corre en pantalla y se pausa fuera, en 3 tarjetas como máximo aunque haya más marcadas; en el carrusel, la del centro igual y las vecinas bajo la capa que las desvanece; el detalle muestra la etiqueta sin animación; con reduced-motion, etiqueta y anillo quietos y ninguna animación. Probado en claro, oscuro y primario amarillo. **Video:** .mov, MP4 en HEVC, 16 s y más de 20 MB se rechazan antes de subir (no queda nada guardado); MP4 de 3 s y WebM se aceptan; quitar el video, reemplazarlo o borrar el equipo borra el archivo; la capa de datos repite los límites de Storage. **Color oficial:** el paso Color ofrece solo los colores del modelo (sin crear colores ni escribir hexadecimales), cambiar el modelo borra el color, la capa de datos rechaza un color de otro modelo, y el nombre a mostrar ("Lila") llega a la tarjeta, el detalle, el texto alternativo, el mensaje de WhatsApp y el `content_name` del píxel; sin nombre a mostrar se ve el oficial ("Lavender").
 12. A 320, 360, 768 y 1440 px: sin scroll horizontal, un `h1` y sin errores en sitio, legales y todo el panel (incluidas las pestañas de Catálogo y el editor de una ficha).
 12b. **Pestañas de Catálogo:** "Fichas técnicas" ya no está en el menú; `#/fichas` y `#/fichas/<id>` llevan a la pestaña Ficha técnica; roles ARIA (`tablist`, `tab`, `tabpanel`, `aria-controls`, `aria-selected`, `tabindex` móvil); flechas con vuelta, Inicio y Fin con el foco en la pestaña; contorno de foco de 3 px; con cambios sin guardar, pregunta antes de cambiar de pestaña.
+12c. **Ficha técnica** (2 casos): las 42 fichas del demo son iguales a la fuente y el sitio las muestra tal cual, en el orden fijo y con sus saltos de línea; apagar "Mostrar la ficha técnica en el sitio" la saca del sitio; apagar categorías las saca; el editor muestra los valores de la fuente (batería vacía), corrige una categoría, completa otra y agrega una fila propia que va al final; "Otras filas de la tienda" apagada la oculta; la capa de datos rechaza una categoría inexistente o repetida, un valor de más de 600 caracteres y una categoría oculta que no existe. La migración de datos viejos del demo precarga las fichas vacías y no toca la que cargó la tienda.
 13. Carrusel: dedo, flechas, puntos, muestras, teclado y Escape. **Video en el detalle:** miniatura con ícono; sin `<video>` en la página hasta tocarla; al tocarla, `preload="none"`, `controls`, sin `autoplay` y se reproduce; volver a la foto lo quita.
 14. Gesto táctil real en el carrusel y cierre de la hoja con el gesto.
 14b. **Vista Carrusel** (8 casos): elegirla en Mi tienda cambia el sitio (mismas tarjetas, orden, contador y detalle; tocar una vecina la centra, la del centro abre el detalle; flechas de 44 px o más con foco visible); bucle en los dos sentidos con flechas, teclado, mouse, trackpad y dedo; 1 tarjeta sin flechas ni bucle, 2 tarjetas con una sola vecina, el filtro vuelve a la primera y el estado vacío; sin scroll horizontal y con altura estable a 320, 360, 768 y 1440 px; con reduced-motion, sin animaciones.
@@ -1088,6 +1095,10 @@ bash tests/supabase-local/levantar.sh detener
 | `nombre_es` además de `nombre_en` | La fuente da casi siempre el nombre en español y a veces no el inglés: sin `nombre_es` habría colores sin nombre. |
 | Hexadecimales del "iPhone 16 / 16e" también en el 16 Plus | La tabla de la fuente es por serie y el 16 Plus tiene exactamente los mismos colores. |
 | Colores de la tienda solo en modelos sin colores oficiales | El 17 Pro y el 17 Pro Max no tienen colores en la fuente; sin esto no se podrían cargar. Los oficiales no se mezclan con inventados. |
+| Fichas técnicas precargadas de la fuente | Pedido de Jared (ronda 2, C2), que cambia la regla del prompt original ("se crean vacías"). Solo se carga lo que traen sus tres archivos; se usó el HTML para el iPhone 7 a 16 Pro Max (es el más completo; `info_complementaria_2.md` resume los mismos modelos con menos detalle) e `info_complementaria.md` para el resto. Se respeta el texto de la fuente (también "4.7\"" o "2,000 nits"); solo se separó la cámara frontal de las traseras, se pasaron "Sep" / "Feb" a "Septiembre" / "Febrero" y se partieron las líneas de almacenamiento y de dimensiones. |
+| "Versiones del modelo" = opciones de almacenamiento | Propuesta aprobada por Jared: la fuente no tiene otra columna que sirva. Los colores no van en la ficha (ya están en el detalle). |
+| Textos que no son datos quedan vacíos | "Datos de catálogo en consolidación", "Lanzamiento reciente" y "Diseño tipo libro (\"Fold\")" (columna de dimensiones) no son medidas: la categoría queda vacía y se anota en la sección 17. |
+| Filas de la tienda al final, con su propio interruptor | Las categorías fijas tienen orden; lo que agrega la tienda no tiene categoría, así que va después y se apaga junto ("Otras filas de la tienda"). |
 | Duplicar no copia "Más vendido" | El duplicado es otra variante y el máximo es 3: copiarlo haría fallar el guardado. El stock sí se copia (pedido de A2). |
 | View Transitions para abrir el detalle | Pedido de Jared. Se probó con cuadros grabados que la foto viaja bien aunque el diálogo esté en la capa superior; sin la API (o con reduced-motion) queda la animación de CSS. |
 | Vecinas del carrusel desvanecidas con una capa (`::after`) | Bajar la opacidad del texto lo dejaba bajo 4,5:1. Las vecinas son tarjetas inactivas (`aria-hidden`, fuera del tabulado): WCAG 1.4.3 exime el texto de componentes inactivos. La tarjeta del centro, que es la que se usa, cumple AA. |
@@ -1137,7 +1148,13 @@ bash tests/supabase-local/levantar.sh detener
   - Nombre en inglés de: Blanco y Negro (17 y 17e); Negro, Visón, Oliva, Azul nítido, Magenta y Plata (18 Pro y 18 Pro Max); Titanio (Duo).
   - Colores del iPhone 17 Pro y 17 Pro Max: la fuente no los lista (la tienda puede agregar los suyos).
   - El hexadecimal de Borgoña y Glaciar viene marcado "aproximado" en la fuente.
-- [ ] Definir quién carga las fichas técnicas y desde qué fuente verificada.
+- [ ] **Fichas técnicas: datos que la fuente no trae** (quedaron vacíos; la tienda los puede completar en Catálogo → Ficha técnica):
+  - **Batería:** ningún modelo (la fuente no tiene esa columna; del Duo solo dice "Sistema de doble batería", dentro de Puertos y carga).
+  - **Cámara frontal:** iPhone 17, 17 Pro, 17 Pro Max, 18 Pro, 18 Pro Max y Duo.
+  - **Cámaras traseras:** Duo (la fuente da "Sist. Multi-cámara: Incluye cámara frontal oculta bajo la pantalla interior. Funciones Smart Take y Kid Cue.", que quedó como fila propia "Sistema de cámaras").
+  - **Dimensiones y peso:** 17 Pro y 17 Pro Max ("Datos de catálogo en consolidación"), 18 Pro y 18 Pro Max ("Lanzamiento reciente") y Duo ("Diseño tipo libro (\"Fold\")").
+  - **Descripción:** ningún modelo (la fuente no trae).
+  - Los datos del 18 Pro, 18 Pro Max y Duo son de modelos de lanzamiento reciente o futuro según la fuente: conviene revisarlos antes de publicar.
 - [ ] Confirmar con cada tienda si su precio es de contado, para `etiqueta_precio`.
 - [ ] Crear en GHL los campos personalizados y el workflow con Inbound Webhook.
 
@@ -1179,6 +1196,14 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 21/10/2026 · C2: ficha técnica precargada de la fuente, con interruptores
+
+- **Pedido de Jared (ronda 2, punto C2):** interruptor general "Mostrar la ficha técnica en el sitio" (sí por defecto) y uno por categoría (año de lanzamiento, procesador, pantalla, cámaras traseras, cámara frontal, batería y versiones del modelo, más las demás categorías de la fuente con su nombre); precargar las fichas de los 42 modelos **solo con el texto de la fuente** (lo que falta queda vacío y se anota); editor por modelo dentro de la pestaña; en el sitio, "Ver ficha técnica" solo con el interruptor encendido, solo categorías activas con valor, en orden, con estilo premium.
+- **Hecho:** `supabase/migrations/0012_fichas.sql` (nuevo); `comun.js` (`CATEGORIAS_FICHA`, `especificacionesValidas`, `filasVisiblesFicha`, campos de la tienda); `semilla.js` (`FICHAS`, `filasDeFuente`); `demo.js` versión 10 (misma migración y mismas reglas); panel `fichas.js` y `panel.css`; sitio `detalle.js` y `sitio.css`.
+- **Fuente:** los tres archivos de Jared (aprobado: "usa los tres archivos y aplica tus propuestas"). HTML para el iPhone 7 a 16 Pro Max, `info_complementaria.md` para el 16e, 17, Air, 17 Pro, 17 Pro Max, 17e, 18 Pro, 18 Pro Max y Duo. 367 filas en total. Las decisiones de formato están en la sección 16 y lo que falta, en la 17.
+- **Pruebas cambiadas y por qué:** `pruebas.sql` exigía "fichas vacías" (regla del prompt original). Este pedido la reemplaza: ahora exige que no haya descripciones de la fuente y, en un bloque nuevo, que haya 41 fichas precargadas, que la de la tienda (`antes_0012_fichas.sql`) no se toque, que no haya batería y las reglas de `validar_ficha` y de `ficha_ocultas`. `comparar-semilla.mjs` compara además las fichas del SQL con `semilla.js`. En `verificar.cjs`: 2 casos nuevos y el de migración de datos viejos suma las fichas.
+- **Verificación:** `tests/sql/probar.sh` OK, `tests/verificar.cjs` 52/52, `tests/verificar-supabase.cjs` 9/9 y `node tests/documentacion.mjs` OK.
 
 ### 21/10/2026 · C1: "Fichas técnicas" pasa a una pestaña de Catálogo
 

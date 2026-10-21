@@ -7,16 +7,13 @@
 import { escaparHTML, formatearCOP, reducirMovimiento } from "../utils.js";
 import { textoCondicion, textoAlternativo, TEXTO_MAS_VENDIDO } from "./catalogo.js";
 import { htmlFoto, htmlMedio } from "./fotos.js";
+import { filasVisiblesFicha } from "../datos/comun.js";
 
 const ICONO_ANT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const ICONO_SIG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const ICONO_PLAY = '<svg class="icono-play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,.55)"/><path d="M10 8l6 4-6 4z" fill="#fff"/></svg>';
 const ICONO_ABRIR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 export const ICONO_WA = '<svg class="icono-wa" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>';
-
-function filasFicha(ficha) {
-  return (ficha?.especificaciones || []).filter((f) => String(f?.etiqueta || "").trim() && String(f?.valor || "").trim());
-}
 
 function htmlDiapositiva(api, q, i, total) {
   const alt = textoAlternativo(q);
@@ -35,7 +32,9 @@ export function crearDetalle({ api, cat, tarjeta, lista, inicial, alComprar, alC
   const tienda = cat.tienda;
   const modelo = tarjeta.modelo;
   const ficha = cat.fichas.get(modelo.id);
-  const filas = filasFicha(ficha);
+  // Solo si la tienda muestra la ficha: categorías encendidas y con valor, en
+  // el orden fijo, y las filas de la tienda al final.
+  const filas = filasVisiblesFicha(ficha, tienda);
   const condicion = tarjeta.condicion;
   let indice = inicial;
   let fotoActual = 0;
@@ -110,7 +109,7 @@ export function crearDetalle({ api, cat, tarjeta, lista, inicial, alComprar, alC
       ${descripcion.map((t) => `<p class="detalle-texto">${escaparHTML(t)}</p>`).join("")}
       ${filas.length ? `<details class="ficha-tecnica"${fichaAbierta ? " open" : ""}>
         <summary>Ver ficha técnica ${ICONO_ABRIR}</summary>
-        <dl>${filas.map((f) => `<div><dt>${escaparHTML(f.etiqueta)}</dt><dd>${escaparHTML(f.valor)}</dd></div>`).join("")}</dl>
+        <dl>${filas.map((f) => `<div${f.clave ? ` data-clave="${f.clave}"` : ""}><dt>${escaparHTML(f.etiqueta)}</dt><dd>${escaparHTML(f.valor)}</dd></div>`).join("")}</dl>
       </details>` : ""}
       ${(pagos.length || tienda.texto_entrega || garantia) ? `<div class="info-compra">
         ${pagos.length ? `<section><h3>Formas de pago</h3><ul>${pagos.map((p) => `<li>${escaparHTML(p)}</li>`).join("")}</ul></section>` : ""}

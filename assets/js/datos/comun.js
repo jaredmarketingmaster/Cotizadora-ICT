@@ -48,7 +48,7 @@ export const CAMPOS_TIENDA = [
   "color_primario", "color_secundario", "tema", "texto_entrega", "formas_pago",
   "texto_garantia_nuevos", "texto_garantia_usados", "etiqueta_precio",
   "texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "modo_demo",
-  "tamano_texto", "vista_equipos"
+  "tamano_texto", "vista_equipos", "mostrar_ficha", "ficha_ocultas"
 ];
 
 export const CAMPOS_EQUIPO = [
@@ -70,6 +70,55 @@ export function nombreColor(color, mostrar = "") {
 // "Más vendido": hasta 3 equipos (igual que limitar_mas_vendidos en 0010).
 export const MAX_MAS_VENDIDOS = 3;
 export const MENSAJE_MAS_VENDIDOS = "Ya tiene 3 equipos marcados como más vendidos. Desmarque uno para marcar este.";
+
+// Ficha técnica (0012): categorías fijas, en el orden en que se muestran.
+// "otras" son las filas que agrega la tienda (sin clave); se muestran al final.
+export const CATEGORIAS_FICHA = [
+  { clave: "lanzamiento", etiqueta: "Año de lanzamiento" },
+  { clave: "procesador", etiqueta: "Procesador" },
+  { clave: "pantalla", etiqueta: "Pantalla" },
+  { clave: "camaras_traseras", etiqueta: "Cámaras traseras" },
+  { clave: "camara_frontal", etiqueta: "Cámara frontal" },
+  { clave: "bateria", etiqueta: "Batería" },
+  { clave: "versiones", etiqueta: "Versiones del modelo" },
+  { clave: "materiales", etiqueta: "Materiales" },
+  { clave: "puertos", etiqueta: "Puertos y carga" },
+  { clave: "dimensiones", etiqueta: "Dimensiones y peso" },
+  { clave: "otras", etiqueta: "Otras filas de la tienda" }
+];
+export const MAX_ETIQUETA_FICHA = 60;
+export const MAX_VALOR_FICHA = 600;
+const CLAVES_FIJAS = CATEGORIAS_FICHA.map((c) => c.clave).filter((c) => c !== "otras");
+
+// Como validar_ficha (0012).
+export function especificacionesValidas(lista) {
+  if (!Array.isArray(lista)) return false;
+  const vistas = new Set();
+  for (const f of lista) {
+    if (!f || typeof f !== "object" || typeof f.etiqueta !== "string" || typeof f.valor !== "string") return false;
+    if (f.etiqueta.length > MAX_ETIQUETA_FICHA || f.valor.length > MAX_VALOR_FICHA) return false;
+    if (f.clave != null) {
+      if (!CLAVES_FIJAS.includes(f.clave) || vistas.has(f.clave)) return false;
+      vistas.add(f.clave);
+    }
+  }
+  return true;
+}
+
+// Lo que el sitio muestra de una ficha: nada si la tienda apagó la ficha;
+// si no, las categorías encendidas que tienen valor, en el orden fijo, y al
+// final las filas de la tienda (si "otras" está encendida).
+export function filasVisiblesFicha(ficha, tienda) {
+  if (tienda?.mostrar_ficha === false) return [];
+  const ocultas = new Set(tienda?.ficha_ocultas || []);
+  const lista = (ficha?.especificaciones || []).filter((f) => String(f?.etiqueta || "").trim() && String(f?.valor || "").trim());
+  const orden = (f) => (f.clave ? CLAVES_FIJAS.indexOf(f.clave) : CLAVES_FIJAS.length);
+  return lista
+    .filter((f) => !ocultas.has(f.clave || "otras"))
+    .map((f, i) => ({ f, i }))
+    .sort((a, b) => orden(a.f) - orden(b.f) || a.i - b.i)
+    .map(({ f }) => ({ clave: f.clave || null, etiqueta: f.etiqueta.trim(), valor: f.valor.trim() }));
+}
 
 export const TAMANOS_TEXTO = ["compacto", "normal", "grande"];
 export const VISTAS_EQUIPOS = ["cuadricula", "carrusel"];

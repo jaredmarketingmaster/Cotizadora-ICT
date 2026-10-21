@@ -526,10 +526,14 @@
 .ficha-tecnica summary::-webkit-details-marker { display: none; }
 .ficha-tecnica summary svg { width: 20px; height: 20px; transition: transform var(--medio) var(--curva); }
 .ficha-tecnica[open] summary svg { transform: rotate(180deg); }
+@media (hover: hover) { .ficha-tecnica summary:hover { background: var(--superficie); } }
 .ficha-tecnica dl { margin: 0; padding: 0 18px 10px; }
-.ficha-tecnica dl div { display: grid; grid-template-columns: minmax(110px, 38%) 1fr; gap: 12px; padding: 12px 0; border-top: 1px solid var(--borde); }
-.ficha-tecnica dt { color: var(--texto-suave); font-weight: 600; }
-.ficha-tecnica dd { margin: 0; white-space: pre-line; }
+/* Celular: el nombre de la categoría arriba y el dato abajo; desde 480 px,
+   en dos columnas. Los datos de varias líneas conservan sus saltos. */
+.ficha-tecnica dl div { display: grid; gap: 4px; padding: 14px 0; border-top: 1px solid var(--borde); }
+@media (min-width: 480px) { .ficha-tecnica dl div { grid-template-columns: minmax(120px, 34%) 1fr; gap: 16px; } }
+.ficha-tecnica dt { color: var(--texto-suave); font-weight: 700; letter-spacing: .01em; }
+.ficha-tecnica dd { margin: 0; white-space: pre-line; line-height: 1.5; font-variant-numeric: tabular-nums; }
 
 .info-compra { display: grid; gap: 12px; }
 .info-compra section { display: grid; gap: 4px; }
