@@ -108,6 +108,12 @@ caso("A2: sin plazo de entrega, los términos dicen el máximo legal de 30 días
   assert.ok(t.includes("usted puede terminar la compra y le devolvemos el dinero sin descuentos ni retenciones en máximo 15 días calendario"));
 });
 
+caso("A3: el proveedor (Argentina) y HighLevel (Estados Unidos) van a países adecuados según la SIC, además del contrato", () => {
+  const p = visible(generar(base()).privacidad);
+  assert.ok(p.includes("Nuestro proveedor tecnológico (Argentina) y HighLevel (Estados Unidos) están en países con un nivel adecuado de protección de datos según la lista de la SIC."));
+  assert.ok(p.includes("Además, hacemos la transmisión con un contrato de transmisión de datos, como lo permite el Decreto 1074 de 2015"));
+});
+
 caso("la relación con Apple sigue al perfil", () => {
   const t = base();
   const indep = "es un comercio independiente. No está afiliado, patrocinado ni autorizado por Apple Inc. iPhone es una marca de Apple Inc.";

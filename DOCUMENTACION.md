@@ -837,7 +837,7 @@ La búsqueda se arma con `describirBusqueda`: el modelo o "iPhone", la condició
 Los textos legales **no se escriben a mano**: la tienda llena el asistente y el motor los genera.
 
 - **Motor** (`assets/js/legal/motor.js`): `faltantes(tienda)` dice qué falta (con el paso); `generar(tienda)` arma los cuatro documentos en el Markdown de `formatoBasico`; `publicar(tienda, anterior, hoy)` devuelve la versión que se publica (la misma si los textos no cambiaron). Nunca deja marcadores ni datos vacíos: si falta algo, no genera.
-- **Plantillas** (`assets/js/legal/plantillas/`); el retracto de Colombia dice el plazo de la devolución (15 días calendario, Ley 2439 de 2024) y su medio (el medio de pago original o el que se acuerde). `privacidad.js` (12 secciones: responsable; datos; finalidades; encargados y transmisión —"nuestro proveedor tecnológico, ubicado en Argentina", la plataforma del sitio, Meta y las herramientas activas—; API de Conversiones; conservación —máximo 2 meses desde el último contacto para quien no compra; para quien compra, lo que exijan las normas contables, tributarias y de protección al consumidor—; derechos; cómo ejercerlos con plazos y la SIC; mayoría de edad; seguridad; cambios y vigencia; sección del país), `terminos.js` (quién vende y relación con Apple según el perfil, cotizador, precios e impuestos, garantía, retracto, entrega, homologados si aplica, mayoría de edad, marcas, proveedor tecnológico, ley aplicable, datos personales, cambios), `cookies.js` (qué son, necesarias, medición y publicidad con una tabla por herramienta activa, GPC, cómo cambiar) y `aviso.js` (2–3 líneas con el enlace).
+- **Plantillas** (`assets/js/legal/plantillas/`); el retracto de Colombia dice el plazo de la devolución (15 días calendario, Ley 2439 de 2024) y su medio (el medio de pago original o el que se acuerde). `privacidad.js` (12 secciones: responsable; datos; finalidades; encargados y transmisión —"nuestro proveedor tecnológico, ubicado en Argentina", la plataforma del sitio, Meta y las herramientas activas; el proveedor (Argentina) y HighLevel (Estados Unidos) en países adecuados según la SIC, además del contrato de transmisión—; API de Conversiones; conservación —máximo 2 meses desde el último contacto para quien no compra; para quien compra, lo que exijan las normas contables, tributarias y de protección al consumidor—; derechos; cómo ejercerlos con plazos y la SIC; mayoría de edad; seguridad; cambios y vigencia; sección del país), `terminos.js` (quién vende y relación con Apple según el perfil, cotizador, precios e impuestos, garantía, retracto, entrega, homologados si aplica, mayoría de edad, marcas, proveedor tecnológico, ley aplicable, datos personales, cambios), `cookies.js` (qué son, necesarias, medición y publicidad con una tabla por herramienta activa, GPC, cómo cambiar) y `aviso.js` (2–3 líneas con el enlace).
 - **Cláusula propia:** cada documento puede llevar una al final, en "Condiciones adicionales de la tienda".
 - **Módulos por país** (`assets/js/legal/paises/`): `indice.js` lista los 18 países de Hispanoamérica y Brasil; solo Colombia está disponible (`co.js`: SIC, tipos de documento, plazos de la Ley 1581, derechos, transmisión, retracto, garantía, horarios de la Ley 2300). Brasil queda en "Necesita el sitio en portugués.".
 - **Cómo sumar un país:** 1) copiar `co.js` con los datos del otro país (con sus fuentes en `legal/FUENTES.md`); 2) importarlo en `indice.js` y ponerle `estado: "disponible"` y `modulo`; 3) migración nueva que cambie `legal_faltantes()` (países permitidos y sus tipos de documento) y, si hace falta, el check de `legal_doc_tipo`; 4) `errorLegales` y `faltantes()` iguales; 5) pruebas (motor y `comparar-faltantes.mjs`).
@@ -1114,7 +1114,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 ```bash
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
-node tests/legal/motor.test.mjs                            # motor legal (12 casos, sin navegador)
+node tests/legal/motor.test.mjs                            # motor legal (13 casos, sin navegador)
 NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 63 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (14 casos) + tipos
@@ -1296,7 +1296,7 @@ bash tests/supabase-local/levantar.sh detener
 | El ID del píxel de Meta es obligatorio para publicar | Propuesta aprobada: la política nombra el píxel y la API de Conversiones como siempre activos. |
 | La versión y la fecha las pone el servidor | Así no se pueden falsear desde el navegador; el panel las calcula igual para la vista previa. |
 | Devolución del retracto en 15 días calendario (no 30) | La Ley 2439 de 2024 bajó el plazo a 15 (ver `legal/FUENTES.md`); 15 cumple también la norma anterior. |
-| Solo Estados Unidos en la lista de países adecuados | Argentina no se pudo confirmar en la lista de la SIC; la transmisión al proveedor se apoya en el contrato de transmisión. |
+| Argentina y Estados Unidos, países adecuados (ronda 3, A3) | La lista de la SIC incluye a los países declarados adecuados por la Comisión Europea, y Argentina lo está (Decisión 2003/490/CE). La política lo dice del proveedor (Argentina) y de HighLevel (Estados Unidos), además del contrato de transmisión. Antes solo se afirmaba Estados Unidos. |
 | Duraciones de cookies solo si están verificadas | Pedido de Jared. Meta y Clarity van sin duración. |
 | El banner espera a que bajen los filtros en celular | Pedido: no tapar el título ni los filtros. En 360 × 800 los filtros llegan casi al borde. |
 | Clarity con `consentv2` y TikTok sin métodos de consentimiento | `consentv2` es el que recomienda Microsoft; los de TikTok no se encontraron en su documentación oficial, así que TikTok simplemente no se carga sin permiso. |
@@ -1320,7 +1320,7 @@ bash tests/supabase-local/levantar.sh detener
 
 **Pendientes del documento del prompt:**
 
-- [ ] **Fuentes legales que no se pudieron abrir** desde el entorno (se verificaron con el buscador o se usaron como las dio Jared): ver `legal/FUENTES.md` (transmisión, cookies, Ley 2300, garantía, RNBD, plazo de devolución del retracto, Argentina en la lista de la SIC).
+- [ ] **Fuentes legales que no se pudieron abrir** desde el entorno (se verificaron con el buscador o se usaron como las dio Jared): ver `legal/FUENTES.md` (transmisión, cookies, Ley 2300, garantía, RNBD; el artículo de Asuntos Legales sobre la lista de la SIC).
 - [ ] **Cookies del script de seguimiento externo de GHL:** no se verificaron; si se activa, agregarlo a la Política de cookies.
 - [ ] Probar en GHL los campos de consentimiento y la guía de la sección 12.3.
 - [ ] Que el abogado confirme si publicar capturas de clientes (aun tapadas) necesita autorización por escrito; el panel pide la casilla en cada reseña, pero no guarda la autorización.
@@ -1379,6 +1379,14 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 21/10/2026 · Ronda 3, A3: Argentina en la lista de países adecuados de la SIC
+
+- **Pedido de Jared:** la lista de las Circulares 5 y 8 de 2017 y 2 de 2018 incluye a los países declarados adecuados por la Comisión Europea, entre ellos Argentina; la transmisión al proveedor tecnológico (Argentina) y a la plataforma (Estados Unidos) va a países adecuados, además del contrato de transmisión.
+- **Verificado** con el buscador: el texto de la Circular 2 de 2018 incluye a los países declarados adecuados por la Comisión Europea, y la Decisión 2003/490/CE declaró adecuada a Argentina (EUR-Lex). El artículo de Asuntos Legales no se pudo abrir.
+- **Hecho:** `co.js` (`paisesAdecuados` y el texto de transmisión), `legal/FUENTES.md` (fuente 4), decisión de la sección 16.
+- **Pruebas:** caso nuevo en `tests/legal/motor.test.mjs` (13 casos).
+- **Verificación:** `node tests/legal/motor.test.mjs` OK y `node tests/documentacion.mjs` OK.
 
 ### 21/10/2026 · Ronda 3, A2: entrega en máximo 30 días si no hay plazo
 

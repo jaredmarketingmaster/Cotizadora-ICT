@@ -36,8 +36,9 @@ export const CO = {
     ],
     // FUENTE 3: transmisión a encargados con contrato de transmisión.
     transmision: "el Decreto 1074 de 2015 (artículo 2.2.2.25.5.2)",
-    // FUENTE 4, solo lo que se pudo confirmar (ver legal/FUENTES.md).
-    paisesAdecuados: ["Estados Unidos"],
+    // FUENTE 4: Estados Unidos (Circular 005 de 2017) y Argentina (declarada
+    // adecuada por la Comisión Europea, que la lista de la SIC incluye).
+    paisesAdecuados: ["Argentina", "Estados Unidos"],
     // FUENTE 10
     rnbd: "solo están obligadas las sociedades y entidades sin ánimo de lucro con activos de más de 100.000 UVT y las personas jurídicas públicas"
   },
@@ -80,7 +81,7 @@ export const CO = {
       `- Si no queda conforme, puede presentar una queja ante la ${SIC}: [${SITIO_SIC.replace("https://", "")}](${SITIO_SIC}).`
     ],
     transmision: () => [
-      `Esto es una transmisión de datos a encargados: ellos los tratan por cuenta nuestra y siguiendo nuestras instrucciones. La hacemos con un contrato de transmisión de datos, como lo permite ${CO.datos.transmision}. ${CO.datos.paisesAdecuados.join(" y ")} figura en la lista de países con un nivel adecuado de protección de datos de la SIC.`
+      `Esto es una transmisión de datos a encargados: ellos los tratan por cuenta nuestra y siguiendo nuestras instrucciones. Nuestro proveedor tecnológico (Argentina) y HighLevel (Estados Unidos) están en países con un nivel adecuado de protección de datos según la lista de la SIC. Además, hacemos la transmisión con un contrato de transmisión de datos, como lo permite ${CO.datos.transmision}.`
     ],
     seccion: (ctx) => [
       `En Colombia, el tratamiento de sus datos se rige por ${CO.datos.leyes}. La autoridad es la ${SIC}: [${SITIO_SIC.replace("https://", "")}](${SITIO_SIC}).`,
