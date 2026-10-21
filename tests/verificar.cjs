@@ -1173,6 +1173,53 @@ async function llenarPopup(p) {
     }
   });
 
+  // Aire entre secciones: el pie, el encabezado (título → filtros) y la zona de
+  // equipos, en las dos vistas. Celular: 48 px en el pie, 52 entre el título y
+  // los filtros, 40 arriba de los equipos y 56 abajo. Escritorio: 72, 72, 64 y
+  // 80. Todo sale de --t-espacio, así que en "compacto" baja al 72 %.
+  for (const [ancho, alto, m] of [[360, 800, { pie: 48, gap: 18, titulo: 52, arriba: 40, abajo: 56 }], [1440, 900, { pie: 72, gap: 24, titulo: 72, arriba: 64, abajo: 80 }]]) {
+    await caso(`espacios: ${ancho}px, pie, encabezado y zona de equipos (cuadrícula y carrusel, normal y compacto)`, async () => {
+      const p = await nueva(ancho, alto);
+      await ir(p);
+      for (const vista of ["cuadricula", "carrusel"]) {
+        for (const [tamano, k] of [["normal", 1], ["compacto", 0.72]]) {
+          await editarDemo(p, (e, x) => Object.assign(e.tienda, { vista_equipos: x[0], tamano_texto: x[1], ciudad: "Medellín" }), [vista, tamano]);
+          await ir(p);
+          const r = await p.evaluate(() => {
+            const caja = (s) => document.querySelector(s).getBoundingClientRect();
+            const pie = getComputedStyle(document.querySelector(".pie"));
+            const equipos = caja("#vista-equipos");
+            return {
+              pieArriba: parseFloat(pie.paddingTop), pieAbajo: parseFloat(pie.paddingBottom),
+              gap: parseFloat(getComputedStyle(document.querySelector(".pie-grilla")).rowGap),
+              titulo: caja(".filtros").top - caja(".titulo").bottom,
+              arriba: equipos.top - caja(".filtros").bottom,
+              abajo: caja("#info-tienda").top - equipos.bottom,
+              infoVisible: !document.querySelector("#info-tienda").hidden,
+              carrusel: document.querySelector("#vista-equipos").classList.contains("carrusel-equipos"),
+            };
+          });
+          const donde = `${vista} ${tamano}`;
+          assert.equal(r.carrusel, vista === "carrusel", `${donde}: vista`);
+          assert.ok(r.infoVisible, `${donde}: la información de la tienda se ve`);
+          const cerca = (v, esperado, que) => assert.ok(Math.abs(v - esperado) <= 1.5, `${donde}: ${que} = ${v.toFixed(1)} px (se esperaba ${esperado.toFixed(1)})`);
+          cerca(r.pieArriba, m.pie * k, "pie arriba");
+          cerca(r.pieAbajo, m.pie * k, "pie abajo");
+          cerca(r.gap, m.gap * k, "separación entre bloques del pie");
+          cerca(r.titulo, m.titulo * k, "título → filtros");
+          cerca(r.arriba, m.arriba * k, "filtros → equipos");
+          // Abajo: el padding de la zona más el margen de la información de la
+          // tienda (en carrusel, debajo del indicador "N de M").
+          cerca(r.abajo, m.abajo * k, "equipos → información de la tienda");
+          const desborde = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+          assert.ok(desborde <= 0, `${donde}: desborda ${desborde}px`);
+        }
+      }
+      assert.deepEqual(p.errores, []);
+      await p.context().close();
+    });
+  }
+
   await caso("pie: fondo con el color secundario y texto AA en claro y oscuro, con cualquier color", async () => {
     const p = await nueva(390, 844);
     await ir(p);

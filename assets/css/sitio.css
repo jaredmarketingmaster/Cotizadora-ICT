@@ -29,7 +29,9 @@
   isolation: isolate;
   background: var(--secundario);
   color: var(--sobre-secundario);
-  padding: calc(20px * var(--t-espacio)) 0 calc(92px * var(--t-espacio));
+  /* Abajo deja aire entre el título y la tarjeta de filtros, que sube 64 px:
+     unos 52 px en celular y 72 px en escritorio (× --t-espacio). */
+  padding: calc(20px * var(--t-espacio)) 0 calc(clamp(116px, 10vw, 136px) * var(--t-espacio));
   overflow: hidden;
 }
 /* Brillos decorativos (en ::before y ::after para no tocar el contraste del
@@ -245,7 +247,12 @@
 }
 
 /* --- Galería --------------------------------------------------------------- */
-.galeria-envoltura { padding-block: calc(28px * var(--t-espacio)) 8px; outline: none; }
+.galeria-envoltura {
+  /* Aire arriba y abajo de la zona de equipos (cuadrícula y carrusel):
+     40 px en celular, 64 px en escritorio (× --t-espacio). */
+  padding-block: calc(clamp(40px, 5vw, 64px) * var(--t-espacio));
+  outline: none;
+}
 .galeria {
   position: relative;
   display: grid; gap: calc(14px * var(--t-espacio));
@@ -645,8 +652,8 @@
 
 /* --- Información de la tienda ---------------------------------------------- */
 .info-tienda {
-  margin-top: calc(40px * var(--t-espacio));
-  padding-block: calc(40px * var(--t-espacio));
+  margin-top: calc(16px * var(--t-espacio));
+  padding-block: calc(clamp(40px, 5vw, 64px) * var(--t-espacio));
   background: var(--superficie);
 }
 .info-grilla { display: grid; gap: 24px; }
@@ -664,11 +671,13 @@
    --sobre-secundario-suave, calculados en tema.js con 4,5:1 o más (claro y
    oscuro, con cualquier color). */
 .pie {
-  padding-block: calc(32px * var(--t-espacio)) calc(calc(40px * var(--t-espacio)) + env(safe-area-inset-bottom));
+  /* 48 px arriba y abajo en celular, 72 px en escritorio (× --t-espacio) */
+  --pie-aire: calc(clamp(48px, 6vw, 72px) * var(--t-espacio));
+  padding-block: var(--pie-aire) calc(var(--pie-aire) + env(safe-area-inset-bottom));
   background: var(--secundario);
   color: var(--sobre-secundario-suave);
 }
-.pie-grilla { display: grid; gap: 10px; }
+.pie-grilla { display: grid; gap: calc(clamp(18px, 2vw, 24px) * var(--t-espacio)); }
 .pie-tienda { color: var(--sobre-secundario); font-weight: 700; }
 .pie-enlaces { display: flex; flex-wrap: wrap; gap: 4px 20px; }
 .pie-enlaces a { display: inline-flex; align-items: center; min-height: 44px; color: var(--sobre-secundario); font-weight: 600; }

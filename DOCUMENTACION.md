@@ -4,7 +4,7 @@
 >
 > **Este documento se mantiene al día con cada cambio.** El verificador (`node tests/documentacion.mjs`) falla si algún archivo del repo no figura en la sección 5, y el hook de Claude Code (`.claude/hooks/documentacion.sh`) no deja terminar un trabajo con cambios sin actualizarlo. Ver sección 18.
 
-**Última actualización:** 20/10/2026 · **Rama de trabajo:** `claude/gallant-euler-ezco6g` · **Repo:** <https://github.com/jaredmarketingmaster/Cotizadora-ICT> (público)
+**Última actualización:** 21/10/2026 · **Rama de trabajo:** `claude/gallant-euler-ezco6g` · **Repo:** <https://github.com/jaredmarketingmaster/Cotizadora-ICT> (público)
 
 ---
 
@@ -283,7 +283,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | Archivo | Qué es |
 |---|---|
 | `assets/css/base.css` (≈264) | Base compartida por el sitio y el panel: <ul><li>**Variables de diseño** (`--primario`, `--sobre-primario`, `--primario-texto`, `--secundario`, `--sobre-secundario`, superficies, bordes, textos, error, éxito, aviso, radios, sombras y curvas), con su versión `[data-tema="oscuro"]`.</li><li>Reinicio y foco visible.</li><li>Botones (`.boton--primario`, `--secundario`, `--suave`, `--peligro`, `--enlace`, `.boton-icono`), campos (`.entrada`, `.campo`, `.error-campo`, `.casilla`) y etiquetas (`.etiqueta-pildora`, `.etiqueta-demo`).</li><li>Spinner y reglas de `prefers-reduced-motion`.</li></ul> |
-| `assets/css/sitio.css` (≈610) | Sitio público: <ul><li>Franja demo y encabezado (el brillo decorativo va en `::before` para no tocar el contraste).</li><li>Filtros: segmentado, lista desplegable propia y chips.</li><li>Galería (1 → 2 → 3 → 4 columnas) y tarjetas.</li><li>Detalle y carrusel (scroll-snap).</li><li>Hoja: pantalla completa desde abajo en celular, ventana centrada en escritorio desde 900 px.</li><li>Barras de compra (apiladas por debajo de 480 px).</li><li>Información de la tienda, pop-up y **pie con el color secundario** de la tienda (texto `--sobre-secundario` y `--sobre-secundario-suave`).</li><li>Animaciones de apertura y páginas legales.</li><li>**Tamaño del texto** (`data-tamano` en `<html>`): variables `--t-titulo` y `--t-espacio`; Grande pone la raíz en 112,5 %.</li></ul> |
+| `assets/css/sitio.css` (≈610) | Sitio público: <ul><li>Franja demo y encabezado (el brillo decorativo va en `::before` para no tocar el contraste).</li><li>Filtros: segmentado, lista desplegable propia y chips.</li><li>Galería (1 → 2 → 3 → 4 columnas) y tarjetas.</li><li>Detalle y carrusel (scroll-snap).</li><li>Hoja: pantalla completa desde abajo en celular, ventana centrada en escritorio desde 900 px.</li><li>Barras de compra (apiladas por debajo de 480 px).</li><li>Información de la tienda, pop-up y **pie con el color secundario** de la tienda (texto `--sobre-secundario` y `--sobre-secundario-suave`).</li><li>Animaciones de apertura y páginas legales.</li><li>**Tamaño del texto** (`data-tamano` en `<html>`): variables `--t-titulo` y `--t-espacio`; Grande pone la raíz en 112,5 %.</li><li>**Aire entre secciones** (todo multiplicado por `--t-espacio`): pie con 48 px arriba y abajo en celular y 72 px en escritorio (`--pie-aire`) y bloques separados 18–24 px; 52–72 px entre el título y los filtros; 40–64 px arriba y abajo de la zona de equipos (las dos vistas).</li></ul> |
 | `assets/css/panel.css` (≈307) | Panel, pensado primero para celular: <ul><li>Acceso y barra superior pegajosa.</li><li>Navegación en pastillas desplazables.</li><li>Bloques, estadísticas, avisos e interruptor.</li><li>Lista de inventario: tarjetas en celular, filas desde 1000 px.</li><li>Formulario por pasos y acciones pegajosas.</li><li>Fotos, filas de ficha, catálogo, vista previa de marca y recorte del logo.</li><li>Lista editable, usuarios, aviso flotante y ventana de confirmación.</li></ul> |
 
 ### 5.4 JavaScript compartido (`assets/js/`)
@@ -362,7 +362,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈1450) | Suite de aceptación en **modo demo** con Playwright: **44 casos** (45 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). | Ver sección 14. |
+| `tests/verificar.cjs` (≈1450) | Suite de aceptación en **modo demo** con Playwright: **46 casos** (47 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). | Ver sección 14. |
 | `tests/verificar-supabase.cjs` (≈311) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **9 casos**. Reemplaza `config.js` en el navegador y puede servir un supabase-js local (`ICT_SUPABASE_JS`). |
 | `tests/documentacion.mjs` | Verificador de este documento: falla si algún archivo versionado no aparece en la sección 5. |
 | `tests/sql/probar.sh` | Crea un Postgres temporal, carga la imitación de Supabase y todas las migraciones en orden, compara la semilla con `semilla.js` y corre `pruebas.sql`. Antes de cada migración corre `tests/sql/antes_<migración>.sql` si existe. |
@@ -921,6 +921,10 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
   - **Botón principal:** sombra de su color, filo de luz arriba, brillo que cruza al pasar el mouse (decorativo, detrás del texto) y presión táctil (`scale(.98)`).
   - **Carga:** tarjetas esqueleto con la forma de una tarjeta (foto y líneas) y un brillo que pasa, del mismo alto que antes (sin saltos).
   - **Pie:** el de B1.
+- **Aire entre secciones** (pedido de Jared, ronda 2, punto A): sale de `--t-espacio`, así que el tamaño Compacto lo baja al 72 %.
+  - Pie: 48 px arriba y abajo en celular y 72 px en escritorio (`clamp(48px, 6vw, 72px)`, más el área segura abajo); bloques separados 18 px en celular y 24 px en escritorio.
+  - Encabezado: el título queda a 52 px de la tarjeta de filtros en celular y a 72 px en escritorio.
+  - Zona de equipos (cuadrícula y carrusel): 40 px arriba y abajo en celular, 64 px en escritorio; la información de la tienda suma 16 px de margen.
   - Con `prefers-reduced-motion`: sin traslados ni escalas (título, presión, indicador, carrusel, aperturas y cierres son directos); se mantienen colores y sombras.
 - **Rendimiento:**
   - Sin librerías en el sitio público.
@@ -947,7 +951,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 ```bash
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 44 casos en modo demo (Playwright + Chromium)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 46 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (10 casos) + tipos
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
@@ -960,7 +964,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 - `ICT_CAPTURAS=1`: además guarda capturas en `tests/capturas/` y corre el caso **capturas de diseño**: 360 y 1440 px × claro y oscuro × cuadrícula y carrusel × color por defecto y primario amarillo, más el detalle y el pop-up, en `tests/capturas/diseno/<etapa>-….png`. `ICT_CAPTURAS_ETAPA` pone la etapa (por ejemplo `antes` o `despues`). La carpeta no se sube al repo.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (44 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (46 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
@@ -978,6 +982,7 @@ node tests/documentacion.mjs                               # este documento cubr
 14. Gesto táctil real en el carrusel y cierre de la hoja con el gesto.
 14b. **Vista Carrusel** (8 casos): elegirla en Mi tienda cambia el sitio (mismas tarjetas, orden, contador y detalle; tocar una vecina la centra, la del centro abre el detalle; flechas de 44 px o más con foco visible); bucle en los dos sentidos con flechas, teclado, mouse, trackpad y dedo; 1 tarjeta sin flechas ni bucle, 2 tarjetas con una sola vecina, el filtro vuelve a la primera y el estado vacío; sin scroll horizontal y con altura estable a 320, 360, 768 y 1440 px; con reduced-motion, sin animaciones.
 15. Sin Apple: ni imágenes en el repo, ni la manzana U+F8FF, ni referencias, y solo recursos externos de Google Fonts.
+15b. **Espacios** (2 casos, 360 y 1440 px): mide en píxeles el relleno del pie y la separación de sus bloques, el aire entre el título y los filtros y arriba y abajo de la zona de equipos, en cuadrícula y carrusel, con tamaño Normal y Compacto (72 %), sin scroll horizontal.
 16. Contraste AA en 4 combinaciones: claro, oscuro, amarillo sobre blanco, y primario oscuro en tema oscuro. **Pie:** el fondo es el secundario y todo su texto pasa AA en claro y oscuro con 6 secundarios (incluidos gris medio, amarillo y azul).
 17. Textos de 16 px o más y zonas táctiles de 44 px, en el sitio, el pop-up y las legales, con los **tres tamaños de texto**. Compacto deja el cuerpo en 16 px y achica títulos y precios; Grande pone el cuerpo en 18 px. Elegir el tamaño en Mi tienda lo cambia en el sitio y no en el panel.
 18. Lista de modelos con teclado y buscador cuando hay más de 8.
@@ -1171,6 +1176,14 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 21/10/2026 · A: más aire entre las secciones del sitio
+
+- **Pedido de Jared (ronda 2, punto A):** más espacio en el pie (unos 48 px arriba y abajo en celular, unos 72 px en escritorio, y más separación entre sus bloques), más margen entre el título del encabezado y la tarjeta de filtros, y más margen arriba y abajo de la zona de equipos en las dos vistas, con los tokens de espacio existentes; sin scroll horizontal a 320, 360, 768 y 1440 px; altura estable del carrusel.
+- **Hecho:** solo `assets/css/sitio.css`, todo multiplicado por `--t-espacio` (ver sección 13): pie 48 → 72 px (`--pie-aire`) y bloques 18 → 24 px; título → filtros 28 → 52 px (celular) y 72 px (escritorio); zona de equipos 28 / 8 px → 40 px (celular) y 64 px (escritorio); margen de la información de la tienda 40 → 16 px, porque ahora el aire lo da la zona de equipos.
+- **Pruebas:** dos casos nuevos en `verificar.cjs` ("espacios", 360 y 1440 px) que miden cada margen en las dos vistas y con tamaño Normal y Compacto. Fallan con el CSS anterior (pie de 32 px) y pasan con el nuevo. Las pruebas de scroll horizontal y altura estable del carrusel siguen igual y pasan.
+- **Capturas:** `tests/capturas/diseno/antes-*.png` y `a-despues-*.png` (no se suben al repo).
+- **Verificación:** `tests/verificar.cjs` 46/46 (47 con capturas) y `node tests/documentacion.mjs` OK.
 
 ### 20/10/2026 · C: rediseño premium del sitio público
 
