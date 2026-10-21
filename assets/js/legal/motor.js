@@ -13,7 +13,7 @@
 // =============================================================================
 
 import { frasesPagos, PLATAFORMA_POR_DEFECTO } from "../datos/comun.js";
-import { whatsappValido } from "../datos/paises.js";
+import { whatsappValido, datosPais } from "../datos/paises.js";
 import { CODIGOS_PAISES, PAISES_DISPONIBLES, modulosDe, documentosDe } from "./paises/indice.js";
 import { activas, idValido, OPCIONALES, HERRAMIENTAS } from "./herramientas.js";
 import * as privacidad from "./plantillas/privacidad.js";
@@ -68,9 +68,12 @@ export function formatearTelefono(t) {
   return m ? `+57 ${m[1]} ${m[2]} ${m[3]}` : d;
 }
 
+// "Los textos legales para Argentina todavía no están disponibles."
+export const textoSinModulo = (pais) => `Los textos legales para ${datosPais(pais).codigo === pais ? datosPais(pais).nombre : "el país de la tienda"} todavía no están disponibles.`;
+
 // --- Lo que falta para publicar --------------------------------------------------
 // { paso (1 a 6 del asistente, o 0 = Mi tienda), campo, texto }. El mismo criterio está en
-// legal_faltantes() de 0016_legales_asistente.sql.
+// legal_faltantes() del SQL (la última versión, 0019_legal_pais_tienda.sql).
 export function faltantes(t) {
   const f = [];
   const falta = (paso, campo, que) => f.push({ paso, campo, texto: que });
@@ -97,6 +100,8 @@ export function faltantes(t) {
   const paises = t.legal_paises || [];
   if (!paises.length) falta(3, "legal_paises", "Los países donde vende");
   else if (paises.some((p) => !PAISES_DISPONIBLES.includes(p))) falta(3, "legal_paises", "Solo se pueden elegir países disponibles");
+  // El país de la tienda (Mi tienda) tiene que tener su módulo legal.
+  if (!PAISES_DISPONIBLES.includes(t.pais)) falta(3, "pais", textoSinModulo(t.pais));
   // Paso 4
   const impuestos = Array.isArray(t.legal_impuestos) ? t.legal_impuestos : [];
   if (!impuestos.length) falta(4, "legal_impuestos", "Los impuestos que se muestran junto al precio");

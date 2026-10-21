@@ -393,6 +393,12 @@ select.entrada { appearance: none; -webkit-appearance: none; padding-right: 40px
 .bloque--grupo > legend { float: left; width: 100%; margin: 0 0 4px; padding: 0; font-size: 1.1875rem; font-weight: 800; }
 .bloque--grupo > legend + * { clear: both; }
 
+/* Legales: el país de la tienda sin módulo (paso 3) */
+.aviso-legal { display: grid; gap: 6px; padding: 12px 14px; border-radius: 10px; background: var(--aviso-fondo); color: var(--aviso); }
+.aviso-legal p { margin: 0; }
+.aviso-legal p:first-child { font-weight: 700; }
+.aviso-legal a { color: inherit; font-weight: 700; }
+
 /* Reseñas (resenas.js) */
 .aviso-datos { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--aviso-fondo); color: var(--aviso); font-weight: 700; }
 .nueva-resena { display: grid; gap: 14px; margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--borde); }

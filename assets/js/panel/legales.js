@@ -15,8 +15,8 @@
 // =============================================================================
 
 import { formatoBasico } from "../utils.js";
-import { PASOS, PERFILES, ENTREGAS, DOCUMENTOS, MARCAS, faltantes, generar, publicar, conVigencia, perfilDe, declaraApple, necesitaLocal, fechaDMA, hoyColombia, contexto } from "../legal/motor.js";
-import { PAISES, documentosDe, modulosDe } from "../legal/paises/indice.js";
+import { PASOS, PERFILES, ENTREGAS, DOCUMENTOS, MARCAS, textoSinModulo, faltantes, generar, publicar, conVigencia, perfilDe, declaraApple, necesitaLocal, fechaDMA, hoyColombia, contexto } from "../legal/motor.js";
+import { PAISES, PAISES_DISPONIBLES, documentosDe, modulosDe } from "../legal/paises/indice.js";
 import { HERRAMIENTAS, OPCIONALES, idValido } from "../legal/herramientas.js";
 import { independiente } from "../legal/plantillas/terminos.js";
 import { $, $$, esc, avisar, conBoton } from "./ui.js";
@@ -163,6 +163,9 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
     },
 
     3: () => `<h2 id="l-titulo">3. Países donde vende</h2>
+      ${PAISES_DISPONIBLES.includes(t.pais) ? "" : `<div class="aviso-legal" id="l-pais" tabindex="-1" role="note">
+        <p>${esc(textoSinModulo(t.pais))}</p>
+        <p>El país de la tienda se elige en <a href="#/tienda">Mi tienda</a>. Mientras tanto no se pueden publicar los textos legales.</p></div>`}
       ${opciones("legal_paises", "Elija los países", PAISES.map((p) => ({
         valor: p.codigo, texto: p.nombre, desactivado: p.estado !== "disponible" && !(t.legal_paises || []).includes(p.codigo),
         nota: p.estado === "disponible" ? "" : p.nota || "Próximamente"

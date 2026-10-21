@@ -175,6 +175,15 @@ begin
   update public.tienda set pais = 'co', whatsapp = '573001234567';
 end $$;
 
+-- 0i. Migración 0019: sin módulo legal para el país de la tienda, falta "pais".
+do $$
+begin
+  assert not (select 'pais' = any (public.legal_faltantes(t)) from public.tienda t), 'Colombia tiene módulo';
+  update public.tienda set pais = 'ar', whatsapp = '5491123456789';
+  assert (select 'pais' = any (public.legal_faltantes(t)) from public.tienda t), 'Argentina todavía no';
+  update public.tienda set pais = 'co', whatsapp = '573001234567';
+end $$;
+
 -- 0b. Migración 0006: el modelo que agregó la agencia (antes_0006) quedó al
 -- final, después del Duo, en el orden que tenía.
 do $$

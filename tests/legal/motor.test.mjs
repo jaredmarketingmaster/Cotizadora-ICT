@@ -174,4 +174,15 @@ caso("los valores iniciales se pueden guardar y los checks de 0016 rechazan lo q
   }
 });
 
+caso("B3: si el país de la tienda no tiene módulo legal, falta en el paso 3 y no se genera", () => {
+  for (const [pais, nombre] of [["ar", "Argentina"], ["br", "Brasil"], ["mx", "México"]]) {
+    const t = { ...base(), pais };
+    const f = faltantes(t).filter((x) => x.campo === "pais");
+    assert.deepEqual(f, [{ paso: 3, campo: "pais", texto: `Los textos legales para ${nombre} todavía no están disponibles.` }]);
+    assert.throws(() => generar(t), /Faltan datos/);
+  }
+  assert.ok(!claves(base()).includes("pais"), "Colombia tiene módulo");
+  assert.ok(claves({ ...base(), pais: undefined }).includes("pais"), "sin país también falta");
+});
+
 console.log(`\nOK: ${casos} casos del motor legal`);

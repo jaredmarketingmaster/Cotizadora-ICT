@@ -1,4 +1,4 @@
-// Compara legal_faltantes() del SQL (0016) con faltantes() de motor.js, con
+// Compara legal_faltantes() del SQL (la última versión) con faltantes() de motor.js, con
 // la tienda de prueba y variantes que rompen cada regla.
 //   node tests/sql/comparar-faltantes.mjs sql <raíz>              → imprime el SQL
 //   node tests/sql/comparar-faltantes.mjs comparar <raíz> <json>  → compara
@@ -37,6 +37,8 @@ const VARIANTES = [
   { legal_retracto_canal: "whatsapp" },
   { legal_paises: ["co", "mx"] },
   { legal_paises: [] },
+  { pais: "ar" },
+  { pais: "br", legal_paises: ["co", "br"] },
   { legal_correo: "datos@", legal_telefono: "12" },
   { nombre: "  ", legal_entrega: [], legal_entrega_zonas: "", legal_homologados: "", plataforma_sitio: "" },
   { legal_clausula_privacidad: "Texto con [PENDIENTE: dato].", legal_clausula_aviso: "Hola {{nombre}}." }

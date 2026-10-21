@@ -1697,7 +1697,7 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
-  await caso("B1: Mi tienda elige el país; el WhatsApp de la tienda sigue su formato (y la capa de datos lo exige)", async () => {
+  await caso("B1 y B3: Mi tienda elige el país; el WhatsApp sigue su formato (y la capa de datos lo exige); sin módulo legal, el paso 3 lo dice", async () => {
     const p = await nueva(1280, 900);
     await entrarPanel(p, "gestor@demo.co");
     await p.goto(`${BASE}/admin/#/tienda`);
@@ -1716,6 +1716,17 @@ async function llenarPopup(p) {
     await p.waitForSelector("text=Guardado");
     let t = await p.evaluate((c) => JSON.parse(localStorage.getItem(c)).tienda, CLAVE_DEMO);
     assert.deepEqual([t.pais, t.whatsapp], ["ar", "5491123456789"]);
+    // B3: Argentina no tiene módulo legal: lo dicen Mi tienda y el paso 3, y falta para publicar
+    assert.match(await p.textContent("#pais-ayuda"), / Los textos legales para Argentina todavía no están disponibles\.$/);
+    await p.goto(`${BASE}/admin/#/legales/3`);
+    await p.waitForSelector("#l-pais");
+    assert.equal(await p.textContent("#l-pais p"), "Los textos legales para Argentina todavía no están disponibles.");
+    assert.equal(await p.getAttribute("#l-pais a", "href"), "#/tienda");
+    await p.goto(`${BASE}/admin/#/legales/6`);
+    await p.waitForSelector("#l-faltan li");
+    assert.ok((await p.locator("#l-faltan li").allTextContents()).some((x) => x.startsWith("Los textos legales para Argentina todavía no están disponibles.")));
+    await p.goto(`${BASE}/admin/#/tienda`);
+    await p.waitForSelector("#pais");
     // Un país sin formato verificado: prefijo y número de 8 a 15 dígitos
     await p.selectOption("#pais", "gt");
     assert.equal(await p.textContent("#whatsapp-ayuda"), "Formato internacional sin «+»: 502 y el número, de 8 a 15 dígitos en total.");

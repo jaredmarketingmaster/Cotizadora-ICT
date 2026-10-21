@@ -6,6 +6,8 @@
 
 import { hexValido, soloDigitos, correoValido, contraste, reducirMovimiento } from "../utils.js";
 import { PAISES_TIENDA, datosPais, whatsappValido } from "../datos/paises.js";
+import { PAISES_DISPONIBLES } from "../legal/paises/indice.js";
+import { textoSinModulo } from "../legal/motor.js";
 import { variablesTema, aplicarTema, FONDOS } from "../tema.js";
 import { logoGenericoSVG } from "../ilustracion.js";
 import { $, $$, esc, avisar, conBoton, campoTexto, marcarError, enfocarPrimerError } from "./ui.js";
@@ -131,7 +133,7 @@ export async function dibujar(vista, ctx) {
   // --- País: moneda, prefijo y zona horaria ---
   function pintarPais() {
     const p = datosPais($("#pais").value);
-    $("#pais-ayuda").textContent = `Moneda: ${p.moneda} (${p.simbolo}). Prefijo del celular: +${p.celular.internacional}. Zona horaria: ${p.zona}. Define cómo se muestran los precios y las fechas, y cómo se validan los celulares.`;
+    $("#pais-ayuda").textContent = `Moneda: ${p.moneda} (${p.simbolo}). Prefijo del celular: +${p.celular.internacional}. Zona horaria: ${p.zona}. Define cómo se muestran los precios y las fechas, y cómo se validan los celulares.${PAISES_DISPONIBLES.includes(p.codigo) ? "" : ` ${textoSinModulo(p.codigo)}`}`;
     $("#whatsapp-ayuda").textContent = ayudaWhatsapp(p.codigo);
   }
   $("#pais").addEventListener("change", () => { ctx.sucio = true; pintarPais(); });
