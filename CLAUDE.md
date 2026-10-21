@@ -90,7 +90,7 @@ Después de correr la suite:
 
 Está en la sección "Pendientes" del README:
 
-- Textos legales.
+- Revisión del abogado de los textos legales base (marcas `[PENDIENTE: …]`).
 - Confirmar los nombres del catálogo.
 - Completar en las fichas técnicas lo que la fuente no trae.
 - Plan de Supabase.

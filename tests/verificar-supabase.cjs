@@ -90,12 +90,21 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
   if (process.env.HTTPS_PROXY) args.push(`--proxy-server=${process.env.HTTPS_PROXY}`, "--proxy-bypass-list=127.0.0.1;localhost");
   navegador = await chromium.launch({ args });
 
-  await caso("sitio: carga los datos públicos con la RPC", async () => {
+  await caso("sitio: carga los datos públicos con la RPC (y los textos legales base, sin marcas)", async () => {
     const p = await pagina();
     await p.goto(`${BASE}/`, { waitUntil: "networkidle" });
     assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
     assert.equal(await p.locator(".galeria > .tarjeta").count(), 5);
     assert.ok(await p.isVisible("#franja-demo"));
+    // Textos legales base (0015) por la RPC: sin marcas y "Texto en revisión."
+    for (const ruta of ["/privacidad/", "/terminos/"]) {
+      await p.goto(`${BASE}${ruta}`, { waitUntil: "networkidle" });
+      await p.waitForFunction(() => !document.querySelector("#legal-texto[aria-busy]"));
+      const texto = await p.textContent("#legal-texto");
+      assert.ok(!/\[PENDIENTE|\{\{/.test(texto), `${ruta}: sin marcas`);
+      assert.equal(await p.textContent(".legal-revision"), "Texto en revisión.");
+    }
+    assert.match(await p.textContent("#legal-texto"), /Precios y disponibilidad/);
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });

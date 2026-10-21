@@ -9,6 +9,7 @@
 // =============================================================================
 
 import { CATALOGO, COLORES, DEMO_EQUIPOS, filasDeFuente } from "./semilla.js";
+import { PRIVACIDAD_BASE, TERMINOS_BASE, AUTORIZACION_BASE, HERRAMIENTAS_BASE } from "./legales-base.js";
 import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, MENSAJE_MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, elegir } from "./comun.js";
 import { hexValido, whatsappTiendaValido, sesion, esperar } from "../utils.js";
 
@@ -51,7 +52,8 @@ function estadoInicial() {
       correo_contacto: "", instagram_url: "", facebook_url: "", tiktok_url: "", logo: "", favicon: "",
       color_primario: "#1A73E8", color_secundario: "#0F172A", tema: "claro", texto_entrega: "",
       pagos_otras: [], ...PAGOS_VACIOS, texto_garantia_nuevos: "", texto_garantia_usados: "", etiqueta_precio: "Precio",
-      texto_privacidad: "", texto_terminos: "", texto_autorizacion_datos: "", aviso_marca: "",
+      texto_privacidad: PRIVACIDAD_BASE, texto_terminos: TERMINOS_BASE, texto_autorizacion_datos: AUTORIZACION_BASE, aviso_marca: "",
+      legales_revisados: false, legales_herramientas: [...HERRAMIENTAS_BASE],
       precios_actualizados_en: t, modo_demo: true, tamano_texto: "normal", vista_equipos: "cuadricula",
       mostrar_ficha: true, ficha_ocultas: [], mostrar_resenas: false, titulo_resenas: TITULO_RESENAS, actualizado_en: t
     },
@@ -67,7 +69,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 12;
+const VERSION = 13;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -156,6 +158,16 @@ const MIGRACIONES = {
     e.tienda.mostrar_resenas = false;
     e.tienda.titulo_resenas = TITULO_RESENAS;
     e.resenas = e.resenas || [];
+  },
+  // 0015_legales.sql: textos base solo donde estaban vacíos, la lista de
+  // herramientas y "Un abogado ya revisó estos textos" en no.
+  12(e) {
+    const t = e.tienda;
+    if (!String(t.texto_privacidad || "").trim()) t.texto_privacidad = PRIVACIDAD_BASE;
+    if (!String(t.texto_terminos || "").trim()) t.texto_terminos = TERMINOS_BASE;
+    if (!String(t.texto_autorizacion_datos || "").trim()) t.texto_autorizacion_datos = AUTORIZACION_BASE;
+    t.legales_revisados = false;
+    t.legales_herramientas = [...HERRAMIENTAS_BASE];
   }
 };
 
@@ -307,8 +319,9 @@ function validarTienda(t) {
   // Como validar_pagos (0013)
   const pagos = errorPagos(t);
   if (pagos) throw new ErrorDatos(pagos);
-  // 0014
-  if (typeof t.mostrar_resenas !== "boolean" || typeof t.titulo_resenas !== "string" || t.titulo_resenas.length > 80) {
+  // 0014 y 0015
+  if (typeof t.mostrar_resenas !== "boolean" || typeof t.titulo_resenas !== "string" || t.titulo_resenas.length > 80 ||
+      typeof t.legales_revisados !== "boolean" || !Array.isArray(t.legales_herramientas) || t.legales_herramientas.some((h) => typeof h !== "string")) {
     throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
   }
 }

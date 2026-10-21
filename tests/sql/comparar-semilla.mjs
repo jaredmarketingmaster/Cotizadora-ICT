@@ -26,4 +26,11 @@ assert.deepEqual(sql.demo.map(normal).sort(orden), DEMO_EQUIPOS.map(normal).sort
 const fichas = Object.fromEntries(CATALOGO.filter((m) => m.slug !== "iphone-13").map((m) => [m.slug, filasDeFuente(m.slug)]));
 assert.deepEqual(sql.fichas, fichas, "las fichas del SQL y las de semilla.js no coinciden");
 const nFilas = Object.values(fichas).reduce((n, f) => n + f.length, 0);
-console.log(`OK: semilla igual en SQL y JS (${CATALOGO.length} modelos, ${colores.length} colores, ${DEMO_EQUIPOS.length} equipos demo, ${nFilas} filas de fichas)`);
+// Textos legales base (0015): iguales a legales-base.js donde estaban vacíos;
+// los términos los había escrito la tienda (antes_0015) y no se tocan.
+const L = await import(pathToFileURL(`${raiz}/assets/js/datos/legales-base.js`));
+assert.deepEqual(sql.legales, {
+  privacidad: L.PRIVACIDAD_BASE, terminos: "Términos que ya escribió la tienda.", autorizacion: L.AUTORIZACION_BASE,
+  herramientas: L.HERRAMIENTAS_BASE, revisados: false
+}, "los textos legales del SQL y los de legales-base.js no coinciden");
+console.log(`OK: semilla igual en SQL y JS (${CATALOGO.length} modelos, ${colores.length} colores, ${DEMO_EQUIPOS.length} equipos demo, ${nFilas} filas de fichas y textos legales)`);

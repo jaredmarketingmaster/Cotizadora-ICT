@@ -211,7 +211,7 @@ No pude abrir la documentación de GHL desde este entorno: su dominio está bloq
 - **Generación más nueva** = la que tiene el mayor "orden" en el catálogo. Así el iPhone Duo (Plegable) queda primero y los modelos nuevos se ordenan solos.
 - **Los usados piden batería y estado estético obligatorios**, porque van en la ficha y en el mensaje. El nombre del color también es obligatorio.
 - **Al renombrar un modelo no cambia su slug**, para no romper enlaces de anuncios ya publicados.
-- **Textos de relleno:** si la tienda no cargó la autorización de datos, la casilla dice "Autorizo el tratamiento de mis datos personales." más el enlace a la política. La casilla no puede quedar sin texto. Es propuesta mía: el texto real lo redacta el abogado.
+- **Textos legales base:** la migración `0015` carga una política de privacidad, unos términos y el texto de la casilla del pop-up, solo donde estaban vacíos. Son un borrador para el abogado: lo que debe confirmar va como `[PENDIENTE: …]`, que el sitio nunca muestra (dice "Texto en revisión."). Si la tienda borra la autorización, la casilla dice "Autorizo el tratamiento de mis datos personales." más el enlace a la política.
 - **Si la tienda no tiene WhatsApp:** el pop-up avisa "Esta tienda todavía no tiene WhatsApp configurado." y no ofrece el botón.
 - **HEIC:** el iPhone normalmente lo convierte a JPEG al elegir la foto, y Safari también lo lee. En otros navegadores, un `.heic` se rechaza con un aviso. No agregué un conversor, porque pesa cerca de 1 MB.
 - **Ficha técnica:** viene precargada con lo que traen los archivos de Jared (migración `0012`); lo que no traen queda vacío. En el sitio, "Ver ficha técnica" solo aparece si la tienda la muestra, y solo con las categorías encendidas que tienen valor.
@@ -256,7 +256,7 @@ El CLS es 0,19 con la franja de modo demo, porque aparece al cargar los datos. S
 
 Del documento del prompt:
 
-- [ ] [PENDIENTE: textos de privacidad, términos y autorización de datos (Ley 1581). Los redacta el abogado.]
+- [ ] [PENDIENTE: que el abogado revise los textos legales base (Ley 1581) y complete las marcas [PENDIENTE: …]; la lista está en la sección 17 de DOCUMENTACION.md. Después, marcar "Un abogado ya revisó estos textos" en Legales.]
 - [ ] [PENDIENTE: confirmar en apple.com/co los nombres del catálogo maestro, en especial del 11 al 17, iPhone Air e iPhone Duo.]
 - [ ] [PENDIENTE: completar en las fichas técnicas lo que la fuente no trae (batería en todos, y otros datos que lista la sección 17 de DOCUMENTACION.md).]
 - [ ] [PENDIENTE: confirmar con cada tienda si su precio es de contado, para configurar etiqueta_precio.]

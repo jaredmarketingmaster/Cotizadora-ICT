@@ -212,6 +212,7 @@ async function vistaInicio(vista) {
     !whatsappTiendaValido(tienda.whatsapp) && ["Falta el WhatsApp", "#/tienda"],
     !frasesPagos(tienda).length && ["Faltan las formas de pago", "#/catalogo/pagos"],
     (!tienda.texto_privacidad.trim() || !tienda.texto_terminos.trim() || !tienda.texto_autorizacion_datos.trim()) && ["Faltan los textos legales", "#/legales"],
+    !tienda.legales_revisados && ["Un abogado todavía no revisó los textos legales", "#/legales"],
     sinFoto.length && ["Hay equipos sin foto", "#/inventario?fotos=sin"],
     ocultosPorModelo.length && [`${plural(ocultosPorModelo.length, "equipo publicado no se ve", "equipos publicados no se ven")} porque su modelo está inactivo`, "#/catalogo"]
   ].filter(Boolean);

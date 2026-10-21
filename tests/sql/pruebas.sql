@@ -534,6 +534,15 @@ do $$ begin
 end $$;
 reset role;
 
+-- 7b. Textos legales (0015): marcas para el abogado en el texto base y la
+-- regla de "solo donde estaba vacío" (la compara también comparar-semilla).
+do $$
+begin
+  assert (select texto_privacidad like '%[PENDIENTE: razón social y NIT]%' and texto_privacidad like '%{{herramientas}}%' from public.tienda), 'privacidad con sus marcas';
+  assert (select texto_terminos from public.tienda) = 'Términos que ya escribió la tienda.', 'los términos de la tienda no se tocan';
+  assert (select not legales_revisados and array_length(legales_herramientas, 1) = 5 from public.tienda), 'sin revisar y con 5 herramientas';
+end $$;
+
 -- 7. Reseñas (0014): ninguna de ejemplo; hasta 12; casilla obligatoria; el
 -- público solo las ve con el interruptor encendido; solo el gestor escribe.
 do $$

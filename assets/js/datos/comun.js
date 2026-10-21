@@ -53,8 +53,52 @@ export const CAMPOS_TIENDA = [
   "tamano_texto", "vista_equipos", "mostrar_ficha", "ficha_ocultas",
   "pagos_medios", "pagos_cuotas", "pagos_cuotas_max", "pagos_sin_interes", "pagos_sin_interes_max",
   "pagos_cripto", "pagos_cripto_cuales", "pagos_pasarelas", "pagos_pasarela_otra",
-  "mostrar_resenas", "titulo_resenas"
+  "mostrar_resenas", "titulo_resenas", "legales_revisados", "legales_herramientas"
 ];
+
+// Textos legales (0015). {{nombre}}, {{ciudad}}, {{direccion}}, {{correo}} y
+// {{herramientas}} se reemplazan por los datos de la tienda; un dato vacío
+// queda como [PENDIENTE: …] (el nombre vacío, como "la tienda").
+// prepararLegal quita las marcas [PENDIENTE: …] y lo que queda vacío por
+// ellas (un ítem "- Etiqueta:" sin valor, el "…:" de una lista que quedó
+// vacía, un título sin contenido) y dice qué faltaba. El sitio nunca
+// muestra una marca.
+const MARCA_PENDIENTE = /\[PENDIENTE:([^\]]*)\]/g;
+
+export function expandirLegal(texto, tienda = {}) {
+  const dato = (v, falta) => String(v || "").trim() || `[PENDIENTE: ${falta}]`;
+  const herramientas = (tienda.legales_herramientas || []).map((h) => String(h).trim()).filter(Boolean);
+  const valores = {
+    nombre: String(tienda.nombre || "").trim() || "la tienda",
+    ciudad: dato(tienda.ciudad, "ciudad"),
+    direccion: dato(tienda.direccion, "dirección"),
+    correo: dato(tienda.correo_contacto, "correo de contacto"),
+    herramientas: herramientas.length ? herramientas.map((h) => `- ${h}`).join("\n") : "[PENDIENTE: herramientas]"
+  };
+  return String(texto || "").replace(/\{\{(\w+)\}\}/g, (m, k) => (k in valores ? valores[k] : m));
+}
+
+export function prepararLegal(texto, tienda = {}) {
+  const expandido = expandirLegal(texto, tienda).replace(/\r\n?/g, "\n");
+  const pendientes = [...expandido.matchAll(MARCA_PENDIENTE)].map((m) => m[1].trim());
+  const lineas = expandido.replace(MARCA_PENDIENTE, "").split("\n")
+    .map((l) => l.replace(/[ \t]+$/, "").replace(/ {2,}/g, " "))
+    // Un ítem que quedó sin valor ("- Correo:" o "-") no se muestra.
+    .filter((l) => !/^\s*[-*]\s*([^:]*:)?\s*$/.test(l));
+  // Un párrafo que presenta una lista ("…:") cuya lista quedó vacía tampoco.
+  const conLista = lineas.filter((l, i) => {
+    if (!/:\s*$/.test(l) || /^\s*[-*]\s/.test(l)) return true;
+    const siguiente = lineas.slice(i + 1).find((x) => x.trim());
+    return Boolean(siguiente) && /^\s*([-*]|\d+[.)])\s/.test(siguiente);
+  });
+  // Un título sin nada debajo (hasta el próximo título) tampoco.
+  const limpias = conLista.filter((l, i) => {
+    if (!/^#{2,3}\s/.test(l.trim())) return true;
+    const siguiente = conLista.slice(i + 1).find((x) => x.trim());
+    return Boolean(siguiente) && !/^#{2,3}\s/.test(siguiente.trim());
+  });
+  return { texto: limpias.join("\n").replace(/\n{3,}/g, "\n\n").trim(), pendientes };
+}
 
 // Reseñas (0014): hasta 12; imagen o video de hasta 30 segundos.
 export const CAMPOS_RESENA = ["tipo", "ruta", "texto", "origen", "origen_otro", "autorizado", "orden"];

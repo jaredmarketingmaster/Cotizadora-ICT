@@ -941,7 +941,7 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
-  await caso("demo: los datos guardados de una versión vieja se migran (stock, tamaño, catálogo, colores, roles, fichas y pagos)", async () => {
+  await caso("demo: los datos guardados de una versión vieja se migran (stock, tamaño, catálogo, colores, roles, fichas, pagos, reseñas y legales)", async () => {
     const p = await nueva();
     await ir(p);
     // Arma un estado como el de la versión 1: 32 modelos, stock numérico, sin colores.
@@ -965,6 +965,10 @@ async function llenarPopup(p) {
       // Formas de pago como antes de 0013: solo la lista libre
       for (const k of Object.keys(e.tienda)) if (k.startsWith("pagos_")) delete e.tienda[k];
       e.tienda.formas_pago = ["Addi", "Sistecrédito"];
+      // Reseñas y legales como antes de 0014 y 0015: una política propia y lo demás vacío
+      delete e.resenas; delete e.tienda.mostrar_resenas; delete e.tienda.titulo_resenas;
+      delete e.tienda.legales_revisados; delete e.tienda.legales_herramientas;
+      Object.assign(e.tienda, { texto_privacidad: "Mi política propia.", texto_terminos: "", texto_autorizacion_datos: "" });
       e.perfiles[0].rol = "agencia"; e.perfiles[0].correo = "agencia@demo.co";
       e.perfiles[1].rol = "tienda"; e.perfiles[1].correo = "tienda@demo.co";
       e.version = 1;
@@ -994,6 +998,11 @@ async function llenarPopup(p) {
     assert.deepEqual(e.tienda.pagos_otras, ["Addi", "Sistecrédito"]);
     assert.ok(!("formas_pago" in e.tienda));
     assert.deepEqual([e.tienda.pagos_cuotas, e.tienda.pagos_cuotas_max, e.tienda.pagos_medios], [false, null, []]);
+    // 0014: sin reseñas y apagadas. 0015: el texto propio queda; los vacíos toman el base.
+    assert.deepEqual([e.resenas, e.tienda.mostrar_resenas], [[], false]);
+    const L = await p.evaluate(async () => ({ ...(await import(new URL("assets/js/datos/legales-base.js", location.href).href)) }));
+    assert.deepEqual([e.tienda.texto_privacidad, e.tienda.texto_terminos, e.tienda.texto_autorizacion_datos], ["Mi política propia.", L.TERMINOS_BASE, L.AUTORIZACION_BASE]);
+    assert.deepEqual([e.tienda.legales_revisados, e.tienda.legales_herramientas], [false, L.HERRAMIENTAS_BASE]);
     assert.deepEqual(e.equipos.map((q) => q.en_stock), [false, true, true, true, true, true]);
     assert.equal(new Set(e.modelos.map((m) => m.orden)).size, 42);
     assert.equal(e.modelos.find((m) => m.slug === "iphone-17e").orden > e.modelos.find((m) => m.slug === "iphone-17-pro-max").orden, true);
@@ -1266,6 +1275,84 @@ async function llenarPopup(p) {
     });
     assert.deepEqual(errores, ["Las cuotas sin interés no pueden ser más que el máximo de cuotas.", "Sin pagos a cuotas, los datos de cuotas quedan vacíos.",
       "Indique hasta cuántas cuotas acepta: de 2 a 48.", "Algún dato no tiene el formato correcto. Revise los campos."]);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  // Textos legales (0015)
+  const textoLegal = async (p, ruta) => { await p.goto(BASE + ruta, { waitUntil: "networkidle" }); await p.waitForFunction(() => !document.querySelector("#legal-texto[aria-busy]")); return p.textContent("#legal-texto"); };
+  await caso("legales: texto base precargado con los datos de la tienda; el sitio y el pop-up nunca muestran [PENDIENTE] ni {{…}}; \"Texto en revisión.\"", async () => {
+    const p = await nueva(390, 844);
+    await ir(p);
+    const L = await p.evaluate(async () => ({ ...(await import(new URL("assets/js/datos/legales-base.js", location.href).href)) }));
+    const t = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).tienda, CLAVE_DEMO);
+    assert.deepEqual([t.texto_privacidad, t.texto_terminos, t.texto_autorizacion_datos, t.legales_revisados], [L.PRIVACIDAD_BASE, L.TERMINOS_BASE, L.AUTORIZACION_BASE, false]);
+    const limpio = (x) => !/\[PENDIENTE|\{\{|\}\}/.test(x);
+    let priv = await textoLegal(p, "/privacidad/");
+    assert.ok(limpio(priv), "privacidad sin marcas");
+    assert.equal(await p.textContent(".legal-revision"), "Texto en revisión.");
+    assert.match(priv, /Nombre: Tienda de demostración/);
+    assert.ok(!/Ciudad:|Razón social|Plazos de respuesta|Excepciones:/.test(priv), "los datos pendientes quedan vacíos (sin su renglón)");
+    assert.match(priv, /GoHighLevel: el CRM donde quedan su cotización y el seguimiento\./);
+    assert.match(priv, /Ley 1581 de 2012/);
+    const term = await textoLegal(p, "/terminos/");
+    assert.ok(limpio(term), "términos sin marcas");
+    assert.ok(!(await p.$$eval("#legal-texto h2", (hs) => hs.map((h) => h.textContent))).includes("Ley aplicable"), "un título que quedó vacío no se muestra");
+    assert.deepEqual(await p.evaluate(contrasteMalo), []);
+    // Pop-up: la casilla con el nombre de la tienda y sin marcas
+    await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb");
+    await p.click("#detalle-en-linea [data-comprar]");
+    await p.waitForSelector("#p-autorizacion");
+    const casilla = await p.textContent('label[for="p-autorizacion"]');
+    assert.ok(limpio(casilla));
+    assert.match(casilla, /^\s*Autorizo a Tienda de demostración a tratar mis datos personales \(nombre, correo y WhatsApp\)/);
+    // Con los datos completos en Mi tienda, aparecen; quedan los pendientes del abogado.
+    await editarDemo(p, (e) => Object.assign(e.tienda, { ciudad: "Medellín", direccion: "Calle 10 # 20-30", correo_contacto: "hola@tienda.co" }));
+    priv = await textoLegal(p, "/privacidad/");
+    assert.match(priv, /Ciudad: Medellín/);
+    assert.match(priv, /Correo: hola@tienda\.co/);
+    assert.equal(await p.locator(".legal-revision").count(), 1, "sigue en revisión: faltan la razón social, el NIT y lo del abogado");
+    // Sin marcas, sin aviso.
+    await editarDemo(p, (e) => { e.tienda.texto_privacidad = e.tienda.texto_privacidad.replace(/\[PENDIENTE:[^\]]*\]/g, "Dato confirmado"); });
+    priv = await textoLegal(p, "/privacidad/");
+    assert.equal(await p.locator(".legal-revision").count(), 0);
+    assert.match(priv, /Razón social y NIT: Dato confirmado/);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("legales: el panel avisa que es un texto base, lista lo pendiente, edita las herramientas y \"Un abogado ya revisó\" quita el aviso de Inicio", async () => {
+    const p = await nueva(1280, 900);
+    await entrarPanel(p, "gestor@demo.co");
+    const avisos = () => p.$$eval(".avisos li span", (xs) => xs.map((x) => x.textContent));
+    assert.ok((await avisos()).includes("Un abogado todavía no revisó los textos legales"));
+    await p.goto(`${BASE}/admin/#/legales`);
+    await p.waitForSelector("#form-legales");
+    const base = "Texto base preparado para revisión de un abogado. No lo trate como definitivo.";
+    const visibles = () => p.$$eval("[data-aviso-base]", (xs) => xs.filter((x) => !x.hidden).map((x) => [x.textContent, x.nextElementSibling.querySelector("textarea").id]));
+    assert.deepEqual(await visibles(), [[base, "texto_privacidad"], [base, "texto_terminos"], [base, "texto_autorizacion_datos"]], "un aviso arriba de cada editor");
+    assert.match(await p.textContent('[data-pendientes="texto_privacidad"]'), /^Falta: razón social y NIT; ciudad; dirección; correo de contacto; /);
+    await p.click('#form-legales details summary >> nth=0');
+    assert.ok(!/\[PENDIENTE|\{\{/.test(await p.textContent('[data-previa="texto_privacidad"]')), "la vista previa es la del sitio");
+    // Herramientas: quitar la última y agregar una
+    assert.equal(await p.locator("#herramientas li").count(), 5);
+    await p.click('[data-quitar="4"]');
+    await p.click("#agregar-herramienta");
+    await p.fill("#herramienta-4", "Herramienta de prueba.");
+    assert.match(await p.textContent('[data-previa="texto_privacidad"]'), /Herramienta de prueba\./);
+    await p.click('label[for="legales_revisados"]');
+    assert.deepEqual(await visibles(), [], "revisados: sin el aviso");
+    await p.click("#guardar-legales");
+    await p.waitForSelector("text=Guardado");
+    const t = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).tienda, CLAVE_DEMO);
+    assert.equal(t.legales_revisados, true);
+    assert.equal(t.legales_herramientas.at(-1), "Herramienta de prueba.");
+    assert.ok(!t.legales_herramientas.some((h) => h.startsWith("Marketing Masters Group")));
+    await p.goto(`${BASE}/admin/#/inicio`);
+    await p.waitForSelector(".estadisticas");
+    assert.ok(!(await avisos()).includes("Un abogado todavía no revisó los textos legales"));
+    const priv = await textoLegal(p, "/privacidad/");
+    assert.match(priv, /Herramienta de prueba\./);
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
