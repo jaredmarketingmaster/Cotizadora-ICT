@@ -62,7 +62,9 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
   - Las rutas van en `equipos.fotos`.
   - Al borrar un equipo o quitar una foto se borran los dos archivos.
 - Video (opcional, uno por equipo): bucket `videos`, ruta en `equipos.video`, validado en `panel/video.js` antes de subir (MP4 H.264 o WebM, 15 s, 20 MB), sin comprimir. Se borra al quitarlo o al borrar el equipo.
-- Cambios a la base: siempre una migración nueva (`0004_…sql`). Nunca editar una ya corrida en producción.
+- Reseñas (`0014`): bucket `resenas`; imágenes comprimidas como las fotos y videos de hasta 30 s (`validarVideo(archivo, {maxSegundos: 30})`). Nunca crear reseñas de ejemplo, tampoco en demo.
+- Textos legales (`0015`): base en `legales-base.js` = `0015_legales.sql`; el sitio pasa todo por `prepararLegal` (nunca muestra `[PENDIENTE: …]`).
+- Cambios a la base: siempre una migración nueva (la próxima es `0016_…sql`). Nunca editar una ya corrida en producción. En producción se corren todas, en orden.
 
 ## Cómo verificar antes de cada commit
 
@@ -70,7 +72,7 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
 node tests/documentacion.mjs                               # DOCUMENTACION.md cubre todos los archivos
 bash tests/sql/probar.sh                                   # SQL y RLS (Postgres local)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 44 casos, modo demo
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 57 casos, modo demo
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 ```
 

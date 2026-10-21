@@ -1118,7 +1118,7 @@ bash tests/supabase-local/levantar.sh detener
 ### 15.2 Producción, una tienda
 
 1. **Proyecto de Supabase.** Conviene la región São Paulo.
-2. **Migraciones:** correr `0001`, `0002` y `0003`, en ese orden.
+2. **Migraciones:** correr **todas** las de `supabase/migrations/`, en orden de número, de `0001` a la última (hoy `0015`): `0001` esquema, `0002` catálogo, `0003` demo, `0004` stock sí/no, `0005` tamaño del texto, `0006` catálogo y colores, `0007` roles, `0008` color oficial, `0009` video, `0010` más vendido, `0011` vista de equipos, `0012` fichas, `0013` formas de pago, `0014` reseñas y `0015` legales. Saltarse una rompe las siguientes (con la CLI, `supabase db push` las corre en orden). Crean también los buckets (`fotos` y `marca` en `0001`, `videos` en `0009`, `resenas` en `0014`) con sus reglas. Para actualizar una tienda ya publicada se corren solo las nuevas, en orden; nunca se edita una ya corrida. (El comentario de `0001_esquema.sql` que dice "0001 → 0002 → 0003" es de cuando eran tres; no se edita porque esa migración ya corrió.)
 3. **Registro:** apagar "Allow new users to sign up".
 4. **Direcciones:** Site URL y Redirect URLs apuntando a `/admin/`.
 5. **Correo:** SMTP propio y las plantillas de `supabase/correos/`.
@@ -1128,9 +1128,13 @@ bash tests/supabase-local/levantar.sh detener
    - `supabase secrets set GHL_WEBHOOK_URL=… ORIGENES_PERMITIDOS=https://dominio`.
 8. **`config.js`:** `backend: "supabase"`, la URL, la clave anon o publishable y el `metaPixelId`.
 9. **Publicar** en cualquier hosting estático.
-10. **Antes de abrir al público:**
-    1. Cargar logo, WhatsApp, legales e inventario, y activar los modelos.
-    2. Con el usuario gestor, tocar "Borrar datos de demostración".
+10. **Antes de abrir al público** (todo con el usuario **gestor**; el administrador solo ve Usuarios):
+    1. Mi tienda: nombre, ciudad, dirección, correo, WhatsApp y logo.
+    2. Catálogo: activar los modelos, revisar la ficha técnica precargada (completar lo que falta) y cargar las formas de pago.
+    3. Legales: revisión del abogado de los textos base y marcar "Un abogado ya revisó estos textos".
+    4. Inventario con fotos.
+    5. Inicio → "Lo que falta" debe decir "Todo está completo.".
+    6. Tocar "Borrar datos de demostración".
 
 ---
 
@@ -1259,6 +1263,13 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 21/10/2026 · F: instrucciones de despliegue al día
+
+- **Pedido de Jared (ronda 2, punto F):** corregir la sección 15.2 y el README: en producción se corren todas las migraciones, de `0001` a la última, en orden (decía "0001, 0002 y 0003"), y revisar otras instrucciones viejas (usuarios demo, roles, buckets).
+- **Hecho:** sección 15.2 (todas las migraciones con su tema, buckets que crean, actualizar una tienda ya publicada, lista de "antes de abrir al público" con el rol que hace cada cosa); `README.md` (mapa de archivos con `0012`–`0015` y las pestañas del panel, paso 2 de producción, "Antes de abrir al público", datos demo, cantidad de casos de las suites); `CLAUDE.md` (cantidad de casos y videos de reseñas).
+- **Revisado y correcto, sin cambios:** usuarios demo (`gestor@demo.co` / `administrador@demo.co`, `demo1234`), tabla de roles del README y 15.1 (GitHub Pages).
+- **Verificación:** `node tests/documentacion.mjs` OK (solo cambian textos).
 
 ### 21/10/2026 · E: textos legales base para revisión del abogado
 

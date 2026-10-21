@@ -26,7 +26,7 @@ assets/
   js/ilustracion.js        Teléfono genérico en SVG (sin manzana)
   js/datos/                Capa de datos: api.js elige demo.js o supabase.js
   js/sitio/                Filtros, galería, detalle con carrusel, pop-up, píxel, atribución
-  js/panel/                Inicio, inventario, mi tienda, fichas, catálogo, legales, usuarios
+  js/panel/                Inicio, inventario, mi tienda (y reseñas), catálogo (modelos, ficha técnica, formas de pago), legales, usuarios
 supabase/
   migrations/0001_esquema.sql   Tablas, seguridad a nivel de fila, disparadores, almacenamiento
   migrations/0002_catalogo.sql  Catálogo maestro: 32 modelos, todos inactivos
@@ -39,6 +39,10 @@ supabase/
   migrations/0009_video.sql     Un video corto opcional por equipo (bucket "videos")
   migrations/0010_mas_vendido.sql  "Más vendido" (hasta 3 equipos)
   migrations/0011_vista_equipos.sql  Vista de los equipos: cuadrícula o carrusel
+  migrations/0012_fichas.sql    Ficha técnica: interruptores y fichas precargadas de la fuente
+  migrations/0013_formas_pago.sql  Formas de pago estructuradas (medios, cuotas, cripto, pasarelas)
+  migrations/0014_resenas.sql   Reseñas (tabla, bucket "resenas" y RLS)
+  migrations/0015_legales.sql   Textos legales base para revisión del abogado
   functions/enviar-lead/        Reenvía el pedido a GHL (la URL va en los secretos)
   functions/usuarios/           Invitar, desactivar y reactivar (solo administrador)
 tests/                     Pruebas (no se usan en producción)
@@ -96,12 +100,12 @@ Para probar:
 ### 1. Supabase (un proyecto por tienda)
 
 1. Crear el proyecto en <https://supabase.com/dashboard>. Conviene la región São Paulo, la más cercana a Colombia.
-2. En **SQL Editor**, correr en orden:
-   - `supabase/migrations/0001_esquema.sql`
-   - `0002_catalogo.sql`
-   - `0003_demo.sql`
+2. En **SQL Editor**, correr **todas** las migraciones de `supabase/migrations/`, una por una y en orden de número, desde `0001_esquema.sql` hasta la última (hoy `0015_legales.sql`):
+   `0001` esquema → `0002` catálogo → `0003` demo → `0004` stock sí/no → `0005` tamaño del texto → `0006` catálogo y colores → `0007` roles → `0008` color oficial → `0009` video → `0010` más vendido → `0011` vista de equipos → `0012` fichas → `0013` formas de pago → `0014` reseñas → `0015` legales.
 
-   Con la CLI se puede usar `supabase db push`.
+   Saltarse una rompe las siguientes. Con la CLI, `supabase db push` las corre en orden. Las migraciones crean también los buckets de Storage (`fotos` y `marca` en `0001`, `videos` en `0009`, `resenas` en `0014`) y sus reglas: no hay que crearlos a mano.
+
+   Más adelante, para actualizar una tienda que ya está en producción, se corren solo las migraciones nuevas, en orden. Nunca se edita una migración que ya se corrió.
 3. En **Authentication → Sign In / Providers**, apagar **Allow new users to sign up**. No hay registro público: solo se entra por invitación.
 
    Igual, un usuario sin perfil no puede escribir nada: lo bloquean las reglas de la base.
@@ -149,9 +153,14 @@ Las rutas `/privacidad/`, `/terminos/` y `/admin/` son carpetas, así que funcio
 
 ### 4. Antes de abrir al público
 
-1. Cargar el logo, el WhatsApp y los textos legales.
-2. Cargar el inventario y activar los modelos en **Catálogo**.
-3. Con el usuario gestor, tocar **Inicio → Borrar datos de demostración**.
+Todo con el usuario **gestor** (el administrador solo ve Usuarios):
+
+1. **Mi tienda:** nombre, ciudad, dirección, correo, WhatsApp y logo.
+2. **Catálogo:** activar los modelos que vende; revisar la **Ficha técnica** (viene precargada; completar lo que falta, como la batería) y cargar las **Formas de pago**.
+3. **Legales:** que el abogado revise los textos base y complete las marcas `[PENDIENTE: …]`; después, marcar "Un abogado ya revisó estos textos".
+4. **Inventario:** cargar los equipos con sus fotos.
+5. **Inicio → Lo que falta** debe decir "Todo está completo.".
+6. Tocar **Inicio → Borrar datos de demostración**.
 
 ## Integración con GHL
 
@@ -205,7 +214,7 @@ No pude abrir la documentación de GHL desde este entorno: su dominio está bloq
 - **"Cantidad disponible"** (contador y lista de modelos) = **cantidad de equipos con stock**. El stock es sí/no ("Con stock" / "Sin stock"), así que no hay unidades que sumar.
 - **El detalle se abre solo debajo** cuando los **tres** filtros están elegidos y queda una sola tarjeta. Así lo leo en el prompt.
 - **Los filtros de la URL se respetan aunque no haya stock.** Un anuncio de un equipo agotado lleva al estado vacío con "Consultar por WhatsApp". Un `modelo` que no existe o está inactivo se ignora.
-- **Datos demo:** para que se vean, `0003_demo.sql` activa los 4 modelos que usan. Quedan marcados con `activo_por_demo`. El catálogo de `0002` sí queda todo inactivo, como pide el prompt.
+- **Datos demo:** para que se vean, `0003_demo.sql` activa los 4 modelos que usan. Quedan marcados con `activo_por_demo`. El resto del catálogo (`0002` y `0006`) queda inactivo, como pide el prompt.
 
   "Borrar datos de demostración" vuelve a apagar esos 4 modelos, salvo que la tienda los haya tocado. Los precios demo son redondos y no son reales.
 - **Generación más nueva** = la que tiene el mayor "orden" en el catálogo. Así el iPhone Duo (Plegable) queda primero y los modelos nuevos se ordenan solos.
@@ -223,9 +232,9 @@ Todas corren en este repo sin Docker. La última corrida pasó completa.
 | Prueba | Qué cubre | Cómo correrla |
 |---|---|---|
 | `tests/sql/probar.sh` | Migraciones en un Postgres local:<br>- Seguridad a nivel de fila por rol (público, sin perfil, inactivo, gestor, administrador), siempre un administrador activo, catálogo y colores<br>- Validaciones<br>- Fecha de precios<br>- Borrar demo<br>- La semilla del SQL coincide con la del modo demo | `bash tests/sql/probar.sh` |
-| `tests/verificar.cjs` | 44 casos en modo demo:<br>- Las 11 pruebas de aceptación de la sección 12<br>- Pop-up: errores, reintento y fallo doble<br>- Panel: validaciones<br>- Ancho de 320 a 1440 px<br>- Carrusel con dedo, flechas, puntos y teclado<br>- Contraste AA en 4 combinaciones de colores<br>- Textos de 16 px o más y zonas táctiles de 44 px<br>- Teclado en la lista<br>- `prefers-reduced-motion`<br>- Píxel y formatos | `python3 -m http.server 8080 &`<br>`NODE_PATH="$(npm root -g)" node tests/verificar.cjs` |
+| `tests/verificar.cjs` | 57 casos en modo demo (58 con `ICT_CAPTURAS`; la lista completa está en la sección 14.2 de `DOCUMENTACION.md`):<br>- Las 11 pruebas de aceptación de la sección 12<br>- Pop-up: errores, reintento y fallo doble<br>- Panel: validaciones<br>- Ancho de 320 a 1440 px<br>- Carrusel con dedo, flechas, puntos y teclado<br>- Contraste AA en 4 combinaciones de colores<br>- Textos de 16 px o más y zonas táctiles de 44 px<br>- Teclado en la lista<br>- `prefers-reduced-motion`<br>- Píxel y formatos<br>- Espacios, más vendido, pestañas de Catálogo, ficha técnica, formas de pago, reseñas y textos legales | `python3 -m http.server 8080 &`<br>`NODE_PATH="$(npm root -g)" node tests/verificar.cjs` |
 | `tests/funciones/probar.sh` | `enviar-lead` con Deno contra un webhook de GHL simulado:<br>- Campos<br>- Validaciones<br>- GHL caído<br>- Falta de secreto<br>- Orígenes | `DENO=/ruta/deno bash tests/funciones/probar.sh` |
-| `tests/verificar-supabase.cjs` | 9 casos del modo Supabase de punta a punta contra un "Supabase local": Postgres, el servidor de auth oficial (GoTrue v2.180.0), PostgREST 12.2.3, las dos funciones en Deno, un SMTP simulado que guarda los correos y Storage **simulado**. Cubre:<br>- Sitio y pop-up → función → webhook<br>- Permisos del panel<br>- Precio → sitio, foto y borrar demo<br>- Invitar por el panel → correo en español → enlace → "Cree su contraseña" → entra<br>- Recuperar la contraseña con el enlace del correo<br>- Desactivar (no puede entrar) y reactivar | `BIN=/carpeta/con/postgrest,auth,deno bash tests/supabase-local/levantar.sh`<br>`NODE_PATH=… node tests/verificar-supabase.cjs` |
+| `tests/verificar-supabase.cjs` | 11 casos del modo Supabase de punta a punta contra un "Supabase local": Postgres, el servidor de auth oficial (GoTrue v2.180.0), PostgREST 12.2.3, las dos funciones en Deno, un SMTP simulado que guarda los correos y Storage **simulado**. Cubre:<br>- Sitio y pop-up → función → webhook<br>- Permisos del panel<br>- Precio → sitio, foto y borrar demo<br>- Invitar por el panel → correo en español → enlace → "Cree su contraseña" → entra<br>- Recuperar la contraseña con el enlace del correo<br>- Desactivar (no puede entrar) y reactivar<br>- Ficha técnica y formas de pago por la RPC, reseñas con Storage y textos legales sin marcas | `BIN=/carpeta/con/postgrest,auth,deno bash tests/supabase-local/levantar.sh`<br>`NODE_PATH=… node tests/verificar-supabase.cjs` |
 
 Variables útiles:
 
