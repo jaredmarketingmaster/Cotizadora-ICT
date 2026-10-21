@@ -161,6 +161,8 @@ export function contexto(t, { rutas = {} } = {}) {
         : `escríbanos a [${correo}](mailto:${correo})`,
       entrega: ENTREGAS.filter((e) => (t.legal_entrega || []).includes(e.clave)).map((e) => e.nombre),
       zonas: limpio(t.legal_entrega_zonas),
+      // Plazo de entrega de la pestaña Envíos (llega con C2); sin plazo, el legal.
+      plazoEntrega: null,
       apple: perfil?.apple
         ? { autorizado: true, detalle: limpio(t.legal_apple_detalle) }
         : { autorizado: false },

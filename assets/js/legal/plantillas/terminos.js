@@ -48,7 +48,8 @@ export function secciones(ctx) {
       titulo: "Entrega",
       lineas: [
         ...v.entrega.map((e) => `- ${e}.`),
-        `- **Zonas:** ${v.zonas.replace(/\.$/, "")}.`
+        `- **Zonas:** ${v.zonas.replace(/\.$/, "")}.`,
+        ...ctx.paises.flatMap((p) => p.terminos.entrega(ctx)).flatMap((l) => ["", l])
       ]
     },
     v.homologados && {

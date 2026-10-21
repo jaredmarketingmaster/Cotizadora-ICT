@@ -49,6 +49,8 @@ export const CO = {
     // FUENTES 7 y 12: Ley 2439 de 2024 (art. 3, que modifica el art. 47) y
     // sentencia C-192 de 2026.
     retracto: { diasHabiles: 5, devolucionDias: 15 },
+    // FUENTE 13: sin plazo pactado, entrega en máximo 30 días calendario.
+    entregaMaxDias: 30,
     garantiaNuevosMinMeses: 12,
     garantiaReclamoDias: 15
   },
@@ -109,6 +111,11 @@ export const CO = {
       `- **Devolución del dinero:** sin descuentos ni retenciones, en máximo ${CO.consumo.retracto.devolucionDias} días calendario, según la Ley 2439 de 2024.`,
       "- **Medio de la devolución:** al mismo medio de pago que usted usó o por el medio que acordemos con usted. Le informamos las opciones disponibles."
     ],
+    // ctx.venta.plazoEntrega: { desde, hasta } en días hábiles (pestaña
+    // Envíos), o null. Sin plazo, va el máximo legal.
+    entrega: (ctx) => (ctx.venta.plazoEntrega
+      ? []
+      : [`Si no acordamos otro plazo con usted, entregamos el pedido en máximo ${CO.consumo.entregaMaxDias} días calendario, contados desde el día siguiente a su pedido, según la Ley 2439 de 2024. Si no lo entregamos a tiempo, usted puede terminar la compra y le devolvemos el dinero sin descuentos ni retenciones en máximo ${CO.consumo.retracto.devolucionDias} días calendario.`]),
     leyAplicable: () => [
       `Las ventas a personas en Colombia se rigen por las leyes de Colombia, en especial ${CO.consumo.ley}. La autoridad de protección al consumidor es la ${SIC}: [${SITIO_SIC.replace("https://", "")}](${SITIO_SIC}).`
     ]

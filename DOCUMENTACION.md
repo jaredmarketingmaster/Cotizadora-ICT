@@ -1114,7 +1114,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 ```bash
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
-node tests/legal/motor.test.mjs                            # motor legal (11 casos, sin navegador)
+node tests/legal/motor.test.mjs                            # motor legal (12 casos, sin navegador)
 NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 63 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (14 casos) + tipos
@@ -1379,6 +1379,14 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 21/10/2026 · Ronda 3, A2: entrega en máximo 30 días si no hay plazo
+
+- **Pedido de Jared:** si la tienda no indica el plazo de entrega, el máximo es de 30 días calendario (Ley 2439 de 2024); los términos lo dicen cuando la pestaña Envíos (C2) no tiene plazo.
+- **Verificado** con el buscador (transcripción de la ley): 30 días calendario desde el día siguiente al pedido; si no se cumple, el consumidor puede terminar la compra y recibir el dinero en máximo 15 días calendario. Se escribió también esto último, que está en la misma norma.
+- **Hecho:** `co.js` (`consumo.entregaMaxDias` y `terminos.entrega(ctx)`), `terminos.js` (sección Entrega), `motor.js` (`venta.plazoEntrega`, por ahora siempre vacío: el plazo llega con la pestaña Envíos en C2), `legal/FUENTES.md` (fuente 13).
+- **Pruebas:** caso nuevo en `tests/legal/motor.test.mjs` (12 casos).
+- **Verificación:** `node tests/legal/motor.test.mjs` OK y `node tests/documentacion.mjs` OK.
 
 ### 21/10/2026 · Ronda 3, A1: el retracto dice el medio de la devolución
 

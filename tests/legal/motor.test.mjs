@@ -102,6 +102,12 @@ caso("A1: la devolución del retracto dice su plazo, su ley y el medio de pago",
   assert.ok(t.includes("al mismo medio de pago que usted usó o por el medio que acordemos con usted. Le informamos las opciones disponibles."), "medio de la devolución");
 });
 
+caso("A2: sin plazo de entrega, los términos dicen el máximo legal de 30 días calendario", () => {
+  const t = visible(generar(base()).terminos);
+  assert.ok(t.includes("Si no acordamos otro plazo con usted, entregamos el pedido en máximo 30 días calendario, contados desde el día siguiente a su pedido, según la Ley 2439 de 2024."));
+  assert.ok(t.includes("usted puede terminar la compra y le devolvemos el dinero sin descuentos ni retenciones en máximo 15 días calendario"));
+});
+
 caso("la relación con Apple sigue al perfil", () => {
   const t = base();
   const indep = "es un comercio independiente. No está afiliado, patrocinado ni autorizado por Apple Inc. iPhone es una marca de Apple Inc.";
