@@ -1556,9 +1556,10 @@ async function llenarPopup(p) {
     await publicarLegalesCon(p, { ga4_activo: true, ga4_id: "G-ABC123XYZ9", clarity_activo: true, clarity_id: "abc123def4", tiktok_activo: true, tiktok_id: "C1A2B3C4D5E6F7G8H9I0" });
     await ir(p);
     // En 360 × 800 los filtros llegan casi al borde: el banner espera a que la persona baje
-    assert.equal(await p.locator(".banner-cookies").count(), 0, "no tapa los filtros");
+    await p.waitForTimeout(500);
+    assert.equal(await p.isVisible(".banner-cookies"), false, "no tapa los filtros");
     await p.mouse.wheel(0, 600);
-    await p.waitForSelector(".banner-cookies");
+    await p.waitForSelector(".banner-cookies", { state: "visible" });
     const filtros = await p.$eval("#filtros", (f) => f.getBoundingClientRect().bottom);
     const banner = await p.$eval(".banner-cookies-caja", (b) => b.getBoundingClientRect().top);
     assert.ok(filtros <= banner, "el banner queda debajo de los filtros");
@@ -1573,7 +1574,7 @@ async function llenarPopup(p) {
     assert.equal(await p.locator(".banner-cookies").count(), 0);
     await ir(p);
     await p.mouse.wheel(0, 600);
-    await p.waitForTimeout(300);
+    await p.waitForTimeout(600);
     assert.equal(await p.locator(".banner-cookies").count(), 0, "la elección queda guardada");
     assert.deepEqual(externas, [], "rechazar no carga nada");
     // Desde el pie: solo medición
@@ -1608,8 +1609,23 @@ async function llenarPopup(p) {
     externas.length = 0;
     await ir(p);
     await p.mouse.wheel(0, 600);
-    await p.waitForSelector(".banner-cookies");
+    await p.waitForSelector(".banner-cookies", { state: "visible" });
     assert.deepEqual(externas, [], "vencida: nada hasta volver a elegir");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("banner de cookies: en 412 × 823 (el celular de Lighthouse) no tapa los filtros ya dibujados, ni al cargar ni al bajar", async () => {
+    const p = await nueva(412, 823, { cookies: null, deviceScaleFactor: 1.75, isMobile: true, hasTouch: true });
+    await ir(p);
+    await p.waitForTimeout(800);
+    const tapa = () => p.evaluate(() => {
+      const b = document.querySelector(".banner-cookies:not([hidden]) .banner-cookies-caja");
+      return Boolean(b) && document.querySelector("#filtros").getBoundingClientRect().bottom > b.getBoundingClientRect().top;
+    });
+    assert.equal(await tapa(), false, "al cargar");
+    for (let i = 0; i < 6; i++) { await p.mouse.wheel(0, 120); await p.waitForTimeout(120); assert.equal(await tapa(), false, `al bajar (${i})`); }
+    await p.waitForSelector(".banner-cookies", { state: "visible" });
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
@@ -1622,7 +1638,7 @@ async function llenarPopup(p) {
     await ir(p);
     await publicarLegalesCon(p, { ga4_activo: true, ga4_id: "G-ABC123XYZ9" });
     await ir(p);
-    await p.waitForSelector(".banner-cookies");
+    await p.waitForSelector(".banner-cookies", { state: "visible" });
     const [filtros, banner, titulo] = await p.evaluate(() => [document.querySelector("#filtros").getBoundingClientRect().bottom, document.querySelector(".banner-cookies-caja").getBoundingClientRect().top, document.querySelector(".titulo").getBoundingClientRect().bottom]);
     assert.ok(filtros <= banner && titulo <= banner, "no tapa el título ni los filtros");
     await p.click("[data-cookies='configurar']");

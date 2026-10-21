@@ -390,7 +390,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈2386) | Suite de aceptación en **modo demo** con Playwright: **62 casos** (63 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). Publica los textos legales de prueba al abrir el sitio o el panel (`nueva(..., {legales})`) y empieza con las cookies rechazadas (`{cookies}`; `null` = sin elegir). `ICT_LINEAS` muestra más líneas de cada falla. | Ver sección 14. |
+| `tests/verificar.cjs` (≈2386) | Suite de aceptación en **modo demo** con Playwright: **63 casos** (64 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). Publica los textos legales de prueba al abrir el sitio o el panel (`nueva(..., {legales})`) y empieza con las cookies rechazadas (`{cookies}`; `null` = sin elegir). `ICT_LINEAS` muestra más líneas de cada falla. | Ver sección 14. |
 | `tests/verificar-supabase.cjs` (≈534) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **12 casos**. Reemplaza `config.js` en el navegador, puede servir un supabase-js local (`ICT_SUPABASE_JS`) y empieza con las cookies rechazadas. |
 | `tests/legal/motor.test.mjs` | Pruebas del motor legal sin navegador (`node tests/legal/motor.test.mjs`): faltantes por perfil y tipo de persona, validaciones, países, datos y plazos en los textos, sin corchetes ni marcadores vacíos, relación con Apple por perfil, herramientas activas e inactivas, versión y vigencia. |
 | `tests/legal/datos-prueba.mjs` | `TIENDA_LEGAL_PRUEBA`: una tienda inventada con todos los datos legales completos, para las pruebas. No es de ninguna tienda real. |
@@ -1090,8 +1090,19 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
   | Sin franja, cuadrícula | 99–100 / 100 / 100 · LCP 1,2–1,6 s · CLS 0,049 | 100 / 100 / 100 · LCP 1,1–1,4 s · CLS 0,045 |
   | Sin franja, carrusel | 100 / 100 / 100 · LCP 1,2–1,5 s · CLS 0,049 | 99–100 / 100 / 100 · LCP 1,4 s · CLS 0,045 |
 
+  **Legales (banner de cookies)**, mismas condiciones, tienda con legales publicados, sin franja y **sin elección de cookies** (primera visita). En el celular de Lighthouse (412 × 823) los filtros llegan casi al borde, así que el banner espera a que la persona baje; por eso se midió además con un **flujo** de Lighthouse (`startFlow`): navegación en frío, desplazamiento hasta que aparece el banner (timespan) e instantánea con el banner visible:
+
+  | Paso | Corrida 1 | Corrida 2 | Corrida 3 |
+  |---|---|---|---|
+  | Navegación (`lighthouse` normal) | 100 / 100 / 100 · LCP 1,4 s · CLS 0,045 | 100 / 100 / 100 · LCP 1,4 s · CLS 0,045 | 100 / 100 / 100 · LCP 1,4 s · CLS 0,045 |
+  | Navegación (dentro del flujo) | 99 / 100 / 100 · LCP 1,6 s · CLS 0,045 | 100 / 100 / 100 · LCP 1,5 s · CLS 0,045 | 99 / 100 / 100 · LCP 1,4 s · CLS 0,045 |
+  | Desplazamiento hasta el banner | CLS 0 | sin métrica de CLS (Lighthouse no la dio) | CLS 0 |
+  | Con el banner visible (instantánea) | — / 100 / 100 | — / 100 / 100 | — / 100 / 100 |
+
+  La instantánea no mide rendimiento (Lighthouse muestra 0 en ese modo). La primera medición encontró un error real: el banner se mostraba antes de que se dibujaran las capacidades y tapaba los filtros; se corrigió midiendo el banner de verdad después de la fuente (`mostrarSinTapar`).
+
   (rendimiento / accesibilidad / buenas prácticas). El CLS de 0,19 lo causa solo la franja de modo demo, que aparece cuando llegan los datos. Para medir sin franja, el Chromium de la medición se abre con el modo demo apagado en `localStorage` y Lighthouse corre con `--disable-storage-reset`.
-- **Peso del sitio público:** unos 170 KB sin comprimir y unos 56 KB con gzip (suma de cada archivo comprimido por separado, sin `demo.js` ni `semilla.js`, sin fuentes ni fotos). La fase C sumó unos 4 KB con gzip (el límite era 30 KB). La ronda 2 lo llevó a unos 198 KB sin comprimir y 65 KB con gzip (+8 KB); de eso, `resenas.js` (2 KB con gzip) solo se descarga si la tienda muestra reseñas.
+- **Peso del sitio público:** unos 170 KB sin comprimir y unos 56 KB con gzip (suma de cada archivo comprimido por separado, sin `demo.js` ni `semilla.js`, sin fuentes ni fotos). La fase C sumó unos 4 KB con gzip (el límite era 30 KB). La ronda 2 lo llevó a unos 198 KB sin comprimir y 65 KB con gzip (+8 KB); de eso, `resenas.js` (2 KB con gzip) solo se descarga si la tienda muestra reseñas. El módulo legal suma en el sitio unos 10 KB con gzip (`consentimiento.js` 4,8 KB, `herramientas.js` 1,4 KB, `vigencia.js` 0,4 KB y lo agregado a `popup.js`, `comun.js`, `utils.js`, `principal.js`, `pixel.js` y `sitio.css`); el motor y las plantillas solo los carga el panel.
 
 ---
 
@@ -1103,7 +1114,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
 node tests/legal/motor.test.mjs                            # motor legal (10 casos, sin navegador)
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 62 casos en modo demo (Playwright + Chromium)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 63 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (14 casos) + tipos
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
@@ -1116,7 +1127,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 - `ICT_CAPTURAS=1`: además guarda capturas en `tests/capturas/` y corre el caso **capturas de diseño**: 360 y 1440 px × claro y oscuro × cuadrícula y carrusel × color por defecto y primario amarillo, más el detalle y el pop-up, en `tests/capturas/diseno/<etapa>-….png`. `ICT_CAPTURAS_ETAPA` pone la etapa (por ejemplo `antes` o `despues`). La carpeta no se sube al repo.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (62 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (63 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
@@ -1134,7 +1145,7 @@ node tests/documentacion.mjs                               # este documento cubr
 12c. **Ficha técnica** (2 casos): las 42 fichas del demo son iguales a la fuente y el sitio las muestra tal cual, en el orden fijo y con sus saltos de línea; apagar "Mostrar la ficha técnica en el sitio" la saca del sitio; apagar categorías las saca; el editor muestra los valores de la fuente (batería vacía), corrige una categoría, completa otra y agrega una fila propia que va al final; "Otras filas de la tienda" apagada la oculta; la capa de datos rechaza una categoría inexistente o repetida, un valor de más de 600 caracteres y una categoría oculta que no existe. La migración de datos viejos del demo precarga las fichas vacías y no toca la que cargó la tienda.
 12d. **Formas de pago:** Inicio avisa ciudad, correo y formas de pago; Mi tienda ya no tiene la lista; la pestaña esconde lo que depende de un interruptor apagado, marca "no más que el máximo" y el nombre de "Otra" con foco al primer error, muestra la vista previa y guarda; el detalle muestra exactamente las frases de lo marcado; sin cuotas se guardan vacías y la tarjeta de crédito va sola; la capa de datos repite las reglas. La migración de datos viejos pasa la lista a `pagos_otras`.
 12e. **Reseñas** (2 casos): el demo no trae ninguna; apagadas o sin reseñas, la sección no aparece, `resenas.js` no se carga y `cargarPublico` no las da. En el panel: aviso fijo arriba de la carga y texto exacto de la casilla; sin la casilla no se sube nada (foco en la casilla); videos de 31 s, .mov y más de 20 MB rechazados sin subir nada; una imagen (dos tamaños) y un video de 20 s se agregan; editar texto, mover, encender y cambiar el título; en el sitio, el orden de las secciones, el título, el orden, las imágenes diferidas, ningún `<video>` antes de tocar, AA; el visor con `preload="none"`, sin reproducción automática, ← y Escape, y el foco vuelve; borrar quita la reseña y sus archivos; la 13.ª se rechaza y "Agregar" queda deshabilitado; `autorizado: false` se rechaza.
-12f. **Legales** (7 casos): el **asistente** (campos según perfil y tipo de persona —emprendedor sin local, jurídica con representante y matrícula, oficial con detalle de Apple—, validaciones al salir del campo con sus mensajes, guardado automático, países con solo Colombia y Brasil "Necesita el sitio en portugués.", garantía de 12 meses con Colombia y los avisos literales, herramientas con su ID, la pregunta de la API de Conversiones con su ayuda, "Lo que falta" que lleva al campo, publicar deshabilitado hasta completar, pestañas con flechas, cláusula propia, versión 1 e Inicio sin el aviso); el **bloqueo** sin publicar (pop-up, "Página en preparación." en las tres páginas, modo demo y borrar demo en panel y capa de datos, publicar incompleto rechazado); los **documentos** (datos de la tienda, secciones, plazos, vigencia, sin corchetes ni marcas, herramientas activas sí e inactivas no, AA, pie); la **republicación** (un cambio en Legales o en Mi tienda sube la versión; incompleto, queda la publicada e Inicio avisa); el **banner** en 360 px (espera a que bajen los filtros, nada se carga antes de aceptar ni al rechazar —medido en la red—, botones iguales de 44 px o más, AA, la elección se guarda, Preferencias desde el pie por categoría, carga solo lo permitido, borra las cookies de lo retirado, vence a los 6 meses) y en 1440 px con **GPC**; y el **pop-up** (aviso corto, las dos casillas literales sin marcar, la obligatoria bloquea y la opcional no, `data-clarity-mask`, los campos de consentimiento del lead, sin píxel ni Lead sin publicidad). La migración de datos viejos del demo pasa los textos propios a las cláusulas.
+12f. **Legales** (8 casos): el **asistente** (campos según perfil y tipo de persona —emprendedor sin local, jurídica con representante y matrícula, oficial con detalle de Apple—, validaciones al salir del campo con sus mensajes, guardado automático, países con solo Colombia y Brasil "Necesita el sitio en portugués.", garantía de 12 meses con Colombia y los avisos literales, herramientas con su ID, la pregunta de la API de Conversiones con su ayuda, "Lo que falta" que lleva al campo, publicar deshabilitado hasta completar, pestañas con flechas, cláusula propia, versión 1 e Inicio sin el aviso); el **bloqueo** sin publicar (pop-up, "Página en preparación." en las tres páginas, modo demo y borrar demo en panel y capa de datos, publicar incompleto rechazado); los **documentos** (datos de la tienda, secciones, plazos, vigencia, sin corchetes ni marcas, herramientas activas sí e inactivas no, AA, pie); la **republicación** (un cambio en Legales o en Mi tienda sube la versión; incompleto, queda la publicada e Inicio avisa); el **banner** en 360 px y en 412 × 823 (espera a que bajen los filtros, nada se carga antes de aceptar ni al rechazar —medido en la red—, botones iguales de 44 px o más, AA, la elección se guarda, Preferencias desde el pie por categoría, carga solo lo permitido, borra las cookies de lo retirado, vence a los 6 meses) y en 1440 px con **GPC**; y el **pop-up** (aviso corto, las dos casillas literales sin marcar, la obligatoria bloquea y la opcional no, `data-clarity-mask`, los campos de consentimiento del lead, sin píxel ni Lead sin publicidad). La migración de datos viejos del demo pasa los textos propios a las cláusulas.
 13. Carrusel: dedo, flechas, puntos, muestras, teclado y Escape. **Video en el detalle:** miniatura con ícono; sin `<video>` en la página hasta tocarla; al tocarla, `preload="none"`, `controls`, sin `autoplay` y se reproduce; volver a la foto lo quita.
 14. Gesto táctil real en el carrusel y cierre de la hoja con el gesto.
 14b. **Vista Carrusel** (8 casos): elegirla en Mi tienda cambia el sitio (mismas tarjetas, orden, contador y detalle; tocar una vecina la centra, la del centro abre el detalle; flechas de 44 px o más con foco visible); bucle en los dos sentidos con flechas, teclado, mouse, trackpad y dedo; 1 tarjeta sin flechas ni bucle, 2 tarjetas con una sola vecina, el filtro vuelve a la primera y el estado vacío; sin scroll horizontal y con altura estable a 320, 360, 768 y 1440 px; con reduced-motion, sin animaciones.
@@ -1367,6 +1378,13 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 21/10/2026 · Legales H: mediciones, capturas y un arreglo del banner
+
+- **Lighthouse móvil** (3 corridas, con el banner): navegación 100 / 100 / 100 (LCP 1,4 s, CLS 0,045); con el banner visible, accesibilidad 100 y buenas prácticas 100; el desplazamiento hasta el banner, CLS 0. Tabla en la sección 13.
+- **Arreglo:** en 412 × 823 el banner se medía antes de que se dibujaran las capacidades y tapaba los filtros. Ahora `iniciarConsentimiento` corre después de dibujar los filtros y `mostrarSinTapar` espera la fuente y mide el banner real (oculto con `hidden` hasta que haya lugar). Caso nuevo en `verificar.cjs` a 412 × 823 (63 casos).
+- **Capturas:** `tests/capturas/legales/` (asistente, cuatro documentos y banner a 360 y 1440 px; no se suben al repo).
+- **Verificación:** las suites en verde; `node tests/documentacion.mjs` OK.
 
 ### 21/10/2026 · Legales B a G: asistente, documentos, banner de cookies, pop-up y bloqueo (0016 y 0017)
 

@@ -814,6 +814,7 @@
   padding: 0 12px calc(12px + env(safe-area-inset-bottom));
   pointer-events: none;
 }
+.banner-cookies[hidden] { display: none; }
 .banner-cookies-caja {
   pointer-events: auto;
   display: grid; gap: 12px;

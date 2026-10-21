@@ -237,25 +237,34 @@ function mostrarBanner({ configurar = false, enfocar = false } = {}) {
     banner.addEventListener("keydown", (e) => { if (e.key === "Escape" && eleccion) cerrarBanner(); });
     document.body.appendChild(banner);
   }
+  banner.hidden = false;
   banner.innerHTML = htmlBanner(configurar);
   if (enfocar) (configurar ? banner.querySelector("#cookies-config input:not(:disabled)") || banner.querySelector(".banner-cookies-guardar") : banner.querySelector("#cookies-titulo"))?.focus();
 }
 
 // Primera visita: muestra el banner cuando no tapa el título ni los filtros
-// (en un celular, cuando la persona baja y los filtros ya pasaron).
-function mostrarSinTapar(protegido) {
-  if (!protegido) { mostrarBanner(); return; }
-  const cabe = () => {
-    const alto = Math.min(innerHeight * 0.5, innerWidth < 600 ? 230 : 150);
-    return protegido.getBoundingClientRect().bottom <= innerHeight - alto;
-  };
-  if (cabe()) { mostrarBanner(); return; }
+// (en un celular, cuando la persona baja y los filtros ya pasaron). Mide el
+// banner de verdad, después de la fuente y de que los filtros se dibujaron.
+async function mostrarSinTapar(protegido) {
+  if (protegido) {
+    try { await Promise.race([document.fonts?.ready, new Promise((r) => setTimeout(r, 3000))]); } catch { /* sin fuentes */ }
+    await new Promise((r) => requestAnimationFrame(() => r()));
+  }
+  if (eleccion) return;
+  mostrarBanner();
+  if (!protegido) return;
+  // Alto del banner medido desde el borde de abajo de la pantalla
+  const alto = innerHeight - banner.querySelector(".banner-cookies-caja").getBoundingClientRect().top;
+  const cabe = () => protegido.getBoundingClientRect().bottom <= innerHeight - alto;
+  if (cabe()) return;
+  banner.hidden = true;
   const revisar = () => {
-    if (!cabe() || eleccion) return;
-    removeEventListener("scroll", revisar);
-    removeEventListener("resize", revisar);
-    mostrarBanner();
+    if (!banner || eleccion) { quitar(); return; }
+    if (!cabe()) return;
+    quitar();
+    banner.hidden = false;
   };
+  const quitar = () => { removeEventListener("scroll", revisar); removeEventListener("resize", revisar); };
   addEventListener("scroll", revisar, { passive: true });
   addEventListener("resize", revisar, { passive: true });
 }

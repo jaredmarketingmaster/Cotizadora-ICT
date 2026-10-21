@@ -318,12 +318,6 @@ async function iniciar() {
   seguro(() => dibujarMarca(t), "marca");
   seguro(() => dibujarInfo(t), "info");
   seguro(() => dibujarPie(t), "pie");
-  // Medición y publicidad: solo lo que la persona acepte (consentimiento.js)
-  seguro(() => {
-    iniciarConsentimiento({ tienda: t, protegido: $("#filtros") });
-    cargarSeguimientoGHL();
-    alCambiar(cargarSeguimientoGHL);
-  }, "consentimiento");
   dibujarResenasSiHay().catch((e) => console.error("reseñas", e));
 
   galeria = crearGaleria($("#lista-equipos"), api);
@@ -355,6 +349,14 @@ async function iniciar() {
   // anuncio de un equipo agotado lleva al estado vacío con la consulta).
   filtros = leerFiltrosURL();
   actualizar();
+
+  // Medición y publicidad: solo lo que la persona acepte (consentimiento.js).
+  // Después de dibujar los filtros, para que el banner no los tape.
+  seguro(() => {
+    iniciarConsentimiento({ tienda: cat.tienda, protegido: $("#filtros") });
+    cargarSeguimientoGHL();
+    alCambiar(cargarSeguimientoGHL);
+  }, "consentimiento");
 
   // En demo, otra pestaña (el panel) puede cambiar los datos: se recargan.
   if (api.tipo === "demo") {

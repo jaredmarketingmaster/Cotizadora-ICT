@@ -74,7 +74,7 @@ node tests/documentacion.mjs                               # DOCUMENTACION.md cu
 bash tests/sql/probar.sh                                   # SQL y RLS (Postgres local)
 python3 -m http.server 8080 &
 node tests/legal/motor.test.mjs                            # motor legal
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 62 casos, modo demo
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 63 casos, modo demo
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 ```
 
