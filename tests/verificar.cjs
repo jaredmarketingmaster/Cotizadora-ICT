@@ -26,12 +26,23 @@ let corridos = 0;
 async function caso(nombre, fn) {
   if (SOLO && !SOLO.test(nombre)) return;
   corridos++;
-  try { await fn(); console.log(`ok   ${nombre}`); } catch (e) { fallas++; console.log(`FALLA ${nombre}\n     ${String(e.message).split("\n").slice(0, 3).join("\n     ")}`); }
+  try { await fn(); console.log(`ok   ${nombre}`); } catch (e) { fallas++; console.log(`FALLA ${nombre}\n     ${String(e.message).split("\n").slice(0, +(process.env.ICT_LINEAS || 3)).join("\n     ")}`); }
 }
 
-async function nueva(ancho = 1280, alto = 900, opciones = {}) {
+// legales: true publica los textos legales con la tienda de prueba
+// (tests/legal/datos-prueba.mjs) la primera vez que se abre el sitio o el
+// panel. cookies: la elección guardada al empezar (null = sin elegir: aparece
+// el banner); por defecto, todo rechazado.
+const COOKIES_RECHAZADAS = { medicion: false, publicidad: false };
+async function nueva(ancho = 1280, alto = 900, { legales = true, cookies = COOKIES_RECHAZADAS, ...opciones } = {}) {
   const ctx = await navegador.newContext({ viewport: { width: ancho, height: alto }, ...opciones });
   const p = await ctx.newPage();
+  p.legales = legales;
+  if (cookies) {
+    await ctx.addInitScript((c) => {
+      try { if (!localStorage.getItem("cotizadora:cookies")) localStorage.setItem("cotizadora:cookies", JSON.stringify({ ...c, fecha: new Date().toISOString() })); } catch { /* nada */ }
+    }, cookies);
+  }
   p.errores = [];
   p.on("pageerror", (e) => p.errores.push(e.message));
   p.on("console", (m) => {
@@ -45,8 +56,39 @@ async function nueva(ancho = 1280, alto = 900, opciones = {}) {
   return p;
 }
 
+// Publica los textos legales de prueba en el estado demo (una vez por página).
+async function publicarLegales(p) {
+  await p.evaluate(async ([clave, base]) => {
+    const { publicar } = await import(`${base}/assets/js/legal/motor.js`);
+    const { TIENDA_LEGAL_PRUEBA } = await import(`${base}/tests/legal/datos-prueba.mjs`);
+    const e = JSON.parse(localStorage.getItem(clave));
+    const legales = Object.entries(TIENDA_LEGAL_PRUEBA).filter(([k]) => /^(legal_|meta_pixel_id|ga4_|gtm_|clarity_|tiktok_|gads_|capi_|plataforma_)/.test(k));
+    Object.assign(e.tienda, Object.fromEntries(legales));
+    e.tienda.legal_publicado = publicar(e.tienda, null, "2026-10-21");
+    localStorage.setItem(clave, JSON.stringify(e));
+  }, [CLAVE_DEMO, BASE]);
+}
+// Vuelve a publicar con cambios (ej. más herramientas): sube la versión.
+async function publicarLegalesCon(p, cambios) {
+  await p.evaluate(async ([clave, base, cambios]) => {
+    const { publicar } = await import(`${base}/assets/js/legal/motor.js`);
+    const e = JSON.parse(localStorage.getItem(clave));
+    Object.assign(e.tienda, cambios);
+    e.tienda.legal_publicado = publicar(e.tienda, e.tienda.legal_publicado, "2026-10-21");
+    localStorage.setItem(clave, JSON.stringify(e));
+  }, [CLAVE_DEMO, BASE, cambios]);
+}
+async function asegurarLegales(p) {
+  if (!p.legales || p.legalesListos) return false;
+  p.legalesListos = true;
+  await p.waitForFunction((clave) => localStorage.getItem(clave), CLAVE_DEMO);
+  await publicarLegales(p);
+  return true;
+}
+
 async function ir(p, ruta = "/") {
   await p.goto(BASE + ruta, { waitUntil: "networkidle" });
+  if (await asegurarLegales(p)) await p.goto(BASE + ruta, { waitUntil: "networkidle" });
   await p.waitForFunction(() => !document.querySelector("#lista-equipos[aria-busy]") || !document.querySelector("#lista-equipos"));
   await p.waitForTimeout(150);
 }
@@ -70,6 +112,7 @@ async function captura(p, nombre) {
 // El gestor entra a Inicio; el administrador, a Usuarios.
 async function entrarPanel(p, correo) {
   await p.goto(`${BASE}/admin/`);
+  await asegurarLegales(p);
   await p.fill("#l-correo", correo);
   await p.fill("#l-clave", "demo1234");
   await p.click("#form-login [type=submit]");
@@ -425,11 +468,7 @@ async function llenarPopup(p) {
   });
 
   await caso("color oficial: el equipo elige un color del modelo y el nombre a mostrar llega al sitio, WhatsApp y el píxel", async () => {
-    const p = await nueva(390, 844);
-    await p.route("**/config.js", async (r) => {
-      const cuerpo = fs.readFileSync(path.join(RAIZ, "config.js"), "utf8").replace('metaPixelId: ""', 'metaPixelId: "123456789012345"');
-      await r.fulfill({ contentType: "text/javascript", body: cuerpo });
-    });
+    const p = await nueva(390, 844, { cookies: { medicion: false, publicidad: true } });
     await p.route("https://connect.facebook.net/**", (r) => r.fulfill({ contentType: "text/javascript", body: "" }));
     await entrarPanel(p, "gestor@demo.co");
     await p.goto(`${BASE}/admin/#/inventario/nuevo`);
@@ -965,10 +1004,11 @@ async function llenarPopup(p) {
       // Formas de pago como antes de 0013: solo la lista libre
       for (const k of Object.keys(e.tienda)) if (k.startsWith("pagos_")) delete e.tienda[k];
       e.tienda.formas_pago = ["Addi", "Sistecrédito"];
-      // Reseñas y legales como antes de 0014 y 0015: una política propia y lo demás vacío
+      // Reseñas y legales como antes de 0014: una política propia, un aviso de
+      // marca y lo demás vacío (sin los campos de 0016)
       delete e.resenas; delete e.tienda.mostrar_resenas; delete e.tienda.titulo_resenas;
-      delete e.tienda.legales_revisados; delete e.tienda.legales_herramientas;
-      Object.assign(e.tienda, { texto_privacidad: "Mi política propia.", texto_terminos: "", texto_autorizacion_datos: "" });
+      for (const k of Object.keys(e.tienda)) if (/^(legal_|meta_pixel_id|ga4_|gtm_|clarity_|tiktok_|gads_|capi_|plataforma_)/.test(k)) delete e.tienda[k];
+      Object.assign(e.tienda, { texto_privacidad: "Mi política propia.", texto_terminos: "", texto_autorizacion_datos: "", aviso_marca: "Mi aviso de marca." });
       e.perfiles[0].rol = "agencia"; e.perfiles[0].correo = "agencia@demo.co";
       e.perfiles[1].rol = "tienda"; e.perfiles[1].correo = "tienda@demo.co";
       e.version = 1;
@@ -998,11 +1038,15 @@ async function llenarPopup(p) {
     assert.deepEqual(e.tienda.pagos_otras, ["Addi", "Sistecrédito"]);
     assert.ok(!("formas_pago" in e.tienda));
     assert.deepEqual([e.tienda.pagos_cuotas, e.tienda.pagos_cuotas_max, e.tienda.pagos_medios], [false, null, []]);
-    // 0014: sin reseñas y apagadas. 0015: el texto propio queda; los vacíos toman el base.
+    // 0014: sin reseñas y apagadas. 0016: los campos del asistente con sus
+    // valores iniciales, sin publicar; lo propio pasa a la cláusula de su
+    // documento (el aviso de marca, a la de los términos) y los textos viejos no quedan.
     assert.deepEqual([e.resenas, e.tienda.mostrar_resenas], [[], false]);
-    const L = await p.evaluate(async () => ({ ...(await import(new URL("assets/js/datos/legales-base.js", location.href).href)) }));
-    assert.deepEqual([e.tienda.texto_privacidad, e.tienda.texto_terminos, e.tienda.texto_autorizacion_datos], ["Mi política propia.", L.TERMINOS_BASE, L.AUTORIZACION_BASE]);
-    assert.deepEqual([e.tienda.legales_revisados, e.tienda.legales_herramientas], [false, L.HERRAMIENTAS_BASE]);
+    const { LEGAL_INICIAL } = await p.evaluate(async (base) => ({ ...(await import(`${base}/assets/js/datos/comun.js`)) }), BASE);
+    assert.deepEqual(Object.fromEntries(Object.keys(LEGAL_INICIAL).map((k) => [k, e.tienda[k]])),
+      { ...LEGAL_INICIAL, legal_clausula_privacidad: "Mi política propia.", legal_clausula_terminos: "Mi aviso de marca." });
+    for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) assert.ok(!(k in e.tienda), k);
+    assert.equal(e.version, 14);
     assert.deepEqual(e.equipos.map((q) => q.en_stock), [false, true, true, true, true, true]);
     assert.equal(new Set(e.modelos.map((m) => m.orden)).size, 42);
     assert.equal(e.modelos.find((m) => m.slug === "iphone-17e").orden > e.modelos.find((m) => m.slug === "iphone-17-pro-max").orden, true);
@@ -1281,78 +1325,357 @@ async function llenarPopup(p) {
 
   // Textos legales (0015)
   const textoLegal = async (p, ruta) => { await p.goto(BASE + ruta, { waitUntil: "networkidle" }); await p.waitForFunction(() => !document.querySelector("#legal-texto[aria-busy]")); return p.textContent("#legal-texto"); };
-  await caso("legales: texto base precargado con los datos de la tienda; el sitio y el pop-up nunca muestran [PENDIENTE] ni {{…}}; \"Texto en revisión.\"", async () => {
-    const p = await nueva(390, 844);
-    await ir(p);
-    const L = await p.evaluate(async () => ({ ...(await import(new URL("assets/js/datos/legales-base.js", location.href).href)) }));
-    const t = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).tienda, CLAVE_DEMO);
-    assert.deepEqual([t.texto_privacidad, t.texto_terminos, t.texto_autorizacion_datos, t.legales_revisados], [L.PRIVACIDAD_BASE, L.TERMINOS_BASE, L.AUTORIZACION_BASE, false]);
-    const limpio = (x) => !/\[PENDIENTE|\{\{|\}\}/.test(x);
-    let priv = await textoLegal(p, "/privacidad/");
-    assert.ok(limpio(priv), "privacidad sin marcas");
-    assert.equal(await p.textContent(".legal-revision"), "Texto en revisión.");
-    assert.match(priv, /Nombre: Tienda de demostración/);
-    assert.ok(!/Ciudad:|Razón social|Plazos de respuesta|Excepciones:/.test(priv), "los datos pendientes quedan vacíos (sin su renglón)");
-    assert.match(priv, /GoHighLevel: el CRM donde quedan su cotización y el seguimiento\./);
-    assert.match(priv, /Ley 1581 de 2012/);
-    const term = await textoLegal(p, "/terminos/");
-    assert.ok(limpio(term), "términos sin marcas");
-    assert.ok(!(await p.$$eval("#legal-texto h2", (hs) => hs.map((h) => h.textContent))).includes("Ley aplicable"), "un título que quedó vacío no se muestra");
-    assert.deepEqual(await p.evaluate(contrasteMalo), []);
-    // Pop-up: la casilla con el nombre de la tienda y sin marcas
-    await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb");
-    await p.click("#detalle-en-linea [data-comprar]");
-    await p.waitForSelector("#p-autorizacion");
-    const casilla = await p.textContent('label[for="p-autorizacion"]');
-    assert.ok(limpio(casilla));
-    assert.match(casilla, /^\s*Autorizo a Tienda de demostración a tratar mis datos personales \(nombre, correo y WhatsApp\)/);
-    // Con los datos completos en Mi tienda, aparecen; quedan los pendientes del abogado.
-    await editarDemo(p, (e) => Object.assign(e.tienda, { ciudad: "Medellín", direccion: "Calle 10 # 20-30", correo_contacto: "hola@tienda.co" }));
-    priv = await textoLegal(p, "/privacidad/");
-    assert.match(priv, /Ciudad: Medellín/);
-    assert.match(priv, /Correo: hola@tienda\.co/);
-    assert.equal(await p.locator(".legal-revision").count(), 1, "sigue en revisión: faltan la razón social, el NIT y lo del abogado");
-    // Sin marcas, sin aviso.
-    await editarDemo(p, (e) => { e.tienda.texto_privacidad = e.tienda.texto_privacidad.replace(/\[PENDIENTE:[^\]]*\]/g, "Dato confirmado"); });
-    priv = await textoLegal(p, "/privacidad/");
-    assert.equal(await p.locator(".legal-revision").count(), 0);
-    assert.match(priv, /Razón social y NIT: Dato confirmado/);
+  // Datos legales de prueba en el estado demo (sin publicar), con cambios.
+  const datosLegales = (p, cambios = {}) => p.evaluate(async ([clave, base, cambios]) => {
+    const { TIENDA_LEGAL_PRUEBA } = await import(`${base}/tests/legal/datos-prueba.mjs`);
+    const e = JSON.parse(localStorage.getItem(clave));
+    const legales = Object.entries(TIENDA_LEGAL_PRUEBA).filter(([k]) => /^(legal_|meta_pixel_id|ga4_|gtm_|clarity_|tiktok_|gads_|capi_|plataforma_)/.test(k));
+    Object.assign(e.tienda, Object.fromEntries(legales), cambios);
+    localStorage.setItem(clave, JSON.stringify(e));
+  }, [CLAVE_DEMO, BASE, cambios]);
+  const tiendaDemo = (p) => p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).tienda, CLAVE_DEMO);
+  // Deja pasar la espera del guardado al escribir (700 ms) y espera "Guardado".
+  const esperarGuardado = async (p) => { await p.waitForTimeout(800); await p.waitForFunction(() => /^Guardado/.test(document.querySelector("#l-guardado")?.textContent || "")); };
+  const MARCAS = /[[\]{}]|undefined|null|NaN|PENDIENTE/;
+  const INDEPENDIENTE = "es un comercio independiente. No está afiliado, patrocinado ni autorizado por Apple Inc. iPhone es una marca de Apple Inc.";
+
+  await caso("legales: el asistente cambia los campos según el perfil y el tipo de persona, valida, guarda solo y publica solo con todo completo", async () => {
+    const p = await nueva(1280, 900, { legales: false });
+    await entrarPanel(p, "gestor@demo.co");
+    const avisos = () => p.$$eval(".avisos li span", (xs) => xs.map((x) => x.textContent));
+    assert.equal((await avisos())[0], "Faltan los textos legales: el pop-up no envía pedidos hasta publicarlos", "primero en Lo que falta");
+    assert.equal(await p.getAttribute(".avisos li a >> nth=0", "href"), "#/legales/1");
+    await p.click(".avisos li a >> nth=0");
+    await p.waitForSelector("#l-titulo");
+    assert.equal(await p.textContent("#l-titulo"), "1. Perfil de la tienda");
+    assert.equal(await p.textContent("#l-progreso-texto"), "0 de 6 pasos completos");
+    // Emprendedor sin local: sin dirección del local
+    await p.check("#l-legal_perfil-4");
+    await esperarGuardado(p);
+    await p.click("#l-siguiente");
+    await p.waitForSelector("#l-legal_tipo_persona");
+    assert.equal(await p.locator("#l-legal_direccion_local").count(), 0, "emprendedor: sin local");
+    assert.equal(await p.locator("#l-legal_representante").count(), 0, "persona natural: sin representante");
+    assert.equal(await p.textContent('label[for="l-legal_nombre"]'), "Nombre completo");
+    // Jurídica: razón social, representante y matrícula
+    await p.check("#l-legal_tipo_persona-1");
+    await esperarGuardado(p);
+    assert.equal(await p.textContent('label[for="l-legal_nombre"]'), "Razón social");
+    for (const c of ["legal_representante", "legal_matricula_numero", "legal_matricula_camara"]) assert.equal(await p.locator(`#l-${c}`).count(), 1, c);
+    // Validaciones al salir del campo
+    await p.selectOption("#l-legal_doc_tipo", "nit");
+    await p.fill("#l-legal_doc_numero", "900123456");
+    await p.fill("#l-legal_correo", "datos@");
+    await p.focus("#l-legal_ciudad");
+    assert.match(await p.textContent("#l-legal_doc_numero-error"), /^Revise el número: sin puntos ni espacios, como 900123456-7\.$/);
+    assert.equal(await p.textContent("#l-legal_correo-error"), "Revise el correo.");
+    assert.equal(await p.getAttribute("#l-legal_correo", "aria-invalid"), "true");
+    await esperarGuardado(p);
+    let t = await tiendaDemo(p);
+    assert.deepEqual([t.legal_perfil, t.legal_tipo_persona, t.legal_doc_tipo, t.legal_doc_numero], ["emprendedor", "juridica", "nit", "900123456"], "se guarda solo");
+    // Revendedor no oficial: pide el local
+    await p.click("#l-pasos a >> nth=0");
+    await p.check("#l-legal_perfil-3");
+    await p.click("#l-siguiente");
+    await p.waitForSelector("#l-legal_direccion_local");
+    // Países: solo Colombia; Brasil necesita portugués
+    await p.click("#l-siguiente");
+    await p.waitForSelector("#l-legal_paises");
+    const paises = await p.$$eval("#l-legal_paises input", (xs) => xs.map((x) => [x.closest("label").textContent.replace(/\s+/g, " ").trim(), x.disabled]));
+    assert.equal(paises.length, 19);
+    assert.deepEqual(paises.filter(([, d]) => !d).map(([n]) => n), ["Colombia"]);
+    assert.ok(paises.some(([n]) => n === "Brasil Necesita el sitio en portugués."));
+    assert.ok(paises.filter(([n]) => / Próximamente$/.test(n)).length === 17);
+    await p.check("#l-legal_paises-4");
+    await esperarGuardado(p);
+    // Condiciones de venta: garantía mínima con Colombia y los avisos literales
+    await p.click("#l-siguiente");
+    await p.waitForSelector("#l-legal_garantia_nuevos");
+    assert.equal(await p.textContent("#l-legal_garantia_nuevos-ayuda"), "Si no indica un término mayor, la ley colombiana fija un año para productos nuevos.");
+    await p.fill("#l-legal_garantia_nuevos", "6");
+    await p.focus("#imp-0-nombre");
+    assert.equal(await p.textContent("#l-legal_garantia_nuevos-error"), "Con Colombia, la garantía de los equipos nuevos debe ser de 12 meses o más.");
+    await p.check("#l-legal_garantia_usados-1");
+    assert.equal(await p.textContent(".aviso-datos"), "Solo puede vender sin garantía un usado cuya garantía legal ya venció, y el cliente debe aceptarlo por escrito al comprar.");
+    await p.check("#l-legal_garantia_usados-0");
+    assert.equal(await p.locator("#l-legal_garantia_usados_meses").count(), 1, "con garantía: pide los meses");
+    assert.match(await p.textContent(".texto-fijo"), new RegExp(`^Tienda de demostración ${INDEPENDIENTE.replace(/\./g, "\\.")}$`));
+    // Herramientas: Meta siempre; las opcionales piden su ID al encenderlas
+    await p.click("#l-siguiente");
+    await p.waitForSelector("#l-meta_pixel_id");
+    assert.equal(await p.locator("#l-ga4_id").count(), 0);
+    await p.check("#l-ga4_activo");
+    await p.waitForSelector("#l-ga4_id");
+    assert.equal(await p.isChecked("#l-capi_solo_consentimiento-0"), true, "API de Conversiones: sí por defecto");
+    assert.equal(await p.textContent("#l-capi_solo_consentimiento-ayuda"), "Configure su workflow de GoHighLevel para revisar el campo consentimiento_publicidad antes de enviar el evento.");
+    assert.equal(await p.inputValue("#l-plataforma_sitio"), "HighLevel (GoHighLevel)");
+    await p.uncheck("#l-ga4_activo");
+    await esperarGuardado(p);
+    // Oficial: el detalle de Apple es obligatorio (y no va el texto de independiente)
+    await p.click("#l-pasos a >> nth=0");
+    await p.check("#l-legal_perfil-0");
+    await esperarGuardado(p);
+    await p.click("#l-pasos a >> nth=3");
+    await p.waitForSelector("#l-legal_apple_detalle");
+    assert.equal(await p.locator(".texto-fijo").count(), 0);
+    // Publicar: deshabilitado mientras falte algo; la lista lleva al campo
+    await datosLegales(p, { legal_perfil: "no_oficial", meta_pixel_id: "" });
+    await p.goto(`${BASE}/admin/#/legales/6`);
+    await p.waitForSelector("#l-publicar");
+    assert.equal(await p.isDisabled("#l-publicar"), true);
+    assert.deepEqual(await p.$$eval("#l-faltan li span", (xs) => xs.map((x) => x.textContent)), ["El ID del píxel de Meta"]);
+    assert.equal(await p.textContent("[data-previa='privacidad']"), "La vista previa aparece cuando no falte ningún dato.");
+    await p.click("#l-faltan a");
+    await p.waitForFunction(() => document.activeElement?.id === "l-meta_pixel_id");
+    assert.equal(await p.textContent("#l-meta_pixel_id-error"), "Complete este dato.");
+    await p.fill("#l-meta_pixel_id", "12a");
+    await p.focus("#l-plataforma_sitio");
+    assert.equal(await p.textContent("#l-meta_pixel_id-error"), "Revise el ID del píxel. Ej.: 123456789012345.");
+    await p.fill("#l-meta_pixel_id", "123456789012345");
+    await esperarGuardado(p);
+    await p.click("#l-siguiente");
+    await p.waitForSelector("#l-publicar:not([disabled])");
+    assert.equal(await p.textContent("#l-progreso-texto"), "5 de 6 pasos completos");
+    // Vista previa en pestañas, con flechas
+    assert.match(await p.textContent("[data-previa='privacidad']"), /Celulares La 70 S\.A\.S\./);
+    await p.focus("#pestana-privacidad");
+    await p.keyboard.press("ArrowRight");
+    assert.equal(await p.getAttribute("#pestana-terminos", "aria-selected"), "true");
+    assert.match(await p.textContent("[data-previa='terminos']"), new RegExp(INDEPENDIENTE.replace(/\./g, "\\.")));
+    // Cláusula propia de los términos
+    await p.click("[data-agregar-clausula='legal_clausula_terminos']");
+    await p.fill("#l-legal_clausula_terminos", "Los equipos se entregan con su caja original.");
+    await esperarGuardado(p);
+    assert.match(await p.textContent("[data-previa='terminos']"), /Condiciones adicionales de la tienda\s*Los equipos se entregan con su caja original\./);
+    await p.click("#l-publicar");
+    await p.waitForSelector("text=Textos legales publicados");
+    assert.match(await p.textContent("#l-estado"), /^Publicados: versión 1, vigentes desde \d{1,2}\/\d{1,2}\/\d{4}\.$/);
+    assert.equal(await p.textContent("#l-progreso-texto"), "6 de 6 pasos completos");
+    assert.equal(await p.isDisabled("#l-publicar"), true, "al día: no hay nada que publicar");
+    t = await tiendaDemo(p);
+    assert.equal(t.legal_publicado.version, 1);
+    await p.goto(`${BASE}/admin/#/inicio`);
+    await p.waitForSelector(".estadisticas");
+    assert.ok(!(await avisos()).some((a) => /legales/.test(a)));
+    assert.equal(await p.isDisabled("#i-modo-demo"), false, "publicados: el modo demo se puede apagar");
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
 
-  await caso("legales: el panel avisa que es un texto base, lista lo pendiente, edita las herramientas y \"Un abogado ya revisó\" quita el aviso de Inicio", async () => {
+  await caso("legales: sin publicar, el pop-up no envía, las páginas dicen \"Página en preparación.\" y la demo no se puede quitar (sitio, panel y capa de datos)", async () => {
+    const p = await nueva(390, 844, { legales: false });
+    await ir(p);
+    for (const ruta of ["/privacidad/", "/terminos/", "/cookies/"]) assert.equal((await textoLegal(p, ruta)).trim(), "Página en preparación.", ruta);
+    await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb");
+    await p.click("#detalle-en-linea [data-comprar]");
+    await p.waitForSelector("#popup[open]");
+    assert.equal(await p.textContent("#popup .popup-alerta"), "Esta tienda todavía no completó su información legal.");
+    assert.equal(await p.locator("#p-nombre, [data-enviar]").count(), 0, "sin formulario ni botón de envío");
+    assert.equal(await p.evaluate(() => sessionStorage.getItem("cotizadora-demo:ultimo-lead")), null);
+    await entrarPanel(p, "gestor@demo.co");
+    assert.equal(await p.isDisabled("#i-modo-demo"), true);
+    assert.equal(await p.isDisabled("#borrar-demo"), true);
+    assert.match(await p.textContent("#demo-sin-legales"), /primero publique los textos legales/);
+    const r = await p.evaluate(async (base) => {
+      const a = await (await import(`${base}/assets/js/datos/api.js`)).api();
+      const intentar = async (fn) => { try { await fn(); return "ok"; } catch (e) { return e.message; } };
+      return [await intentar(() => a.borrarDatosDemo()), await intentar(() => a.guardarTienda({ modo_demo: false })),
+        await intentar(() => a.guardarTienda({ legal_publicado: { documentos: { privacidad: "a", terminos: "b", cookies: "c", aviso: "d" } } }))];
+    }, BASE);
+    assert.deepEqual(r, ["Publique los textos legales antes de borrar los datos de demostración.", "Publique los textos legales antes de quitar el modo demo.", "Faltan datos para publicar los textos legales."]);
+    assert.equal((await tiendaDemo(p)).modo_demo, true);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("legales: los documentos publicados llevan los datos de la tienda, sus secciones y la vigencia, sin marcas; las herramientas activas aparecen y las inactivas no", async () => {
+    const p = await nueva(390, 844);
+    await ir(p);
+    const priv = await textoLegal(p, "/privacidad/");
+    assert.equal(await p.textContent("h1"), "Política de tratamiento de datos personales");
+    for (const x of ["Celulares La 70 S.A.S.", "NIT 900123456-7", "Nuestro proveedor tecnológico, ubicado en Argentina", "HighLevel (GoHighLevel), en Estados Unidos",
+      "máximo 10 días hábiles", "máximo 15 días hábiles", "máximo 2 meses desde el último contacto", "mayores de 18 años", "Vigente desde 21/10/2026 · versión 1."]) assert.ok(priv.includes(x), `privacidad: ${x}`);
+    const term = await textoLegal(p, "/terminos/");
+    assert.ok(term.includes(`Tienda de demostración ${INDEPENDIENTE}`), "términos: relación con Apple");
+    assert.ok(term.includes("5 días hábiles siguientes a la entrega"));
+    const cook = await textoLegal(p, "/cookies/");
+    assert.ok(cook.includes("Píxel de Meta") && cook.includes("_fbp"));
+    for (const x of ["Google Analytics", "Microsoft Clarity", "TikTok", "Google Ads", "Tag Manager"]) assert.ok(!cook.includes(x), `inactiva: ${x}`);
+    assert.equal(await p.locator("#legal-texto table").count(), 1, "una tabla por herramienta activa");
+    for (const x of [priv, term, cook]) assert.ok(!MARCAS.test(x), `marcas o datos vacíos: ${x.match(MARCAS)}`);
+    assert.ok(await p.isVisible("[data-preferencias-cookies]"), "el pie de las páginas legales permite cambiar las cookies");
+    assert.deepEqual(await p.evaluate(contrasteMalo), []);
+    // Con más herramientas, la política de cookies las suma
+    await publicarLegalesCon(p, { ga4_activo: true, ga4_id: "G-ABC123XYZ9", clarity_activo: true, clarity_id: "abc123def4" });
+    const cook2 = await textoLegal(p, "/cookies/");
+    assert.ok(cook2.includes("Google Analytics 4") && cook2.includes("_ga (2 años)") && cook2.includes("Microsoft Clarity"));
+    assert.ok(cook2.includes("versión 2."), "otro texto, otra versión");
+    // Pie del sitio: los tres documentos y las preferencias
+    await ir(p);
+    assert.deepEqual(await p.$$eval(".pie-enlaces a", (xs) => xs.map((x) => [x.textContent, x.getAttribute("href")])),
+      [["Política de privacidad", "privacidad/"], ["Términos y condiciones", "terminos/"], ["Política de cookies", "cookies/"]]);
+    assert.ok(await p.isVisible(".pie [data-preferencias-cookies]"));
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("legales: después de publicar, un cambio en Legales o en Mi tienda regenera y sube la versión; con datos incompletos queda la publicada", async () => {
     const p = await nueva(1280, 900);
     await entrarPanel(p, "gestor@demo.co");
-    const avisos = () => p.$$eval(".avisos li span", (xs) => xs.map((x) => x.textContent));
-    assert.ok((await avisos()).includes("Un abogado todavía no revisó los textos legales"));
-    await p.goto(`${BASE}/admin/#/legales`);
-    await p.waitForSelector("#form-legales");
-    const base = "Texto base preparado para revisión de un abogado. No lo trate como definitivo.";
-    const visibles = () => p.$$eval("[data-aviso-base]", (xs) => xs.filter((x) => !x.hidden).map((x) => [x.textContent, x.nextElementSibling.querySelector("textarea").id]));
-    assert.deepEqual(await visibles(), [[base, "texto_privacidad"], [base, "texto_terminos"], [base, "texto_autorizacion_datos"]], "un aviso arriba de cada editor");
-    assert.match(await p.textContent('[data-pendientes="texto_privacidad"]'), /^Falta: razón social y NIT; ciudad; dirección; correo de contacto; /);
-    await p.click('#form-legales details summary >> nth=0');
-    assert.ok(!/\[PENDIENTE|\{\{/.test(await p.textContent('[data-previa="texto_privacidad"]')), "la vista previa es la del sitio");
-    // Herramientas: quitar la última y agregar una
-    assert.equal(await p.locator("#herramientas li").count(), 5);
-    await p.click('[data-quitar="4"]');
-    await p.click("#agregar-herramienta");
-    await p.fill("#herramienta-4", "Herramienta de prueba.");
-    assert.match(await p.textContent('[data-previa="texto_privacidad"]'), /Herramienta de prueba\./);
-    await p.click('label[for="legales_revisados"]');
-    assert.deepEqual(await visibles(), [], "revisados: sin el aviso");
-    await p.click("#guardar-legales");
-    await p.waitForSelector("text=Guardado");
-    const t = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).tienda, CLAVE_DEMO);
-    assert.equal(t.legales_revisados, true);
-    assert.equal(t.legales_herramientas.at(-1), "Herramienta de prueba.");
-    assert.ok(!t.legales_herramientas.some((h) => h.startsWith("Marketing Masters Group")));
+    await p.goto(`${BASE}/admin/#/legales/4`);
+    await p.waitForSelector("#l-legal_garantia_nuevos");
+    await p.fill("#l-legal_garantia_nuevos", "24");
+    await p.waitForFunction(() => document.querySelector("#l-guardado")?.textContent === "Guardado. Textos legales actualizados: versión 2.");
+    assert.match(await textoLegal(p, "/terminos/"), /24 meses desde la entrega[\s\S]*versión 2\./);
+    // Incompleto: se guarda, pero lo publicado queda
+    await p.goto(`${BASE}/admin/#/legales/4`);
+    await p.waitForSelector("#l-legal_entrega_zonas");
+    await p.fill("#l-legal_entrega_zonas", "");
+    await esperarGuardado(p);
+    assert.equal((await tiendaDemo(p)).legal_publicado.version, 2);
     await p.goto(`${BASE}/admin/#/inicio`);
     await p.waitForSelector(".estadisticas");
-    assert.ok(!(await avisos()).includes("Un abogado todavía no revisó los textos legales"));
-    const priv = await textoLegal(p, "/privacidad/");
-    assert.match(priv, /Herramienta de prueba\./);
+    assert.ok((await p.$$eval(".avisos li span", (xs) => xs.map((x) => x.textContent))).includes("Faltan datos legales: los textos publicados no se actualizan"));
+    // Completo otra vez y un cambio de nombre en Mi tienda: versión 3
+    const v = await p.evaluate(async (base) => {
+      const a = await (await import(`${base}/assets/js/datos/api.js`)).api();
+      await a.guardarTienda({ legal_entrega_zonas: "Medellín" });
+      const t = await a.guardarTienda({ nombre: "La 70 Celulares" });
+      return [t.legal_publicado.version, t.legal_publicado.documentos.terminos.includes("La 70 Celulares es un comercio independiente")];
+    }, BASE);
+    assert.deepEqual(v, [4, true], "zonas (3) y nombre (4)");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("banner de cookies: nada se carga antes de aceptar; rechazar no carga nada; por categoría; tres botones iguales; no tapa los filtros; se cambia desde el pie", async () => {
+    const p = await nueva(360, 800, { cookies: null });
+    const externas = [];
+    await p.route(/connect\.facebook\.net|googletagmanager\.com|clarity\.ms|analytics\.tiktok\.com/, (r) => { externas.push(new URL(r.request().url()).host); r.fulfill({ contentType: "text/javascript", body: "" }); });
+    await ir(p);
+    await publicarLegalesCon(p, { ga4_activo: true, ga4_id: "G-ABC123XYZ9", clarity_activo: true, clarity_id: "abc123def4", tiktok_activo: true, tiktok_id: "C1A2B3C4D5E6F7G8H9I0" });
+    await ir(p);
+    // En 360 × 800 los filtros llegan casi al borde: el banner espera a que la persona baje
+    assert.equal(await p.locator(".banner-cookies").count(), 0, "no tapa los filtros");
+    await p.mouse.wheel(0, 600);
+    await p.waitForSelector(".banner-cookies");
+    const filtros = await p.$eval("#filtros", (f) => f.getBoundingClientRect().bottom);
+    const banner = await p.$eval(".banner-cookies-caja", (b) => b.getBoundingClientRect().top);
+    assert.ok(filtros <= banner, "el banner queda debajo de los filtros");
+    assert.deepEqual(externas, [], "nada antes de aceptar");
+    assert.equal(await p.getAttribute(".banner-cookies", "aria-labelledby"), "cookies-titulo");
+    const cajas = await p.$$eval(".banner-cookies-botones .boton", (bs) => bs.map((b) => { const r = b.getBoundingClientRect(); return [b.textContent, Math.round(r.width), Math.round(r.height)]; }));
+    assert.deepEqual(cajas.map((c) => c[0]), ["Aceptar todas", "Rechazar todas", "Configurar"]);
+    assert.equal(new Set(cajas.map((c) => `${c[1]}x${c[2]}`)).size, 1, `los tres del mismo tamaño: ${JSON.stringify(cajas)}`);
+    assert.ok(cajas[0][2] >= 44);
+    assert.deepEqual(await p.evaluate(contrasteMalo), []);
+    await p.click("[data-cookies='rechazar']");
+    assert.equal(await p.locator(".banner-cookies").count(), 0);
+    await ir(p);
+    await p.mouse.wheel(0, 600);
+    await p.waitForTimeout(300);
+    assert.equal(await p.locator(".banner-cookies").count(), 0, "la elección queda guardada");
+    assert.deepEqual(externas, [], "rechazar no carga nada");
+    // Desde el pie: solo medición
+    await p.click(".pie [data-preferencias-cookies]");
+    await p.waitForSelector("#cookies-config");
+    assert.equal(await p.isChecked("#ck-necesarias"), true);
+    assert.equal(await p.isDisabled("#ck-necesarias"), true);
+    assert.match(await p.textContent("#ck-medicion-texto"), /Google Analytics 4, Microsoft Clarity\.$/);
+    assert.match(await p.textContent("#ck-publicidad-texto"), /Píxel de Meta, Píxel de TikTok\.$/);
+    await p.check("#ck-medicion");
+    await p.click(".banner-cookies-guardar");
+    await p.waitForFunction(() => document.activeElement?.matches("[data-preferencias-cookies]"));
+    await p.waitForTimeout(300);
+    assert.deepEqual([...new Set(externas)].sort(), ["www.clarity.ms", "www.googletagmanager.com"]);
+    // Ahora solo publicidad: desde ahora se carga Meta y TikTok; se borran las cookies de medición
+    await p.evaluate(() => { document.cookie = "_ga=GA1.1.1; path=/"; });
+    await p.click(".pie [data-preferencias-cookies]");
+    await p.uncheck("#ck-medicion");
+    await p.check("#ck-publicidad");
+    await p.click(".banner-cookies-guardar");
+    await p.waitForTimeout(300);
+    assert.ok(externas.includes("connect.facebook.net") && externas.includes("analytics.tiktok.com"));
+    assert.ok(!/_ga=/.test(await p.evaluate(() => document.cookie)), "se borran las cookies de medición");
+    const c = await p.evaluate(() => JSON.parse(localStorage.getItem("cotizadora:cookies")));
+    assert.deepEqual([c.medicion, c.publicidad], [false, true]);
+    externas.length = 0;
+    await ir(p);
+    assert.deepEqual([...new Set(externas)], ["connect.facebook.net", "analytics.tiktok.com"].filter((h) => externas.includes(h)), "medición retirada: no se carga");
+    assert.ok(!externas.includes("www.googletagmanager.com") && !externas.includes("www.clarity.ms"));
+    // Seis meses: una elección vieja vuelve a preguntar
+    await p.evaluate(() => { const c = JSON.parse(localStorage.getItem("cotizadora:cookies")); c.fecha = new Date(Date.now() - 190 * 864e5).toISOString(); localStorage.setItem("cotizadora:cookies", JSON.stringify(c)); });
+    externas.length = 0;
+    await ir(p);
+    await p.mouse.wheel(0, 600);
+    await p.waitForSelector(".banner-cookies");
+    assert.deepEqual(externas, [], "vencida: nada hasta volver a elegir");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("banner de cookies: en escritorio aparece sin tapar los filtros; con Global Privacy Control la publicidad queda rechazada", async () => {
+    const p = await nueva(1440, 900, { cookies: null });
+    await p.addInitScript(() => Object.defineProperty(Navigator.prototype, "globalPrivacyControl", { get: () => true }));
+    const externas = [];
+    await p.route(/connect\.facebook\.net|googletagmanager\.com|clarity\.ms|analytics\.tiktok\.com/, (r) => { externas.push(new URL(r.request().url()).host); r.fulfill({ contentType: "text/javascript", body: "" }); });
+    await ir(p);
+    await publicarLegalesCon(p, { ga4_activo: true, ga4_id: "G-ABC123XYZ9" });
+    await ir(p);
+    await p.waitForSelector(".banner-cookies");
+    const [filtros, banner, titulo] = await p.evaluate(() => [document.querySelector("#filtros").getBoundingClientRect().bottom, document.querySelector(".banner-cookies-caja").getBoundingClientRect().top, document.querySelector(".titulo").getBoundingClientRect().bottom]);
+    assert.ok(filtros <= banner && titulo <= banner, "no tapa el título ni los filtros");
+    await p.click("[data-cookies='configurar']");
+    assert.equal(await p.isDisabled("#ck-publicidad"), true);
+    assert.match(await p.textContent("#ck-publicidad-texto"), /Global Privacy Control/);
+    await p.click("[data-cookies='aceptar']");
+    await p.waitForTimeout(300);
+    const c = await p.evaluate(() => JSON.parse(localStorage.getItem("cotizadora:cookies")));
+    assert.deepEqual([c.medicion, c.publicidad], [true, false], "GPC: publicidad rechazada");
+    assert.deepEqual([...new Set(externas)], ["www.googletagmanager.com"], "solo medición");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("pop-up: aviso corto y dos casillas sin marcar; la obligatoria bloquea y la opcional no; el lead lleva el consentimiento; Lead del píxel solo con publicidad", async () => {
+    const p = await nueva(390, 844, { cookies: { medicion: true, publicidad: false } });
+    await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb");
+    await p.click("#detalle-en-linea [data-comprar]");
+    await p.waitForSelector("#p-autorizacion");
+    const aviso = (await p.textContent("#p-aviso")).replace(/\s+/g, " ").trim();
+    assert.match(aviso, /^Tienda de demostración \(Celulares La 70 S\.A\.S\., NIT 900123456-7\) es responsable de sus datos\./);
+    assert.ok(aviso.endsWith("Ver la Política de privacidad."));
+    assert.equal(await p.getAttribute("#p-aviso a", "target"), "_blank");
+    assert.equal((await p.textContent('label[for="p-autorizacion"]')).replace(/\s+/g, " ").trim(),
+      "Soy mayor de 18 años y autorizo el tratamiento de mis datos para recibir mi cotización y ser contactado sobre ella por WhatsApp y correo, según la Política de privacidad.");
+    assert.equal((await p.textContent('label[for="p-promociones"]')).replace(/\s+/g, " ").trim(), "Quiero recibir promociones y novedades de Tienda de demostración por WhatsApp y correo.");
+    assert.deepEqual([await p.isChecked("#p-autorizacion"), await p.isChecked("#p-promociones")], [false, false], "las dos sin marcar");
+    assert.equal(await p.getAttribute("#form-cotizacion", "data-clarity-mask"), "true");
+    assert.equal(await p.getAttribute("#popup .resumen", "data-clarity-mask"), "true");
+    await p.fill("#p-nombre", "Juan Pérez");
+    await p.fill("#p-correo", "juan@correo.co");
+    await p.click("#p-telefono");
+    await p.keyboard.type("3001234567");
+    await p.click("[data-enviar]");
+    assert.equal(await p.textContent("#p-autorizacion-error"), "Para continuar, acepte la autorización de datos.");
+    assert.equal(await p.evaluate(() => document.activeElement.id), "p-autorizacion");
+    assert.equal(await p.evaluate(() => sessionStorage.getItem("cotizadora-demo:ultimo-lead")), null, "sin la obligatoria no se envía");
+    await p.check("#p-autorizacion");
+    await p.click("[data-enviar]");
+    await p.waitForSelector("text=Su pedido está listo");
+    const lead = JSON.parse(await p.evaluate(() => sessionStorage.getItem("cotizadora-demo:ultimo-lead")));
+    assert.deepEqual([lead.consentimiento_datos, lead.consentimiento_promociones, lead.consentimiento_medicion, lead.consentimiento_publicidad, lead.version_politica],
+      [true, false, true, false, 1]);
+    assert.match(lead.fecha_consentimiento, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}-05:00$/);
+    assert.equal(await p.evaluate(() => typeof window.fbq), "undefined", "sin publicidad no hay píxel ni Lead");
+    // Con promociones marcadas
+    await p.click("[data-cerrar]");
+    await p.click("#detalle-en-linea [data-comprar]");
+    await llenarPopup(p);
+    await p.check("#p-promociones");
+    await p.click("[data-enviar]");
+    await p.waitForSelector("text=Su pedido está listo");
+    assert.equal(JSON.parse(await p.evaluate(() => sessionStorage.getItem("cotizadora-demo:ultimo-lead"))).consentimiento_promociones, true);
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
@@ -1395,7 +1718,7 @@ async function llenarPopup(p) {
   for (const [ancho, alto] of [[320, 640], [360, 800], [768, 1024], [1440, 900]]) {
     await caso(`10. ${ancho}px: sin scroll horizontal, un h1 y sin errores (sitio, legales y panel)`, async () => {
       const p = await nueva(ancho, alto);
-      for (const ruta of ["/", "/privacidad/", "/terminos/"]) {
+      for (const ruta of ["/", "/privacidad/", "/terminos/", "/cookies/"]) {
         await ir(p, ruta);
         assert.equal(await p.locator("h1").count(), 1, `${ruta}: h1`);
         const desborde = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -1738,7 +2061,9 @@ async function llenarPopup(p) {
       if (!/\.(html|js|css|svg|sql|ts|md)$/.test(a)) continue;
       const t = fs.readFileSync(a, "utf8");
       assert.ok(!t.includes(""), `manzana en ${a}`);
-      assert.ok(!/apple\.com|SF Pro|San Francisco|apple-logo|Apple Inc/i.test(t.replace(/apple\.com\/co/g, "")), `referencia a Apple en ${a}`);
+      // "Apple Inc." solo en las frases fijas de los términos (pedido de Jared)
+      const sinFrases = t.replace(/No está afiliado, patrocinado ni autorizado por Apple Inc\. iPhone es una marca de Apple Inc\.|Apple e iPhone son marcas de Apple Inc\./g, "");
+      assert.ok(!/apple\.com|SF Pro|San Francisco|apple-logo|Apple Inc/i.test(sinFrases.replace(/apple\.com\/co/g, "")), `referencia a Apple en ${a}`);
     }
     const p = await nueva();
     await ir(p);
@@ -1955,23 +2280,28 @@ async function llenarPopup(p) {
   });
 
   await caso("copy: usted, sin tú/vos ni promesas, sin \"Purchase\" en el píxel", async () => {
-    const t = ["index.html", "admin/index.html", "privacidad/index.html", "terminos/index.html"]
+    const legal = ["assets/js/legal", "assets/js/legal/paises", "assets/js/legal/plantillas"]
+      .flatMap((d) => fs.readdirSync(path.join(RAIZ, d)).filter((f) => f.endsWith(".js")).map((f) => `${d}/${f}`));
+    const sitio = ["index.html", "privacidad/index.html", "terminos/index.html", "cookies/index.html", ...legal]
+      .concat(fs.readdirSync(path.join(RAIZ, "assets/js/sitio")).map((f) => `assets/js/sitio/${f}`))
+      .map((f) => fs.readFileSync(path.join(RAIZ, f), "utf8")).join("\n");
+    // Ni borradores ni "revise con un abogado" en lo que ve el cliente
+    assert.ok(!/\bborrador\b|\babogad[oa]\b|\ben revisi[oó]n\b|revise con/i.test(sitio.replace(/\/\/.*$/gm, "")), "aviso de borrador o de abogado en el sitio");
+    const t = ["index.html", "admin/index.html", "privacidad/index.html", "terminos/index.html", "cookies/index.html"]
       .concat(fs.readdirSync(path.join(RAIZ, "assets/js/sitio")).map((f) => `assets/js/sitio/${f}`))
       .concat(fs.readdirSync(path.join(RAIZ, "assets/js/panel")).map((f) => `assets/js/panel/${f}`))
       .map((f) => fs.readFileSync(path.join(RAIZ, f), "utf8")).join("\n");
-    const sinComentarios = t.replace(/\/\/.*$/gm, "");
+    // El tuteo se revisa también en los textos legales; las promesas, no (los
+    // plazos de la ley sí van en ellos).
+    const sinComentarios = (t + legal.map((f) => fs.readFileSync(path.join(RAIZ, f), "utf8")).join("\n")).replace(/\/\/.*$/gm, "");
     const tuteo = sinComentarios.match(/\b(tú|vos|tienes|puedes|quieres|tu pedido|tus datos|tu nombre|tu correo|tu whatsapp)\b|(^|[>"'.!?]\s*)(Elige|Escribe|Toca|Revisa|Acepta|Ingresa|Llena)\b/i);
     assert.ok(!tuteo, `aparece tuteo o voseo: ${tuteo?.[0]}`);
     assert.ok(!/envío gratis|garantía de 12 meses|respondemos en/i.test(t), "promesa no cargada por la tienda");
     assert.ok(!/["']Purchase["']/.test(fs.readFileSync(path.join(RAIZ, "assets/js/sitio/pixel.js"), "utf8")), "dispara Purchase");
   });
 
-  await caso("píxel: PageView, ViewContent y Lead con eventID y sin datos personales", async () => {
-    const p = await nueva(390, 844);
-    await p.route("**/config.js", async (r) => {
-      const cuerpo = fs.readFileSync(path.join(RAIZ, "config.js"), "utf8").replace('metaPixelId: ""', 'metaPixelId: "123456789012345"');
-      await r.fulfill({ contentType: "text/javascript", body: cuerpo });
-    });
+  await caso("píxel: PageView, ViewContent y Lead con eventID y sin datos personales (con publicidad aceptada)", async () => {
+    const p = await nueva(390, 844, { cookies: { medicion: false, publicidad: true } });
     await p.route("https://connect.facebook.net/**", (r) => r.fulfill({ contentType: "text/javascript", body: "" }));
     await ir(p);
     await p.click(".tarjeta-boton >> nth=0");

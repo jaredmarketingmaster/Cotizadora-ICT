@@ -2,7 +2,8 @@
 //   node tests/legal/motor.test.mjs
 import assert from "node:assert/strict";
 import { faltantes, generar, publicar, conVigencia, contexto, PERFILES } from "../../assets/js/legal/motor.js";
-import { PAISES, PAISES_DISPONIBLES } from "../../assets/js/legal/paises/indice.js";
+import { PAISES, PAISES_DISPONIBLES, CODIGOS_PAISES } from "../../assets/js/legal/paises/indice.js";
+import { CODIGOS_PAISES_SQL, LEGAL_INICIAL, errorLegales } from "../../assets/js/datos/comun.js";
 import { formatoBasico } from "../../assets/js/utils.js";
 import { TIENDA_LEGAL_PRUEBA } from "./datos-prueba.mjs";
 
@@ -63,6 +64,7 @@ caso("validaciones: garantía de 12 meses o más con Colombia, IVA con porcentaj
 });
 
 caso("países: solo Colombia está disponible; Brasil necesita portugués", () => {
+  assert.deepEqual(CODIGOS_PAISES_SQL, CODIGOS_PAISES, "la lista del check de 0016 (comun.js) es la del índice");
   assert.deepEqual(PAISES_DISPONIBLES, ["co"]);
   assert.equal(PAISES.find((p) => p.codigo === "br").estado, "portugues");
   assert.equal(PAISES.length, 19);
@@ -143,6 +145,15 @@ caso("el contexto no deja pasar formato de la tienda a los textos", () => {
   const t = base();
   t.legal_entrega_zonas = "[Medellín] **todo**";
   assert.equal(contexto(t).venta.zonas, "Medellín todo");
+});
+
+caso("los valores iniciales se pueden guardar y los checks de 0016 rechazan lo que no corresponde", () => {
+  assert.equal(errorLegales(LEGAL_INICIAL), "");
+  assert.equal(errorLegales({ ...LEGAL_INICIAL, ...base() }), "");
+  for (const malo of [{ legal_perfil: "otro" }, { legal_paises: ["us"] }, { legal_garantia_nuevos: 0 }, { legal_entrega: ["dron"] },
+    { ga4_activo: "si" }, { legal_clausula_terminos: "x".repeat(4001) }, { legal_publicado: [] }, { legal_paso: 7 }]) {
+    assert.notEqual(errorLegales({ ...LEGAL_INICIAL, ...malo }), "", JSON.stringify(malo).slice(0, 60));
+  }
 });
 
 console.log(`\nOK: ${casos} casos del motor legal`);

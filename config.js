@@ -20,7 +20,9 @@ export const CONFIG = {
     anonKey: ""    // [PENDIENTE] Project Settings → API → anon public
   },
 
-  // Píxel de Meta de la tienda. Vacío = no se carga ningún script de Meta.
+  // YA NO SE USA: el ID del píxel de Meta (y el de las demás herramientas) se
+  // carga en el panel, Legales → Herramientas. Si una tienda vieja tiene un ID
+  // aquí, el panel lo copia una vez a Legales al entrar el gestor.
   metaPixelId: "",
 
   // Script de seguimiento externo de GHL (Sites → External Tracking), opcional.

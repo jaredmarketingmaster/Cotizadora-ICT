@@ -48,56 +48,60 @@ export const CAMPOS_TIENDA = [
   "nombre", "ciudad", "direccion", "horario_texto", "whatsapp", "correo_contacto",
   "instagram_url", "facebook_url", "tiktok_url", "logo", "favicon",
   "color_primario", "color_secundario", "tema", "texto_entrega", "pagos_otras",
-  "texto_garantia_nuevos", "texto_garantia_usados", "etiqueta_precio",
-  "texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "modo_demo",
+  "texto_garantia_nuevos", "texto_garantia_usados", "etiqueta_precio", "modo_demo",
   "tamano_texto", "vista_equipos", "mostrar_ficha", "ficha_ocultas",
   "pagos_medios", "pagos_cuotas", "pagos_cuotas_max", "pagos_sin_interes", "pagos_sin_interes_max",
   "pagos_cripto", "pagos_cripto_cuales", "pagos_pasarelas", "pagos_pasarela_otra",
-  "mostrar_resenas", "titulo_resenas", "legales_revisados", "legales_herramientas"
+  "mostrar_resenas", "titulo_resenas"
 ];
 
-// Textos legales (0015). {{nombre}}, {{ciudad}}, {{direccion}}, {{correo}} y
-// {{herramientas}} se reemplazan por los datos de la tienda; un dato vacío
-// queda como [PENDIENTE: …] (el nombre vacío, como "la tienda").
-// prepararLegal quita las marcas [PENDIENTE: …] y lo que queda vacío por
-// ellas (un ítem "- Etiqueta:" sin valor, el "…:" de una lista que quedó
-// vacía, un título sin contenido) y dice qué faltaba. El sitio nunca
-// muestra una marca.
-const MARCA_PENDIENTE = /\[PENDIENTE:([^\]]*)\]/g;
+// Legales (0016): los datos del asistente, con sus valores iniciales (los
+// mismos defaults del SQL; tests/sql/comparar-semilla.mjs lo revisa).
+// legal_publicado lo arma el motor (assets/js/legal/motor.js) al publicar.
+export const PLATAFORMA_POR_DEFECTO = "HighLevel (GoHighLevel)";
+export const LEGAL_INICIAL = {
+  legal_paso: 1, legal_perfil: "", legal_tipo_persona: "", legal_nombre: "", legal_doc_tipo: "", legal_doc_numero: "",
+  legal_direccion: "", legal_ciudad: "", legal_correo: "", legal_telefono: "", legal_representante: "",
+  legal_matricula_numero: "", legal_matricula_camara: "", legal_direccion_local: "", legal_rnbd: "",
+  legal_paises: [], legal_impuestos: [{ nombre: "IVA", porcentaje: null, incluido: null }],
+  legal_garantia_nuevos: null, legal_garantia_usados: "", legal_garantia_usados_meses: null, legal_retracto_canal: "",
+  legal_entrega: [], legal_entrega_zonas: "", legal_apple_detalle: "", legal_homologados: "",
+  legal_clausula_privacidad: "", legal_clausula_terminos: "", legal_clausula_cookies: "", legal_clausula_aviso: "",
+  meta_pixel_id: "", ga4_activo: false, ga4_id: "", gtm_activo: false, gtm_id: "", clarity_activo: false, clarity_id: "",
+  tiktok_activo: false, tiktok_id: "", gads_activo: false, gads_id: "",
+  capi_solo_consentimiento: true, plataforma_sitio: PLATAFORMA_POR_DEFECTO, legal_publicado: null
+};
+export const CAMPOS_LEGALES = Object.keys(LEGAL_INICIAL);
+CAMPOS_TIENDA.push(...CAMPOS_LEGALES);
 
-export function expandirLegal(texto, tienda = {}) {
-  const dato = (v, falta) => String(v || "").trim() || `[PENDIENTE: ${falta}]`;
-  const herramientas = (tienda.legales_herramientas || []).map((h) => String(h).trim()).filter(Boolean);
-  const valores = {
-    nombre: String(tienda.nombre || "").trim() || "la tienda",
-    ciudad: dato(tienda.ciudad, "ciudad"),
-    direccion: dato(tienda.direccion, "dirección"),
-    correo: dato(tienda.correo_contacto, "correo de contacto"),
-    herramientas: herramientas.length ? herramientas.map((h) => `- ${h}`).join("\n") : "[PENDIENTE: herramientas]"
-  };
-  return String(texto || "").replace(/\{\{(\w+)\}\}/g, (m, k) => (k in valores ? valores[k] : m));
-}
-
-export function prepararLegal(texto, tienda = {}) {
-  const expandido = expandirLegal(texto, tienda).replace(/\r\n?/g, "\n");
-  const pendientes = [...expandido.matchAll(MARCA_PENDIENTE)].map((m) => m[1].trim());
-  const lineas = expandido.replace(MARCA_PENDIENTE, "").split("\n")
-    .map((l) => l.replace(/[ \t]+$/, "").replace(/ {2,}/g, " "))
-    // Un ítem que quedó sin valor ("- Correo:" o "-") no se muestra.
-    .filter((l) => !/^\s*[-*]\s*([^:]*:)?\s*$/.test(l));
-  // Un párrafo que presenta una lista ("…:") cuya lista quedó vacía tampoco.
-  const conLista = lineas.filter((l, i) => {
-    if (!/:\s*$/.test(l) || /^\s*[-*]\s/.test(l)) return true;
-    const siguiente = lineas.slice(i + 1).find((x) => x.trim());
-    return Boolean(siguiente) && /^\s*([-*]|\d+[.)])\s/.test(siguiente);
-  });
-  // Un título sin nada debajo (hasta el próximo título) tampoco.
-  const limpias = conLista.filter((l, i) => {
-    if (!/^#{2,3}\s/.test(l.trim())) return true;
-    const siguiente = conLista.slice(i + 1).find((x) => x.trim());
-    return Boolean(siguiente) && !/^#{2,3}\s/.test(siguiente.trim());
-  });
-  return { texto: limpias.join("\n").replace(/\n{3,}/g, "\n\n").trim(), pendientes };
+// Como los checks de 0016 (lo que se puede guardar; lo que falta para
+// publicar lo dice faltantes() de motor.js). "" = bien.
+const LARGOS_LEGALES = {
+  legal_nombre: 160, legal_doc_numero: 20, legal_direccion: 160, legal_ciudad: 80, legal_correo: 160, legal_telefono: 20,
+  legal_representante: 160, legal_matricula_numero: 40, legal_matricula_camara: 80, legal_direccion_local: 160,
+  legal_entrega_zonas: 200, legal_apple_detalle: 400, legal_clausula_privacidad: 4000, legal_clausula_terminos: 4000,
+  legal_clausula_cookies: 4000, legal_clausula_aviso: 4000, meta_pixel_id: 30, ga4_id: 30, gtm_id: 30, clarity_id: 30,
+  tiktok_id: 30, gads_id: 30, plataforma_sitio: 80
+};
+const OPCIONES_LEGALES = {
+  legal_perfil: ["", "oficial", "autorizado", "electronica", "no_oficial", "emprendedor", "particular"],
+  legal_tipo_persona: ["", "natural", "juridica"], legal_doc_tipo: ["", "cc", "nit", "ce"], legal_rnbd: ["", "si", "no"],
+  legal_garantia_usados: ["", "con", "sin"], legal_retracto_canal: ["", "correo", "whatsapp"], legal_homologados: ["", "si", "no"]
+};
+export const CODIGOS_PAISES_SQL = ["ar", "bo", "br", "cl", "co", "cr", "cu", "ec", "sv", "gt", "hn", "mx", "ni", "pa", "py", "pe", "do", "uy", "ve"];
+export function errorLegales(t) {
+  const MAL = "Algún dato no tiene el formato correcto. Revise los campos.";
+  for (const [k, max] of Object.entries(LARGOS_LEGALES)) if (typeof t[k] !== "string" || t[k].length > max) return MAL;
+  for (const [k, op] of Object.entries(OPCIONES_LEGALES)) if (!op.includes(t[k])) return MAL;
+  const meses = (v) => v === null || (Number.isInteger(v) && v >= 1 && v <= 120);
+  if (!Number.isInteger(t.legal_paso) || t.legal_paso < 1 || t.legal_paso > 6) return MAL;
+  if (!Array.isArray(t.legal_paises) || t.legal_paises.some((p) => !CODIGOS_PAISES_SQL.includes(p))) return MAL;
+  if (!Array.isArray(t.legal_entrega) || t.legal_entrega.some((e) => !["retiro", "transportadora", "personal"].includes(e))) return MAL;
+  if (!Array.isArray(t.legal_impuestos) || t.legal_impuestos.length > 6) return MAL;
+  if (!meses(t.legal_garantia_nuevos) || !meses(t.legal_garantia_usados_meses)) return MAL;
+  for (const k of ["ga4_activo", "gtm_activo", "clarity_activo", "tiktok_activo", "gads_activo", "capi_solo_consentimiento"]) if (typeof t[k] !== "boolean") return MAL;
+  if (t.legal_publicado !== null && (typeof t.legal_publicado !== "object" || Array.isArray(t.legal_publicado))) return MAL;
+  return "";
 }
 
 // Reseñas (0014): hasta 12; imagen o video de hasta 30 segundos.

@@ -409,3 +409,45 @@ select.entrada { appearance: none; -webkit-appearance: none; padding-right: 40px
 .resena-tipo { font-weight: 700; }
 .resena-botones { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; }
 @media (min-width: 720px) { .resena-fila { grid-template-columns: 96px minmax(0, 1fr) auto; } .resena-medio { width: 96px; height: 96px; } .resena-botones { grid-column: auto; flex-direction: column; justify-content: flex-start; } }
+
+/* Legales: asistente de seis pasos (legales.js) */
+.estado-legales { margin: 0; }
+.progreso-legales { display: flex; align-items: center; gap: 12px; }
+.progreso-legales progress { flex: 1; height: 10px; accent-color: var(--primario); }
+.pasos-legales { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.paso-legal {
+  display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 12px;
+  border: 1.5px solid var(--borde); border-radius: var(--radio-md);
+  color: var(--texto); font-weight: 700; text-decoration: none; background: var(--fondo);
+}
+.paso-legal[aria-current="step"] { border-color: var(--primario-texto); box-shadow: inset 0 0 0 1.5px var(--primario-texto); }
+.paso-legal-numero {
+  display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--superficie); color: var(--texto); font-weight: 800;
+}
+.paso-legal--hecho .paso-legal-numero { background: var(--exito-fondo); color: var(--exito); }
+@media (hover: hover) { .paso-legal:not([aria-current="step"]):hover { background: var(--superficie); } }
+.opciones-legales { display: grid; gap: 10px; }
+.opciones-legales legend { margin-bottom: 4px; }
+.opciones-legales .casilla { min-height: 44px; align-items: center; }
+.opciones-legales .casilla input:disabled + span { color: var(--texto-suave); }
+.sub-bloque { display: grid; gap: 12px; padding-top: 16px; border-top: 1px solid var(--borde); }
+.sub-bloque h3 { font-size: 1.0625rem; font-weight: 800; }
+.texto-fijo { margin: 0; padding: 12px 14px; border-left: 3px solid var(--borde-fuerte); background: var(--superficie); border-radius: 0 10px 10px 0; }
+.lista-impuestos { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.fila-impuesto { display: grid; gap: 12px; padding: 12px; border: 1px solid var(--borde); border-radius: var(--radio-md); background: var(--fondo); }
+@media (min-width: 760px) { .fila-impuesto { grid-template-columns: 1fr 160px 1fr; align-items: start; } .fila-impuesto > .boton { grid-column: 1 / -1; justify-self: start; } }
+.entrada-con-sufijo { display: flex; align-items: center; gap: 8px; }
+.entrada-con-sufijo .entrada { max-width: 140px; }
+.estado-guardado { min-height: 1.5em; margin: 0 0 8px; color: var(--texto-suave); font-weight: 600; }
+.acciones-pasos { display: flex; gap: 10px; justify-content: space-between; flex-wrap: wrap; }
+.acciones-pasos .boton[hidden] { display: none; }
+.acciones-pasos #l-siguiente { margin-left: auto; }
+.publicar-legales { display: grid; gap: 8px; justify-items: start; }
+.panel-pestana { display: grid; gap: 12px; }
+.panel-pestana[hidden] { display: none; }
+.vista-previa-legal h2 { font-size: 1.125rem; font-weight: 800; }
+.vista-previa-legal h3 { font-size: 1.0625rem; font-weight: 800; }
+.vista-previa-legal .tabla-legal { overflow-x: auto; }
+.vista-previa-legal table { border-collapse: collapse; width: 100%; }
+.vista-previa-legal th, .vista-previa-legal td { padding: 8px 10px; border: 1px solid var(--borde); text-align: left; vertical-align: top; }

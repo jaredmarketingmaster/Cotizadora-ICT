@@ -2,11 +2,14 @@
 // Panel de administración: acceso, rutas (#/seccion) y la vista de Inicio.
 // =============================================================================
 
+import { CONFIG } from "../../../config.js";
 import { api as obtenerApi } from "../datos/api.js";
 import { aplicarTema } from "../tema.js";
 import { fechaCorta, plural, whatsappTiendaValido } from "../utils.js";
 import { frasesPagos } from "../datos/comun.js";
 import { $, $$, esc, avisar, confirmar, conBoton, campoTexto, marcarError, enfocarPrimerError, interruptor } from "./ui.js";
+import { republicarAlGuardar } from "./legales.js";
+import { faltantes } from "../legal/motor.js";
 
 const RUTAS = {
   inicio: () => ({ dibujar: vistaInicio }),
@@ -143,8 +146,17 @@ function vistaNuevaClave(tipo) {
 
 // --- Panel ---------------------------------------------------------------------
 
+// Compatibilidad: el ID del píxel estaba en config.js. Se copia una vez a la
+// tienda (Legales → Herramientas) si allí está vacío.
+async function copiarPixelViejo() {
+  const viejo = String(CONFIG.metaPixelId || "").trim();
+  if (!ctx.esGestor() || !viejo || ctx.tienda.meta_pixel_id || !/^\d{5,20}$/.test(viejo)) return;
+  try { ctx.tienda = await ctx.api.guardarTienda({ meta_pixel_id: viejo }); } catch (e) { console.error("píxel de config.js", e); }
+}
+
 async function entrar() {
   await ctx.recargarTienda();
+  await copiarPixelViejo();
   $("#acceso").hidden = true;
   $("#acceso-contenido").innerHTML = "";
   $("#cargando-panel").hidden = true;
@@ -204,15 +216,18 @@ async function vistaInicio(vista) {
   const borradores = equipos.filter((q) => !q.publicado);
   const ocultosPorModelo = equipos.filter((q) => q.publicado && q.en_stock && !activos.has(q.modelo_id));
   const sinFoto = equipos.filter((q) => !q.es_demo && !(q.fotos || []).length);
+  // Legales primero: sin publicar, el pop-up no envía pedidos (0017).
+  const legales = faltantes(tienda);
+  const pasoLegal = legales.find((f) => f.paso > 0)?.paso || 6;
   const avisos = [
+    !tienda.legal_publicado && ["Faltan los textos legales: el pop-up no envía pedidos hasta publicarlos", `#/legales/${pasoLegal}`],
+    tienda.legal_publicado && legales.length && ["Faltan datos legales: los textos publicados no se actualizan", `#/legales/${pasoLegal}`],
     !tienda.nombre.trim() && ["Falta el nombre de la tienda", "#/tienda"],
     !tienda.ciudad.trim() && ["Falta la ciudad", "#/tienda"],
     !tienda.correo_contacto.trim() && ["Falta el correo de contacto", "#/tienda"],
     !tienda.logo && ["Falta el logo", "#/tienda"],
     !whatsappTiendaValido(tienda.whatsapp) && ["Falta el WhatsApp", "#/tienda"],
     !frasesPagos(tienda).length && ["Faltan las formas de pago", "#/catalogo/pagos"],
-    (!tienda.texto_privacidad.trim() || !tienda.texto_terminos.trim() || !tienda.texto_autorizacion_datos.trim()) && ["Faltan los textos legales", "#/legales"],
-    !tienda.legales_revisados && ["Un abogado todavía no revisó los textos legales", "#/legales"],
     sinFoto.length && ["Hay equipos sin foto", "#/inventario?fotos=sin"],
     ocultosPorModelo.length && [`${plural(ocultosPorModelo.length, "equipo publicado no se ve", "equipos publicados no se ven")} porque su modelo está inactivo`, "#/catalogo"]
   ].filter(Boolean);
@@ -242,8 +257,9 @@ async function vistaInicio(vista) {
     <section class="bloque" aria-labelledby="t-demo">
       <h2 id="t-demo">Modo demo</h2>
       <p class="ayuda">Con el modo demo encendido, el sitio muestra la franja "Sitio en preparación". Hay ${plural(demo, "equipo de demostración", "equipos de demostración")}.</p>
-      ${interruptor({ id: "i-modo-demo", etiqueta: "Mostrar la franja de demostración", marcado: tienda.modo_demo })}
-      <button type="button" class="boton boton--peligro" id="borrar-demo" ${!demo && !tienda.modo_demo ? "disabled" : ""}>Borrar datos de demostración</button>
+      ${!tienda.legal_publicado ? `<p class="aviso-datos" id="demo-sin-legales">Para quitar el modo demo o borrar los datos de demostración, primero <a href="#/legales/${pasoLegal}">publique los textos legales</a>.</p>` : ""}
+      ${interruptor({ id: "i-modo-demo", etiqueta: "Mostrar la franja de demostración", marcado: tienda.modo_demo, atributos: !tienda.legal_publicado && tienda.modo_demo ? 'disabled aria-describedby="demo-sin-legales"' : "" })}
+      <button type="button" class="boton boton--peligro" id="borrar-demo" ${(!demo && !tienda.modo_demo) || !tienda.legal_publicado ? "disabled" : ""} ${!tienda.legal_publicado ? 'aria-describedby="demo-sin-legales"' : ""}>Borrar datos de demostración</button>
       ${ctx.api.tipo === "demo" ? '<button type="button" class="boton boton--secundario" id="reiniciar-demo">Volver a los datos iniciales (solo en este navegador)</button>' : ""}
     </section>` : ""}`;
 
@@ -275,6 +291,7 @@ async function iniciar() {
   try {
     ctx.api = await obtenerApi();
     await ctx.api.iniciar();
+    republicarAlGuardar(ctx.api);
     const tipo = await ctx.api.tipoDeEnlace();
     ctx.usuario = await ctx.api.sesionActual();
     if (tipo === "invite" || tipo === "recovery") {

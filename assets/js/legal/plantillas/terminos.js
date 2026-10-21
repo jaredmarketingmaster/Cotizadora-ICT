@@ -2,12 +2,16 @@
 // Plantilla: Términos y condiciones (/terminos/).
 // =============================================================================
 
+// Texto fijo para los perfiles que no son tienda oficial ni revendedor
+// autorizado (no se puede cambiar).
+export const independiente = (tienda) => `${tienda} es un comercio independiente. No está afiliado, patrocinado ni autorizado por Apple Inc. iPhone es una marca de Apple Inc.`;
+
 export function secciones(ctx) {
   const r = ctx.responsable;
   const v = ctx.venta;
   const apple = v.apple.autorizado
     ? `${v.apple.detalle} ${ctx.tienda} declara, bajo su responsabilidad, que esta información es cierta.`
-    : `${ctx.tienda} es un comercio independiente. No está afiliado, patrocinado ni autorizado por Apple Inc. iPhone es una marca de Apple Inc.`;
+    : independiente(ctx.tienda);
   return [
     {
       titulo: "Quién vende",

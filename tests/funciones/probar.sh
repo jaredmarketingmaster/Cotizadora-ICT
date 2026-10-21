@@ -26,7 +26,7 @@ for p in 18090 18091 18092 18093; do
   for _ in $(seq 50); do curl -s -o /dev/null "http://127.0.0.1:$p" && break; sleep 0.2; done
 done
 
-BUENO='{"nombre":"Juan Pérez","correo":"juan@correo.co","telefono":"+573001234567","modelo":"iPhone 18 Pro Max","condicion":"Nuevo","capacidad":"256 GB","color":"Plata","precio_cotizado":6200000,"equipo_id":"abc","tipo_consulta":"compra","codigo_cotizacion":"COT-AB2C","utm_source":"meta","utm_medium":"","utm_campaign":"test","utm_term":"","utm_content":"","ad_id":"123","fbclid":"prueba","pagina":"https://tienda.co/","enviado_en":"2026-10-20T00:00:00Z"}'
+BUENO='{"nombre":"Juan Pérez","correo":"juan@correo.co","telefono":"+573001234567","modelo":"iPhone 18 Pro Max","condicion":"Nuevo","capacidad":"256 GB","color":"Plata","precio_cotizado":6200000,"equipo_id":"abc","tipo_consulta":"compra","codigo_cotizacion":"COT-AB2C","utm_source":"meta","utm_medium":"","utm_campaign":"test","utm_term":"","utm_content":"","ad_id":"123","fbclid":"prueba","pagina":"https://tienda.co/","enviado_en":"2026-10-20T00:00:00Z","consentimiento_datos":true,"consentimiento_promociones":false,"consentimiento_medicion":true,"consentimiento_publicidad":false,"version_politica":2,"fecha_consentimiento":"2026-10-20T09:30:00-05:00"}'
 fallas=0
 probar() { # nombre, puerto, cuerpo, estado esperado, [origen]
   local estado
@@ -36,7 +36,7 @@ probar() { # nombre, puerto, cuerpo, estado esperado, [origen]
 probar "lead válido" 18090 "$BUENO" 200
 node -e '
 const r = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
-const esperado = { name: "Juan Pérez", email: "juan@correo.co", phone: "+573001234567", modelo: "iPhone 18 Pro Max", condicion: "Nuevo", capacidad: "256 GB", color: "Plata", precio_cotizado: 6200000, equipo_id: "abc", tipo_consulta: "compra", codigo_cotizacion: "COT-AB2C", utm_source: "meta", utm_campaign: "test", ad_id: "123", fbclid: "prueba", event_id: "COT-AB2C" };
+const esperado = { name: "Juan Pérez", email: "juan@correo.co", phone: "+573001234567", modelo: "iPhone 18 Pro Max", condicion: "Nuevo", capacidad: "256 GB", color: "Plata", precio_cotizado: 6200000, equipo_id: "abc", tipo_consulta: "compra", codigo_cotizacion: "COT-AB2C", utm_source: "meta", utm_campaign: "test", ad_id: "123", fbclid: "prueba", event_id: "COT-AB2C", consentimiento_datos: true, consentimiento_promociones: false, consentimiento_medicion: true, consentimiento_publicidad: false, version_politica: 2, fecha_consentimiento: "2026-10-20T09:30:00-05:00" };
 for (const [k, v] of Object.entries(esperado)) if (r[k] !== v) { console.log("FALLA campo " + k + ": " + JSON.stringify(r[k])); process.exit(1); }
 for (const k of ["utm_medium", "utm_term", "utm_content"]) if (!(k in r)) { console.log("FALLA falta " + k); process.exit(1); }
 console.log("ok   el webhook recibió todos los campos");' "$TMP/ok.json" || fallas=$((fallas+1))
@@ -44,6 +44,10 @@ probar "teléfono inválido" 18090 "${BUENO/+573001234567/+572001234567}" 400
 probar "correo inválido" 18090 "${BUENO/juan@correo.co/juan}" 400
 probar "código inválido" 18090 "${BUENO/COT-AB2C/COT-AB1C}" 400
 probar "JSON roto" 18090 "{" 400
+probar "sin autorización de datos" 18090 "${BUENO/\"consentimiento_datos\":true/\"consentimiento_datos\":false}" 400
+probar "sin versión de la política" 18090 "${BUENO/\"version_politica\":2/\"version_politica\":0}" 400
+probar "fecha sin zona horaria" 18090 "${BUENO/2026-10-20T09:30:00-05:00/2026-10-20 09:30}" 400
+probar "promociones como texto: no" 18090 "${BUENO/\"consentimiento_promociones\":false/\"consentimiento_promociones\":\"si\"}" 200
 probar "GHL responde 500" 18091 "$BUENO" 502
 probar "sin GHL_WEBHOOK_URL" 18092 "$BUENO" 500
 probar "origen no permitido" 18093 "$BUENO" 403 "https://otro.co"

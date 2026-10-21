@@ -33,8 +33,8 @@ for f in "$RAIZ"/supabase/migrations/*.sql; do
 done
 # La semilla del SQL y la del adaptador demo deben coincidir (antes de que las
 # pruebas cambien los datos; "iphone-prueba" es un dato de antes_0006 y la
-# ficha del iPhone 13 la cargó la tienda en antes_0012; los términos, en
-# antes_0015).
+# ficha del iPhone 13 la cargó la tienda en antes_0012; los términos y el aviso
+# de marca, en antes_0015 y antes_0016).
 "${PSQL[@]}" -At -c "
   select json_build_object(
     'modelos', (select json_agg(json_build_object('nombre', nombre, 'slug', slug, 'generacion', generacion, 'orden', orden) order by orden) from public.modelos where slug <> 'iphone-prueba'),
@@ -46,8 +46,11 @@ done
       from public.equipos e join public.modelos m on m.id = e.modelo_id left join public.colores c on c.id = e.color_id where e.es_demo),
     'fichas', (select json_object_agg(m.slug, f.especificaciones order by m.orden) from public.fichas f join public.modelos m on m.id = f.modelo_id
       where m.slug not in ('iphone-prueba', 'iphone-13')),
-    'legales', (select json_build_object('privacidad', texto_privacidad, 'terminos', texto_terminos, 'autorizacion', texto_autorizacion_datos,
-      'herramientas', legales_herramientas, 'revisados', legales_revisados) from public.tienda))" > "$DIR/semilla.json"
+    'legales', (select to_jsonb(t) from public.tienda t))" > "$DIR/semilla.json"
 node "$RAIZ/tests/sql/comparar-semilla.mjs" "$RAIZ" "$DIR/semilla.json"
+# Lo que falta para publicar los legales: el mismo criterio en SQL y en JS.
+node "$RAIZ/tests/sql/comparar-faltantes.mjs" sql "$RAIZ" > "$DIR/faltantes.sql"
+"${PSQL[@]}" -At -f "$DIR/faltantes.sql" > "$DIR/faltantes.json"
+node "$RAIZ/tests/sql/comparar-faltantes.mjs" comparar "$RAIZ" "$DIR/faltantes.json"
 
 "${PSQL[@]}" -f "$RAIZ/tests/sql/pruebas.sql"

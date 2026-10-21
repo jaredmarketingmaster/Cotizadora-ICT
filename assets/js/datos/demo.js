@@ -9,8 +9,7 @@
 // =============================================================================
 
 import { CATALOGO, COLORES, DEMO_EQUIPOS, filasDeFuente } from "./semilla.js";
-import { PRIVACIDAD_BASE, TERMINOS_BASE, AUTORIZACION_BASE, HERRAMIENTAS_BASE } from "./legales-base.js";
-import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, MENSAJE_MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, elegir } from "./comun.js";
+import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, MENSAJE_MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, LEGAL_INICIAL, errorLegales, elegir } from "./comun.js";
 import { hexValido, whatsappTiendaValido, sesion, esperar } from "../utils.js";
 
 const CLAVE = "cotizadora-demo:v1";
@@ -52,8 +51,7 @@ function estadoInicial() {
       correo_contacto: "", instagram_url: "", facebook_url: "", tiktok_url: "", logo: "", favicon: "",
       color_primario: "#1A73E8", color_secundario: "#0F172A", tema: "claro", texto_entrega: "",
       pagos_otras: [], ...PAGOS_VACIOS, texto_garantia_nuevos: "", texto_garantia_usados: "", etiqueta_precio: "Precio",
-      texto_privacidad: PRIVACIDAD_BASE, texto_terminos: TERMINOS_BASE, texto_autorizacion_datos: AUTORIZACION_BASE, aviso_marca: "",
-      legales_revisados: false, legales_herramientas: [...HERRAMIENTAS_BASE],
+      ...copia(LEGAL_INICIAL),
       precios_actualizados_en: t, modo_demo: true, tamano_texto: "normal", vista_equipos: "cuadricula",
       mostrar_ficha: true, ficha_ocultas: [], mostrar_resenas: false, titulo_resenas: TITULO_RESENAS, actualizado_en: t
     },
@@ -69,7 +67,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 13;
+const VERSION = 14;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -163,13 +161,38 @@ const MIGRACIONES = {
   // herramientas y "Un abogado ya revisó estos textos" en no.
   12(e) {
     const t = e.tienda;
-    if (!String(t.texto_privacidad || "").trim()) t.texto_privacidad = PRIVACIDAD_BASE;
-    if (!String(t.texto_terminos || "").trim()) t.texto_terminos = TERMINOS_BASE;
-    if (!String(t.texto_autorizacion_datos || "").trim()) t.texto_autorizacion_datos = AUTORIZACION_BASE;
+    // (Los textos base de 0015 ya no existen en el código: la migración 13 los
+    // reconoce por su huella y los descarta.)
+    for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos"]) t[k] = t[k] || "";
     t.legales_revisados = false;
-    t.legales_herramientas = [...HERRAMIENTAS_BASE];
+    t.legales_herramientas = [];
+  },
+  // 0016_legales_asistente.sql: los datos del asistente con sus valores
+  // iniciales; lo que la tienda había escrito pasa a la cláusula propia de su
+  // documento (los textos base de 0015 sin cambios se descartan, por su
+  // huella) y el aviso de marca, a la de los términos. Sin publicar.
+  13(e) {
+    const t = e.tienda;
+    const propio = (texto, base) => (huellaTexto(texto || "") === base ? "" : String(texto || "").trim().slice(0, 4000));
+    Object.assign(t, copia(LEGAL_INICIAL), {
+      legal_clausula_privacidad: propio(t.texto_privacidad, "d8e42352"),
+      legal_clausula_terminos: [propio(t.texto_terminos, "0d6f6d52"), String(t.aviso_marca || "").trim()].filter(Boolean).join("\n\n").slice(0, 4000),
+      legal_clausula_aviso: propio(t.texto_autorizacion_datos, "0e0f5fbb")
+    });
+    for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) delete t[k];
   }
 };
+
+// FNV-1a de 32 bits (la misma huella de motor.js).
+function huellaTexto(s) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(16).padStart(8, "0");
+}
+
+// Como 0017: sin textos legales publicados, la demo se queda.
+const SIN_LEGALES_DEMO = "Publique los textos legales antes de quitar el modo demo.";
+const SIN_LEGALES_BORRAR = "Publique los textos legales antes de borrar los datos de demostración.";
 
 // Valores por defecto de las formas de pago estructuradas (0013).
 const PAGOS_VACIOS = {
@@ -319,11 +342,33 @@ function validarTienda(t) {
   // Como validar_pagos (0013)
   const pagos = errorPagos(t);
   if (pagos) throw new ErrorDatos(pagos);
-  // 0014 y 0015
-  if (typeof t.mostrar_resenas !== "boolean" || typeof t.titulo_resenas !== "string" || t.titulo_resenas.length > 80 ||
-      typeof t.legales_revisados !== "boolean" || !Array.isArray(t.legales_herramientas) || t.legales_herramientas.some((h) => typeof h !== "string")) {
+  // 0014
+  if (typeof t.mostrar_resenas !== "boolean" || typeof t.titulo_resenas !== "string" || t.titulo_resenas.length > 80) {
     throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
   }
+  // Como los checks de 0016
+  const legales = errorLegales(t);
+  if (legales) throw new ErrorDatos(legales);
+}
+
+// Como publicar_legales (0016): solo completa, con los cuatro documentos sin
+// marcas y sin despublicar. La versión y la fecha las pone el adaptador:
+// suben solo si cambió algún documento. El motor se carga solo al publicar.
+async function publicarLegales(nueva, anterior) {
+  const viejo = anterior.legal_publicado;
+  if (JSON.stringify(nueva.legal_publicado) === JSON.stringify(viejo)) return;
+  if (!nueva.legal_publicado) throw new ErrorDatos("Los textos legales publicados no se pueden quitar.");
+  const { faltantes, hoyColombia, DOCUMENTOS, MARCAS } = await import("../legal/motor.js");
+  if (faltantes(nueva).length) throw new ErrorDatos("Faltan datos para publicar los textos legales.");
+  const docs = nueva.legal_publicado.documentos || {};
+  if (DOCUMENTOS.some((d) => typeof docs[d.clave] !== "string" || !docs[d.clave].trim() || MARCAS.test(docs[d.clave]))) {
+    throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
+  }
+  const iguales = viejo && DOCUMENTOS.every((d) => viejo.documentos?.[d.clave] === docs[d.clave]);
+  nueva.legal_publicado = iguales ? viejo : {
+    version: (viejo?.version || 0) + 1, vigente_desde: hoyColombia(),
+    huella: String(nueva.legal_publicado.huella || ""), documentos: Object.fromEntries(DOCUMENTOS.map((d) => [d.clave, docs[d.clave]]))
+  };
 }
 
 // Como los checks de la tabla resenas (0014)
@@ -481,8 +526,11 @@ export const demo = {
     if ("modo_demo" in datos && datos.modo_demo !== e.tienda.modo_demo && p.rol !== "gestor") {
       throw new ErrorDatos("Solo el gestor puede cambiar el modo demo.", "42501");
     }
-    const nueva = { ...e.tienda, ...datos, actualizado_en: ahora() };
+    const nueva = copia({ ...e.tienda, ...datos, actualizado_en: ahora() });
     validarTienda(nueva);
+    if ("legal_publicado" in datos) await publicarLegales(nueva, e.tienda);
+    // Como proteger_tienda (0017)
+    if (e.tienda.modo_demo && !nueva.modo_demo && !nueva.legal_publicado) throw new ErrorDatos(SIN_LEGALES_DEMO);
     e.tienda = nueva;
     escribir(e);
     return copia(nueva);
@@ -717,6 +765,7 @@ export const demo = {
     await red();
     const e = leer();
     exigirGestor(e, "borrar los datos de demostración");
+    if (!e.tienda.legal_publicado) throw new ErrorDatos(SIN_LEGALES_BORRAR);
     e.equipos = e.equipos.filter((q) => !q.es_demo);
     for (const m of e.modelos) if (m.activo_por_demo) Object.assign(m, { activo: false, activo_por_demo: false });
     e.tienda.modo_demo = false;

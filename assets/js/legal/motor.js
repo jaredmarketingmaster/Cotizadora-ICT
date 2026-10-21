@@ -12,13 +12,14 @@
 //   cambiaron, conserva la versión; si cambiaron, sube el número y la fecha.
 // =============================================================================
 
-import { frasesPagos } from "../datos/comun.js";
+import { frasesPagos, PLATAFORMA_POR_DEFECTO } from "../datos/comun.js";
 import { CODIGOS_PAISES, PAISES_DISPONIBLES, modulosDe, documentosDe } from "./paises/indice.js";
 import { activas, idValido, OPCIONALES, HERRAMIENTAS } from "./herramientas.js";
 import * as privacidad from "./plantillas/privacidad.js";
 import * as terminos from "./plantillas/terminos.js";
 import * as cookies from "./plantillas/cookies.js";
 import * as aviso from "./plantillas/aviso.js";
+import { fechaDMA, conVigencia } from "./vigencia.js";
 
 export const DOCUMENTOS = [
   { clave: "privacidad", titulo: "Política de tratamiento de datos personales", ruta: "privacidad/", clausula: "legal_clausula_privacidad" },
@@ -42,10 +43,10 @@ export const ENTREGAS = [
   { clave: "personal", nombre: "Entrega personal" }
 ];
 export const PASOS = ["Perfil", "Identificación", "Países", "Condiciones de venta", "Herramientas", "Publicar"];
-export const PLATAFORMA_POR_DEFECTO = "HighLevel (GoHighLevel)";
 
 const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const TELEFONO = /^\+?\d{7,15}$/;
+export const MARCAS = /\[PENDIENTE|\{\{/;
 const texto = (v) => String(v ?? "").trim();
 // Lo que escribe la tienda entra al texto sin formato propio (ni corchetes,
 // ni asteriscos, ni numerales al inicio).
@@ -67,7 +68,7 @@ export function formatearTelefono(t) {
 }
 
 // --- Lo que falta para publicar --------------------------------------------------
-// { paso (1 a 6, o 0 = Mi tienda), campo, texto }. El mismo criterio está en
+// { paso (1 a 6 del asistente, o 0 = Mi tienda), campo, texto }. El mismo criterio está en
 // legal_faltantes() de 0016_legales_asistente.sql.
 export function faltantes(t) {
   const f = [];
@@ -101,7 +102,7 @@ export function faltantes(t) {
   impuestos.forEach((i, n) => {
     const p = Number(i?.porcentaje);
     if (!texto(i?.nombre)) falta(4, `legal_impuestos.${n}.nombre`, `El nombre del impuesto ${n + 1}`);
-    if (i?.porcentaje === null || i?.porcentaje === "" || !Number.isFinite(p) || p < 0 || p > 100) falta(4, `legal_impuestos.${n}.porcentaje`, `El porcentaje de ${texto(i?.nombre) || `el impuesto ${n + 1}`}`);
+    if (typeof i?.porcentaje !== "number" || !Number.isFinite(p) || p < 0 || p > 100) falta(4, `legal_impuestos.${n}.porcentaje`, `El porcentaje de ${texto(i?.nombre) || `el impuesto ${n + 1}`}`);
     if (typeof i?.incluido !== "boolean") falta(4, `legal_impuestos.${n}.incluido`, `Si ${texto(i?.nombre) || `el impuesto ${n + 1}`} está incluido en el precio`);
   });
   const minimo = Math.max(1, ...modulosDe(paises).map((m) => m.consumo.garantiaNuevosMinMeses));
@@ -120,6 +121,9 @@ export function faltantes(t) {
   if (!idValido(HERRAMIENTAS[0], t.meta_pixel_id)) falta(5, "meta_pixel_id", "El ID del píxel de Meta");
   for (const h of OPCIONALES) if (t[h.activo] && !idValido(h, t[h.campo])) falta(5, h.campo, `El ${h.etiquetaId} de ${h.nombre}`);
   if (!texto(t.plataforma_sitio)) falta(5, "plataforma_sitio", "La plataforma del sitio");
+  // Paso 6: una cláusula propia con marcas del texto anterior (0016 pasó ahí
+  // lo que la tienda había escrito).
+  for (const d of DOCUMENTOS) if (MARCAS.test(texto(t[d.clausula]))) falta(6, d.clausula, `Corregir la cláusula propia de: ${d.titulo}`);
   return f;
 }
 
@@ -212,11 +216,6 @@ export function hoyColombia(ahora = new Date()) {
   return new Date(ahora.getTime() - 5 * 3600 * 1000).toISOString().slice(0, 10);
 }
 
-export function fechaDMA(iso) {
-  const [a, m, d] = String(iso).split("-").map(Number);
-  return `${d}/${m}/${a}`;
-}
-
 // La versión que se publica. Igual a la anterior si los textos no cambiaron.
 export function publicar(t, anterior = null, hoy = hoyColombia()) {
   const documentos = generar(t);
@@ -225,11 +224,4 @@ export function publicar(t, anterior = null, hoy = hoyColombia()) {
   return { version: (anterior?.version || 0) + 1, vigente_desde: hoy, huella: h, documentos };
 }
 
-// El texto que se muestra: el documento y, al pie, su vigencia.
-export function conVigencia(publicado, clave) {
-  const doc = publicado?.documentos?.[clave];
-  if (!doc) return "";
-  return `${doc}\n\nVigente desde ${fechaDMA(publicado.vigente_desde)} · versión ${publicado.version}.`;
-}
-
-export { CODIGOS_PAISES };
+export { CODIGOS_PAISES, PLATAFORMA_POR_DEFECTO, fechaDMA, conVigencia };

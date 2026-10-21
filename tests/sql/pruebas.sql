@@ -140,6 +140,19 @@ select m.id, 'nuevo', '128 GB', c.id, 'Agotado', 1000000, false, true from publi
 insert into public.equipos (modelo_id, condicion, capacidad, color_id, color_nombre_mostrar, precio, en_stock, publicado)
 select m.id, 'nuevo', '128 GB', c.id, 'Inactivo', 1000000, true, true from public.modelos m join public.colores c on c.modelo_id = m.id and c.nombre_es = 'Rosa' where m.slug = 'iphone-16';
 
+-- 0g. Migración 0016 (legales): los textos de 0015 ya no existen; lo que la tienda había
+-- escrito pasó a su cláusula propia; valores por defecto.
+do $$
+begin
+  assert not exists (select 1 from information_schema.columns where table_name = 'tienda'
+    and column_name in ('texto_privacidad', 'texto_terminos', 'texto_autorizacion_datos', 'aviso_marca', 'legales_revisados', 'legales_herramientas')), 'sin las columnas de 0015';
+  assert (select legal_clausula_terminos from public.tienda) = E'Términos que ya escribió la tienda.\n\nAviso de marca propio.', 'términos y aviso de marca de la tienda en la cláusula';
+  assert (select legal_clausula_privacidad = '' and legal_clausula_aviso = '' and legal_clausula_cookies = '' from public.tienda), 'los textos base se descartan';
+  assert (select legal_publicado is null and legal_paso = 1 and capi_solo_consentimiento and plataforma_sitio = 'HighLevel (GoHighLevel)'
+          and legal_impuestos = '[{"nombre": "IVA", "porcentaje": null, "incluido": null}]' from public.tienda), 'sin publicar y con los valores por defecto';
+  assert (select 'legal_perfil' = any (public.legal_faltantes(t)) and 'meta_pixel_id' = any (public.legal_faltantes(t)) from public.tienda t), 'faltan datos';
+end $$;
+
 -- 0b. Migración 0006: el modelo que agregó la agencia (antes_0006) quedó al
 -- final, después del Duo, en el orden que tenía.
 do $$
@@ -278,7 +291,71 @@ begin
   update public.fichas set descripcion = 'Prueba' where modelo_id = (select id from public.modelos where slug = 'iphone-16');
   assert (select descripcion from public.fichas f join public.modelos m on m.id = f.modelo_id where m.slug = 'iphone-16') = 'Prueba', 'gestor edita fichas';
 
-  -- Modo demo
+end $$;
+-- 0017: sin textos legales publicados, el modo demo no se apaga ni se borra la demo
+do $$ begin
+  update public.tienda set modo_demo = false;
+  raise exception 'no debería apagar el modo demo sin legales publicados';
+exception when check_violation then
+  assert sqlerrm = 'Publique los textos legales antes de quitar el modo demo.', sqlerrm;
+end $$;
+do $$ begin
+  perform public.borrar_datos_demo();
+  raise exception 'no debería borrar la demo sin legales publicados';
+exception when check_violation then
+  assert sqlerrm = 'Publique los textos legales antes de borrar los datos de demostración.', sqlerrm;
+end $$;
+-- 4b. Legales (0016) con el gestor: validaciones, publicación y versión.
+do $$ begin
+  update public.tienda set legal_perfil = 'distribuidor';
+  raise exception 'perfil inválido';
+exception when check_violation then null; end $$;
+do $$ begin
+  update public.tienda set legal_paises = '{co,us}';
+  raise exception 'país que no está en la lista';
+exception when check_violation then null; end $$;
+do $$ begin
+  update public.tienda set legal_publicado = '{"documentos": {"privacidad": "a", "terminos": "b", "cookies": "c", "aviso": "d"}}';
+  raise exception 'no debería publicar con datos incompletos';
+exception when check_violation then
+  assert sqlerrm = 'Faltan datos para publicar los textos legales.', sqlerrm;
+end $$;
+do $$
+declare v jsonb;
+begin
+  -- Los datos de tests/legal/datos-prueba.mjs (inventados)
+  update public.tienda set legal_perfil = 'no_oficial', legal_tipo_persona = 'natural', legal_nombre = 'Celulares La 70 S.A.S.',
+    legal_doc_tipo = 'nit', legal_doc_numero = '900123456-7', legal_direccion = 'Calle 70 # 45-10', legal_ciudad = 'Medellín',
+    legal_correo = 'datos@lasetenta.co', legal_telefono = '573001234567', legal_direccion_local = 'Carrera 70 # 44-20, local 3',
+    legal_rnbd = 'no', legal_paises = '{co}', legal_impuestos = '[{"nombre": "IVA", "porcentaje": 19, "incluido": true}]',
+    legal_garantia_nuevos = 12, legal_garantia_usados = 'sin', legal_retracto_canal = 'correo', legal_entrega = '{retiro,transportadora}',
+    legal_entrega_zonas = 'Medellín y su área metropolitana', legal_homologados = 'si', meta_pixel_id = '123456789012345',
+    legal_clausula_terminos = 'Los equipos se entregan con su caja.';
+  assert (select cardinality(public.legal_faltantes(t)) = 0 from public.tienda t), 'completa';
+  begin
+    update public.tienda set legal_publicado = '{"documentos": {"privacidad": "a", "terminos": "[PENDIENTE: x]", "cookies": "c", "aviso": "d"}}';
+    raise exception 'no debería publicar un documento con marcas';
+  exception when check_violation then null; end;
+  begin
+    update public.tienda set legal_publicado = '{"documentos": {"privacidad": "a", "terminos": "b", "cookies": "c"}}';
+    raise exception 'no debería publicar sin el aviso';
+  exception when check_violation then null; end;
+  update public.tienda set legal_publicado = '{"version": 7, "vigente_desde": "2020-01-01", "huella": "h1", "documentos": {"privacidad": "a", "terminos": "b", "cookies": "c", "aviso": "d"}}';
+  select legal_publicado into v from public.tienda;
+  assert (v->>'version')::int = 1 and v->>'vigente_desde' = to_char((now() at time zone 'America/Bogota')::date, 'YYYY-MM-DD'), 'versión 1 con la fecha de hoy (las pone el disparador): ' || v::text;
+  update public.tienda set legal_publicado = '{"huella": "h1", "documentos": {"privacidad": "a", "terminos": "b", "cookies": "c", "aviso": "d"}}';
+  assert (select (legal_publicado->>'version')::int from public.tienda) = 1, 'los mismos textos no suben la versión';
+  update public.tienda set legal_publicado = '{"huella": "h2", "documentos": {"privacidad": "a", "terminos": "b2", "cookies": "c", "aviso": "d"}}';
+  assert (select (legal_publicado->>'version')::int = 2 and legal_publicado->'documentos'->>'terminos' = 'b2' from public.tienda), 'un texto nuevo sube la versión';
+  -- Incompleto después de publicar: se guarda y lo publicado queda
+  update public.tienda set legal_garantia_nuevos = 6;
+  assert (select 'legal_garantia_nuevos' = any (public.legal_faltantes(t)) and (legal_publicado->>'version')::int = 2 from public.tienda t), 'lo publicado no se pierde';
+  update public.tienda set legal_garantia_nuevos = 12;
+  begin
+    update public.tienda set legal_publicado = null;
+    raise exception 'no debería despublicar';
+  exception when check_violation then null; end;
+  -- Ya publicados: el gestor cambia el modo demo (0017)
   update public.tienda set modo_demo = false;
   update public.tienda set modo_demo = true;
   assert (select modo_demo from public.tienda), 'gestor cambia el modo demo';
@@ -450,6 +527,8 @@ do $$ begin
   -- No edita nada fuera de los accesos (las políticas filtran: 0 filas)
   update public.tienda set nombre = 'x';
   assert (select nombre from public.tienda) = 'Mi tienda', 'administrador no edita la tienda';
+  update public.tienda set legal_perfil = 'oficial', meta_pixel_id = '999999';
+  assert (select legal_perfil = 'no_oficial' and meta_pixel_id = '123456789012345' from public.tienda), 'administrador no edita los datos legales';
   update public.equipos set precio = 1;
   assert (select count(*) from public.equipos where precio = 1) = 0, 'administrador no edita equipos';
   update public.modelos set activo = false where slug = 'iphone-16';
@@ -533,15 +612,6 @@ do $$ begin
   assert not ((public.datos_publicos() -> 'tienda' ->> 'modo_demo')::boolean), 'tienda sin modo demo';
 end $$;
 reset role;
-
--- 7b. Textos legales (0015): marcas para el abogado en el texto base y la
--- regla de "solo donde estaba vacío" (la compara también comparar-semilla).
-do $$
-begin
-  assert (select texto_privacidad like '%[PENDIENTE: razón social y NIT]%' and texto_privacidad like '%{{herramientas}}%' from public.tienda), 'privacidad con sus marcas';
-  assert (select texto_terminos from public.tienda) = 'Términos que ya escribió la tienda.', 'los términos de la tienda no se tocan';
-  assert (select not legales_revisados and array_length(legales_herramientas, 1) = 5 from public.tienda), 'sin revisar y con 5 herramientas';
-end $$;
 
 -- 7. Reseñas (0014): ninguna de ejemplo; hasta 12; casilla obligatoria; el
 -- público solo las ve con el interruptor encendido; solo el gestor escribe.

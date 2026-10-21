@@ -4,11 +4,15 @@
 // confirmación, c) evento Lead, d) WhatsApp con el mensaje escrito.
 // El formulario es un <form> real con campos con nombre (también los ocultos),
 // para que el script de seguimiento externo de GHL, si se instala, lo reconozca.
+// Legales (0016): arriba de las casillas va el aviso corto publicado; la
+// casilla de datos es obligatoria y la de promociones, opcional (las dos sin
+// marcar). Sin textos legales publicados no se envía nada. Los campos y el
+// resumen llevan data-clarity-mask para que Clarity no los grabe.
 // =============================================================================
 
 import {
   escaparHTML, formatearCOP, formatearCelular, soloDigitos, celularValido, correoValido,
-  generarCodigo, whatsappTiendaValido
+  generarCodigo, whatsappTiendaValido, formatoBasico
 } from "../utils.js";
 import { textoAlternativo, textoCondicion, mensajeCompra, mensajeSinStock, enlaceWhatsApp } from "./catalogo.js";
 import { leerAtribucion, CLAVES_ATRIBUCION } from "./atribucion.js";
@@ -16,7 +20,7 @@ import { evento, parametrosEquipo } from "./pixel.js";
 import { htmlMedio } from "./fotos.js";
 import { ICONO_WA } from "./detalle.js";
 import { cerrarConTransicion, cerrarConEscape } from "./transiciones.js";
-import { prepararLegal } from "../datos/comun.js";
+import { estado as estadoCookies, permitido } from "./consentimiento.js";
 
 const CERRAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 const OK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -44,6 +48,11 @@ function formatearConCursor(input) {
   if (document.activeElement === input) input.setSelectionRange(nueva, nueva);
 }
 
+// Fecha y hora de Colombia con su zona: 2026-10-21T14:03:05-05:00.
+export function fechaConZona(ahora = new Date()) {
+  return `${new Date(ahora.getTime() - 5 * 3600 * 1000).toISOString().slice(0, 19)}-05:00`;
+}
+
 export function crearPopup({ dialogo, api, obtenerTienda }) {
   let contexto = null;
   let codigo = "";
@@ -54,7 +63,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
   function resumenHTML() {
     if (contexto.tipo === "compra") {
       const q = contexto.equipo;
-      return `<div class="resumen">
+      return `<div class="resumen" data-clarity-mask="true">
         <span class="resumen-medio">${htmlMedio(api, q, textoAlternativo(q), { sizes: "64px" })}</span>
         <div>
           <p class="resumen-nombre">${escaparHTML(q.modelo.nombre)} · ${textoCondicion(q.condicion)}</p>
@@ -63,14 +72,13 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
         </div>
       </div>`;
     }
-    return `<div class="resumen"><span class="resumen-medio">${htmlMedio(api, { color_hex: "#8E8E93" }, "")}</span>
+    return `<div class="resumen" data-clarity-mask="true"><span class="resumen-medio">${htmlMedio(api, { color_hex: "#8E8E93" }, "")}</span>
       <div><p class="resumen-nombre">Consulta: ${escaparHTML(contexto.busqueda)}</p></div></div>`;
   }
 
   function dibujarFormulario() {
     const tienda = obtenerTienda();
-    // Sin marcas [PENDIENTE: …] y con los datos de la tienda (0015)
-    const autorizacion = prepararLegal(tienda.texto_autorizacion_datos, tienda).texto || "Autorizo el tratamiento de mis datos personales.";
+    if (!tienda.legal_publicado) { dibujarSinLegales(); return; }
     dialogo.innerHTML = `
       <div class="popup-contenido">
         <div class="popup-cabecera">
@@ -82,7 +90,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
         </div>
         ${resumenHTML()}
         ${whatsappTiendaValido(tienda.whatsapp) ? "" : '<p class="popup-alerta" role="alert">Esta tienda todavía no tiene WhatsApp configurado.</p>'}
-        <form class="popup-form" id="form-cotizacion" name="cotizadora-ict" action="#" method="post" novalidate>
+        <form class="popup-form" id="form-cotizacion" name="cotizadora-ict" action="#" method="post" novalidate data-clarity-mask="true">
           <div class="campo">
             <label for="p-nombre">Su nombre</label>
             <input class="entrada" id="p-nombre" name="name" type="text" autocomplete="name" required aria-describedby="p-nombre-error" maxlength="80">
@@ -108,12 +116,19 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
             <label for="p-sitio">No llene este campo</label>
             <input id="p-sitio" name="sitio_web" type="text" tabindex="-1" autocomplete="off">
           </div>
+          <div class="popup-aviso-legal" id="p-aviso">${formatoBasico(tienda.legal_publicado.documentos.aviso)}</div>
           <div class="campo">
             <label class="casilla" for="p-autorizacion">
               <input id="p-autorizacion" name="autorizacion_datos" type="checkbox" required aria-describedby="p-autorizacion-error">
-              <span>${escaparHTML(autorizacion)} <a href="privacidad/" target="_blank" rel="noopener">Ver la política de privacidad</a>.</span>
+              <span>Soy mayor de 18 años y autorizo el tratamiento de mis datos para recibir mi cotización y ser contactado sobre ella por WhatsApp y correo, según la <a href="privacidad/" target="_blank" rel="noopener">Política de privacidad</a>.</span>
             </label>
             <p class="error-campo" id="p-autorizacion-error"></p>
+          </div>
+          <div class="campo">
+            <label class="casilla" for="p-promociones">
+              <input id="p-promociones" name="promociones" type="checkbox">
+              <span>Quiero recibir promociones y novedades de ${escaparHTML(tienda.nombre || "la tienda")} por WhatsApp y correo.</span>
+            </label>
           </div>
           <div class="popup-alerta" data-alerta role="alert" hidden></div>
           <button type="button" class="boton boton--primario boton--grande boton--bloque" data-enviar>${ICONO_WA}Continuar a WhatsApp</button>
@@ -123,6 +138,8 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
       </div>`;
 
     const form = dialogo.querySelector("form");
+    // Los enlaces del aviso se abren aparte, para no perder lo escrito.
+    form.querySelectorAll("#p-aviso a").forEach((a) => { a.target = "_blank"; a.rel = "noopener"; });
     const tel = form.querySelector("#p-telefono");
     tel.addEventListener("input", () => formatearConCursor(tel));
     form.querySelectorAll(".entrada, #p-autorizacion").forEach((el) => {
@@ -137,6 +154,18 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
     });
     form.querySelector("[data-enviar]").addEventListener("click", intentarEnviar);
     form.addEventListener("submit", (e) => { e.preventDefault(); enviar(); });
+  }
+
+  // Sin textos legales publicados (0016) el pop-up no pide datos ni envía.
+  function dibujarSinLegales() {
+    dialogo.innerHTML = `
+      <div class="popup-contenido">
+        <div class="popup-cabecera">
+          <div><h2 class="popup-titulo" id="popup-titulo" tabindex="-1">Antes de pasar a WhatsApp</h2></div>
+          <button type="button" class="boton-icono" data-cerrar aria-label="Cerrar">${CERRAR}</button>
+        </div>
+        <p class="popup-alerta" role="alert">Esta tienda todavía no completó su información legal.</p>
+      </div>`;
   }
 
   function validarCampo(id) {
@@ -172,6 +201,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
     const compra = contexto.tipo === "compra";
     const q = contexto.equipo;
     const filtros = contexto.filtros || {};
+    const cookies = estadoCookies();
     return {
       nombre, correo, telefono,
       modelo: compra ? q.modelo.nombre : contexto.nombreModelo || "",
@@ -184,6 +214,14 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
       codigo_cotizacion: codigo,
       ...atrib,
       event_id: codigo,
+      // Consentimiento (0016): la casilla obligatoria, la opcional, el banner
+      // de cookies y la versión de los textos que aceptó.
+      consentimiento_datos: f.querySelector("#p-autorizacion").checked,
+      consentimiento_promociones: f.querySelector("#p-promociones").checked,
+      consentimiento_medicion: cookies.medicion,
+      consentimiento_publicidad: cookies.publicidad,
+      version_politica: obtenerTienda().legal_publicado.version,
+      fecha_consentimiento: fechaConZona(),
       pagina: location.origin + location.pathname,
       enviado_en: new Date().toISOString()
     };
@@ -220,7 +258,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
 
     if (r.ok) {
       const parametros = contexto.tipo === "compra" ? parametrosEquipo(contexto.equipo) : { content_name: contexto.busqueda };
-      evento("Lead", parametros, codigo);
+      if (permitido("publicidad")) evento("Lead", parametros, codigo);
       confirmar(true);
       return;
     }
@@ -270,7 +308,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
       enlace = "";
       dibujarFormulario();
       dialogo.showModal();
-      dialogo.querySelector("#p-nombre").focus();
+      (dialogo.querySelector("#p-nombre") || dialogo.querySelector("#popup-titulo")).focus();
     }
   };
 }

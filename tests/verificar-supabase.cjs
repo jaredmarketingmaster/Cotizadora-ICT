@@ -21,7 +21,6 @@ const ENTORNO = Object.fromEntries(fs.readFileSync(process.env.ICT_ENTORNO || "/
 const CONFIG = `export const CONFIG = {
   backend: "supabase",
   supabase: { url: "${ENTORNO.URL}", anonKey: "${ENTORNO.ANON}" },
-  metaPixelId: "",
   ghlSeguimiento: { src: "", id: "" }
 };`;
 
@@ -38,6 +37,10 @@ async function pagina(ancho = 1280) {
     await ctx.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@*/+esm", (r) =>
       r.fulfill({ contentType: "text/javascript", headers: { "access-control-allow-origin": "*" }, body: fs.readFileSync(process.env.ICT_SUPABASE_JS, "utf8") }));
   }
+  // Cookies ya elegidas (todo rechazado): el banner no tapa nada.
+  await ctx.addInitScript(() => {
+    try { if (!localStorage.getItem("cotizadora:cookies")) localStorage.setItem("cotizadora:cookies", JSON.stringify({ medicion: false, publicidad: false, fecha: new Date().toISOString() })); } catch { /* nada */ }
+  });
   const p = await ctx.newPage();
   p.errores = [];
   p.on("pageerror", (e) => p.errores.push(e.message));
@@ -90,21 +93,55 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
   if (process.env.HTTPS_PROXY) args.push(`--proxy-server=${process.env.HTTPS_PROXY}`, "--proxy-bypass-list=127.0.0.1;localhost");
   navegador = await chromium.launch({ args });
 
-  await caso("sitio: carga los datos públicos con la RPC (y los textos legales base, sin marcas)", async () => {
+  await caso("sitio: carga los datos públicos con la RPC; sin legales publicados, \"Página en preparación.\" y el pop-up no envía", async () => {
     const p = await pagina();
     await p.goto(`${BASE}/`, { waitUntil: "networkidle" });
     assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
     assert.equal(await p.locator(".galeria > .tarjeta").count(), 5);
     assert.ok(await p.isVisible("#franja-demo"));
-    // Textos legales base (0015) por la RPC: sin marcas y "Texto en revisión."
-    for (const ruta of ["/privacidad/", "/terminos/"]) {
+    await p.goto(`${BASE}/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb`, { waitUntil: "networkidle" });
+    await p.click("#detalle-en-linea [data-comprar]");
+    assert.equal(await p.textContent("#popup .popup-alerta"), "Esta tienda todavía no completó su información legal.");
+    for (const ruta of ["/privacidad/", "/terminos/", "/cookies/"]) {
       await p.goto(`${BASE}${ruta}`, { waitUntil: "networkidle" });
       await p.waitForFunction(() => !document.querySelector("#legal-texto[aria-busy]"));
-      const texto = await p.textContent("#legal-texto");
-      assert.ok(!/\[PENDIENTE|\{\{/.test(texto), `${ruta}: sin marcas`);
-      assert.equal(await p.textContent(".legal-revision"), "Texto en revisión.");
+      assert.equal((await p.textContent("#legal-texto")).trim(), "Página en preparación.", ruta);
     }
-    assert.match(await p.textContent("#legal-texto"), /Precios y disponibilidad/);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("legales (0016 y 0017): el servidor no deja quitar la demo ni publicar incompleto; el gestor publica y el servidor pone versión y fecha", async () => {
+    const p = await pagina(1280);
+    await entrar(p, "gestor@local.co");
+    await p.waitForSelector(".estadisticas");
+    assert.equal(await p.isDisabled("#borrar-demo"), true);
+    const r = await p.evaluate(async (base) => {
+      const a = await (await import(`${base}/assets/js/datos/api.js`)).api();
+      const { publicar, generar } = await import(`${base}/assets/js/legal/motor.js`);
+      const { TIENDA_LEGAL_PRUEBA } = await import(`${base}/tests/legal/datos-prueba.mjs`);
+      const intentar = async (fn) => { try { await fn(); return "ok"; } catch (e) { return e.message; } };
+      const r = [];
+      r.push(await intentar(() => a.borrarDatosDemo()));
+      r.push(await intentar(() => a.guardarTienda({ modo_demo: false })));
+      const legales = Object.fromEntries(Object.entries(TIENDA_LEGAL_PRUEBA).filter(([k]) => /^(legal_|meta_pixel_id|ga4_|gtm_|clarity_|tiktok_|gads_|capi_|plataforma_)/.test(k)));
+      let t = await a.guardarTienda({ ...legales, meta_pixel_id: "" });
+      r.push(await intentar(() => a.guardarTienda({ legal_publicado: { version: 9, vigente_desde: "2020-01-01", huella: "x", documentos: generar({ ...t, meta_pixel_id: "123456789012345" }) } })));
+      r.push(await intentar(() => a.guardarTienda({ legal_perfil: "distribuidor" })));
+      t = await a.guardarTienda({ meta_pixel_id: "123456789012345" });
+      t = await a.guardarTienda({ legal_publicado: { ...publicar(t, null), version: 9, vigente_desde: "2020-01-01" } });
+      r.push(t.legal_publicado.version, t.legal_publicado.vigente_desde);
+      // El panel vuelve a publicar solo cuando un cambio toca los textos
+      t = await a.guardarTienda({ legal_garantia_nuevos: 24 });
+      r.push(t.legal_publicado.version);
+      return r;
+    }, BASE);
+    const hoy = new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10);
+    assert.deepEqual(r, ["Publique los textos legales antes de borrar los datos de demostración.", "Publique los textos legales antes de quitar el modo demo.",
+      "Faltan datos para publicar los textos legales.", "Algún dato no tiene el formato correcto. Revise los campos.", 1, hoy, 2]);
+    await p.goto(`${BASE}/terminos/`, { waitUntil: "networkidle" });
+    await p.waitForFunction(() => !document.querySelector("#legal-texto[aria-busy]"));
+    assert.match(await p.textContent("#legal-texto"), /24 meses desde la entrega[\s\S]*versión 2\./);
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
@@ -120,9 +157,13 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.fill("#p-correo", "ana@correo.co");
     await p.fill("#p-telefono", "3109876543");
     await p.check("#p-autorizacion");
+    await p.check("#p-promociones");
     await p.click("[data-enviar]");
     await p.waitForSelector("text=Su pedido está listo", { timeout: 15000 });
     const lead = JSON.parse(fs.readFileSync(ENTORNO.LEAD, "utf8"));
+    assert.deepEqual([lead.consentimiento_datos, lead.consentimiento_promociones, lead.consentimiento_medicion, lead.consentimiento_publicidad, lead.version_politica],
+      [true, true, false, false, 2]);
+    assert.match(lead.fecha_consentimiento, /-05:00$/);
     const codigo = (await p.textContent(".popup-estado .codigo")).trim();
     assert.equal(lead.name, "Ana Gómez");
     assert.equal(lead.email, "ana@correo.co");

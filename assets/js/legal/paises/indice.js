@@ -2,7 +2,7 @@
 // Países donde vende la tienda (paso 3 del asistente): los de habla hispana de
 // América y Brasil. Solo se pueden elegir los "disponibles" (con su módulo,
 // ej. co.js). Para sumar uno: escribir su módulo, importarlo aquí, ponerle
-// estado "disponible" y sumarlo a paises_disponibles() con una migración.
+// estado "disponible" y cambiar legal_faltantes() (0016) con una migración nueva.
 // =============================================================================
 
 import CO from "./co.js";

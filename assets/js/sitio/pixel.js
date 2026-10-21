@@ -1,17 +1,17 @@
 // =============================================================================
-// Píxel de Meta. El ID sale de config.js; si está vacío no se carga nada.
+// Píxel de Meta. Lo carga solo consentimiento.js, cuando la persona acepta las
+// cookies de publicidad, con el ID de la tienda (Legales → Herramientas).
 // Eventos: PageView al cargar, ViewContent al abrir un detalle y Lead al
-// confirmarse el envío. Nunca Purchase (la venta se registra en el CRM).
-// Nunca se mandan a Meta nombre, correo ni teléfono.
+// confirmarse el envío. Sin permiso de publicidad no sale ningún evento.
+// Nunca Purchase (la venta se registra en el CRM). Nunca se mandan a Meta
+// nombre, correo ni teléfono.
 // =============================================================================
-
-import { CONFIG } from "../../../config.js";
 
 let activo = false;
 
-export function iniciarPixel() {
-  const id = String(CONFIG.metaPixelId || "").trim();
-  if (!/^\d{5,20}$/.test(id)) return;
+export function iniciarPixel(id) {
+  if (!/^\d{5,20}$/.test(String(id || ""))) return;
+  if (typeof window.fbq === "function") { window.fbq("consent", "grant"); activo = true; return; }
   /* eslint-disable */
   !function (f, b, e, v, n, t, s) {
     if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); };
@@ -22,6 +22,12 @@ export function iniciarPixel() {
   window.fbq("init", id);
   window.fbq("track", "PageView");
   activo = true;
+}
+
+// La persona retiró el permiso de publicidad: desde ahora no sale nada.
+export function retirarPixel() {
+  if (typeof window.fbq === "function") window.fbq("consent", "revoke");
+  activo = false;
 }
 
 export function evento(nombre, parametros, eventID) {

@@ -18,7 +18,7 @@
 6. [Modelo de datos y seguridad (Supabase / Postgres)](#6-modelo-de-datos-y-seguridad-supabase--postgres)
 7. [Capa de datos del front-end (demo y Supabase)](#7-capa-de-datos-del-front-end-demo-y-supabase)
 8. [Sitio público: cómo funciona por dentro](#8-sitio-público-cómo-funciona-por-dentro)
-9. [Pop-up, WhatsApp, atribución y píxel](#9-pop-up-whatsapp-atribución-y-píxel)
+9. [Pop-up, WhatsApp, atribución, píxel y legales](#9-pop-up-whatsapp-atribución-píxel-y-legales)
 10. [Panel de administración](#10-panel-de-administración)
 11. [Funciones del servidor (Edge Functions)](#11-funciones-del-servidor-edge-functions)
 12. [Integración con GoHighLevel (GHL)](#12-integración-con-gohighlevel-ghl)
@@ -185,6 +185,12 @@ El prompt tiene 13 secciones:
   - El hook `.claude/hooks/documentacion.sh`, configurado en `.claude/settings.json`.
   - La regla en `CLAUDE.md`.
 
+### 2.12 Módulo legal (0016 y 0017)
+
+- Jared pidió reemplazar los textos legales base de `0015` por un módulo listo para usar: la tienda solo llena su perfil, su identificación, sus países y sus condiciones de venta, y los documentos salen de plantillas por país.
+- Fases A a H: motor, módulo de Colombia y plantillas (A); asistente de seis pasos y migración `0016` (B); páginas `/privacidad/`, `/terminos/` y la nueva `/cookies/` (C); banner de cookies con consentimiento previo y las dos casillas del pop-up (D); `consentimiento.js` como único cargador de herramientas y el ID del píxel en la tienda (E); bloqueo hasta publicar, `0017` (F); documentación y `legal/FUENTES.md` (G); pruebas y mediciones (H).
+- Ver la sección 9.6 a 9.9.
+
 ---
 
 ## 3. Reglas que no se rompen
@@ -196,7 +202,8 @@ Vienen del prompt y de las decisiones de Jared. Cualquier cambio debe respetarla
 3. **Datos:** no inventar especificaciones, precios, colores, garantías, plazos ni tiempos de respuesta. **Si un campo está vacío, no se muestra.** Tampoco se escriben promesas que la tienda no cargó, como "envío gratis" o "garantía de 12 meses".
 4. **Moneda:** pesos colombianos con el formato `$5.299.000` (punto de miles, sin decimales). Se guardan como enteros. Para formatear se usa `formatearCOP`; **no** se usa `Intl`, que en español puede no agrupar los números de 4 cifras.
 5. **Fechas:** D/M/AAAA en hora de Colombia, con `fechaCorta`.
-6. **Nada de la tienda en el código.** Todo sale de la base y se edita desde el panel. `config.js` solo lleva la conexión, el píxel y el script de GHL.
+6. **Nada de la tienda en el código.** Todo sale de la base y se edita desde el panel. `config.js` solo lleva la conexión y el script de GHL (desde `0016`, los ID de las herramientas, incluido el del píxel, van en Legales).
+6b. **Legales:** la tienda es la responsable del tratamiento; el proveedor tecnológico es el encargado y en los textos públicos se nombra solo como "nuestro proveedor tecnológico, ubicado en Argentina" (nunca su nombre, documento ni domicilio, en ningún archivo). Nada se afirma como requisito legal si no está en `legal/FUENTES.md`. Ninguna herramienta de medición o publicidad se carga sin consentimiento. Sin avisos de "borrador" ni de "revisión de un abogado".
 7. **Datos personales de clientes** (nombre, correo, WhatsApp): **nunca** en Supabase ni en el píxel de Meta. Solo van a GHL, a través de la función `enviar-lead`.
 8. **Píxel:** nunca `Purchase`; la venta se registra en el CRM.
 9. **No abrir pop-ups que nadie pidió.**
@@ -262,8 +269,8 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `index.html` (≈140) | Sitio público, una sola página: <ul><li>En el `<head>`, un script en línea aplica la **apariencia de la visita anterior** (`localStorage["cotizadora:apariencia"]`: tema, tamaño y colores) antes del primer pintado; valida cada valor. Las páginas legales tienen el mismo script.</li><li>La lista de equipos va dentro de `#vista-equipos`, con las flechas y el indicador del carrusel (ocultos en cuadrícula).</li><li>Franja demo, encabezado con logo, nombre y título, y tarjeta de filtros (segmentado, lista desplegable y chips).</li><li>Contador y "Limpiar filtros", galería, estado vacío y detalle en línea.</li><li>Sección `#resenas` (oculta hasta que haya reseñas para mostrar) entre los equipos y la información de la tienda, y `<dialog id="visor-resena">` (visor a pantalla completa).</li><li>Información de la tienda, pie, `<dialog id="hoja-detalle">` (detalle del equipo), barra fija de compra y `<dialog id="popup">`.</li><li>Carga Google Fonts (Inter) sin bloquear el pintado, `modulepreload` de los módulos y `assets/js/sitio/principal.js`.</li></ul> |
-| `config.js` (≈34) | **Único archivo que cambia por tienda.** Contiene:<ul><li>`backend`: `"demo"` o `"supabase"`.</li><li>`supabase.url` y `supabase.anonKey`.</li><li>`metaPixelId`.</li><li>`ghlSeguimiento.src` y `ghlSeguimiento.id`, del script de seguimiento externo de GHL (opcional).</li></ul>Nada de lo que contiene es secreto. |
+| `index.html` (≈162) | Sitio público, una sola página: <ul><li>En el `<head>`, un script en línea aplica la **apariencia de la visita anterior** (`localStorage["cotizadora:apariencia"]`: tema, tamaño y colores) antes del primer pintado; valida cada valor. Las páginas legales tienen el mismo script.</li><li>La lista de equipos va dentro de `#vista-equipos`, con las flechas y el indicador del carrusel (ocultos en cuadrícula).</li><li>Franja demo, encabezado con logo, nombre y título, y tarjeta de filtros (segmentado, lista desplegable y chips).</li><li>Contador y "Limpiar filtros", galería, estado vacío y detalle en línea.</li><li>Sección `#resenas` (oculta hasta que haya reseñas para mostrar) entre los equipos y la información de la tienda, y `<dialog id="visor-resena">` (visor a pantalla completa).</li><li>Información de la tienda, pie (enlaces a las tres políticas y el botón "Preferencias de cookies", oculto hasta que carga el consentimiento), `<dialog id="hoja-detalle">` (detalle del equipo), barra fija de compra y `<dialog id="popup">`.</li><li>Carga Google Fonts (Inter) sin bloquear el pintado, `modulepreload` de los módulos y `assets/js/sitio/principal.js`.</li></ul> |
+| `config.js` (≈36) | **Único archivo que cambia por tienda.** Contiene:<ul><li>`backend`: `"demo"` o `"supabase"`.</li><li>`supabase.url` y `supabase.anonKey`.</li><li>`metaPixelId`: **ya no se usa** (desde `0016` el ID va en Legales → Herramientas). Si una tienda vieja tiene uno aquí, el panel lo copia una vez a la tienda al entrar el gestor (`copiarPixelViejo` en `panel.js`).</li><li>`ghlSeguimiento.src` y `ghlSeguimiento.id`, del script de seguimiento externo de GHL (opcional; se carga solo con permiso de medición).</li></ul>Nada de lo que contiene es secreto. |
 | `README.md` | Guía para personas: probar en demo, GitHub Pages, poner una tienda en producción, GHL, píxel, decisiones, pruebas y pendientes. |
 | `CLAUDE.md` | Reglas y guía para las próximas sesiones de Claude Code: cómo verificar antes de cada commit y la obligación de mantener este documento. |
 | `DOCUMENTACION.md` | Este documento. |
@@ -276,16 +283,17 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | Archivo | Qué es |
 |---|---|
 | `admin/index.html` (≈59) | Cáscara del panel. Tiene:<ul><li>Pantalla de carga y bloque `#acceso` (login, recuperar y crear contraseña).</li><li>`#app` con barra superior (tienda, usuario, "Ver mi sitio" y "Salir"), navegación por pestañas y `#vista` (contenido de la ruta).</li><li>Aviso flotante "Guardado" y `<dialog id="confirmar">`.</li><li>`noindex`.</li></ul> |
-| `privacidad/index.html` (≈32) | Página legal `/privacidad/`. Muestra `tienda.texto_privacidad` con formato básico. |
-| `terminos/index.html` (≈32) | Página legal `/terminos/`. Muestra `tienda.texto_terminos`. |
+| `privacidad/index.html` (≈44) | Página `/privacidad/`: "Política de tratamiento de datos personales". Muestra el documento publicado (`tienda.legal_publicado.documentos.privacidad`) con su vigencia; sin publicar, "Página en preparación.". Pie con las tres políticas y "Preferencias de cookies". Script: `legal.js`. |
+| `terminos/index.html` (≈44) | Página `/terminos/`: "Términos y condiciones". Igual que la de privacidad, con `documentos.terminos`. |
+| `cookies/index.html` (≈44) | Página `/cookies/` (nueva con `0016`): "Política de cookies". Igual que las otras, con `documentos.cookies`. |
 
 ### 5.3 Estilos (`assets/css/`)
 
 | Archivo | Qué es |
 |---|---|
 | `assets/css/base.css` (≈264) | Base compartida por el sitio y el panel: <ul><li>**Variables de diseño** (`--primario`, `--sobre-primario`, `--primario-texto`, `--secundario`, `--sobre-secundario`, superficies, bordes, textos, error, éxito, aviso, radios, sombras y curvas), con su versión `[data-tema="oscuro"]`.</li><li>Reinicio y foco visible.</li><li>Botones (`.boton--primario`, `--secundario`, `--suave`, `--peligro`, `--enlace`, `.boton-icono`), campos (`.entrada`, `.campo`, `.error-campo`, `.casilla`) y etiquetas (`.etiqueta-pildora`, `.etiqueta-demo`).</li><li>Spinner y reglas de `prefers-reduced-motion`.</li></ul> |
-| `assets/css/sitio.css` (≈610) | Sitio público: <ul><li>Franja demo y encabezado (el brillo decorativo va en `::before` para no tocar el contraste).</li><li>Filtros: segmentado, lista desplegable propia y chips.</li><li>Galería (1 → 2 → 3 → 4 columnas) y tarjetas.</li><li>Detalle y carrusel (scroll-snap).</li><li>Hoja: pantalla completa desde abajo en celular, ventana centrada en escritorio desde 900 px.</li><li>Barras de compra (apiladas por debajo de 480 px).</li><li>Información de la tienda, pop-up y **pie con el color secundario** de la tienda (texto `--sobre-secundario` y `--sobre-secundario-suave`).</li><li>Animaciones de apertura y páginas legales.</li><li>**Tamaño del texto** (`data-tamano` en `<html>`): variables `--t-titulo` y `--t-espacio`; Grande pone la raíz en 112,5 %.</li><li>**Aire entre secciones** (todo multiplicado por `--t-espacio`): pie con 48 px arriba y abajo en celular y 72 px en escritorio (`--pie-aire`) y bloques separados 18–24 px; 52–72 px entre el título y los filtros; 40–64 px arriba y abajo de la zona de equipos (las dos vistas).</li></ul> |
-| `assets/css/panel.css` (≈307) | Panel, pensado primero para celular: <ul><li>Acceso y barra superior pegajosa.</li><li>Navegación en pastillas desplazables.</li><li>Bloques, estadísticas, avisos e interruptor.</li><li>Lista de inventario: tarjetas en celular, filas desde 1000 px.</li><li>Formulario por pasos y acciones pegajosas.</li><li>Fotos, filas de ficha, catálogo, vista previa de marca y recorte del logo.</li><li>Lista editable, usuarios, aviso flotante y ventana de confirmación.</li></ul> |
+| `assets/css/sitio.css` (≈969) | Sitio público: <ul><li>Franja demo y encabezado (el brillo decorativo va en `::before` para no tocar el contraste).</li><li>Filtros: segmentado, lista desplegable propia y chips.</li><li>Galería (1 → 2 → 3 → 4 columnas) y tarjetas.</li><li>Detalle y carrusel (scroll-snap).</li><li>Hoja: pantalla completa desde abajo en celular, ventana centrada en escritorio desde 900 px.</li><li>Barras de compra (apiladas por debajo de 480 px).</li><li>Información de la tienda, pop-up y **pie con el color secundario** de la tienda (texto `--sobre-secundario` y `--sobre-secundario-suave`).</li><li>Animaciones de apertura y páginas legales (con `.tabla-legal` para las tablas de la Política de cookies).</li><li>**Banner de cookies** (`.banner-cookies`): fijo abajo (no mueve nada: sin CLS), caja de 760 px como máximo, tres botones iguales en una grilla de 3 columnas, interruptores por categoría (`.interruptor-cookie`); botón "Preferencias de cookies" del pie (`.pie-boton`); aviso corto del pop-up (`.popup-aviso-legal`).</li><li>**Tamaño del texto** (`data-tamano` en `<html>`): variables `--t-titulo` y `--t-espacio`; Grande pone la raíz en 112,5 %.</li><li>**Aire entre secciones** (todo multiplicado por `--t-espacio`): pie con 48 px arriba y abajo en celular y 72 px en escritorio (`--pie-aire`) y bloques separados 18–24 px; 52–72 px entre el título y los filtros; 40–64 px arriba y abajo de la zona de equipos (las dos vistas).</li></ul> |
+| `assets/css/panel.css` (≈453) | Panel, pensado primero para celular: <ul><li>Acceso y barra superior pegajosa.</li><li>Navegación en pastillas desplazables.</li><li>Bloques, estadísticas, avisos e interruptor.</li><li>Lista de inventario: tarjetas en celular, filas desde 1000 px.</li><li>Formulario por pasos y acciones pegajosas.</li><li>Fotos, filas de ficha, catálogo, vista previa de marca y recorte del logo.</li><li>Lista editable, usuarios, aviso flotante y ventana de confirmación.</li><li>**Asistente de Legales:** progreso, pasos (`.pasos-legales`, `aria-current="step"`, ✓ en los completos), opciones (`.opciones-legales`), filas de impuestos, texto fijo (`.texto-fijo`), estado del guardado, vista previa con tablas y botones Anterior / Siguiente.</li></ul> |
 
 ### 5.4 JavaScript compartido (`assets/js/`)
 
@@ -294,12 +302,13 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `assets/js/utils.js` (≈278) | Utilidades sin dependencias: <ul><li>**Números:** `formatearMiles`, `formatearCOP`, `leerPrecio` ("5.299.000" → 5299000).</li><li>**Fechas:** `fechaCorta` (D/M/AAAA en America/Bogota).</li><li>**Texto:** `escaparHTML`, `plural`, `formatoBasico` (mini-markdown seguro para los legales: `##`, `###`, `**`, listas, enlaces https/mailto (nueva pestaña) y rutas relativas como `../cookies/` (misma pestaña), y tablas con `|` que salen como `<div class="tabla-legal"><table>` con la primera columna en `<th scope="row">`).</li><li>**Capacidades:** `CAPACIDADES_SUGERIDAS`, `slugCapacidad`, `capacidadDeSlug`, `capacidadEnGB`.</li><li>**Contacto:** `soloDigitos`, `celularValido` (10 dígitos que empiezan por 3), `formatearCelular` ("300 123 4567"), `correoValido`, `whatsappTiendaValido` (12 dígitos que empiezan por 57).</li><li>**Código:** `generarCodigo`, `codigoValido`. "COT-" más 4 caracteres de un alfabeto de 32 sin O, 0, I ni 1, con `crypto.getRandomValues`; como 256 % 32 = 0, el sorteo no tiene sesgo.</li><li>**Contraste WCAG:** `hexValido`, `luminancia`, `contraste`, `textoSobre` (blanco o casi negro, garantiza al menos 4,5:1), `ajustarParaTexto` (oscurece o aclara un color hasta 4,5:1 sobre uno o varios fondos; si en una dirección no alcanza, prueba la otra) y `mezclar`.</li><li>**Varios:** `sesion` (sessionStorage seguro), `seguro`, `reducirMovimiento`, `esperar`, `idEvento`.</li></ul> |
 | `assets/js/tema.js` (≈45) | `variablesTema(tienda)` y `aplicarTema(tienda)`: pasan `color_primario`, `color_secundario` y `tema` a variables CSS y calculan el texto con contraste AA. También ponen `data-tamano` (`tamano_texto`) en `<html>`, que solo lee `sitio.css`, y `--sobre-secundario-suave` (texto suave del pie, 4,5:1 o más sobre el secundario). `--primario-texto` se ajusta contra **todas** las superficies del tema. También exporta `FONDOS`. |
 | `assets/js/ilustracion.js` (≈51) | `telefonoSVG(colorHex, titulo)`: teléfono genérico con el marco del color del equipo. `logoGenericoSVG()`: ícono para cuando no hay logo. |
-| `assets/js/legal/motor.js` (≈235) | **Motor legal, puro (sin DOM ni red).** <ul><li>`DOCUMENTOS` (privacidad, términos, cookies y aviso, cada uno con su campo de cláusula propia), `PERFILES` (seis perfiles de tienda, con `apple` y `local`), `ENTREGAS`, `PASOS` del asistente y `PLATAFORMA_POR_DEFECTO`.</li><li>`faltantes(tienda)`: lista `{paso, campo, texto}` de lo que falta o no es válido; cambia con el perfil, el tipo de persona y los países.</li><li>`contexto(tienda)`: datos limpios para las plantillas (`limpio` quita `[ ] * _` y `#`, para que la tienda no meta formato).</li><li>`generar(tienda)`: los cuatro documentos en Markdown; falla con "Faltan datos para generar los textos legales." si falta algo.</li><li>`huella` (FNV-1a de los textos), `hoyColombia`, `fechaDMA`, `publicar(tienda, anterior, hoy)` (sube la versión solo si cambió algún texto) y `conVigencia(publicado, clave)` (agrega "Vigente desde D/M/AAAA · versión N.").</li></ul> |
+| `assets/js/legal/motor.js` (≈227) | **Motor legal, puro (sin DOM ni red).** <ul><li>`DOCUMENTOS` (privacidad, términos, cookies y aviso, cada uno con su campo de cláusula propia), `PERFILES` (seis perfiles de tienda, con `apple` y `local`), `ENTREGAS`, `PASOS` del asistente y `PLATAFORMA_POR_DEFECTO`.</li><li>`faltantes(tienda)`: lista `{paso, campo, texto}` de lo que falta o no es válido; cambia con el perfil, el tipo de persona y los países.</li><li>`contexto(tienda)`: datos limpios para las plantillas (`limpio` quita `[ ] * _` y `#`, para que la tienda no meta formato).</li><li>`generar(tienda)`: los cuatro documentos en Markdown; falla con "Faltan datos para generar los textos legales." si falta algo.</li><li>`MARCAS` (`[PENDIENTE` o `{{`: una cláusula propia con eso falta corregirla, paso 6), `huella` (FNV-1a de los textos), `hoyColombia`, `publicar(tienda, anterior, hoy)` (sube la versión solo si cambió algún texto) y vuelve a exportar `fechaDMA` y `conVigencia` de `vigencia.js`.</li></ul> |
+| `assets/js/legal/vigencia.js` (≈16) | `fechaDMA(iso)` y `conVigencia(publicado, clave)`: el documento con "Vigente desde D/M/AAAA · versión N." al pie. Separado del motor para que el sitio no cargue las plantillas. |
 | `assets/js/legal/herramientas.js` (≈69) | Herramientas de medición y publicidad: `CATEGORIAS`, `HERRAMIENTAS` (píxel de Meta siempre; GA4, GTM, Clarity, TikTok y Google Ads opcionales), cada una con su campo, patrón del ID, proveedor, categoría, cookies (duración solo si está verificada en `legal/FUENTES.md`) y política. `OPCIONALES`, `activas(tienda)` e `idValido`. |
 | `assets/js/legal/paises/indice.js` (≈48) | `PAISES`: los 18 países de Hispanoamérica y Brasil (19). Solo Colombia está `disponible`; Brasil queda en `portugues` ("Necesita el sitio en portugués."); el resto, `proximamente`. `PAISES_DISPONIBLES`, `CODIGOS_PAISES`, `modulosDe` y `documentosDe`. Para sumar un país se copia `co.js` con los datos del otro país y se agrega su módulo aquí. |
 | `assets/js/legal/paises/co.js` (≈115) | Módulo de Colombia: autoridad (SIC), documentos (C.C., NIT con dígito de verificación, C.E.), plazos de la Ley 1581 (consultas 10 + 5 días hábiles, reclamos 15 + 8, completar en 5), derechos del artículo 8, transmisión (Decreto 1074), retracto (5 días hábiles, devolución en máximo 15 días calendario), garantía mínima de 12 meses para nuevos, reclamos de garantía en 15 días hábiles, horarios de la Ley 2300 y las secciones propias del país en privacidad y términos. Cada dato tiene su fuente en `legal/FUENTES.md`. |
 | `assets/js/legal/plantillas/privacidad.js` (≈104) | `secciones(ctx)` de la Política de tratamiento de datos: 12 secciones (responsable, datos, finalidades, encargados y transmisión, API de Conversiones, conservación, derechos, cómo ejercerlos, mayoría de edad, seguridad, cambios y la sección por país). El proveedor tecnológico se nombra solo como "nuestro proveedor tecnológico, ubicado en Argentina". |
-| `assets/js/legal/plantillas/terminos.js` (≈76) | `secciones(ctx)` de los Términos y condiciones: quién vende y relación con Apple (según el perfil), cotizador, precios e impuestos, garantía, retracto, entrega, homologados (si aplica), mayoría de edad, marcas, proveedor tecnológico, ley aplicable, datos personales y cambios. |
+| `assets/js/legal/plantillas/terminos.js` (≈80) | `independiente(tienda)`: el texto fijo de los perfiles que no son oficiales ni autorizados (lo usa también el paso 4 del asistente). `secciones(ctx)` de los Términos y condiciones: quién vende y relación con Apple (según el perfil), cotizador, precios e impuestos, garantía, retracto, entrega, homologados (si aplica), mayoría de edad, marcas, proveedor tecnológico, ley aplicable, datos personales y cambios. |
 | `assets/js/legal/plantillas/cookies.js` (≈64) | `secciones(ctx)` de la Política de cookies: qué son, categorías (necesarias, medición, publicidad), una tabla por herramienta activa, Global Privacy Control y cómo cambiar la elección ("Preferencias de cookies"). |
 | `assets/js/legal/plantillas/aviso.js` (≈15) | `secciones(ctx)` del aviso de privacidad corto del pop-up: quién es responsable, para qué se usan los datos, los derechos y el enlace a la política. |
 
@@ -308,16 +317,16 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | Archivo | Qué es |
 |---|---|
 | `assets/js/datos/api.js` (≈17) | `api()`: devuelve, una sola vez, el adaptador `demo` o `supabase` según `config.js`. Si se pide Supabase sin URL o clave, usa demo y avisa en la consola. |
-| `assets/js/datos/comun.js` (≈62) | Reglas compartidas por los dos adaptadores: <ul><li>`ErrorDatos`.</li><li>`equipoEsPublico`: publicado, con stock (`en_stock`) y de un modelo activo.</li><li>`LADO_GRANDE` = 1600 y `LADO_MINIATURA` = 640.</li><li>`rutaMiniatura`: `x.webp` → `x-640.webp`.</li><li>`CAMPOS_TIENDA`, `CAMPOS_EQUIPO`, `CAMPOS_COLOR`, `MAX_MAS_VENDIDOS` y `MENSAJE_MAS_VENDIDOS`, `nombreColor(color, mostrar)` (nombre que ve el cliente: el elegido por la tienda o el oficial en inglés, o el de la fuente), `TAMANOS_TEXTO`, `ESTADOS_ESTETICOS` y `elegir`.</li><li>**Ficha técnica (0012):** `CATEGORIAS_FICHA` (las 10 categorías fijas con su clave y nombre, en orden, más `otras` para las filas de la tienda), `MAX_ETIQUETA_FICHA` (60) y `MAX_VALOR_FICHA` (600), `especificacionesValidas` (las reglas de `validar_ficha`) y `filasVisiblesFicha(ficha, tienda)`: lo que muestra el sitio (nada si `mostrar_ficha` está apagado; si no, las categorías encendidas con valor en el orden fijo y al final las filas de la tienda).</li><li>**Textos legales (0015):** `expandirLegal(texto, tienda)` reemplaza `{{nombre}}` (o "la tienda"), `{{ciudad}}`, `{{direccion}}`, `{{correo}}` (si falta, `[PENDIENTE: …]`) y `{{herramientas}}` (lista); `prepararLegal(texto, tienda)` devuelve `{texto, pendientes}`: quita las marcas `[PENDIENTE: …]` y lo que queda vacío por ellas (ítems "- Etiqueta:" sin valor, el "…:" de una lista vacía, títulos sin contenido).</li><li>**Formas de pago (0013):** `MEDIOS_PAGO`, `PASARELAS_PAGO`, `MIN_CUOTAS` / `MAX_CUOTAS`, `errorPagos(tienda)` (las reglas de `validar_pagos`, con sus mensajes) y `frasesPagos(tienda)`: las frases del sitio ("Transferencia bancaria.", "Tarjeta de crédito: hasta 12 cuotas, hasta 6 sin interés.", "Pago a cuotas: …" si no marcó crédito, "Criptomonedas: USDT.", "Pago en línea con PSE, Nequi y Addi." y cada una de las otras, tal cual).</li><li>`mensajeDeError`: traduce los errores de Postgres al español; los mensajes de los disparadores (ya en español) pasan tal cual.</li></ul> |
+| `assets/js/datos/comun.js` (≈291) | Reglas compartidas por los dos adaptadores: <ul><li>`ErrorDatos`.</li><li>`equipoEsPublico`: publicado, con stock (`en_stock`) y de un modelo activo.</li><li>`LADO_GRANDE` = 1600 y `LADO_MINIATURA` = 640.</li><li>`rutaMiniatura`: `x.webp` → `x-640.webp`.</li><li>`CAMPOS_TIENDA`, `CAMPOS_EQUIPO`, `CAMPOS_COLOR`, `MAX_MAS_VENDIDOS` y `MENSAJE_MAS_VENDIDOS`, `nombreColor(color, mostrar)` (nombre que ve el cliente: el elegido por la tienda o el oficial en inglés, o el de la fuente), `TAMANOS_TEXTO`, `ESTADOS_ESTETICOS` y `elegir`.</li><li>**Ficha técnica (0012):** `CATEGORIAS_FICHA` (las 10 categorías fijas con su clave y nombre, en orden, más `otras` para las filas de la tienda), `MAX_ETIQUETA_FICHA` (60) y `MAX_VALOR_FICHA` (600), `especificacionesValidas` (las reglas de `validar_ficha`) y `filasVisiblesFicha(ficha, tienda)`: lo que muestra el sitio (nada si `mostrar_ficha` está apagado; si no, las categorías encendidas con valor en el orden fijo y al final las filas de la tienda).</li><li>**Legales (0016):** `LEGAL_INICIAL` (los campos del asistente con sus valores iniciales, iguales a los defaults del SQL; `CAMPOS_TIENDA` los incluye), `CAMPOS_LEGALES`, `PLATAFORMA_POR_DEFECTO` ("HighLevel (GoHighLevel)"), `CODIGOS_PAISES_SQL` (la lista del check de `legal_paises`; la prueba del motor la compara con `indice.js`) y `errorLegales(tienda)`: los checks de `0016` (largos, opciones, países, entregas, meses de 1 a 120, interruptores, `legal_publicado` objeto o vacío).</li><li>**Formas de pago (0013):** `MEDIOS_PAGO`, `PASARELAS_PAGO`, `MIN_CUOTAS` / `MAX_CUOTAS`, `errorPagos(tienda)` (las reglas de `validar_pagos`, con sus mensajes) y `frasesPagos(tienda)`: las frases del sitio ("Transferencia bancaria.", "Tarjeta de crédito: hasta 12 cuotas, hasta 6 sin interés.", "Pago a cuotas: …" si no marcó crédito, "Criptomonedas: USDT.", "Pago en línea con PSE, Nequi y Addi." y cada una de las otras, tal cual).</li><li>`mensajeDeError`: traduce los errores de Postgres al español; los mensajes de los disparadores (ya en español) pasan tal cual.</li></ul> |
 | `assets/js/datos/semilla.js` (≈115) | `CATALOGO`: los **42 modelos** desde el iPhone 7, con slug, generación y orden de 10 en 10 por fecha de lanzamiento. `COLORES`: los 183 colores oficiales por slug (`[nombre_es, nombre_en, hex]`, vacío si la fuente no lo da). `DEMO_EQUIPOS`: los 6 equipos demo. `FICHAS`: las fichas técnicas de los 42 modelos, solo con lo que trae la fuente (`[clave, valor]` o `[null, valor, etiqueta]`), y `filasDeFuente(slug)`, que las devuelve como quedan en la base. `slugDe`. **Debe coincidir** con `0006_catalogo_colores.sql`, `0003_demo.sql` y `0012_fichas.sql`; la prueba SQL lo revisa. |
-| `assets/js/datos/demo.js` (≈436) | Back-end de demostración. Ver sección 7.2. |
+| `assets/js/datos/demo.js` (≈822) | Back-end de demostración. Ver sección 7.2. |
 | `assets/js/datos/supabase.js` (≈304) | Back-end Supabase. Ver sección 7.3. |
 
 ### 5.6 Sitio público (`assets/js/sitio/`)
 
 | Archivo | Qué es |
 |---|---|
-| `assets/js/sitio/principal.js` (≈328) | **Orquestador del sitio.** Sus tareas: <ul><li>Captura la atribución, inicia el píxel y el script de GHL.</li><li>Carga los datos y aplica el tema.</li><li>Dibuja marca, información y pie.</li><li>Arma los filtros y lee y escribe la URL.</li><li>Actualiza contador y galería, y decide el detalle en línea.</li><li>Abre la hoja de detalle (con gesto de deslizar para cerrar) y conecta la barra fija.</li><li>En demo, recarga si otra pestaña cambió los datos (evento `storage`).</li></ul> |
+| `assets/js/sitio/principal.js` (≈388) | **Orquestador del sitio.** Sus tareas: <ul><li>Captura la atribución.</li><li>Carga los datos y aplica el tema.</li><li>Dibuja marca, información y pie.</li><li>Inicia el **consentimiento** (`iniciarConsentimiento`, con los filtros como zona que el banner no tapa); el script de seguimiento de GHL se carga solo con permiso de medición (`cargarSeguimientoGHL`, una vez, también si la persona acepta después).</li><li>Arma los filtros y lee y escribe la URL.</li><li>Actualiza contador y galería, y decide el detalle en línea.</li><li>Abre la hoja de detalle (con gesto de deslizar para cerrar) y conecta la barra fija.</li><li>En demo, recarga si otra pestaña cambió los datos (evento `storage`).</li></ul> |
 | `assets/js/sitio/catalogo.js` (≈163) | **Lógica pura, sin DOM:** <ul><li>`prepararCatalogo`, que calcula la recencia de cada generación como el mayor `orden` de sus modelos.</li><li>`filtrar`, `contarEquipos` (cantidad de equipos: el stock es sí/no), `opcionesModelo` (agrupadas por generación, de la más nueva a la más vieja), `etiquetaGeneracion` ("Generación 11", "Generación XS y XR"; "Plegable" queda igual; el panel usa la misma) y `opcionesCapacidad`.</li><li>`prepararCatalogo` guarda también los colores (`cat.colores`, por id) y le pone a cada equipo `color` (el oficial), `color_nombre` (el que ve el cliente, con `nombreColor`) y `color_hex` (la muestra oficial o vacío). El resto del sitio (tarjetas, muestras, detalle, texto alternativo, WhatsApp y píxel) usa esos dos campos.</li><li>`encadenar`: limpia las elecciones que un cambio deja inválidas.</li><li>`tarjetas`: nuevos por modelo y capacidad, usados por unidad; orden: destacados, generación más nueva y precio. Cada tarjeta lleva `masVendido` si cualquiera de sus equipos tiene `mas_vendido` (no cambia el orden); `TEXTO_MAS_VENDIDO` es la etiqueta.</li><li>`diapositivas`, `textoCondicion`, `textoAlternativo` y `describirBusqueda`.</li><li>`mensajeCompra`, `mensajeSinStock` y `enlaceWhatsApp`.</li></ul> |
 | `assets/js/sitio/filtros.js` (≈189) | Controles de los filtros: <ul><li>`iniciarSegmentado`: Nuevo/Usado, donde un segundo toque desmarca; pone `--i` y `--visible` para el indicador que se desliza.</li><li>`iniciarChips`: almacenamiento.</li><li>`iniciarDesplegable`: lista propia con `role="listbox"`, grupos por generación, "Todos los modelos", cantidad por modelo, buscador si hay más de 8, teclado (flechas, Inicio/Fin, Enter, Escape, Tab) y cierre al tocar afuera.</li><li>`marcarLimpiado`: destello cuando un filtro se limpia solo.</li></ul> |
 | `assets/js/sitio/galeria.js` (≈125) | `crearGaleria(lista, api)`: tarjetas con clave estable. Al filtrar, las que salen se desvanecen y las que quedan se reacomodan con **FLIP** (Web Animations API). Sin animación si hay `prefers-reduced-motion`. Con `usarCarrusel(c)`, dibuja las tarjetas y le pasa el movimiento al carrusel. **Más vendido:** la tarjeta lleva la clase `tarjeta--mas-vendido`, la etiqueta y `span.tarjeta-brillo` (decorativo); un `IntersectionObserver` pone `data-en-pantalla` en las 3 primeras como máximo, y solo en esas corre la luz. |
@@ -325,25 +334,25 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `assets/js/sitio/detalle.js` (≈219) | `crearDetalle(...)`: carrusel y ficha. <ul><li>El carrusel usa scroll-snap y se mueve con el dedo, flechas, puntos, muestras de color y teclado; con varias fotos muestra miniaturas.</li><li>La ficha tiene nombre, etiqueta (y "Más vendido", quieta, si el modelo y capacidad lo es en un nuevo, o la unidad en un usado), variante, `etiqueta_precio` y precio (el elemento más grande), datos de usado, descripciones, "Ver ficha técnica" (solo filas con valor), pagos, entrega, garantía y el botón.</li><li>También exporta `htmlBarraCompra` e `ICONO_WA`.</li></ul> |
 | `assets/js/sitio/resenas.js` (≈100) | **Reseñas del sitio** (`0014`). `dibujarResenas({seccion, dialogo, api, tienda, resenas})`: solo si `mostrar_resenas` y hay alguna (si no, la sección queda oculta). Celular: fila con scroll-snap; desde 900 px: mosaico. Cada reseña es un botón con la imagen (miniatura de 640 px, carga diferida) o un recuadro "Video", el texto (4 líneas) y el origen en texto. El visor: título "Reseña N de M", imagen grande o `<video controls playsinline preload="none">` creado al abrir (no se descarga nada hasta que el cliente toca reproducir; sin reproducción automática), texto, origen, "Anterior" / "Siguiente", ← y →, Escape, el botón o tocar afuera para cerrar, y el foco vuelve a la reseña. `principal.js` lo importa **solo si hay reseñas para mostrar**. |
 | `assets/js/sitio/transiciones.js` (≈80) | Apertura y cierre de los diálogos del sitio: `abrirConTransicion(dialogo, mostrar, {origen, destino})` usa la **View Transitions API** (la foto de la tarjeta viaja al detalle; el diálogo lleva `data-vt` mientras dura) y, sin ella o con reduced-motion, abre directo con la animación de CSS de siempre. `cerrarConTransicion` hace una salida corta (baja en celular; se achica y desvanece en pantallas grandes) y después `close()`; `cerrarConEscape` lo usa con Escape. |
-| `assets/js/sitio/popup.js` (≈272) | `crearPopup(...)`: el pop-up "Antes de pasar a WhatsApp" completo. Ver sección 9. |
+| `assets/js/sitio/popup.js` (≈314) | `crearPopup(...)`: el pop-up "Antes de pasar a WhatsApp" completo, con el aviso corto, las dos casillas y los campos de consentimiento del pedido; sin textos legales publicados no pide datos (`dibujarSinLegales`). `fechaConZona()`: fecha y hora de Colombia con `-05:00`. Ver sección 9. |
 | `assets/js/sitio/fotos.js` (≈19) | `htmlFoto`: `<img>` con `srcset` 640w/1600w, `loading="lazy"` o `fetchpriority="high"`. `htmlMedio`: la foto principal o la ilustración. |
 | `assets/js/sitio/atribucion.js` (≈31) | `CLAVES_ATRIBUCION` (`utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`, `ad_id`, `fbclid`), `capturarAtribucion` y `leerAtribucion`. Guarda en `sessionStorage["cotizadora:atribucion"]` el **primer valor por clave** de la sesión. |
-| `assets/js/sitio/pixel.js` (≈40) | `iniciarPixel`: carga el píxel solo si hay un ID válido y manda `PageView`. `evento(nombre, parametros, eventID)`. `parametrosEquipo(q)`: `content_name`, `content_ids`, `content_type`, `value` y `currency: "COP"`. |
-| `assets/js/sitio/legal.js` (≈28) | Script de `/privacidad/` y `/terminos/`: carga la tienda, aplica el tema, muestra el logo y el texto con `prepararLegal` (datos de la tienda en lugar de `{{…}}`, sin marcas `[PENDIENTE: …]`) y `formatoBasico`. Si quedaba alguna marca, arriba dice "Texto en revisión." (`.legal-revision`). Si no hay texto: "La tienda todavía no publicó este texto." |
+| `assets/js/sitio/pixel.js` (≈46) | Píxel de Meta. Lo llama solo `consentimiento.js`: `iniciarPixel(id)` (con publicidad aceptada; carga y manda `PageView`, o `consent grant` si ya estaba) y `retirarPixel()` (`fbq("consent", "revoke")`; desde ahí no sale nada). `evento(nombre, parametros, eventID)` solo con el píxel activo. `parametrosEquipo(q)`: `content_name`, `content_ids`, `content_type`, `value` y `currency: "COP"`. |
+| `assets/js/sitio/legal.js` (≈26) | Script de `/privacidad/`, `/terminos/` y `/cookies/`: carga la tienda, aplica el tema, muestra el logo y el documento publicado con `conVigencia` (sin publicar: "Página en preparación.") e inicia el consentimiento **sin cargar herramientas ni mostrar el banner** (solo el botón "Preferencias de cookies" del pie). |
+| `assets/js/sitio/consentimiento.js` (≈276) | **Consentimiento de cookies: el único módulo que decide qué se carga.** <ul><li>`iniciarConsentimiento({tienda, cargar, protegido, rutaCookies, preguntar})`, `estado()` (`{elegido, medicion, publicidad, fecha}`, lo que va en el lead), `permitido(categoria)`, `alCambiar(fn)` y `gpc()`.</li><li>Elección en `localStorage["cotizadora:cookies"]` por 6 meses (183 días); vencida, se vuelve a preguntar.</li><li>Cargadores por herramienta (IDs de la tienda): Meta (vía `pixel.js`), GA4 y Google Ads (`gtag.js` una vez), GTM, Clarity (`consentv2`) y TikTok (código base). Google con **Consent Mode v2 básico**: todo `denied` por defecto y `update` según la elección, y el script solo después de aceptar.</li><li>Al retirar una categoría: Meta `consent revoke`, Google `consent update` en `denied`, Clarity `consentv2` en `denied`, y se borran las cookies propias de esa categoría (`_ga*`, `_clck`, `_clsk` o `_fbp`, `_fbc`, `_gcl_*`, `_ttp`). Lo ya cargado en la página no se descarga; desde la próxima no se carga.</li><li>**GPC** (`navigator.globalPrivacyControl`): publicidad rechazada y su interruptor deshabilitado.</li><li>**Banner:** región con título "Cookies", texto corto con enlace a la Política de cookies, "Aceptar todas", "Rechazar todas" y "Configurar" (iguales); Configurar muestra Necesarias (siempre activas), Medición y Publicidad (solo las categorías con herramientas activas, con sus nombres) y "Guardar mi elección". Escape lo cierra si ya había elección; el foco vuelve al botón del pie.</li><li>`mostrarSinTapar`: la primera vez, el banner aparece solo si cabe debajo de los filtros; si no (360 × 800), espera a que la persona baje.</li></ul> |
 
 ### 5.7 Panel (`assets/js/panel/`)
 
 | Archivo | Qué es |
 |---|---|
-| `assets/js/panel/panel.js` (≈283) | Arranque, acceso y rutas. <ul><li>**Acceso:** vistas de login, recuperación y "Cree su contraseña" o "Contraseña nueva", según `tipoDeEnlace()`.</li><li>`entrar()` y el router `enrutar()` por hash, que pregunta si hay cambios sin guardar (`ctx.sucio`) y llama `ctx.alSalir`.</li><li>La vista **Inicio**: estadísticas, fecha de precios, avisos de "Lo que falta" (también nombre, ciudad, correo y formas de pago) y modo demo (gestor).</li><li>`ctx.marcarRuta(ruta)`: cambia la dirección sin volver a dibujar (pestañas).</li><li>Rutas por rol: el administrador solo llega a Usuarios; el gestor, a todo lo demás. La navegación muestra solo los enlaces de su rol (`data-rol`).</li><li>Define `ctx`, que tiene: `api`, `usuario`, `tienda`, `sucio`, `alSalir`, `esAdministrador()`, `esGestor()`, `inicio()`, `recargarTienda()` e `ir()`.</li></ul> |
+| `assets/js/panel/panel.js` (≈317) | Arranque, acceso y rutas. <ul><li>**Acceso:** vistas de login, recuperación y "Cree su contraseña" o "Contraseña nueva", según `tipoDeEnlace()`.</li><li>Al arrancar, `republicarAlGuardar(ctx.api)` (de `legales.js`) envuelve `guardarTienda` para volver a publicar los legales después de cada cambio; al entrar, `copiarPixelViejo` (ID de `config.js` → tienda, una vez).</li><li>`entrar()` y el router `enrutar()` por hash, que pregunta si hay cambios sin guardar (`ctx.sucio`) y llama `ctx.alSalir`.</li><li>La vista **Inicio**: estadísticas, fecha de precios, avisos de "Lo que falta" (**primero los legales**: "Faltan los textos legales: el pop-up no envía pedidos hasta publicarlos" con enlace al primer paso incompleto, o "Faltan datos legales: los textos publicados no se actualizan"; después nombre, ciudad, correo, formas de pago, etc.) y modo demo (gestor; sin legales publicados, el interruptor y "Borrar datos de demostración" quedan deshabilitados con el aviso y el enlace).</li><li>`ctx.marcarRuta(ruta)`: cambia la dirección sin volver a dibujar (pestañas y pasos).</li><li>Rutas por rol: el administrador solo llega a Usuarios; el gestor, a todo lo demás. La navegación muestra solo los enlaces de su rol (`data-rol`).</li><li>Define `ctx`, que tiene: `api`, `usuario`, `tienda`, `sucio`, `alSalir`, `esAdministrador()`, `esGestor()`, `inicio()`, `recargarTienda()` e `ir()`.</li></ul> |
 | `assets/js/panel/ui.js` (≈82) | Piezas de interfaz: `$`, `$$`, `esc`, `avisar` ("Guardado" o error), `confirmar` (promesa sobre `<dialog>`), `conBoton` (botón en espera más aviso), `campoTexto`, `interruptor`, `marcarError` y `enfocarPrimerError`. |
 | `assets/js/panel/inventario.js` (≈605) | Inventario. <ul><li>**Lista** con buscador y filtros (modelo, condición, publicado y los especiales "sin stock" y "sin foto").</li><li>**Edición rápida** de precio, el interruptor **Stock** ("Con stock" / "Sin stock"), publicado y **Más vendido** (máximo 3; el cuarto avisa sin llamar a la base): se guarda al salir del campo, con Enter o al mover el interruptor.</li><li>Borrar con confirmación (borra también las fotos).</li><li>**Formulario** por pasos para agregar, completo para editar y duplicar, con validaciones.</li><li>**Fotos:** subir, cámara, arrastrar y soltar, reordenar, quitar y máximo 6.</li><li>**Color:** el paso Color muestra solo los colores oficiales del modelo (muestra y nombre en inglés, o el de la fuente) y el campo opcional "Nombre que verá el cliente". No se crean colores ni se escribe un hexadecimal desde el equipo. Cambiar el modelo borra el color elegido. Si el modelo no tiene colores, se puede guardar sin color.</li><li>Opción de activar el modelo si estaba inactivo.</li><li>Limpia las fotos subidas si se sale sin guardar.</li></ul> |
 | `assets/js/panel/tienda.js` (≈359) | Mi tienda: <ul><li>Datos de la tienda y redes.</li><li>Marca: logo con **recorte** (horizontal 3:1 o cuadrado, arrastrar, zoom y teclado), favicon de 128 px, colores con selector y hexadecimal, tema, **tamaño del texto** (Compacto, Normal o Grande) y **vista previa en vivo** con el contraste calculado.</li><li>**Diseño del sitio:** cómo se ven los equipos, "Cuadrícula" o "Carrusel", cada una con su explicación.</li><li>Venta: etiqueta del precio, entrega y garantías. Las formas de pago pasaron a Catálogo → Formas de pago (hay un enlace).</li></ul> |
 | `assets/js/panel/pagos.js` (≈175) | **Pestaña "Formas de pago" de Catálogo** (`#/catalogo/pagos`, `0013`): medios (chips), cuotas (interruptor; hasta cuántas, de 2 a 48; interruptor de sin interés y hasta cuántas, no más que el máximo), criptomonedas (interruptor y "¿Cuáles?"), pasarelas (chips; "Otra" pide el nombre) y "Otras formas de pago" (la lista libre que antes estaba en Mi tienda). Lo que depende de un interruptor se esconde si está apagado y se guarda vacío. Valida con mensajes en cada campo y foco al primer error; abajo, "Así se ve en el sitio" con `frasesPagos`. |
 | `assets/js/panel/fichas.js` (≈170) | **Pestaña "Ficha técnica" de Catálogo** (`#/catalogo/ficha` y `#/catalogo/ficha/<modeloId>`; los títulos son `h2`, el `h1` es "Catálogo"). <ul><li>**Lista:** interruptor "Mostrar la ficha técnica en el sitio" (`tienda.mostrar_ficha`), un interruptor por categoría (`tienda.ficha_ocultas`; se guardan al moverlos y se deshabilitan con la ficha apagada) y los modelos activos con cuántos datos tiene su ficha.</li><li>**Editor de un modelo:** descripción, un campo por categoría fija (precargado de la fuente; la tienda lo corrige o completa) y "Otras filas de la tienda" (agregar, editar, subir, bajar y borrar, con etiquetas sugeridas). "Copiar ficha de otro modelo" copia todo.</li></ul> |
 | `assets/js/panel/catalogo.js` (≈275) | **Catálogo con pestañas** (`role="tablist"`, flechas con vuelta, Inicio y Fin; el foco queda en la pestaña; cambiar de pestaña no recarga la vista, cambia la dirección con `ctx.marcarRuta` y pregunta si hay cambios sin guardar). Cada pestaña dibuja en un contenedor nuevo, así una que termina de cargar tarde no pisa a la actual. Pestaña **Modelos y colores**: agrupada por generación con interruptor activo/inactivo; renombra (el slug no cambia), reordena (intercambia el `orden`) y agrega modelos al final. **Colores** de cada modelo (desplegable): muestra, nombre en español y en inglés (solo lectura), hexadecimal de la fuente fijo y campo para completar el que falta; en modelos sin colores oficiales, el gestor agrega y borra colores de la tienda. |
-| `assets/js/panel/legales.js` (≈125) | Editores de privacidad, términos, autorización de datos y aviso de marca, con aviso si están vacíos y vista previa (la del sitio: con los datos de la tienda y sin marcas). Desde `0015`: interruptor "Un abogado ya revisó estos textos" (`legales_revisados`); mientras esté apagado, arriba de cada uno de los tres textos base el aviso "Texto base preparado para revisión de un abogado. No lo trate como definitivo."; debajo de cada uno, "Falta: …" con lo pendiente; lista editable de **herramientas** (`legales_herramientas`, va donde dice `{{herramientas}}`). |
-| `assets/js/datos/legales-base.js` (≈95) | Los textos legales base (`PRIVACIDAD_BASE`, `TERMINOS_BASE`, `AUTORIZACION_BASE`) y `HERRAMIENTAS_BASE`. Son los mismos de `0015_legales.sql` (la prueba SQL lo revisa). Solo los usa el adaptador demo. Ver sección 9.6. |
+| `assets/js/panel/legales.js` (≈512) | **Asistente de Legales** (`#/legales` y `#/legales/<1 a 6>`, con `?campo=` para enfocar un campo). Ver sección 9.6. <ul><li>Progreso (`<progress>` y "N de 6 pasos completos"), lista de pasos con ✓, Anterior / Siguiente.</li><li>Pasos: 1 Perfil, 2 Identificación, 3 Países, 4 Condiciones de venta, 5 Herramientas, 6 Vista previa y publicación.</li><li>Guardado automático: texto a los 700 ms de dejar de escribir, lo demás al cambiarlo, con "Guardando…" / "Guardado." en un `role="status"`; un guardado que termina fuera de Legales no pinta nada.</li><li>Errores por campo después de tocarlo (`mensajeError`), con `aria-invalid` en el control.</li><li>Paso 6: "Lo que falta" con "Resolver" (lleva al paso y enfoca el campo), pestañas de los 4 documentos con flechas, "Agregar una cláusula propia" por documento y "Publicar textos legales" (solo con todo completo).</li><li>`republicarAlGuardar(api)`: después de cada guardado, si ya hay textos publicados y no falta nada, vuelve a generar y publicar; la versión sube solo si cambió algún texto.</li></ul> |
 | `assets/js/panel/usuarios.js` (≈100) | Solo administrador: invitar (correo y rol), **asignar rol** (selector por usuario), desactivar con confirmación y reactivar. Su propia fila no tiene controles. |
 | `assets/js/panel/imagenes.js` (≈85) | Fotos en el navegador, sin librerías: <ul><li>`validarArchivo`: jpg, png, webp o heic de hasta 10 MB.</li><li>`comprimirFoto`: devuelve `{grande ≤1600px, miniatura ≤640px, ext}` en WebP, o JPEG si el navegador no codifica WebP.</li><li>`codificar`, `cargarImagen` y `MAX_BYTES`.</li></ul>El HEIC se rechaza con un aviso claro si el navegador no lo lee. |
 | `assets/js/panel/resenas.js` (≈210) | **Reseñas en Mi tienda** (`0014`), fuera del formulario: todo se guarda solo. Interruptor "Mostrar reseñas en el sitio" y "Título de la sección"; lista (hasta 12) con miniatura, texto y origen editables, subir, bajar y borrar (borra también sus archivos); "Agregar una reseña" con el **aviso fijo** "Las capturas pueden tener datos personales de sus clientes. Tápelos o pida autorización antes de publicarlas." arriba de la carga, archivo (imagen comprimida como las fotos, en dos tamaños, o video validado con `validarVideo(archivo, {maxSegundos: 30})`), texto y origen opcionales (Instagram, WhatsApp, Google u Otro con "¿Cuál?") y la casilla **obligatoria** "Tengo autorización de esta persona o tapé su nombre, foto y número.". Si algo falla después de subir, borra lo subido. Con 12, "Agregar reseña" queda deshabilitado. |
@@ -357,7 +366,9 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `supabase/migrations/0002_catalogo.sql` (≈42) | Inserta los **32 modelos** del catálogo maestro, en el orden del prompt, todos inactivos (`orden` 10, 20, …, 320). Cada modelo recibe su ficha vacía por disparador. |
 | `supabase/migrations/0003_demo.sql` (≈36) | Pone el nombre "Tienda de demostración" y `modo_demo = true`, activa los 4 modelos que usa la demo (con `activo_por_demo = true`) e inserta los 6 equipos demo. |
 | `supabase/migrations/0011_vista_equipos.sql` (≈12) | `tienda.vista_equipos`: `cuadricula` (por defecto) o `carrusel`. |
-| `supabase/migrations/0015_legales.sql` (≈125) | Textos legales base (privacidad, términos y casilla del pop-up) **solo donde estaban vacíos**; `tienda.legales_revisados` y `tienda.legales_herramientas`. Generada con los mismos textos de `legales-base.js`. |
+| `supabase/migrations/0017_bloqueo_legal.sql` (≈39) | Sin `legal_publicado`: `proteger_tienda` no deja apagar el modo demo ("Publique los textos legales antes de quitar el modo demo.") y `borrar_datos_demo` no corre ("Publique los textos legales antes de borrar los datos de demostración."), con cualquier sesión. |
+| `supabase/migrations/0016_legales_asistente.sql` (≈203) | Legales con asistente: los campos `legal_*`, de herramientas (`meta_pixel_id`, `ga4_*`, `gtm_*`, `clarity_*`, `tiktok_*`, `gads_*`), `capi_solo_consentimiento`, `plataforma_sitio` y `legal_publicado`; pasa los textos propios de la tienda a las cláusulas y borra las columnas de `0015`; `legal_faltantes(tienda)` y el disparador `tienda_publicar_legales` (`publicar_legales`). Ver sección 6. |
+| `supabase/migrations/0015_legales.sql` (≈125) | Textos legales base (privacidad, términos y casilla del pop-up) solo donde estaban vacíos; `tienda.legales_revisados` y `tienda.legales_herramientas`. **Reemplazada por `0016`**, que descarta esos textos base (por su md5) y borra las columnas; no se edita porque ya corrió en producción. |
 | `supabase/migrations/0014_resenas.sql` (≈110) | Reseñas: `tienda.mostrar_resenas` (no por defecto) y `tienda.titulo_resenas`; tabla `resenas` (hasta 12 con `resenas_limitar`, imagen o video, texto, origen, `autorizado` obligatorio, orden) con RLS (el público lee solo con el interruptor encendido; el gestor escribe); bucket `resenas` (20 MB, imágenes y videos) y las políticas de archivos con él; `datos_publicos()` suma `resenas`. **No crea ninguna reseña.** |
 | `supabase/migrations/0013_formas_pago.sql` (≈65) | Formas de pago estructuradas en `tienda` (medios, cuotas, criptomonedas, pasarelas); `formas_pago` pasa a `pagos_otras` con sus valores; disparador `tienda_validar_pagos`. |
 | `supabase/migrations/0012_fichas.sql` (≈110) | Ficha técnica: `tienda.mostrar_ficha` (sí por defecto) y `tienda.ficha_ocultas` (categorías apagadas, con check); clave opcional por fila y disparador `fichas_validar`; precarga de las fichas de los 42 modelos **solo con lo que trae la fuente** y solo en fichas sin filas. |
@@ -368,7 +379,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `supabase/migrations/0006_catalogo_colores.sql` (≈415) | Catálogo desde el iPhone 7: agrega los 10 modelos que faltaban (por slug), renumera el `orden` de los 42 por fecha de lanzamiento (los de la agencia quedan al final) y crea `colores` con los 183 colores oficiales, el disparador `colores_proteger`, su RLS y `datos_publicos()` con colores. Ver sección 6. |
 | `supabase/migrations/0005_tamano_texto.sql` (≈13) | Agrega `tienda.tamano_texto`: `compacto`, `normal` (por defecto) o `grande`. |
 | `supabase/migrations/0004_en_stock.sql` (≈40) | El stock pasa de número a sí/no: agrega `equipos.en_stock` (verdadero por defecto), convierte `stock > 0` en verdadero y 0 en falso, rehace `equipos_leer` y `datos_publicos()` con `en_stock`, y quita `stock` y `usado_es_una_unidad`. |
-| `supabase/functions/_compartido/lead.ts` (≈53) | `armarLead(datos)`: valida y arma el pedido que va a GHL. Exporta también `CAMPOS_ATRIBUCION` y `CAMPOS_OCULTOS`. No depende de Deno. |
+| `supabase/functions/_compartido/lead.ts` (≈67) | `armarLead(datos)`: valida y arma el pedido que va a GHL. Desde `0016` exige `consentimiento_datos: true`, `version_politica` entero ≥ 1 y `fecha_consentimiento` ISO con zona horaria; los otros tres consentimientos van como `true` solo si llegan `true`. Exporta también `CAMPOS_ATRIBUCION`, `CAMPOS_OCULTOS` y `CAMPOS_CONSENTIMIENTO`. No depende de Deno. |
 | `supabase/functions/enviar-lead/index.ts` (≈73) | Función pública, sin JWT: valida y reenvía al Inbound Webhook de GHL. Ver sección 11.1. |
 | `supabase/functions/usuarios/index.ts` (≈75) | Función solo para administradores activos: invitar (con rol), desactivar y reactivar con la clave de servicio. Ver sección 11.2. |
 | `supabase/correos/invitacion.html` | Plantilla en español del correo de invitación. Usa `{{ .ConfirmationURL }}`. |
@@ -379,12 +390,12 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈1450) | Suite de aceptación en **modo demo** con Playwright: **57 casos** (58 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). | Ver sección 14. |
-| `tests/verificar-supabase.cjs` (≈311) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **9 casos**. Reemplaza `config.js` en el navegador y puede servir un supabase-js local (`ICT_SUPABASE_JS`). |
+| `tests/verificar.cjs` (≈2386) | Suite de aceptación en **modo demo** con Playwright: **62 casos** (63 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). Publica los textos legales de prueba al abrir el sitio o el panel (`nueva(..., {legales})`) y empieza con las cookies rechazadas (`{cookies}`; `null` = sin elegir). `ICT_LINEAS` muestra más líneas de cada falla. | Ver sección 14. |
+| `tests/verificar-supabase.cjs` (≈534) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **12 casos**. Reemplaza `config.js` en el navegador, puede servir un supabase-js local (`ICT_SUPABASE_JS`) y empieza con las cookies rechazadas. |
 | `tests/legal/motor.test.mjs` | Pruebas del motor legal sin navegador (`node tests/legal/motor.test.mjs`): faltantes por perfil y tipo de persona, validaciones, países, datos y plazos en los textos, sin corchetes ni marcadores vacíos, relación con Apple por perfil, herramientas activas e inactivas, versión y vigencia. |
 | `tests/legal/datos-prueba.mjs` | `TIENDA_LEGAL_PRUEBA`: una tienda inventada con todos los datos legales completos, para las pruebas. No es de ninguna tienda real. |
 | `tests/documentacion.mjs` | Verificador de este documento: falla si algún archivo versionado no aparece en la sección 5. |
-| `tests/sql/probar.sh` | Crea un Postgres temporal, carga la imitación de Supabase y todas las migraciones en orden, compara la semilla con `semilla.js` y corre `pruebas.sql`. Antes de cada migración corre `tests/sql/antes_<migración>.sql` si existe. |
+| `tests/sql/probar.sh` | Crea un Postgres temporal, carga la imitación de Supabase y todas las migraciones en orden, compara la semilla con `semilla.js` (y los valores legales iniciales con `LEGAL_INICIAL`), compara `legal_faltantes()` con `faltantes()` del motor (`comparar-faltantes.mjs`) y corre `pruebas.sql`. Antes de cada migración corre `tests/sql/antes_<migración>.sql` si existe. |
 | `tests/sql/antes_0007_roles.sql` | Los usuarios de prueba con los roles viejos (agencia y tienda), para probar que `0007` los convierte. `pruebas.sql` los sigue usando. |
 | `tests/sql/antes_0006_catalogo_colores.sql` | Un modelo de la agencia (orden 330) antes de `0006`, para probar que queda al final. |
 | `tests/sql/antes_0015_legales.sql` | Unos términos que la tienda ya había escrito, para probar que `0015` no los pisa. |
@@ -392,9 +403,11 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `tests/sql/antes_0012_fichas.sql` | Una ficha que la tienda ya había cargado (iPhone 13), para probar que la precarga de `0012` no la pisa. |
 | `tests/sql/antes_0004_en_stock.sql` | Datos con el esquema viejo (stock 4 y stock 0) para probar que `0004` los convierte bien. `pruebas.sql` los revisa y los borra. |
 | `tests/sql/supabase_simulado.sql` | Roles `anon`, `authenticated` y `service_role`, esquema `auth` con `auth.uid()`, y `storage.buckets` y `storage.objects` mínimos. |
-| `tests/sql/pruebas.sql` | Asserts de catálogo y semilla, y de RLS por rol (anon, sin perfil, inactivo, gestor, administrador). También validaciones, fecha de precios, colores, modo demo, perfiles (nadie se quita a sí mismo; siempre un administrador activo, también sin sesión) y borrar demo. |
-| `tests/sql/comparar-semilla.mjs` | Compara el JSON de la semilla del SQL con `semilla.js`: catálogo, colores, equipos demo y las fichas precargadas (filas, orden y textos). |
-| `tests/funciones/probar.sh` | Revisa los tipos de las dos funciones y prueba `enviar-lead` contra webhooks simulados: 10 casos. |
+| `tests/sql/pruebas.sql` | Asserts de catálogo y semilla, y de RLS por rol (anon, sin perfil, inactivo, gestor, administrador). También validaciones, fecha de precios, colores, modo demo, perfiles (nadie se quita a sí mismo; siempre un administrador activo, también sin sesión) y borrar demo. **Legales:** migración de `0016` (columnas viejas fuera, textos propios en las cláusulas, valores iniciales), checks, publicar incompleto o con marcas rechazado, versión y fecha que pone el disparador, sin despublicar, el administrador no edita, y el bloqueo de `0017`. |
+| `tests/sql/comparar-semilla.mjs` | Compara el JSON de la semilla del SQL con `semilla.js`: catálogo, colores, equipos demo, las fichas precargadas (filas, orden y textos) y los valores legales iniciales con `LEGAL_INICIAL` (`comun.js`). |
+| `tests/sql/comparar-faltantes.mjs` | Arma 27 variantes de la tienda de prueba (completa, vacía, cada regla rota) y compara `legal_faltantes()` del SQL con `faltantes()` de `motor.js`. |
+| `tests/sql/antes_0016_legales_asistente.sql` | Un aviso de marca de la tienda, para probar que `0016` lo pasa a la cláusula de los términos después de sus términos (`antes_0015`). |
+| `tests/funciones/probar.sh` | Revisa los tipos de las dos funciones y prueba `enviar-lead` contra webhooks simulados: 14 casos (con los de consentimiento). |
 | `tests/funciones/servir.ts` | Corre una función de Supabase en un puerto fijo (`Deno.serve` no lee `PORT`). |
 | `tests/funciones/webhook-simulado.mjs` | Webhook de GHL falso: guarda el último cuerpo recibido y responde con el código de `ESTADO`. |
 | `tests/supabase-local/levantar.sh` | Levanta el "Supabase local" completo (ver sección 14.3) y deja `/tmp/cotizadora-supabase-local/entorno`. Con el argumento `detener`, lo apaga. |
@@ -438,7 +451,14 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
     - `pagos_otras`: `text[]`, la lista libre (antes `formas_pago`; `0013` la renombró y conservó los valores).
   - `texto_garantia_nuevos`, `texto_garantia_usados`.
   - `etiqueta_precio`: por defecto "Precio".
-- **Legales:** `texto_privacidad`, `texto_terminos`, `texto_autorizacion_datos`, `aviso_marca`; desde `0015`, `legales_revisados` (no por defecto) y `legales_herramientas` (`text[]`, con 5 herramientas por defecto). `0015` carga los textos base solo donde estaban vacíos.
+- **Legales (desde `0016`; los de `0015` ya no existen):**
+  - Asistente: `legal_paso` (1–6), `legal_perfil` (`oficial`, `autorizado`, `electronica`, `no_oficial`, `emprendedor`, `particular`), `legal_tipo_persona` (`natural` / `juridica`), `legal_nombre`, `legal_doc_tipo` (`cc`, `nit`, `ce`) y `legal_doc_numero`, `legal_direccion`, `legal_ciudad`, `legal_correo`, `legal_telefono`, `legal_representante`, `legal_matricula_numero`, `legal_matricula_camara`, `legal_direccion_local`, `legal_rnbd` (`si` / `no` / vacío), `legal_paises` (`text[]` de los 19 códigos), `legal_impuestos` (`jsonb`: `[{nombre, porcentaje, incluido}]`, por defecto IVA vacío), `legal_garantia_nuevos` y `legal_garantia_usados_meses` (1–120), `legal_garantia_usados` (`con` / `sin`), `legal_retracto_canal` (`correo` / `whatsapp`), `legal_entrega` (`retiro`, `transportadora`, `personal`), `legal_entrega_zonas`, `legal_apple_detalle`, `legal_homologados` (`si` / `no`) y las cuatro `legal_clausula_*` (hasta 4000 caracteres).
+  - Herramientas: `meta_pixel_id`; `ga4_activo`/`ga4_id`, `gtm_activo`/`gtm_id`, `clarity_activo`/`clarity_id`, `tiktok_activo`/`tiktok_id`, `gads_activo`/`gads_id`; `capi_solo_consentimiento` (sí por defecto); `plataforma_sitio` ("HighLevel (GoHighLevel)" por defecto).
+  - `legal_publicado` (`jsonb`): `{version, vigente_desde, huella, documentos: {privacidad, terminos, cookies, aviso}}`. Vacío = sin publicar.
+  - Se guardan incompletos (los checks solo limitan largos y opciones); los formatos y lo obligatorio los revisa `legal_faltantes(tienda)` → `text[]` con las claves que faltan, el mismo criterio de `faltantes()` en `motor.js`.
+  - Disparador `tienda_publicar_legales` (`publicar_legales`): solo publica con `legal_faltantes` vacío y los cuatro documentos no vacíos y sin `[PENDIENTE` ni `{{`; no deja volver a `null`; **la versión y la fecha las pone él**: si los documentos son iguales a los publicados, deja lo publicado; si no, versión + 1 y la fecha de hoy en Colombia.
+  - `0016` pasó lo que la tienda había escrito a la cláusula propia de su documento (`texto_privacidad` → privacidad, `texto_terminos` y `aviso_marca` → términos, `texto_autorizacion_datos` → aviso) y descartó los textos base de `0015` sin cambios (por su md5).
+  - `0017`: sin `legal_publicado`, el modo demo no se apaga y `borrar_datos_demo` no corre.
 - **Sistema:**
   - `precios_actualizados_en`: lo pone el disparador.
   - `modo_demo`: por defecto `true`.
@@ -599,8 +619,9 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 - **Estado:** `localStorage["cotizadora-demo:v1"]`, un JSON con `tienda`, `modelos`, `fichas`, `equipos` y `perfiles`. Se comparte entre pestañas del mismo navegador.
 - **Fotos:** IndexedDB, base `cotizadora-demo`, almacén `archivos`. Se exponen como `blob:` URLs.
 - **Usuarios de prueba:** `gestor@demo.co` y `administrador@demo.co`, clave `demo1234` (desde la versión 5 de los datos; antes `tienda@demo.co` y `agencia@demo.co`, que `migrar()` convierte). La sesión va en `sessionStorage["cotizadora-demo:sesion"]`.
-- **Versión de los datos:** el JSON lleva `version` (hoy 13; la 13 es `0015_legales.sql`: textos base donde estaban vacíos, herramientas y revisión en no; la 12 es `0014_resenas.sql`: interruptor apagado, título por defecto y lista vacía; la 10 es `0012_fichas.sql`, interruptores de la ficha y precarga de la fuente en las fichas sin filas; la 11 es `0013_formas_pago.sql`, `formas_pago` → `pagos_otras` y los campos nuevos vacíos). Si el navegador tiene una versión vieja, `migrar()` repite la migración SQL del mismo número (por ejemplo `stock` → `en_stock`) sin perder lo cargado.
+- **Versión de los datos:** el JSON lleva `version` (hoy 14; la 14 es `0016_legales_asistente.sql`: los campos del asistente con `LEGAL_INICIAL`, los textos propios a las cláusulas, los textos base de `0015` descartados por su huella FNV-1a y las columnas viejas borradas; la 13 es `0015_legales.sql`: textos base donde estaban vacíos, herramientas y revisión en no; la 12 es `0014_resenas.sql`: interruptor apagado, título por defecto y lista vacía; la 10 es `0012_fichas.sql`, interruptores de la ficha y precarga de la fuente en las fichas sin filas; la 11 es `0013_formas_pago.sql`, `formas_pago` → `pagos_otras` y los campos nuevos vacíos). Si el navegador tiene una versión vieja, `migrar()` repite la migración SQL del mismo número (por ejemplo `stock` → `en_stock`) sin perder lo cargado.
 - **Repite las reglas del SQL:**
+  - Legales: `errorLegales` (checks de `0016`), la publicación de `publicar_legales` (`publicarLegales`, que carga el motor solo al publicar: faltantes, documentos sin marcas, sin despublicar, versión y fecha) y el bloqueo de `0017` (modo demo y borrar la demo).
   - Permisos por rol.
   - Las restricciones CHECK.
   - La fecha de precios al cambiar un precio.
@@ -707,14 +728,14 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 - **Pie:**
   - "Nombre · ciudad".
   - "Precios actualizados al D/M/AAAA".
-  - Enlaces "Política de privacidad" y "Términos y condiciones".
-  - `aviso_marca`, si existe.
+  - Enlaces "Política de privacidad", "Términos y condiciones" y "Política de cookies", y el botón "Preferencias de cookies".
+  - (El aviso de marca ya no va en el pie: desde `0016` la relación con Apple está en los términos.)
 
 ---
 
-## 9. Pop-up, WhatsApp, atribución y píxel
+## 9. Pop-up, WhatsApp, atribución, píxel y legales
 
-> Los textos legales base (privacidad, términos y la casilla del pop-up) están en la sección 9.6.
+> Los textos legales, el asistente, el banner de cookies y el bloqueo hasta publicar están en las secciones 9.6 a 9.9.
 
 ### 9.1 El pop-up (`popup.js`)
 
@@ -725,8 +746,11 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
   - "Su nombre": `name="name"`.
   - "Su correo": `name="email"`.
   - "Su WhatsApp": con el prefijo **+57 fijo**. Se formatea mientras se escribe ("300 123 4567") y el cursor se conserva en el dígito.
-  - La casilla con `texto_autorizacion_datos` y el enlace a `privacidad/`.
-  - Si ese texto está vacío, la casilla dice "Autorizo el tratamiento de mis datos personales.". Es una propuesta: la casilla no puede quedar sin texto.
+  - Arriba de las casillas, el **aviso de privacidad corto** publicado (`documentos.aviso`), con el enlace a la política (se abre en otra pestaña).
+  - Casilla **obligatoria**, sin marcar: "Soy mayor de 18 años y autorizo el tratamiento de mis datos para recibir mi cotización y ser contactado sobre ella por WhatsApp y correo, según la Política de privacidad." (`name="autorizacion_datos"`, con enlace).
+  - Casilla **opcional**, sin marcar: "Quiero recibir promociones y novedades de [nombre de la tienda] por WhatsApp y correo." (`name="promociones"`). No bloquea el envío.
+  - El formulario y el resumen llevan `data-clarity-mask="true"` (Clarity no los graba).
+  - Sin textos legales publicados, el pop-up solo dice "Esta tienda todavía no completó su información legal." y no envía nada.
 - **Errores**, al salir del campo o al enviar; el foco va al primer error:
   - "Escriba su nombre."
   - "Revise su correo."
@@ -742,7 +766,7 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 1. **Código:** genera `codigo_cotizacion` (`COT-` y 4 caracteres) y lo conserva entre reintentos.
 2. **Envío:** arma el pedido y llama `api.enviarLead(datos)`. Espera la confirmación.
 3. **Si sale bien:**
-   1. Dispara el evento `Lead` del píxel con `eventID` = el código.
+   1. Dispara el evento `Lead` del píxel con `eventID` = el código, **solo si la persona aceptó las cookies de publicidad**.
    2. Muestra la pantalla "Su pedido está listo", con el botón "Abrir WhatsApp" y "Su código: X. Si nos escribe desde otro número, menciónelo."
    3. Intenta `window.open(wa.me…)`. El navegador puede bloquearlo después de la espera; por eso el botón siempre está.
 4. **Si falla:**
@@ -757,8 +781,13 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
   "precio_cotizado": 6200000, "equipo_id", "tipo_consulta": "compra|sin stock",
   "codigo_cotizacion": "COT-AB2C",
   "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "ad_id", "fbclid",
-  "event_id": "COT-AB2C", "pagina", "enviado_en" }
+  "event_id": "COT-AB2C", "pagina", "enviado_en",
+  "consentimiento_datos": true, "consentimiento_promociones": false,
+  "consentimiento_medicion": false, "consentimiento_publicidad": false,
+  "version_politica": 1, "fecha_consentimiento": "2026-10-21T14:03:05-05:00" }
 ```
+
+`consentimiento_medicion` y `consentimiento_publicidad` son lo elegido en el banner (sin elegir = `false`); `version_politica`, la versión publicada que vio la persona.
 
 ### 9.3 Mensajes de WhatsApp (exactos)
 
@@ -793,22 +822,60 @@ La búsqueda se arma con `describirBusqueda`: el modelo o "iPhone", la condició
 
 ### 9.5 Píxel de Meta
 
-- Solo se carga si `config.metaPixelId` tiene de 5 a 20 dígitos.
+- El ID sale de la tienda (`meta_pixel_id`, Legales → Herramientas), no de `config.js`.
+- Solo se carga si la persona **aceptó las cookies de publicidad** (lo decide `consentimiento.js`).
 - **Eventos:**
   - `PageView` al cargar.
   - `ViewContent` al abrir un detalle, con `content_name` = modelo, capacidad y color; `content_ids` = [equipo_id]; `value` = precio; `currency` = "COP".
   - `Lead` al confirmarse el envío, con los mismos parámetros y `eventID`. Si es una consulta sin stock, solo lleva `content_name`.
+- Si la persona retira el permiso, `fbq("consent", "revoke")` y no sale nada más.
 - **Nunca** `Purchase`, nunca datos personales. La suite lo verifica.
 
-### 9.6 Textos legales base (0015)
+### 9.6 Legales: motor, plantillas y módulos por país
 
-Borrador para que lo revise un abogado; se carga solo donde el texto estaba vacío. Está en `legales-base.js` y en `0015_legales.sql`.
+Los textos legales **no se escriben a mano**: la tienda llena el asistente y el motor los genera.
 
-- **Política de privacidad:** responsable (nombre, razón social y NIT, ciudad, dirección y correo de la tienda); datos que se recogen (nombre, correo y WhatsApp; el equipo cotizado con modelo, condición, capacidad, color y precio; el código; UTM, `ad_id` y `fbclid`, guardados en el navegador mientras dura la visita; datos técnicos del navegador que usa el píxel de Meta y sus cookies `_fbp` y `_fbc`; la apariencia en `localStorage`, que no es un dato personal); para qué (atender la cotización, contactar por WhatsApp, seguimiento comercial y medir anuncios); herramientas (`{{herramientas}}`); plazo (máximo 2 meses en el CRM o hasta que la compra se complete o se pierda, lo primero); derechos de la Ley 1581 de 2012 (conocer, actualizar, rectificar, suprimir y revocar) y cómo ejercerlos (correo de la tienda).
-- **Términos:** qué es el sitio (la compra se acuerda por WhatsApp; el sitio no cobra), precios en pesos con su fecha, precio y disponibilidad se confirman por WhatsApp, dibujo genérico sin foto, datos de los usados, garantía, entrega y pagos según el detalle, datos personales, marcas, ley aplicable y contacto.
-- **Casilla del pop-up:** "Autorizo a {{nombre}} a tratar mis datos personales (nombre, correo y WhatsApp) para atender mi cotización, contactarme por WhatsApp y hacer el seguimiento comercial, según su política de privacidad." más el enlace "Ver la política de privacidad".
-- **Herramientas por defecto** (editables): GoHighLevel (CRM), píxel de Meta y API de Conversiones de Meta, WhatsApp, el proveedor del sitio y de la base de datos, y Marketing Masters Group como encargado del tratamiento.
-- **Al mostrarlos** (`prepararLegal`): los `{{dato}}` se reemplazan; las marcas `[PENDIENTE: …]` se quitan junto con el renglón que queda vacío, y la página dice "Texto en revisión.". El pop-up usa el mismo proceso.
+- **Motor** (`assets/js/legal/motor.js`): `faltantes(tienda)` dice qué falta (con el paso); `generar(tienda)` arma los cuatro documentos en el Markdown de `formatoBasico`; `publicar(tienda, anterior, hoy)` devuelve la versión que se publica (la misma si los textos no cambiaron). Nunca deja marcadores ni datos vacíos: si falta algo, no genera.
+- **Plantillas** (`assets/js/legal/plantillas/`): `privacidad.js` (12 secciones: responsable; datos; finalidades; encargados y transmisión —"nuestro proveedor tecnológico, ubicado en Argentina", la plataforma del sitio, Meta y las herramientas activas—; API de Conversiones; conservación —máximo 2 meses desde el último contacto para quien no compra; para quien compra, lo que exijan las normas contables, tributarias y de protección al consumidor—; derechos; cómo ejercerlos con plazos y la SIC; mayoría de edad; seguridad; cambios y vigencia; sección del país), `terminos.js` (quién vende y relación con Apple según el perfil, cotizador, precios e impuestos, garantía, retracto, entrega, homologados si aplica, mayoría de edad, marcas, proveedor tecnológico, ley aplicable, datos personales, cambios), `cookies.js` (qué son, necesarias, medición y publicidad con una tabla por herramienta activa, GPC, cómo cambiar) y `aviso.js` (2–3 líneas con el enlace).
+- **Cláusula propia:** cada documento puede llevar una al final, en "Condiciones adicionales de la tienda".
+- **Módulos por país** (`assets/js/legal/paises/`): `indice.js` lista los 18 países de Hispanoamérica y Brasil; solo Colombia está disponible (`co.js`: SIC, tipos de documento, plazos de la Ley 1581, derechos, transmisión, retracto, garantía, horarios de la Ley 2300). Brasil queda en "Necesita el sitio en portugués.".
+- **Cómo sumar un país:** 1) copiar `co.js` con los datos del otro país (con sus fuentes en `legal/FUENTES.md`); 2) importarlo en `indice.js` y ponerle `estado: "disponible"` y `modulo`; 3) migración nueva que cambie `legal_faltantes()` (países permitidos y sus tipos de documento) y, si hace falta, el check de `legal_doc_tipo`; 4) `errorLegales` y `faltantes()` iguales; 5) pruebas (motor y `comparar-faltantes.mjs`).
+- **Herramientas** (`assets/js/legal/herramientas.js`): Meta siempre; GA4, GTM, Clarity, TikTok y Google Ads opcionales. Cada una con categoría (medición o publicidad), formato del ID, cookies y política. Solo se escriben duraciones verificadas en la documentación del proveedor.
+- **Versión y vigencia:** cada documento termina en "Vigente desde D/M/AAAA · versión N.". La versión sube solo cuando cambia algún texto.
+- **Fuentes:** todo lo que los textos afirman como requisito legal está en `legal/FUENTES.md`, con su estado de verificación.
+
+### 9.7 El asistente de Legales (panel)
+
+Seis pasos que se guardan solos, con progreso y la lista de pasos con ✓:
+
+1. **Perfil:** tienda oficial de Apple, revendedor autorizado, tienda de electrónica en general, revendedor no oficial, emprendedor sin local físico o revendedor particular.
+2. **Identificación:** persona natural o jurídica; nombre completo o razón social; tipo y número de documento (C.C., NIT con dígito de verificación o C.E.); dirección para notificaciones y ciudad; correo para temas de datos personales; teléfono. Jurídica: representante legal, número de matrícula mercantil y cámara de comercio. Dirección del local salvo emprendedor y particular. Registro Nacional de Bases de Datos opcional, con la explicación.
+3. **Países:** solo los disponibles se pueden marcar; los demás dicen "Próximamente" y Brasil "Necesita el sitio en portugués.".
+4. **Condiciones de venta:** impuestos (lista editable; por defecto IVA con el porcentaje vacío y "¿Incluido en el precio?"); garantía de nuevos en meses ("Si no indica un término mayor, la ley colombiana fija un año para productos nuevos."; con Colombia, 12 o más); usados con garantía (meses) o sin garantía (aviso: "Solo puede vender sin garantía un usado cuya garantía legal ya venció, y el cliente debe aceptarlo por escrito al comprar."); canal del retracto (correo o WhatsApp de Mi tienda); entrega (retiro, transportadora, personal) y zonas; relación con Apple (perfiles no oficiales: el texto fijo "[Tienda] es un comercio independiente. No está afiliado, patrocinado ni autorizado por Apple Inc. iPhone es una marca de Apple Inc."; oficial o autorizado: detalle obligatorio y la declaración bajo su responsabilidad); homologados sí o no.
+5. **Herramientas:** píxel de Meta y API de Conversiones siempre (ID obligatorio para publicar); GA4, GTM, Clarity, TikTok y Google Ads con interruptor e ID validado (Clarity con la ayuda para elegir el enmascarado "Strict"); "¿Enviar a la API de Conversiones solo si la persona aceptó las cookies de publicidad?" (sí por defecto) con "Configure su workflow de GoHighLevel para revisar el campo consentimiento_publicidad antes de enviar el evento."; plataforma del sitio.
+6. **Vista previa y publicación:** "Lo que falta" con "Resolver"; pestañas de los cuatro documentos; "Agregar una cláusula propia"; "Publicar textos legales", habilitado solo con todo completo.
+
+Después de publicar, cada cambio (en Legales, Mi tienda o Formas de pago) vuelve a generar y publicar los textos; la versión sube solo si cambió algún texto. Si un cambio deja datos incompletos, queda la versión publicada e Inicio lo avisa.
+
+### 9.8 Banner de cookies
+
+- Primera visita (o elección de más de 6 meses): aparece abajo, sin tapar el título ni los filtros. Tres botones del mismo tamaño: "Aceptar todas", "Rechazar todas" y "Configurar".
+- **Nada de medición ni publicidad se carga antes de aceptar** (ni se precarga). Rechazar = no se carga nada.
+- Configurar: Necesarias (siempre activas), Medición y Publicidad con sus herramientas, y "Guardar mi elección".
+- Google con Consent Mode v2 básico; GPC = publicidad rechazada.
+- Se cambia desde "Preferencias de cookies" en el pie de todas las páginas. Retirar un permiso detiene desde ese momento lo de esa categoría y borra sus cookies.
+- Es fijo y aparece después del primer pintado: no mueve nada (CLS).
+
+### 9.9 Bloqueo hasta publicar
+
+Mientras `legal_publicado` esté vacío:
+
+- El pop-up dice "Esta tienda todavía no completó su información legal." y no envía.
+- `/privacidad/`, `/terminos/` y `/cookies/` dicen "Página en preparación.".
+- El modo demo no se puede apagar ni se pueden borrar los datos de demostración (SQL `0017`, demo y panel).
+- Inicio pone "Faltan los textos legales…" primero en "Lo que falta", con el enlace al paso pendiente.
+
+Al publicar, todo se habilita. En el sitio, el panel y los textos no hay avisos de "borrador" ni de "revisión de un abogado".
 
 ---
 
@@ -840,7 +907,7 @@ Borrador para que lo revise un abogado; se carga solo donde el texto estaba vac�
 | `#/catalogo/ficha` y `#/catalogo/ficha/<modeloId>` | Catálogo, pestaña **Ficha técnica** (lista y editor de un modelo). |
 | `#/catalogo/pagos` | Catálogo, pestaña **Formas de pago**. |
 | `#/fichas` y `#/fichas/<modeloId>` | Enlaces viejos: llevan a `#/catalogo/ficha…`. "Fichas técnicas" ya no está en el menú. |
-| `#/legales` | Textos legales (con el interruptor de revisión del abogado y las herramientas). |
+| `#/legales` y `#/legales/<1 a 6>` | Asistente de Legales (sigue en el último paso; `?campo=<campo>` enfoca ese campo). |
 | `#/usuarios` | Usuarios (solo administrador; el gestor vuelve a Inicio). |
 
 ### 10.3 Validaciones del panel
@@ -886,7 +953,7 @@ Se publica **sin verificación de JWT** (`--no-verify-jwt`), porque la llama el 
 
 1. Atiende CORS y solo acepta `POST`.
 2. Si `ORIGENES_PERMITIDOS` está definido y el origen no está en la lista, responde 403.
-3. Valida con `armarLead`: nombre de 2 caracteres o más, correo, teléfono `^\+573\d{9}$`, `tipo_consulta` igual a `compra` o `sin stock`, y código con el formato `COT-XXXX`. Si algo falla, responde 400 con el campo.
+3. Valida con `armarLead`: nombre de 2 caracteres o más, correo, teléfono `^\+573\d{9}$`, `tipo_consulta` igual a `compra` o `sin stock`, código con el formato `COT-XXXX`, `consentimiento_datos` en `true`, `version_politica` entero de 1 o más y `fecha_consentimiento` ISO con zona horaria. Si algo falla, responde 400 con el campo.
 4. Hace `POST` a `GHL_WEBHOOK_URL`, con un tiempo máximo de 10 s.
 5. **Responde:**
    - `{ok: true}` si GHL respondió 2xx.
@@ -901,7 +968,9 @@ Se publica **sin verificación de JWT** (`--no-verify-jwt`), porque la llama el 
   "modelo", "condicion", "capacidad", "color", "precio_cotizado", "equipo_id",
   "tipo_consulta", "codigo_cotizacion",
   "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "ad_id", "fbclid",
-  "event_id", "pagina", "enviado_en" }
+  "event_id", "pagina", "enviado_en",
+  "consentimiento_datos", "consentimiento_promociones", "consentimiento_medicion", "consentimiento_publicidad",
+  "version_politica", "fecha_consentimiento" }
 ```
 
 **Secretos:** `GHL_WEBHOOK_URL` (obligatorio) y `ORIGENES_PERMITIDOS` (opcional, separados por coma).
@@ -933,6 +1002,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 3. Agregar la acción **Create/Update Contact** y mapear:
    - **Campos estándar:** `name`, `email` y `phone`.
    - **Campos personalizados:** `modelo`, `condicion`, `capacidad`, `color`, `precio_cotizado`, `equipo_id`, `tipo_consulta`, `codigo_cotizacion`, `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`, `ad_id` y `fbclid`.
+   - **Campos de consentimiento (nuevos con `0016`):** `consentimiento_datos`, `consentimiento_promociones`, `consentimiento_medicion` y `consentimiento_publicidad` (sí/no), `version_politica` (número) y `fecha_consentimiento` (fecha y hora con zona).
 
 **Límite:** no se garantiza que GHL llene su reporte nativo de atribución por este camino, aunque todos los datos del anuncio quedan en campos del contacto.
 
@@ -945,6 +1015,16 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
   - Si captura el `<dialog>`.
   - Si toma los campos ocultos.
   - Si duplica contactos junto con el webhook.
+- **Consentimiento:** el sitio lo carga solo si la persona acepta las cookies de **medición**. No figura en la Política de cookies porque sus cookies no se verificaron (pendiente, sección 17).
+
+### 12.3 Guía corta: consentimiento en los workflows
+
+1. **Crear los campos** de la lista de arriba en la subcuenta (Settings → Custom Fields) y mapearlos en Create/Update Contact.
+2. **API de Conversiones:** antes de enviar el evento a Meta, una condición *If/Else* que revise `consentimiento_publicidad`. Si la tienda eligió "Sí" en el paso 5 (por defecto), solo se envía con `true`; así lo dice la política de datos.
+3. **Promociones y novedades:** solo a contactos con `consentimiento_promociones` en `true`. Los mensajes de la cotización (`consentimiento_datos`) no autorizan promociones.
+4. **Horarios** de los workflows de promociones (Ley 2300 de 2023, según el pedido de Jared; las franjas no se pudieron verificar, ver `legal/FUENTES.md`): de lunes a viernes de 7:00 a 19:00 y los sábados de 8:00 a 15:00; nunca domingos ni festivos.
+5. **Conservación:** un workflow que borre o anonimice, a los **2 meses** del último contacto, a quien no compró. A quien compró se lo conserva lo que exijan las normas contables, tributarias y de protección al consumidor.
+6. Si la tienda cambia sus textos legales, `version_politica` sube: sirve para saber qué versión aceptó cada contacto.
 
 ---
 
@@ -1022,9 +1102,10 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 ```bash
 bash tests/sql/probar.sh                                   # SQL y RLS en un Postgres local (sin Docker)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 57 casos en modo demo (Playwright + Chromium)
+node tests/legal/motor.test.mjs                            # motor legal (10 casos, sin navegador)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 62 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
-DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (10 casos) + tipos
+DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (14 casos) + tipos
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
 ```
 
@@ -1035,7 +1116,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 - `ICT_CAPTURAS=1`: además guarda capturas en `tests/capturas/` y corre el caso **capturas de diseño**: 360 y 1440 px × claro y oscuro × cuadrícula y carrusel × color por defecto y primario amarillo, más el detalle y el pop-up, en `tests/capturas/diseno/<etapa>-….png`. `ICT_CAPTURAS_ETAPA` pone la etapa (por ejemplo `antes` o `despues`). La carpeta no se sube al repo.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (57 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (62 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
@@ -1048,26 +1129,26 @@ node tests/documentacion.mjs                               # este documento cubr
 9. `/admin` sin sesión pide login. La tienda no ve Usuarios, no renombra, y la capa de datos también se lo impide.
 10. Roles: el gestor no ve Usuarios y la capa de datos le niega gestionarlos; el administrador solo ve Usuarios y la capa de datos le niega lo demás; invita con rol, asigna roles, desactiva y no puede quitarse a sí mismo. Catálogo: 42 modelos y generaciones en orden; colores (hex de la fuente fijo, completar el que falta, colores de la tienda solo en el 17 Pro). Datos demo guardados de una versión vieja se migran (stock, tamaño, catálogo y colores).
 11. Validaciones del panel. **Más vendido:** tres se marcan en la lista; el cuarto avisa y no se guarda (también en la capa de datos y en el formulario); desmarcando uno, se puede; Duplicar no lo copia. **En el sitio** (3 casos): etiqueta "Más vendido" con 4,5:1 o más, anillo con luz y halo en la tarjeta (por cualquier color del grupo o por la unidad usada), mismo orden de tarjetas, la luz anima solo `transform`, corre en pantalla y se pausa fuera, en 3 tarjetas como máximo aunque haya más marcadas; en el carrusel, la del centro igual y las vecinas bajo la capa que las desvanece; el detalle muestra la etiqueta sin animación; con reduced-motion, etiqueta y anillo quietos y ninguna animación. Probado en claro, oscuro y primario amarillo. **Video:** .mov, MP4 en HEVC, 16 s y más de 20 MB se rechazan antes de subir (no queda nada guardado); MP4 de 3 s y WebM se aceptan; quitar el video, reemplazarlo o borrar el equipo borra el archivo; la capa de datos repite los límites de Storage. **Color oficial:** el paso Color ofrece solo los colores del modelo (sin crear colores ni escribir hexadecimales), cambiar el modelo borra el color, la capa de datos rechaza un color de otro modelo, y el nombre a mostrar ("Lila") llega a la tarjeta, el detalle, el texto alternativo, el mensaje de WhatsApp y el `content_name` del píxel; sin nombre a mostrar se ve el oficial ("Lavender").
-12. A 320, 360, 768 y 1440 px: sin scroll horizontal, un `h1` y sin errores en sitio, legales y todo el panel (incluidas las pestañas de Catálogo y el editor de una ficha).
+12. A 320, 360, 768 y 1440 px: sin scroll horizontal, un `h1` y sin errores en sitio, las tres páginas legales y todo el panel (incluidas las pestañas de Catálogo y el editor de una ficha).
 12b. **Pestañas de Catálogo:** "Fichas técnicas" ya no está en el menú; `#/fichas` y `#/fichas/<id>` llevan a la pestaña Ficha técnica; roles ARIA (`tablist`, `tab`, `tabpanel`, `aria-controls`, `aria-selected`, `tabindex` móvil); flechas con vuelta, Inicio y Fin con el foco en la pestaña; contorno de foco de 3 px; con cambios sin guardar, pregunta antes de cambiar de pestaña.
 12c. **Ficha técnica** (2 casos): las 42 fichas del demo son iguales a la fuente y el sitio las muestra tal cual, en el orden fijo y con sus saltos de línea; apagar "Mostrar la ficha técnica en el sitio" la saca del sitio; apagar categorías las saca; el editor muestra los valores de la fuente (batería vacía), corrige una categoría, completa otra y agrega una fila propia que va al final; "Otras filas de la tienda" apagada la oculta; la capa de datos rechaza una categoría inexistente o repetida, un valor de más de 600 caracteres y una categoría oculta que no existe. La migración de datos viejos del demo precarga las fichas vacías y no toca la que cargó la tienda.
 12d. **Formas de pago:** Inicio avisa ciudad, correo y formas de pago; Mi tienda ya no tiene la lista; la pestaña esconde lo que depende de un interruptor apagado, marca "no más que el máximo" y el nombre de "Otra" con foco al primer error, muestra la vista previa y guarda; el detalle muestra exactamente las frases de lo marcado; sin cuotas se guardan vacías y la tarjeta de crédito va sola; la capa de datos repite las reglas. La migración de datos viejos pasa la lista a `pagos_otras`.
 12e. **Reseñas** (2 casos): el demo no trae ninguna; apagadas o sin reseñas, la sección no aparece, `resenas.js` no se carga y `cargarPublico` no las da. En el panel: aviso fijo arriba de la carga y texto exacto de la casilla; sin la casilla no se sube nada (foco en la casilla); videos de 31 s, .mov y más de 20 MB rechazados sin subir nada; una imagen (dos tamaños) y un video de 20 s se agregan; editar texto, mover, encender y cambiar el título; en el sitio, el orden de las secciones, el título, el orden, las imágenes diferidas, ningún `<video>` antes de tocar, AA; el visor con `preload="none"`, sin reproducción automática, ← y Escape, y el foco vuelve; borrar quita la reseña y sus archivos; la 13.ª se rechaza y "Agregar" queda deshabilitado; `autorizado: false` se rechaza.
-12f. **Textos legales** (2 casos): el demo trae los textos base; `/privacidad/`, `/terminos/` y la casilla del pop-up nunca muestran `[PENDIENTE` ni `{{`; "Texto en revisión." mientras quede una marca y no sin ellas; los datos de Mi tienda aparecen y los que faltan quedan sin su renglón; un título vacío no se muestra; AA. En el panel: el aviso del texto base arriba de cada uno de los tres editores, "Falta: …", vista previa sin marcas, herramientas editables que llegan a la política, e Inicio deja de avisar al marcar "Un abogado ya revisó estos textos". La migración de datos viejos carga los textos base solo donde estaban vacíos.
+12f. **Legales** (7 casos): el **asistente** (campos según perfil y tipo de persona —emprendedor sin local, jurídica con representante y matrícula, oficial con detalle de Apple—, validaciones al salir del campo con sus mensajes, guardado automático, países con solo Colombia y Brasil "Necesita el sitio en portugués.", garantía de 12 meses con Colombia y los avisos literales, herramientas con su ID, la pregunta de la API de Conversiones con su ayuda, "Lo que falta" que lleva al campo, publicar deshabilitado hasta completar, pestañas con flechas, cláusula propia, versión 1 e Inicio sin el aviso); el **bloqueo** sin publicar (pop-up, "Página en preparación." en las tres páginas, modo demo y borrar demo en panel y capa de datos, publicar incompleto rechazado); los **documentos** (datos de la tienda, secciones, plazos, vigencia, sin corchetes ni marcas, herramientas activas sí e inactivas no, AA, pie); la **republicación** (un cambio en Legales o en Mi tienda sube la versión; incompleto, queda la publicada e Inicio avisa); el **banner** en 360 px (espera a que bajen los filtros, nada se carga antes de aceptar ni al rechazar —medido en la red—, botones iguales de 44 px o más, AA, la elección se guarda, Preferencias desde el pie por categoría, carga solo lo permitido, borra las cookies de lo retirado, vence a los 6 meses) y en 1440 px con **GPC**; y el **pop-up** (aviso corto, las dos casillas literales sin marcar, la obligatoria bloquea y la opcional no, `data-clarity-mask`, los campos de consentimiento del lead, sin píxel ni Lead sin publicidad). La migración de datos viejos del demo pasa los textos propios a las cláusulas.
 13. Carrusel: dedo, flechas, puntos, muestras, teclado y Escape. **Video en el detalle:** miniatura con ícono; sin `<video>` en la página hasta tocarla; al tocarla, `preload="none"`, `controls`, sin `autoplay` y se reproduce; volver a la foto lo quita.
 14. Gesto táctil real en el carrusel y cierre de la hoja con el gesto.
 14b. **Vista Carrusel** (8 casos): elegirla en Mi tienda cambia el sitio (mismas tarjetas, orden, contador y detalle; tocar una vecina la centra, la del centro abre el detalle; flechas de 44 px o más con foco visible); bucle en los dos sentidos con flechas, teclado, mouse, trackpad y dedo; 1 tarjeta sin flechas ni bucle, 2 tarjetas con una sola vecina, el filtro vuelve a la primera y el estado vacío; sin scroll horizontal y con altura estable a 320, 360, 768 y 1440 px; con reduced-motion, sin animaciones.
-15. Sin Apple: ni imágenes en el repo, ni la manzana U+F8FF, ni referencias, y solo recursos externos de Google Fonts.
+15. Sin Apple: ni imágenes en el repo, ni la manzana U+F8FF, ni referencias (salvo las frases fijas de los términos que pidió Jared), y solo recursos externos de Google Fonts.
 15b. **Espacios** (2 casos, 360 y 1440 px): mide en píxeles el relleno del pie y la separación de sus bloques, el aire entre el título y los filtros y arriba y abajo de la zona de equipos, en cuadrícula y carrusel, con tamaño Normal y Compacto (72 %), sin scroll horizontal.
 16. Contraste AA en 4 combinaciones: claro, oscuro, amarillo sobre blanco, y primario oscuro en tema oscuro. **Pie:** el fondo es el secundario y todo su texto pasa AA en claro y oscuro con 6 secundarios (incluidos gris medio, amarillo y azul).
 17. Textos de 16 px o más y zonas táctiles de 44 px, en el sitio, el pop-up y las legales, con los **tres tamaños de texto**. Compacto deja el cuerpo en 16 px y achica títulos y precios; Grande pone el cuerpo en 18 px. Elegir el tamaño en Mi tienda lo cambia en el sitio y no en el panel.
 18. Lista de modelos con teclado y buscador cuando hay más de 8.
 19. `prefers-reduced-motion`: sin animaciones en curso y todo funciona.
-20. Copy: sin tuteo ni promesas, sin `Purchase`.
-21. Píxel: `PageView`, `ViewContent` y `Lead` con `eventID`, sin datos personales.
+20. Copy: sin tuteo ni promesas (también en los textos legales), sin `Purchase`, y sin "borrador", "abogado" ni "en revisión" en lo que ve el cliente.
+21. Píxel (con publicidad aceptada): `PageView`, `ViewContent` y `Lead` con `eventID`, sin datos personales.
 22. Formatos: `$5.299.000`, fecha D/M/AAAA y código sin O/0/I/1.
 
-### 14.3 "Supabase local" y `tests/verificar-supabase.cjs` (11 casos)
+### 14.3 "Supabase local" y `tests/verificar-supabase.cjs` (12 casos)
 
 **Cómo levantarlo y probarlo:**
 
@@ -1090,14 +1171,14 @@ bash tests/supabase-local/levantar.sh detener
 | 2525 | SMTP simulado |
 | 54321 | Pasarela |
 
-**Los 11 casos:**
+**Los 12 casos:**
 
-1. El sitio carga con la RPC.
-2. El pop-up pasa por la función y llega al webhook con todos los campos.
+1. El sitio carga con la RPC; sin legales publicados, el pop-up no envía y las tres páginas dicen "Página en preparación.".
+1c. **Legales:** el servidor no deja borrar la demo ni apagarla sin publicar, rechaza publicar incompleto y un perfil inválido; el gestor publica y el servidor pone versión 1 y la fecha de hoy (aunque le manden otra); un cambio sube a la versión 2 y `/terminos/` lo muestra.
+2. El pop-up pasa por la función y llega al webhook con todos los campos, también los de consentimiento.
 3. Permisos del panel: el gestor no ve Usuarios y el servidor (función y tabla) le niega gestionarlos; colores.
 4. Un precio cambiado en el panel se ve en el sitio, con la fecha.
 4b. **Ficha técnica y formas de pago:** el gestor guarda cuotas en Catálogo → Formas de pago; el servidor rechaza "sin interés" mayor que el máximo con el mismo mensaje del panel; el sitio muestra la frase y la ficha precargada por la RPC, en el orden fijo.
-1b. **Textos legales base por la RPC:** `/privacidad/` y `/terminos/` sin marcas y con "Texto en revisión.".
 4c. **Reseñas:** el gestor sube una imagen y un video de 20 s al bucket `resenas` desde el panel; apagadas, la tabla no las da al público (REST) ni el sitio las muestra; encendidas, sí; la miniatura se sirve desde Storage; el video **no se pide al abrir el visor** y sí al reproducirlo; Storage rechaza un .mov en `resenas`.
 5. Crear un equipo con foto y **video** (Storage simulado); en el sitio, **ningún pedido al video hasta tocar su miniatura**, y al tocarla se pide; el video queda en el bucket `videos` y se sirve como `video/mp4`; Storage rechaza un tipo no permitido aunque se salte el panel.
 6. El gestor borra la demo.
@@ -1137,7 +1218,7 @@ bash tests/supabase-local/levantar.sh detener
 ### 15.2 Producción, una tienda
 
 1. **Proyecto de Supabase.** Conviene la región São Paulo.
-2. **Migraciones:** correr **todas** las de `supabase/migrations/`, en orden de número, de `0001` a la última (hoy `0015`): `0001` esquema, `0002` catálogo, `0003` demo, `0004` stock sí/no, `0005` tamaño del texto, `0006` catálogo y colores, `0007` roles, `0008` color oficial, `0009` video, `0010` más vendido, `0011` vista de equipos, `0012` fichas, `0013` formas de pago, `0014` reseñas y `0015` legales. Saltarse una rompe las siguientes (con la CLI, `supabase db push` las corre en orden). Crean también los buckets (`fotos` y `marca` en `0001`, `videos` en `0009`, `resenas` en `0014`) con sus reglas. Para actualizar una tienda ya publicada se corren solo las nuevas, en orden; nunca se edita una ya corrida. (El comentario de `0001_esquema.sql` que dice "0001 → 0002 → 0003" es de cuando eran tres; no se edita porque esa migración ya corrió.)
+2. **Migraciones:** correr **todas** las de `supabase/migrations/`, en orden de número, de `0001` a la última (hoy `0017`): `0001` esquema, `0002` catálogo, `0003` demo, `0004` stock sí/no, `0005` tamaño del texto, `0006` catálogo y colores, `0007` roles, `0008` color oficial, `0009` video, `0010` más vendido, `0011` vista de equipos, `0012` fichas, `0013` formas de pago, `0014` reseñas, `0015` legales (textos base, reemplazados por la siguiente), `0016` asistente de legales y `0017` bloqueo hasta publicar. Saltarse una rompe las siguientes (con la CLI, `supabase db push` las corre en orden). Crean también los buckets (`fotos` y `marca` en `0001`, `videos` en `0009`, `resenas` en `0014`) con sus reglas. Para actualizar una tienda ya publicada se corren solo las nuevas, en orden; nunca se edita una ya corrida. (El comentario de `0001_esquema.sql` que dice "0001 → 0002 → 0003" es de cuando eran tres; no se edita porque esa migración ya corrió.)
 3. **Registro:** apagar "Allow new users to sign up".
 4. **Direcciones:** Site URL y Redirect URLs apuntando a `/admin/`.
 5. **Correo:** SMTP propio y las plantillas de `supabase/correos/`.
@@ -1145,12 +1226,12 @@ bash tests/supabase-local/levantar.sh detener
 7. **Funciones:**
    - `supabase functions deploy enviar-lead --no-verify-jwt` y `supabase functions deploy usuarios`.
    - `supabase secrets set GHL_WEBHOOK_URL=… ORIGENES_PERMITIDOS=https://dominio`.
-8. **`config.js`:** `backend: "supabase"`, la URL, la clave anon o publishable y el `metaPixelId`.
+8. **`config.js`:** `backend: "supabase"`, la URL y la clave anon o publishable. El ID del píxel ya no va aquí: va en Legales → Herramientas.
 9. **Publicar** en cualquier hosting estático.
 10. **Antes de abrir al público** (todo con el usuario **gestor**; el administrador solo ve Usuarios):
     1. Mi tienda: nombre, ciudad, dirección, correo, WhatsApp y logo.
     2. Catálogo: activar los modelos, revisar la ficha técnica precargada (completar lo que falta) y cargar las formas de pago.
-    3. Legales: revisión del abogado de los textos base y marcar "Un abogado ya revisó estos textos".
+    3. Legales: completar los seis pasos del asistente y "Publicar textos legales" (sin eso, el pop-up no envía y la demo no se puede quitar). En GHL, los campos de consentimiento y la guía de la sección 12.3.
     4. Inventario con fotos.
     5. Inicio → "Lo que falta" debe decir "Todo está completo.".
     6. Tocar "Borrar datos de demostración".
@@ -1197,11 +1278,17 @@ bash tests/supabase-local/levantar.sh detener
 | Recencia de la generación = mayor `orden` | Ordena "Plegable" y los modelos futuros sin escribir las generaciones en el código. |
 | Usados con batería y estado obligatorios | Van en la ficha y en el mensaje. |
 | El slug no cambia al renombrar | No rompe los enlaces de anuncios ya publicados. |
-| Texto de relleno en la casilla de autorización | La casilla obligatoria no puede quedar sin texto. Desde `0015` hay un texto base; el relleno solo aparece si la tienda borra el texto. |
-| Textos legales con `{{dato}}` y `[PENDIENTE: …]` | El texto base sirve para cualquier tienda: los datos salen de Mi tienda al mostrarlo y lo que falta queda marcado para el abogado. El sitio quita las marcas y el renglón que quedó vacío ("con esos campos vacíos") y avisa "Texto en revisión.". |
-| El aviso del texto base se esconde con "Un abogado ya revisó" | Después de la revisión, "No lo trate como definitivo" sería falso. Mientras no esté marcado, sale arriba de cada uno de los tres textos. |
-| La política dice sessionStorage y cookies del píxel, no localStorage | Es como funciona el código: la atribución vive en `sessionStorage` mientras dura la visita; `localStorage` solo guarda la apariencia (no es un dato personal); las cookies (`_fbp`, `_fbc`) las pone el píxel de Meta, si está configurado. |
-| API de Conversiones de Meta en la lista de herramientas | Pedido de Jared, aunque el código del sitio no la usa (la podría usar GHL). La lista es editable: si la tienda no la usa, la quita. |
+| Textos legales generados, no escritos a mano (`0016`) | Pedido de Jared: la tienda solo llena datos; las plantillas y los módulos por país ponen lo que exige la ley, con sus fuentes. Reemplaza los textos base de `0015`. |
+| Los textos propios de la tienda pasan a la cláusula propia | Propuesta aprobada por Jared: no se pierde nada de lo que la tienda escribió; los textos base sin cambios se descartan (por su huella). |
+| El demo empieza sin legales publicados | Propuesta aprobada: el demo muestra el bloqueo real. Las pruebas publican con la tienda de prueba. |
+| El ID del píxel de Meta es obligatorio para publicar | Propuesta aprobada: la política nombra el píxel y la API de Conversiones como siempre activos. |
+| La versión y la fecha las pone el servidor | Así no se pueden falsear desde el navegador; el panel las calcula igual para la vista previa. |
+| Devolución del retracto en 15 días calendario (no 30) | La Ley 2439 de 2024 bajó el plazo a 15 (ver `legal/FUENTES.md`); 15 cumple también la norma anterior. |
+| Solo Estados Unidos en la lista de países adecuados | Argentina no se pudo confirmar en la lista de la SIC; la transmisión al proveedor se apoya en el contrato de transmisión. |
+| Duraciones de cookies solo si están verificadas | Pedido de Jared. Meta y Clarity van sin duración. |
+| El banner espera a que bajen los filtros en celular | Pedido: no tapar el título ni los filtros. En 360 × 800 los filtros llegan casi al borde. |
+| Clarity con `consentv2` y TikTok sin métodos de consentimiento | `consentv2` es el que recomienda Microsoft; los de TikTok no se encontraron en su documentación oficial, así que TikTok simplemente no se carga sin permiso. |
+| El script de seguimiento de GHL con permiso de medición | Mide visitas: no se carga antes de aceptar. |
 | Sin conversor de HEIC | Pesa cerca de 1 MB. El iPhone convierte a JPEG al elegir la foto y Safari lee HEIC. |
 | `flowType: "implicit"` | Los enlaces de invitación y recuperación funcionan en otro navegador o celular. |
 | Google Fonts sin bloquear | El LCP bajó de 2,7 s a 1,4 s. |
@@ -1221,11 +1308,9 @@ bash tests/supabase-local/levantar.sh detener
 
 **Pendientes del documento del prompt:**
 
-- [ ] **Revisión del abogado de los textos legales base** (Ley 1581). Marcas `[PENDIENTE: …]` que deja `0015`:
-  - Política de privacidad: razón social y NIT; excepciones al plazo de 2 meses (si alguna norma obliga a guardar datos por más tiempo); plazos de respuesta a las solicitudes.
-  - Términos: cambios, devoluciones y garantía legal; ley y jurisdicción aplicables.
-  - Además, cada tienda completa en Mi tienda la ciudad, la dirección y el correo (si faltan, quedan como `[PENDIENTE: …]`).
-  - Cuando esté revisado, marcar "Un abogado ya revisó estos textos" en Legales.
+- [ ] **Fuentes legales que no se pudieron abrir** desde el entorno (se verificaron con el buscador o se usaron como las dio Jared): ver `legal/FUENTES.md` (transmisión, cookies, Ley 2300, garantía, RNBD, plazo de devolución del retracto, Argentina en la lista de la SIC).
+- [ ] **Cookies del script de seguimiento externo de GHL:** no se verificaron; si se activa, agregarlo a la Política de cookies.
+- [ ] Probar en GHL los campos de consentimiento y la guía de la sección 12.3.
 - [ ] Que el abogado confirme si publicar capturas de clientes (aun tapadas) necesita autorización por escrito; el panel pide la casilla en cada reseña, pero no guarda la autorización.
 - [ ] Confirmar en apple.com/co los nombres del catálogo (desde el iPhone 7, iPhone Air e iPhone Duo).
 - [ ] **Datos que faltan en la fuente del catálogo** (quedaron vacíos; no se completaron de memoria):
@@ -1282,6 +1367,14 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 21/10/2026 · Legales B a G: asistente, documentos, banner de cookies, pop-up y bloqueo (0016 y 0017)
+
+- **Pedido de Jared (módulo legal):** asistente de seis pasos con guardado automático y vista previa; documentos generados (privacidad, términos, cookies y aviso del pop-up) con versión; banner con consentimiento previo; dos casillas en el pop-up y el consentimiento en cada lead; bloqueo hasta publicar; guía para GHL.
+- **Hecho:** `0016_legales_asistente.sql` (campos, `legal_faltantes`, publicación con versión y fecha del servidor, textos propios a las cláusulas, columnas de `0015` fuera) y `0017_bloqueo_legal.sql`; demo versión 14 con las mismas reglas; `panel/legales.js` (asistente), `panel.js` (Inicio, republicación, copia única del píxel de `config.js`); `sitio/consentimiento.js` (banner y cargadores), `pixel.js`, `principal.js`, `popup.js` (aviso, casillas, consentimiento, bloqueo), `legal.js`, `cookies/index.html` y pie de las páginas legales; `lead.ts` (campos de consentimiento); `legal/vigencia.js`; CSS; se borró `datos/legales-base.js`.
+- **Decisiones:** las de la sección 16 (textos propios a las cláusulas, demo sin publicar, píxel obligatorio, versión del servidor, 15 días de devolución, Clarity `consentv2`, GHL con medición).
+- **Pruebas:** `tests/sql` (migración, checks, publicación, bloqueo y `comparar-faltantes.mjs` con 27 variantes), `tests/legal/motor.test.mjs` (10), `tests/funciones/probar.sh` (14), `tests/verificar.cjs` (62; 7 casos nuevos de legales y los que usan el pop-up publican con la tienda de prueba) y `tests/verificar-supabase.cjs` (12).
+- **Verificación:** todas las suites pasan; `node tests/documentacion.mjs` OK.
 
 ### 21/10/2026 · Legales A: motor legal, módulo de Colombia y plantillas
 

@@ -8,6 +8,8 @@ export const CAMPOS_OCULTOS = [
   "tipo_consulta", "codigo_cotizacion", ...CAMPOS_ATRIBUCION
 ];
 
+export const CAMPOS_CONSENTIMIENTO = ["consentimiento_datos", "consentimiento_promociones", "consentimiento_medicion", "consentimiento_publicidad"];
+
 type Datos = Record<string, unknown>;
 
 function texto(v: unknown, max = 500): string {
@@ -27,6 +29,13 @@ export function armarLead(datos: Datos): { lead?: Datos; error?: string } {
   if (!/^\+573\d{9}$/.test(telefono)) return { error: "telefono" };
   if (tipo !== "compra" && tipo !== "sin stock") return { error: "tipo_consulta" };
   if (!/^COT-[ABCDEFGHJKLMNPQRSTUVWXYZ2-9]{4}$/.test(codigo)) return { error: "codigo_cotizacion" };
+  // Consentimiento (0016): la autorización de datos es obligatoria; la versión
+  // de los textos y la fecha con zona horaria, también.
+  if (datos.consentimiento_datos !== true) return { error: "consentimiento_datos" };
+  const version = datos.version_politica;
+  if (typeof version !== "number" || !Number.isSafeInteger(version) || version < 1) return { error: "version_politica" };
+  const fecha = texto(datos.fecha_consentimiento, 40);
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?([+-]\d{2}:\d{2}|Z)$/.test(fecha) || Number.isNaN(Date.parse(fecha))) return { error: "fecha_consentimiento" };
 
   const precio = datos.precio_cotizado;
   const lead: Datos = {
@@ -45,6 +54,11 @@ export function armarLead(datos: Datos): { lead?: Datos; error?: string } {
     codigo_cotizacion: codigo
   };
   for (const c of CAMPOS_ATRIBUCION) lead[c] = texto(datos[c], 500);
+  // Consentimiento: GHL debe revisar consentimiento_publicidad antes de la API
+  // de Conversiones y consentimiento_promociones antes de enviar promociones.
+  for (const c of CAMPOS_CONSENTIMIENTO) lead[c] = datos[c] === true;
+  lead.version_politica = version;
+  lead.fecha_consentimiento = fecha;
   // Datos técnicos útiles para el workflow
   lead.event_id = codigo;
   lead.pagina = texto(datos.pagina, 300);

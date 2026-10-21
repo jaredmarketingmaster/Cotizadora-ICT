@@ -42,6 +42,13 @@ Solo se escribe una duración si está en la documentación del proveedor. Si no
 
 **Microsoft Clarity, modo estricto:** según la documentación de Microsoft (<https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-masking>), el modo de enmascarado se elige en Clarity → Settings → Masking; no hay forma de activarlo desde el código del sitio. El sitio marca los campos del pop-up y su resumen con `data-clarity-mask="true"` (enmascarado por elemento) y el paso 5 del asistente pide elegir "Strict" en Clarity.
 
+**Consentimiento de cada herramienta en el código** (`assets/js/sitio/consentimiento.js`):
+
+- **Clarity:** `window.clarity("consentv2", { ad_Storage, analytics_Storage })`, el método que Microsoft recomienda y que reemplaza al viejo `consent` (<https://learn.microsoft.com/en-au/clarity/clarity-consent-api-v2>). Confirmado por el buscador (Microsoft Learn).
+- **TikTok:** no se encontró en la documentación oficial de TikTok la descripción de sus métodos de consentimiento (`grantConsent` / `revokeConsent` solo aparecen en guías de terceros). Por eso el sitio no los usa: el píxel de TikTok simplemente no se carga sin permiso de publicidad, y al retirarlo se borra `_ttp`.
+- **Meta:** `fbq("consent", "revoke")` detiene los envíos del píxel y `fbq("consent", "grant")` los reanuda (<https://developers.facebook.com/docs/meta-pixel/implementation/gdpr>). Confirmado por el buscador (documentación de Meta). El sitio carga el píxel solo después de aceptar y usa `revoke` al retirar el permiso.
+- **Google:** Consent Mode v2 en modo básico (abajo).
+
 **Global Privacy Control:** propiedad `navigator.globalPrivacyControl` (<https://www.w3.org/TR/2024/WD-gpc-20241203/>, <https://developer.mozilla.org/en-US/docs/Web/API/Navigator/globalPrivacyControl>).
 
 **Consent Mode v2 de Google:** modo básico, con `ad_storage`, `analytics_storage`, `ad_user_data` y `ad_personalization` en `denied` por defecto, y el script de Google cargado solo después de aceptar.

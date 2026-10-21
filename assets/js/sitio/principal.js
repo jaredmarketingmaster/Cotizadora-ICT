@@ -19,7 +19,8 @@ import { crearDetalle, htmlBarraCompra } from "./detalle.js";
 import { crearPopup } from "./popup.js";
 import { capturarAtribucion } from "./atribucion.js";
 import { abrirConTransicion, cerrarConTransicion, cerrarConEscape } from "./transiciones.js";
-import { iniciarPixel, evento, parametrosEquipo } from "./pixel.js";
+import { evento, parametrosEquipo } from "./pixel.js";
+import { iniciarConsentimiento, alCambiar, permitido } from "./consentimiento.js";
 
 const $ = (s) => document.querySelector(s);
 
@@ -102,8 +103,6 @@ function dibujarPie(t) {
   $("#pie-tienda").textContent = [t.nombre, t.ciudad].filter(Boolean).join(" · ");
   const fecha = fechaCorta(t.precios_actualizados_en);
   $("#pie-precios").textContent = fecha ? `Precios actualizados al ${fecha}` : "";
-  $("#pie-aviso").textContent = t.aviso_marca || "";
-  $("#pie-aviso").hidden = !t.aviso_marca;
 }
 
 // --- Filtros y galería ---------------------------------------------------------
@@ -301,8 +300,6 @@ function iniciarHoja() {
 // --- Arranque ------------------------------------------------------------------
 async function iniciar() {
   seguro(capturarAtribucion, "atribución");
-  seguro(iniciarPixel, "píxel");
-  seguro(cargarSeguimientoGHL, "seguimiento GHL");
 
   api = await obtenerApi();
   let datos;
@@ -321,6 +318,12 @@ async function iniciar() {
   seguro(() => dibujarMarca(t), "marca");
   seguro(() => dibujarInfo(t), "info");
   seguro(() => dibujarPie(t), "pie");
+  // Medición y publicidad: solo lo que la persona acepte (consentimiento.js)
+  seguro(() => {
+    iniciarConsentimiento({ tienda: t, protegido: $("#filtros") });
+    cargarSeguimientoGHL();
+    alCambiar(cargarSeguimientoGHL);
+  }, "consentimiento");
   dibujarResenasSiHay().catch((e) => console.error("reseñas", e));
 
   galeria = crearGaleria($("#lista-equipos"), api);
@@ -368,9 +371,13 @@ async function iniciar() {
 }
 
 // Script de seguimiento externo de GHL (opcional, ver config.js).
+// El script de seguimiento externo de GHL (config.js) mide visitas: se carga
+// solo con permiso de medición, una vez.
+let ghlCargado = false;
 function cargarSeguimientoGHL() {
   const { src, id } = CONFIG.ghlSeguimiento || {};
-  if (!src || !/^https:\/\//.test(src)) return;
+  if (ghlCargado || !permitido("medicion") || !src || !/^https:\/\//.test(src)) return;
+  ghlCargado = true;
   const s = document.createElement("script");
   s.src = src;
   s.async = true;

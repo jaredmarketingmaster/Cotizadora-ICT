@@ -30,10 +30,11 @@ Cómo se hace cumplir:
 2. Sin logo, imágenes, íconos ni tipografías de Apple. Los marcadores de posición son el SVG genérico de `ilustracion.js`.
 3. No inventar especificaciones, precios, colores, garantías, plazos ni promesas. Lo que no cargó la tienda no se muestra.
 4. Moneda: `$5.299.000`, con `formatearCOP`. Fechas: D/M/AAAA, hora de Colombia, con `fechaCorta`. No usar `Intl` para números.
-5. Nada de la tienda en el código: todo sale de la base y se edita desde el panel. `config.js` solo lleva la conexión, el píxel y el script de GHL.
+5. Nada de la tienda en el código: todo sale de la base y se edita desde el panel. `config.js` solo lleva la conexión y el script de GHL (los ID del píxel y de las demás herramientas van en Legales → Herramientas).
 6. Datos personales de clientes: **nunca** en Supabase ni en el píxel. Solo van a GHL por la función `enviar-lead`.
 7. No disparar `Purchase`. No abrir pop-ups que nadie pidió.
 8. Textos de 16 px o más, zonas táctiles de 44 px o más, contraste AA y `prefers-reduced-motion` respetado. La suite lo revisa.
+9. Legales: la tienda es la responsable; el proveedor tecnológico (encargado) se nombra solo como "nuestro proveedor tecnológico, ubicado en Argentina": nunca su nombre, documento ni domicilio en el repo. Nada se afirma como requisito legal si no está en `legal/FUENTES.md`. Ninguna herramienta de medición o publicidad se carga sin consentimiento (`sitio/consentimiento.js`). Sin avisos de "borrador" ni de "abogado" en el sitio.
 
 ## Textos literales del prompt (no reescribir)
 
@@ -63,8 +64,8 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
   - Al borrar un equipo o quitar una foto se borran los dos archivos.
 - Video (opcional, uno por equipo): bucket `videos`, ruta en `equipos.video`, validado en `panel/video.js` antes de subir (MP4 H.264 o WebM, 15 s, 20 MB), sin comprimir. Se borra al quitarlo o al borrar el equipo.
 - Reseñas (`0014`): bucket `resenas`; imágenes comprimidas como las fotos y videos de hasta 30 s (`validarVideo(archivo, {maxSegundos: 30})`). Nunca crear reseñas de ejemplo, tampoco en demo.
-- Textos legales (`0015`): base en `legales-base.js` = `0015_legales.sql`; el sitio pasa todo por `prepararLegal` (nunca muestra `[PENDIENTE: …]`).
-- Cambios a la base: siempre una migración nueva (la próxima es `0016_…sql`). Nunca editar una ya corrida en producción. En producción se corren todas, en orden.
+- Legales (`0016` y `0017`): el asistente del panel llena los datos y `assets/js/legal/motor.js` genera los cuatro documentos desde las plantillas y los módulos por país (`legal/paises/`; solo Colombia disponible). `legal_faltantes()` del SQL = `faltantes()` del motor (`tests/sql/comparar-faltantes.mjs`); la versión y la fecha las pone el disparador `publicar_legales`. Sin publicar: el pop-up no envía, las páginas dicen "Página en preparación." y la demo no se quita. Los valores iniciales están en `LEGAL_INICIAL` (`comun.js`) y en el SQL.
+- Cambios a la base: siempre una migración nueva (la próxima es `0018_…sql`). Nunca editar una ya corrida en producción. En producción se corren todas, en orden.
 
 ## Cómo verificar antes de cada commit
 
@@ -72,7 +73,8 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
 node tests/documentacion.mjs                               # DOCUMENTACION.md cubre todos los archivos
 bash tests/sql/probar.sh                                   # SQL y RLS (Postgres local)
 python3 -m http.server 8080 &
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 57 casos, modo demo
+node tests/legal/motor.test.mjs                            # motor legal
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 62 casos, modo demo
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 ```
 
@@ -92,7 +94,7 @@ Después de correr la suite:
 
 Está en la sección "Pendientes" del README:
 
-- Revisión del abogado de los textos legales base (marcas `[PENDIENTE: …]`).
+- Fuentes legales que no se pudieron abrir (ver `legal/FUENTES.md`) y las cookies del script de seguimiento de GHL.
 - Confirmar los nombres del catálogo.
 - Completar en las fichas técnicas lo que la fuente no trae.
 - Plan de Supabase.
