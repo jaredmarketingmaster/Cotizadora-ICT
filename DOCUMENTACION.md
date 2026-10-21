@@ -40,14 +40,15 @@
   1. Filtra por condición (nuevo/usado), modelo y almacenamiento.
   2. Ve los equipos en una galería y recorre los colores en un carrusel.
   3. Ve la ficha y el precio y toca **"Comprar por WhatsApp"**.
-  4. Un pop-up pide nombre, correo y WhatsApp, manda el contacto a **GHL** (el CRM) con el origen del anuncio y abre WhatsApp con el pedido ya escrito.
-- **La tienda** gestiona marca, datos, inventario, fotos, fichas técnicas y textos legales desde un **panel privado `/admin`**, sin tocar código.
+  4. Un pop-up pide nombre, correo, WhatsApp y la autorización de datos (y, opcional, el permiso para promociones), manda el contacto a **GHL** (el CRM) con el origen del anuncio y el consentimiento, y abre WhatsApp con el pedido ya escrito.
+  5. En la primera visita, un banner pide permiso para las cookies de medición y de publicidad: sin aceptar, no se carga ninguna de esas herramientas.
+- **La tienda** gestiona marca, datos, inventario, fotos, fichas técnicas y sus datos legales desde un **panel privado `/admin`**, sin tocar código. Los textos legales (política de datos, términos, política de cookies y aviso del pop-up) **no se escriben a mano**: se generan desde plantillas por país con lo que la tienda llena en el asistente de Legales (secciones 9.6 a 9.9). Sin textos publicados, el pop-up no envía pedidos.
 - **Tecnología:** HTML + CSS + JavaScript vanilla con ES modules. **Sin build, sin npm, sin frameworks** en producción. Tiene dos back-ends intercambiables:
   - **Modo demo:** todo vive en el navegador (localStorage + IndexedDB). Es el modo actual en GitHub Pages.
   - **Modo Supabase:** base de datos Postgres con seguridad a nivel de fila, usuarios, archivos y dos funciones de servidor en Deno. Es el modo de producción.
 - **Origen:** nació del documento *"Prompt de la cotizadora I.C.T. v2"* (20/10/2026, de Jared Ezequiel Farfán Borges). Ese prompt era para el **AI Studio de GoHighLevel**. Como no había acceso a AI Studio, se construyó como código con Supabase en lugar de "AI Studio Cloud".
-- **Estado (20/10/2026):**
-  - Completo y probado en modo demo y contra un "Supabase local".
+- **Estado (21/10/2026):**
+  - Completo y probado en modo demo y contra un "Supabase local", con el módulo legal (`0016` y `0017`).
   - **No conectado todavía** a un Supabase real ni a GHL real.
   - Listo para verse en GitHub Pages una vez que el dueño lo active en Settings → Pages.
 
@@ -318,9 +319,9 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 |---|---|
 | `assets/js/datos/api.js` (≈17) | `api()`: devuelve, una sola vez, el adaptador `demo` o `supabase` según `config.js`. Si se pide Supabase sin URL o clave, usa demo y avisa en la consola. |
 | `assets/js/datos/comun.js` (≈291) | Reglas compartidas por los dos adaptadores: <ul><li>`ErrorDatos`.</li><li>`equipoEsPublico`: publicado, con stock (`en_stock`) y de un modelo activo.</li><li>`LADO_GRANDE` = 1600 y `LADO_MINIATURA` = 640.</li><li>`rutaMiniatura`: `x.webp` → `x-640.webp`.</li><li>`CAMPOS_TIENDA`, `CAMPOS_EQUIPO`, `CAMPOS_COLOR`, `MAX_MAS_VENDIDOS` y `MENSAJE_MAS_VENDIDOS`, `nombreColor(color, mostrar)` (nombre que ve el cliente: el elegido por la tienda o el oficial en inglés, o el de la fuente), `TAMANOS_TEXTO`, `ESTADOS_ESTETICOS` y `elegir`.</li><li>**Ficha técnica (0012):** `CATEGORIAS_FICHA` (las 10 categorías fijas con su clave y nombre, en orden, más `otras` para las filas de la tienda), `MAX_ETIQUETA_FICHA` (60) y `MAX_VALOR_FICHA` (600), `especificacionesValidas` (las reglas de `validar_ficha`) y `filasVisiblesFicha(ficha, tienda)`: lo que muestra el sitio (nada si `mostrar_ficha` está apagado; si no, las categorías encendidas con valor en el orden fijo y al final las filas de la tienda).</li><li>**Legales (0016):** `LEGAL_INICIAL` (los campos del asistente con sus valores iniciales, iguales a los defaults del SQL; `CAMPOS_TIENDA` los incluye), `CAMPOS_LEGALES`, `PLATAFORMA_POR_DEFECTO` ("HighLevel (GoHighLevel)"), `CODIGOS_PAISES_SQL` (la lista del check de `legal_paises`; la prueba del motor la compara con `indice.js`) y `errorLegales(tienda)`: los checks de `0016` (largos, opciones, países, entregas, meses de 1 a 120, interruptores, `legal_publicado` objeto o vacío).</li><li>**Formas de pago (0013):** `MEDIOS_PAGO`, `PASARELAS_PAGO`, `MIN_CUOTAS` / `MAX_CUOTAS`, `errorPagos(tienda)` (las reglas de `validar_pagos`, con sus mensajes) y `frasesPagos(tienda)`: las frases del sitio ("Transferencia bancaria.", "Tarjeta de crédito: hasta 12 cuotas, hasta 6 sin interés.", "Pago a cuotas: …" si no marcó crédito, "Criptomonedas: USDT.", "Pago en línea con PSE, Nequi y Addi." y cada una de las otras, tal cual).</li><li>`mensajeDeError`: traduce los errores de Postgres al español; los mensajes de los disparadores (ya en español) pasan tal cual.</li></ul> |
-| `assets/js/datos/semilla.js` (≈115) | `CATALOGO`: los **42 modelos** desde el iPhone 7, con slug, generación y orden de 10 en 10 por fecha de lanzamiento. `COLORES`: los 183 colores oficiales por slug (`[nombre_es, nombre_en, hex]`, vacío si la fuente no lo da). `DEMO_EQUIPOS`: los 6 equipos demo. `FICHAS`: las fichas técnicas de los 42 modelos, solo con lo que trae la fuente (`[clave, valor]` o `[null, valor, etiqueta]`), y `filasDeFuente(slug)`, que las devuelve como quedan en la base. `slugDe`. **Debe coincidir** con `0006_catalogo_colores.sql`, `0003_demo.sql` y `0012_fichas.sql`; la prueba SQL lo revisa. |
+| `assets/js/datos/semilla.js` (≈594) | `CATALOGO`: los **42 modelos** desde el iPhone 7, con slug, generación y orden de 10 en 10 por fecha de lanzamiento. `COLORES`: los 183 colores oficiales por slug (`[nombre_es, nombre_en, hex]`, vacío si la fuente no lo da). `DEMO_EQUIPOS`: los 6 equipos demo. `FICHAS`: las fichas técnicas de los 42 modelos, solo con lo que trae la fuente (`[clave, valor]` o `[null, valor, etiqueta]`), y `filasDeFuente(slug)`, que las devuelve como quedan en la base. `slugDe`. **Debe coincidir** con `0006_catalogo_colores.sql`, `0003_demo.sql` y `0012_fichas.sql`; la prueba SQL lo revisa. |
 | `assets/js/datos/demo.js` (≈822) | Back-end de demostración. Ver sección 7.2. |
-| `assets/js/datos/supabase.js` (≈304) | Back-end Supabase. Ver sección 7.3. |
+| `assets/js/datos/supabase.js` (≈371) | Back-end Supabase. Ver sección 7.3. |
 
 ### 5.6 Sitio público (`assets/js/sitio/`)
 
@@ -1379,6 +1380,13 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
 
+### 21/10/2026 · Revisión de este documento después del módulo legal
+
+- **Pedido de Jared:** confirmar que este documento esté al día.
+- **Revisado:** referencias viejas a `0015` (quedan solo como historia), cantidad de casos de cada suite, tamaño de cada archivo de la sección 5 y cobertura de archivos.
+- **Corregido:** el resumen (sección 1) ahora menciona el módulo legal, el banner y el consentimiento, con el estado al 21/10/2026; el glosario suma responsable y encargado, SIC, `legal_publicado`, cláusula propia, API de Conversiones, Consent Mode v2 y GPC; los tamaños de `semilla.js` (≈594) y `supabase.js` (≈371) venían de rondas anteriores.
+- **Verificación:** `node tests/documentacion.mjs` OK.
+
 ### 21/10/2026 · Legales H: mediciones, capturas y un arreglo del banner
 
 - **Lighthouse móvil** (3 corridas, con el banner): navegación 100 / 100 / 100 (LCP 1,4 s, CLS 0,045); con el banner visible, accesibilidad 100 y buenas prácticas 100; el desplazamiento hasta el banner, CLS 0. Tabla en la sección 13.
@@ -1683,3 +1691,10 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 | **FLIP** | Técnica de animación: *First, Last, Invert, Play*. Se usa para reacomodar la galería. |
 | **LCP / CLS** | Métricas de Core Web Vitals: cuánto tarda en aparecer el contenido principal y cuánto se mueve la página al cargar. |
 | **Slug** | Versión de un nombre para la URL, ej. `iphone-18-pro-max`. |
+| **Responsable / encargado** | Quien decide sobre los datos personales (la tienda) y quien los trata por cuenta de ella (en los textos, "nuestro proveedor tecnológico, ubicado en Argentina", y la plataforma del sitio). |
+| **SIC** | Superintendencia de Industria y Comercio: la autoridad de datos personales y de protección al consumidor en Colombia. |
+| **`legal_publicado`** | Los cuatro documentos legales publicados de la tienda, con su versión y su fecha de vigencia. Vacío = sin publicar (bloqueo de la sección 9.9). |
+| **Cláusula propia** | Texto opcional que la tienda agrega al final de un documento legal, en "Condiciones adicionales de la tienda". |
+| **API de Conversiones (CAPI)** | Envío de eventos a Meta desde el servidor (en este proyecto, desde GHL), además del píxel del navegador. |
+| **Consent Mode v2** | Modo de Google para respetar el consentimiento: `analytics_storage`, `ad_storage`, `ad_user_data` y `ad_personalization`. En modo básico, el script solo se carga después de aceptar. |
+| **GPC** | *Global Privacy Control*: señal del navegador (`navigator.globalPrivacyControl`) que pide no compartir datos; el sitio la toma como rechazo de la publicidad. |
