@@ -277,7 +277,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `CLAUDE.md` | Reglas y guía para las próximas sesiones de Claude Code: cómo verificar antes de cada commit y la obligación de mantener este documento. |
 | `DOCUMENTACION.md` | Este documento. |
 | `AI_HANDOFF.md` | **Contrato de traspaso entre agentes** (22/10/2026, de Claude Code a OpenAI Codex): estado (rama, build, comando de verificación), las reglas de arquitectura que no se cambian, lo terminado, las limitaciones conocidas y los próximos pasos exactos (primer pintado en portugués, correos en portugués, módulo legal de Argentina solo con fuentes, catálogo cuando Jared responda `catalogo/FALTANTES.md`), con los archivos prohibidos. Se actualiza o se borra cuando cambie el estado que describe. El 22/10/2026 Claude Code hizo los puntos 1 y 2; el 3 y el 4 quedaron marcados como bloqueados (falta información de Jared). |
-| `legal/FUENTES.md` | Fuentes de todo lo que los textos legales afirman como requisito legal (Colombia) y de las cookies de cada herramienta, con el estado de verificación de cada una y las decisiones (plazo de devolución del retracto, Argentina en la lista de la SIC). |
+| `legal/FUENTES.md` | Fuentes de todo lo que los textos legales afirman como requisito legal (Colombia) y de las cookies de cada herramienta, con el estado de verificación de cada una (buscador, 21/10/2026; informes de Gemini Deep Research, 22/10/2026) y las decisiones (plazo de devolución del retracto, Argentina en la lista de la SIC). |
 | `catalogo/FALTANTES.md` | **Preguntas para Jared sobre el catálogo** (H), sacadas de `semilla.js` y de la sección 17: por modelo, los colores sin nombre en inglés o sin hexadecimal de la fuente, los modelos sin colores (17 Pro y 17 Pro Max), las categorías vacías de la ficha y las notas de la fuente (Duo, 18 Pro, 17 Pro); lo que vale para todos (batería, descripción, nombres); el conflicto de colores del 18 Pro (la fuente de Jared contra Outlook Business); la tabla de los 34 hexadecimales aproximados con los modelos donde se usa cada uno; y tablas en blanco para responder con la fuente y armar una migración. |
 | `assets/videos/LEAME.md` | **Videos opcionales** (G): `intro-panel.mp4` (botón "Ver intro" del panel, horizontal), `ayuda-celular.mp4` (vertical, 1080 × 1920) y `ayuda-computadora.mp4` (horizontal, 1920 × 1080) del globo de ayuda; MP4 H.264 de menos de 20 MB; nada se rompe hasta que existan; cómo subirlos. Los `.mp4` no van en el repositorio de la plantilla. |
 | `.gitignore` | Ignora `tests/capturas/`, `node_modules/`, `deno.lock`, `.env` y las carpetas temporales de la CLI de Supabase. |
@@ -1464,7 +1464,7 @@ CORREOS_IDIOMA=pt BIN=… bash tests/supabase-local/levantar.sh   # con los corr
 
 **Pendientes del documento del prompt:**
 
-- [ ] **Fuentes legales que no se pudieron abrir** desde el entorno (se verificaron con el buscador o se usaron como las dio Jared): ver `legal/FUENTES.md` (transmisión, cookies, Ley 2300, garantía, RNBD; el artículo de Asuntos Legales sobre la lista de la SIC).
+- [ ] **Fuentes legales que no se pudieron abrir** desde el entorno: se verificaron con el buscador y, desde el 22/10/2026, con los informes de Gemini Deep Research que pasó Jared (citas revisadas por coherencia, no contra el original). Ver `legal/FUENTES.md`. Queda para el abogado: la Ley 2300 (franjas, con fuentes secundarias) y si el radicado de PQR con respuesta por WhatsApp o correo cumple con el "seguimiento" (fuente 17).
 - [ ] **Cookies del script de seguimiento externo de GHL:** no se verificaron; si se activa, agregarlo a la Política de cookies.
 - [ ] Probar en GHL los campos de consentimiento y la guía de la sección 12.3.
 - [ ] Que el abogado confirme si publicar capturas de clientes (aun tapadas) necesita autorización por escrito; el panel pide la casilla en cada reseña, pero no guarda la autorización.
@@ -1533,6 +1533,16 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 22/10/2026 · Investigación con Gemini, punto 1: `legal/FUENTES.md` corregido y completado
+
+- **Pedido de Jared:** aplicar el plan de 9 puntos que salió de revisar sus informes de Gemini Deep Research (rondas 1 y 2), un commit por punto. Este es el 1.
+- **Hecho:** `legal/FUENTES.md`:
+  - nota de cómo se verificaron los datos nuevos (informes de Gemini; citas revisadas por coherencia, porque desde el entorno no se abren las páginas);
+  - **correcciones:** se quita el artículo de Asuntos Legales de Daniela Acosta Baena (Gemini no lo encontró; Argentina sigue en la lista de la SIC por la remisión a la Comisión Europea); la sanción a Sodimac no fue por cookies (fue por tomar el silencio como autorización en tiendas físicas);
+  - estados actualizados de las fuentes 3, 4, 5, 6, 8, 9, 10 y 12 (C-192 de 2026: 24/6/2026);
+  - **fuentes nuevas** 14 a 18: transporte de la devolución del retracto a cargo del consumidor, reversión del pago, enlace a la SIC, PQR con radicado y Registro de Números Excluidos; y en la 8 y la 9, los 3 meses de garantía de usados y los plazos de reparación, cambio y devolución. Las usan los puntos 4 y 5.
+- **No cambia código ni textos visibles.** Verificación: `node tests/documentacion.mjs` OK.
 
 ### 22/10/2026 · Se quita el archivo XML de productos (Google y Meta)
 
