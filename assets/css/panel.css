@@ -408,10 +408,6 @@ select.entrada { appearance: none; -webkit-appearance: none; padding-right: 40px
 .bloque--grupo > legend { float: left; width: 100%; margin: 0 0 4px; padding: 0; font-size: 1.1875rem; font-weight: 800; }
 .bloque--grupo > legend + * { clear: both; }
 
-/* Archivo XML (feed.js): el enlace con su botón de copiar */
-.fila-copiar { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
-.fila-copiar .entrada { flex: 1 1 240px; min-width: 0; }
-
 /* Legales: el país de la tienda sin módulo (paso 3) */
 .aviso-legal { display: grid; gap: 6px; padding: 12px 14px; border-radius: 10px; background: var(--aviso-fondo); color: var(--aviso); }
 .aviso-legal p { margin: 0; }

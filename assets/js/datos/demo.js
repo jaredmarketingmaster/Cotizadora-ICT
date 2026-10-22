@@ -61,7 +61,7 @@ function estadoInicial() {
       pagos_otras: [], ...PAGOS_VACIOS, texto_garantia_nuevos: "", texto_garantia_usados: "", etiqueta_precio: "Precio",
       ...copia(LEGAL_INICIAL), ...copia(ENVIOS_INICIAL),
       precios_actualizados_en: t, modo_demo: true, tamano_texto: "normal", vista_equipos: "cuadricula",
-      mostrar_ficha: true, ficha_ocultas: [], mostrar_resenas: false, titulo_resenas: TITULO_RESENAS, titulo_sitio: "", url_sitio: "", actualizado_en: t
+      mostrar_ficha: true, ficha_ocultas: [], mostrar_resenas: false, titulo_resenas: TITULO_RESENAS, titulo_sitio: "", actualizado_en: t
     },
     modelos,
     fichas: modelos.map((m) => ({ modelo_id: m.id, descripcion: "", especificaciones: filasDeFuente(m.slug), actualizado_en: t })),
@@ -75,7 +75,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 21;
+const VERSION = 22;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -227,7 +227,9 @@ const MIGRACIONES = {
     delete t.pagos_pasarela_otra;
   },
   // 0025_url_sitio.sql: la dirección del sitio, vacía.
-  20(e) { e.tienda.url_sitio = ""; }
+  20(e) { e.tienda.url_sitio = ""; },
+  // 0027_quitar_url_sitio.sql: sin archivo XML, la dirección del sitio se borra.
+  21(e) { delete e.tienda.url_sitio; }
 };
 
 // FNV-1a de 32 bits (la misma huella de motor.js).
@@ -410,8 +412,6 @@ function validarTienda(t) {
   }
   // 0021
   if (typeof t.titulo_sitio !== "string" || t.titulo_sitio.length > 80) throw error("formato");
-  // 0025
-  if (typeof t.url_sitio !== "string" || (t.url_sitio && (!/^https:\/\/[^\s/]+\.[^\s]+$/.test(t.url_sitio) || t.url_sitio.length > 200))) throw error("url_sitio");
   // Como los checks de 0016
   const legales = errorLegales(t);
   if (legales) throw new ErrorDatos(legales);

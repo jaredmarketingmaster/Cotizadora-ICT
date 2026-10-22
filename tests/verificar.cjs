@@ -1062,8 +1062,8 @@ async function llenarPopup(p) {
     assert.deepEqual(Object.fromEntries(Object.keys(LEGAL_INICIAL).map((k) => [k, e.tienda[k]])),
       { ...LEGAL_INICIAL, legal_clausula_privacidad: "Mi política propia.", legal_clausula_terminos: "Mi aviso de marca." });
     for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) assert.ok(!(k in e.tienda), k);
-    assert.equal(e.version, 21);
-    assert.equal(e.tienda.url_sitio, "", "0025: sin dirección");
+    assert.equal(e.version, 22);
+    assert.ok(!("url_sitio" in e.tienda), "0025 la agregó y 0027 la quitó (sin archivo XML)");
     assert.ok(!("pagos_pasarela_otra" in e.tienda) && Array.isArray(e.tienda.pagos_pasarelas_otras) && !e.tienda.pagos_pasarelas.includes("otra") && typeof e.tienda.pagos_descuentos === "object", "0024: otras pasarelas con nombre");
     assert.ok(!("legal_entrega" in e.tienda) && !("legal_entrega_zonas" in e.tienda) && typeof e.tienda.envio_retiro === "boolean" && Array.isArray(e.tienda.envio_zonas), "0023: la entrega pasa a Envíos");
     const sinFuente = e.colores.filter((c) => c.oficial && !c.hex_de_fuente);
@@ -1819,7 +1819,7 @@ async function llenarPopup(p) {
     await p.click("#form-login [type=submit]");
     await p.waitForSelector(".estadisticas");
     assert.equal(await p.textContent('[data-ruta="inventario"]'), PT["panel.nav.inventario"]);
-    for (const ruta of ["inicio", "inventario", "inventario/nuevo", "tienda", "catalogo", "catalogo/fichas", "catalogo/pagos", "catalogo/envios", "catalogo/xml", "legales/1", "legales/2", "legales/3", "legales/4", "legales/5", "legales/6"]) {
+    for (const ruta of ["inicio", "inventario", "inventario/nuevo", "tienda", "catalogo", "catalogo/fichas", "catalogo/pagos", "catalogo/envios", "legales/1", "legales/2", "legales/3", "legales/4", "legales/5", "legales/6"]) {
       await p.goto(`${BASE}/admin/#/${ruta}`);
       await p.waitForTimeout(400);
       await p.waitForSelector("#vista h1, #vista h2");
@@ -1951,7 +1951,7 @@ async function llenarPopup(p) {
     assert.ok((await p.$$eval(".avisos li span", (xs) => xs.map((x) => x.textContent))).includes("Falta elegir cómo entrega los equipos (retiro o envío)."));
     await p.goto(`${BASE}/admin/#/catalogo/envios`);
     await p.waitForSelector("#form-envios");
-    assert.deepEqual(await p.$$eval(".pestanas [role=tab]", (xs) => xs.map((x) => x.textContent)), ["Modelos y colores", "Ficha técnica", "Formas de pago", "Envíos", "Archivo XML"]);
+    assert.deepEqual(await p.$$eval(".pestanas [role=tab]", (xs) => xs.map((x) => x.textContent)), ["Modelos y colores", "Ficha técnica", "Formas de pago", "Envíos"]);
     await p.check("#e-retiro");
     assert.match(await p.textContent("#e-retiro-ayuda"), /^Para el retiro, complete la dirección en Mi tienda\.$/);
     await p.check("#e-domicilio");
@@ -2058,50 +2058,26 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
-  await caso("C4: Archivo XML en Catálogo (dirección, cuenta, excluidos con motivo, vista previa, descarga en demo con XML válido) y ?equipo= abre el detalle", async () => {
-    const p = await nueva(1280, 900, { acceptDownloads: true });
+  await caso("?equipo=<id> abre el detalle del equipo; uno que no es público muestra el estado vacío (sin el archivo XML: #/catalogo/xml ya no existe)", async () => {
+    const p = await nueva(1280, 900);
     await entrarPanel(p, "gestor@demo.co");
-    // Dos equipos de verdad con foto (los de demostración no van al archivo)
     await editarDemo(p, (e) => {
       const demo = e.equipos.filter((q) => q.es_demo);
-      e.equipos.push({ ...demo[1], id: "xml-1", es_demo: false, fotos: ["equipos/xml-1.webp"] }, { ...demo[2], id: "xml-2", es_demo: false, fotos: [] });
+      e.equipos.push({ ...demo[1], id: "enlace-1", es_demo: false, fotos: ["equipos/enlace-1.webp"] }, { ...demo[2], id: "enlace-2", es_demo: false, fotos: [] });
     });
+    // La pestaña del archivo XML se quitó: la ruta vieja cae en la primera pestaña del Catálogo.
     await p.goto(`${BASE}/admin/#/catalogo/xml`);
     await p.reload();
-    await p.waitForSelector("#form-feed");
-    assert.equal(await p.textContent("#feed-enlaces"), "Para tener el archivo, primero guarde la dirección de su sitio.");
-    assert.equal(await p.textContent("#feed-cuenta"), "Va 1 equipo al archivo.");
-    const motivos = await p.$$eval("#feed-excluidos li", (xs) => xs.map((x) => x.textContent.split(" — ")[1]));
-    assert.ok(motivos.includes("no tiene foto") && motivos.includes("es de demostración"), motivos.join(", "));
-    await p.fill("#url_sitio", "tienda.co");
-    await p.click("#guardar-feed");
-    assert.equal(await p.textContent("#url_sitio-error"), "Escriba la dirección completa, empezando por https://");
-    await p.fill("#url_sitio", "https://tienda.co");
-    await p.click("#guardar-feed");
-    await p.waitForSelector("[data-descargar='google']");
-    assert.match(await p.textContent("#feed-enlaces .aviso-datos"), /^En el modo demo el archivo se descarga desde aquí/);
-    assert.equal(await p.locator("#feed-vista tbody tr").count(), 1);
-    assert.match(await p.textContent("#feed-vista tbody td:last-child"), /^https:\/\/tienda\.co\/\?equipo=xml-1$/);
-    const [descarga] = await Promise.all([p.waitForEvent("download"), p.click("[data-descargar='google']")]);
-    assert.equal(descarga.suggestedFilename(), "productos-google.xml");
-    const xml = fs.readFileSync(await descarga.path(), "utf8");
-    const revision = await p.evaluate((x) => {
-      const d = new DOMParser().parseFromString(x, "application/xml");
-      const G = "http://base.google.com/ns/1.0";
-      return { error: d.getElementsByTagName("parsererror").length, items: d.getElementsByTagName("item").length,
-        precio: d.getElementsByTagNameNS(G, "price")[0]?.textContent, enlace: d.querySelector("item > link")?.textContent };
-    }, xml);
-    assert.equal(revision.error, 0, "XML válido");
-    assert.equal(revision.items, 1, "solo el público con foto");
-    assert.match(revision.precio, /^\d+\.00 COP$/);
-    assert.equal(revision.enlace, "https://tienda.co/?equipo=xml-1");
+    await p.waitForSelector(".pestanas [role=tab]");
+    assert.equal(await p.getAttribute("#pestana-modelos", "aria-selected"), "true");
+    assert.equal(await p.locator("#pestana-xml").count(), 0);
     // El enlace del producto abre su detalle en el sitio; uno que no es público, el estado vacío
-    await ir(p, "/?equipo=xml-1");
+    await ir(p, "/?equipo=enlace-1");
     await p.waitForSelector("#detalle-en-linea:not([hidden])");
-    assert.equal(await p.evaluate(() => new URLSearchParams(location.search).get("equipo")), "xml-1");
+    assert.equal(await p.evaluate(() => new URLSearchParams(location.search).get("equipo")), "enlace-1");
     assert.ok(await p.isVisible("#vacio") === false);
-    await editarDemo(p, (e) => { e.equipos.find((q) => q.id === "xml-2").publicado = false; });
-    await ir(p, "/?equipo=xml-2");
+    await editarDemo(p, (e) => { e.equipos.find((q) => q.id === "enlace-2").publicado = false; });
+    await ir(p, "/?equipo=enlace-2");
     assert.equal(await p.isVisible("#vacio"), true, "no público: estado vacío");
     assert.equal(await p.isVisible("#limpiar"), true);
     await p.click("#limpiar");

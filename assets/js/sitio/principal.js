@@ -37,7 +37,7 @@ let popup;
 let detalleEnLinea = null;
 let detalleHoja = null;
 let claveEnLinea = "";
-// ?equipo=<id> (los enlaces del archivo XML de productos, C4): si el equipo no
+// ?equipo=<id> (enlace directo a un equipo, para anuncios o para compartir): si el equipo no
 // está publicado, el sitio muestra el estado vacío hasta que se cambie un filtro.
 let equipoNoDisponible = false;
 let equipoInicial = null;

@@ -80,20 +80,12 @@ do $$ begin
   update public.tienda set ficha_ocultas = '{}', mostrar_ficha = true;
 end $$;
 
--- 0n. Migración 0025: dirección del sitio vacía o https://, hasta 200.
+-- 0n. Migración 0025 agregó la dirección del sitio (para el archivo XML) y
+-- 0027 la quitó junto con el archivo: la columna ya no existe.
 do $$
 begin
-  assert (select url_sitio from public.tienda) = '', 'vacía por defecto';
-  update public.tienda set url_sitio = 'https://tienda.co';
-  begin
-    update public.tienda set url_sitio = 'http://tienda.co';
-    raise exception 'sin https';
-  exception when check_violation then null; end;
-  begin
-    update public.tienda set url_sitio = 'https://tienda.co/' || repeat('x', 200);
-    raise exception 'más de 200';
-  exception when check_violation then null; end;
-  update public.tienda set url_sitio = '';
+  assert not exists (select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'tienda' and column_name = 'url_sitio'), '0027: sin url_sitio';
 end $$;
 
 -- 0m. Migración 0024: la "otra" pasarela de antes_0024 pasó a la lista con su

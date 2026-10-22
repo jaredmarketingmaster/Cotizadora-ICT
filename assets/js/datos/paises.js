@@ -4,8 +4,7 @@
 // legal/paises/indice.js (que los importa para los nombres).
 //
 // - Moneda: código ISO 4217 y símbolo. Los precios se guardan enteros y se
-//   muestran sin decimales en todas las monedas (decisión de la ronda 3); el
-//   XML de productos usa dos decimales ("5299.00 BRL").
+//   muestran sin decimales en todas las monedas (decisión de la ronda 3).
 // - Separador de miles: el uso habitual de cada país (convención de CLDR).
 // - Celular: los países con `verificado: true` tienen su formato confirmado en
 //   las fuentes de DOCUMENTACION.md (sección 9.10). En los demás se usa una

@@ -54,8 +54,9 @@ supabase/
   migrations/0022_hex_aproximado.sql     Muestra aproximada para los colores sin hexadecimal
   migrations/0023_envios.sql             Envíos (retiro, envío a domicilio, gratis con condición, plazo)
   migrations/0024_pagos.sql              Pasarelas por país, otras con nombre y descuentos informativos
-  migrations/0025_url_sitio.sql          Dirección del sitio (para el archivo XML de productos)
+  migrations/0025_url_sitio.sql          Dirección del sitio (para el archivo XML de productos; la quita 0027)
   migrations/0026_lote.sql               Carga de equipos en lote (todo o nada) y archivos compartidos
+  migrations/0027_quitar_url_sitio.sql   Sin archivo XML de productos: borra la dirección del sitio
   functions/enviar-lead/        Reenvía el pedido a GHL (la URL va en los secretos)
   functions/usuarios/           Invitar, desactivar y reactivar (solo administrador)
 tests/                     Pruebas (no se usan en producción)
@@ -113,7 +114,7 @@ Para probar:
 ### 1. Supabase (un proyecto por tienda)
 
 1. Crear el proyecto en <https://supabase.com/dashboard>. Conviene la región São Paulo, la más cercana a Colombia.
-2. En **SQL Editor**, correr **todas** las migraciones de `supabase/migrations/`, una por una y en orden de número, desde `0001_esquema.sql` hasta la última (hoy `0026_lote.sql`):
+2. En **SQL Editor**, correr **todas** las migraciones de `supabase/migrations/`, una por una y en orden de número, desde `0001_esquema.sql` hasta la última (hoy `0027_quitar_url_sitio.sql`):
    `0001` esquema → `0002` catálogo → `0003` demo → `0004` stock sí/no → `0005` tamaño del texto → `0006` catálogo y colores → `0007` roles → `0008` color oficial → `0009` video → `0010` más vendido → `0011` vista de equipos → `0012` fichas → `0013` formas de pago → `0014` reseñas → `0015` legales → `0016` asistente de legales → `0017` bloqueo hasta publicar → `0018` país de la tienda → `0019` legales según el país de la tienda → `0020` idioma → `0021` título del sitio → `0022` hexadecimal aproximado → `0023` envíos → `0024` pasarelas y descuentos → `0025` dirección del sitio → `0026` carga en lote.
 
    Saltarse una rompe las siguientes. Con la CLI, `supabase db push` las corre en orden. Las migraciones crean también los buckets de Storage (`fotos` y `marca` en `0001`, `videos` en `0009`, `resenas` en `0014`) y sus reglas: no hay que crearlos a mano.
@@ -267,7 +268,6 @@ Todas corren en este repo sin Docker. La última corrida pasó completa.
 |---|---|---|
 | `tests/sql/probar.sh` | Migraciones en un Postgres local:<br>- Seguridad a nivel de fila por rol (público, sin perfil, inactivo, gestor, administrador), siempre un administrador activo, catálogo y colores<br>- Validaciones<br>- Fecha de precios<br>- Borrar demo<br>- La semilla del SQL coincide con la del modo demo<br>- Legales: migración, publicación con versión del servidor, bloqueo, y lo que falta igual en SQL y JS | `bash tests/sql/probar.sh` |
 | `tests/paises.test.mjs` | Los datos de país sin navegador: precio por moneda, fechas por zona horaria, celular y WhatsApp por país | `node tests/paises.test.mjs` |
-| `tests/feed.test.mjs` | Archivo XML (4 casos): solo públicos con foto, campos, monedas, Meta y portugués | `node tests/feed.test.mjs` |
 | `tests/pagos.test.mjs` | Formas de pago (3 casos): claves del check, grupos por país, descuentos y frases | `node tests/pagos.test.mjs` |
 | `tests/envios.test.mjs` | Envíos (3 casos): reglas con sus mensajes y frases del sitio, también en portugués | `node tests/envios.test.mjs` |
 | `tests/i18n.test.mjs` | Diccionarios es/pt (5 casos): mismas claves y variables, ninguna vacía, toda clave del código existe, el HTML igual al español, usted / você | `node tests/i18n.test.mjs` |
