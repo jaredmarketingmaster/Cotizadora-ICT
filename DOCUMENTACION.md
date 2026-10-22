@@ -277,6 +277,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `DOCUMENTACION.md` | Este documento. |
 | `RONDA3_PENDIENTE.md` | **Temporal.** El traspaso de lo que falta de la ronda 3 (D: carga en lote; E: "Ver intro"; F: globo de ayuda; G: `assets/videos/LEAME.md`; H: `catalogo/FALTANTES.md`; I: pruebas, Lighthouse y cierre), con el pedido exacto de Jared, cómo hacerlo con el código de hoy, las pruebas que faltan y cómo trabajar en el repo, para seguir con otro LLM. Se borra al terminar la ronda. |
 | `legal/FUENTES.md` | Fuentes de todo lo que los textos legales afirman como requisito legal (Colombia) y de las cookies de cada herramienta, con el estado de verificación de cada una y las decisiones (plazo de devolución del retracto, Argentina en la lista de la SIC). |
+| `catalogo/FALTANTES.md` | **Preguntas para Jared sobre el catálogo** (H), sacadas de `semilla.js` y de la sección 17: por modelo, los colores sin nombre en inglés o sin hexadecimal de la fuente, los modelos sin colores (17 Pro y 17 Pro Max), las categorías vacías de la ficha y las notas de la fuente (Duo, 18 Pro, 17 Pro); lo que vale para todos (batería, descripción, nombres); el conflicto de colores del 18 Pro (la fuente de Jared contra Outlook Business); la tabla de los 34 hexadecimales aproximados con los modelos donde se usa cada uno; y tablas en blanco para responder con la fuente y armar una migración. |
 | `assets/videos/LEAME.md` | **Videos opcionales** (G): `intro-panel.mp4` (botón "Ver intro" del panel, horizontal), `ayuda-celular.mp4` (vertical, 1080 × 1920) y `ayuda-computadora.mp4` (horizontal, 1920 × 1080) del globo de ayuda; MP4 H.264 de menos de 20 MB; nada se rompe hasta que existan; cómo subirlos. Los `.mp4` no van en el repositorio de la plantilla. |
 | `.gitignore` | Ignora `tests/capturas/`, `node_modules/`, `deno.lock`, `.env` y las carpetas temporales de la CLI de Supabase. |
 | `.nojekyll` | Archivo vacío. Le dice a GitHub Pages que publique los archivos tal cual, sin procesarlos con Jekyll (que ignora carpetas que empiezan con `_`). |
@@ -1458,7 +1459,7 @@ bash tests/supabase-local/levantar.sh detener
 - [ ] **Archivo XML (C4):** campos y valores verificados solo con el buscador (las páginas de Google y Meta no se pudieron abrir); sin `g:google_product_category`; sin GTIN en los nuevos; revisar las políticas de Google y Meta para revendedores no oficiales y equipos usados; publicar `catalogo-feed` y probarlo en Merchant Center y en el catálogo de Meta.
 - [ ] **Pasarelas por país sin verificar (C3):** la lista de `pasarelas.js` la dio Jared y es de conocimiento general; no se verificó con fuentes (que existan, que operen en ese país y sus nombres exactos).
 - [ ] **Envíos en tiendas que ya existían:** después de `0023`, una tienda que había elegido transportadora o entrega personal tiene que elegir el costo del envío en Catálogo → Envíos para que se vuelvan a publicar los legales.
-- [ ] **Hexadecimales aproximados (C1):** 151 colores llevan una muestra aproximada por nombre, no oficial (lista en `catalogo/FALTANTES.md`). Conviene que Jared pase los hexadecimales reales.
+- [ ] **Hexadecimales aproximados (C1):** 151 colores llevan una muestra aproximada por nombre, no oficial (lista y preguntas en `catalogo/FALTANTES.md`). Conviene que Jared pase los hexadecimales reales.
 - [ ] **Portugués:** los textos legales siguen en español (falta un módulo legal en portugués); los nombres de los colores y las fichas técnicas del catálogo están en español (no hay fuente con los nombres oficiales en portugués); los correos de invitación y recuperación (`supabase/correos/`) siguen en español; las traducciones al portugués las hizo el asistente y conviene que las revise una persona de Brasil.
 - [ ] **Primer pintado en portugués:** la primera vez, el sitio de una tienda en portugués se ve en español un instante (hasta que llegan los datos y se carga pt.js).
 - [ ] **Módulos legales de otros países.** Solo Colombia tiene módulo; una tienda de otro país no puede publicar sus legales (y por eso no envía pedidos) hasta que exista el de su país. Si una tienda ya publicada cambia a un país sin módulo, quedan los textos de Colombia publicados: conviene no cambiar el país después de publicar.
@@ -1502,6 +1503,12 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 22/10/2026 · Ronda 3, H: `catalogo/FALTANTES.md`
+
+- **Pedido de Jared:** una lista, modelo por modelo, con preguntas concretas sobre lo que falta en el catálogo (colores sin nombre en inglés, 17 Pro y 17 Pro Max sin colores, batería, cámara frontal, dimensiones, descripción, cámaras del Duo y lo de la sección 17), el conflicto de colores del iPhone 18 Pro, la lista de los hexadecimales aproximados de C1 y tablas en blanco para devolver las respuestas.
+- **Hecho:** `catalogo/FALTANTES.md` (nuevo), armado con los datos de `semilla.js` (`CATALOGO`, `COLORES`, `FICHAS`, `HEX_APROXIMADOS`: 151 colores sin hexadecimal de la fuente, 34 nombres aproximados) y las notas de la sección 17. Las preguntas que valen para los 42 modelos (batería, descripción, nombres en apple.com/co) van una sola vez arriba.
+- **Verificación:** `node tests/documentacion.mjs` OK. No cambia código.
 
 ### 22/10/2026 · Ronda 3, G: `assets/videos/LEAME.md`
 

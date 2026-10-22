@@ -28,9 +28,10 @@ Un commit por punto, todos con las pruebas pasando:
 | D | `06c39fb` | Carga de equipos en lote (0026): `panel/lote.js`, `crear_equipos_lote`, `archivos_en_uso`. |
 | E | `b211b96` | Botón "Ver intro" en Inicio (`prepararIntro` en `panel.js`). |
 | F | `0b669e9` | Globo de ayuda en el sitio (`sitio/ayuda.js`). |
-| G | (este commit) | `assets/videos/LEAME.md`. |
+| G | `1e5f61b` | `assets/videos/LEAME.md`. |
+| H | (este commit) | `catalogo/FALTANTES.md`. |
 
-**Falta:** H (`catalogo/FALTANTES.md`), I (pruebas finales, Lighthouse, documentación y reporte final).
+**Falta:** I (pruebas finales, Lighthouse, documentación y reporte final).
 
 Números al día de hoy:
 - Próxima migración: **`0027_…sql`**.
