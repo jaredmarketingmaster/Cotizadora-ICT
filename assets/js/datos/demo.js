@@ -8,7 +8,7 @@
 // No sirve para producción: cada navegador tiene su propia copia.
 // =============================================================================
 
-import { CATALOGO, COLORES, DEMO_EQUIPOS, filasDeFuente } from "./semilla.js";
+import { CATALOGO, COLORES, DEMO_EQUIPOS, HEX_APROXIMADOS, filasDeFuente } from "./semilla.js";
 import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, LEGAL_INICIAL, errorLegales, elegir } from "./comun.js";
 import { hexValido, sesion, esperar } from "../utils.js";
 import { whatsappValido, CODIGOS_PAIS_TIENDA } from "./paises.js";
@@ -74,7 +74,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 17;
+const VERSION = 18;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -195,7 +195,15 @@ const MIGRACIONES = {
   // 0020_idioma.sql: las tiendas que ya existían quedan en español.
   15(e) { e.tienda.idioma = "es"; },
   // 0021_titulo_sitio.sql: vacío = el título del idioma de la tienda.
-  16(e) { e.tienda.titulo_sitio = ""; }
+  16(e) { e.tienda.titulo_sitio = ""; },
+  // 0022_hex_aproximado.sql: los oficiales sin hexadecimal reciben el aproximado.
+  17(e) {
+    for (const c of e.colores) {
+      // (Los que armó una migración anterior con coloresOficiales ya lo traen.)
+      c.hex_aproximado = Boolean(c.hex_aproximado);
+      if (c.oficial && !c.hex && !c.hex_de_fuente && HEX_APROXIMADOS[c.nombre_es]) Object.assign(c, { hex: HEX_APROXIMADOS[c.nombre_es], hex_aproximado: true });
+    }
+  }
 };
 
 // FNV-1a de 32 bits (la misma huella de motor.js).
@@ -215,11 +223,18 @@ const PAGOS_VACIOS = {
   pagos_cripto: false, pagos_cripto_cuales: "", pagos_pasarelas: [], pagos_pasarela_otra: ""
 };
 
+// El hexadecimal de la fuente o, si no trae, el aproximado por nombre (0022).
+function hexOficial(nombre, hex) {
+  if (hex) return { hex, hex_de_fuente: true, hex_aproximado: false };
+  const aprox = HEX_APROXIMADOS[nombre] || "";
+  return { hex: aprox, hex_de_fuente: false, hex_aproximado: Boolean(aprox) };
+}
+
 function coloresOficiales(modelos) {
   const lista = [];
   for (const m of [...modelos].sort((a, b) => a.orden - b.orden)) {
     (COLORES[m.slug] || []).forEach(([nombre_es, nombre_en, hex], i) => lista.push({
-      id: lista.length + 1, modelo_id: m.id, nombre_es, nombre_en, hex, orden: i + 1, oficial: true, hex_de_fuente: hex !== ""
+      id: lista.length + 1, modelo_id: m.id, nombre_es, nombre_en, orden: i + 1, oficial: true, ...hexOficial(nombre_es, hex)
     }));
   }
   return lista;
@@ -612,6 +627,8 @@ export const demo = {
     }
     if (c.hex_de_fuente && nuevo.hex !== c.hex) throw error("color_hex_fuente", "42501");
     validarColor(nuevo, e);
+    // Como proteger_color() (0022): si cambia el hexadecimal, ya no es aproximado.
+    nuevo.hex_aproximado = Boolean(c.hex_aproximado) && nuevo.hex === c.hex;
     Object.assign(c, nuevo);
     escribir(e);
     return copia(c);
@@ -626,7 +643,7 @@ export const demo = {
     }
     const c = {
       id: Math.max(0, ...e.colores.map((x) => x.id)) + 1, nombre_en: "", hex: "", orden: 0,
-      ...elegir(datos, CAMPOS_COLOR), oficial: false, hex_de_fuente: false
+      ...elegir(datos, CAMPOS_COLOR), oficial: false, hex_de_fuente: false, hex_aproximado: false
     };
     validarColor(c, e);
     e.colores.push(c);

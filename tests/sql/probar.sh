@@ -38,7 +38,7 @@ done
 "${PSQL[@]}" -At -c "
   select json_build_object(
     'modelos', (select json_agg(json_build_object('nombre', nombre, 'slug', slug, 'generacion', generacion, 'orden', orden) order by orden) from public.modelos where slug <> 'iphone-prueba'),
-    'colores', (select json_agg(json_build_object('slug', m.slug, 'nombre_es', c.nombre_es, 'nombre_en', c.nombre_en, 'hex', c.hex, 'orden', c.orden, 'oficial', c.oficial, 'hex_de_fuente', c.hex_de_fuente) order by m.orden, c.orden)
+    'colores', (select json_agg(json_build_object('slug', m.slug, 'nombre_es', c.nombre_es, 'nombre_en', c.nombre_en, 'hex', c.hex, 'orden', c.orden, 'oficial', c.oficial, 'hex_de_fuente', c.hex_de_fuente, 'hex_aproximado', c.hex_aproximado) order by m.orden, c.orden)
       from public.colores c join public.modelos m on m.id = c.modelo_id),
     'demo', (select json_agg(json_build_object('slug', m.slug, 'condicion', e.condicion, 'capacidad', e.capacidad,
       'color', c.nombre_es, 'color_nombre_mostrar', e.color_nombre_mostrar, 'precio', e.precio, 'en_stock', e.en_stock, 'destacado', e.destacado,

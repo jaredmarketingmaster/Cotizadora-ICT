@@ -112,6 +112,49 @@ export const COLORES = {
   "iphone-duo": [["Titanio", "", ""]]
 };
 
+// Hexadecimales APROXIMADOS (ronda 3, C1) para los colores que la fuente trae
+// sin hexadecimal, por nombre. No son de la fuente ni oficiales: solo pintan la
+// muestra (colores.hex_aproximado). Donde otro modelo trae el hexadecimal del
+// mismo nombre en la fuente, se usa ese (Negro, Blanco, Rosa, Plata, Negro
+// espacial). El gestor los puede cambiar en Catálogo. 0022_hex_aproximado.sql
+// tiene lo mismo; la lista está también en catalogo/FALTANTES.md.
+export const HEX_APROXIMADOS = {
+  "Negro brillante": "#0B0B0C",
+  "Negro": "#2C2D30",
+  "Plata": "#E3E4E6",
+  "Oro": "#F2DCC5",
+  "Oro rosa": "#E8C1B5",
+  "(PRODUCT)RED": "#BA0C2F",
+  "Gris espacial": "#5C5E62",
+  "Blanco": "#F5F6F8",
+  "Azul": "#4A7CA8",
+  "Amarillo": "#F6E27A",
+  "Coral": "#FF6E5A",
+  "Verde": "#A7C8A1",
+  "Morado": "#C9B8E0",
+  "Verde noche": "#4E5851",
+  "Púrpura": "#B7A6D6",
+  "Grafito": "#52514F",
+  "Azul pacífico": "#2E4A5E",
+  "Blanco estelar": "#F2EDE4",
+  "Medianoche": "#232A31",
+  "Rosa": "#EEA7B7",
+  "Azul sierra": "#9BB5CE",
+  "Verde alpino": "#576856",
+  "Negro espacial": "#333333",
+  "Morado oscuro": "#594F63",
+  "Titanio negro": "#3C3C3D",
+  "Titanio blanco": "#F2F1EC",
+  "Titanio azul": "#3F4A58",
+  "Titanio natural": "#BAB4A9",
+  "Titanio del desierto": "#BFA48F",
+  "Visón": "#8B7B6E",
+  "Oliva": "#6B6E4E",
+  "Azul nítido": "#3A6FD8",
+  "Magenta": "#B0306A",
+  "Titanio": "#BAB4A9"
+};
+
 // Fichas técnicas de la fuente (archivos de Jared: el HTML del inventario para
 // el iPhone 7 al 16 Pro Max e info_complementaria.md para el resto). Cada fila es
 // [clave, valor] de una categoría fija (CATEGORIAS_FICHA) o [null, valor, etiqueta].

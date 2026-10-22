@@ -228,10 +228,15 @@ begin
   assert (select count(*) from public.modelos where slug in ('iphone-7','iphone-se-2','iphone-se-3') and not activo) = 3, 'los nuevos, inactivos';
   assert (select generacion from public.modelos where slug = 'iphone-se-2') = '11', 'SE 2 en la generación de su lanzamiento';
   assert (select count(distinct orden) from public.modelos) = 42, 'orden sin repetir';
-  -- Colores: 183 oficiales; solo 32 con hexadecimal de la fuente
+  -- Colores: 183 oficiales; solo 32 con hexadecimal de la fuente. Desde 0022
+  -- los otros 151 llevan uno aproximado (por nombre), marcado como tal.
   assert (select count(*) from public.colores) = 183, '183 colores oficiales';
-  assert (select count(*) from public.colores where hex <> '') = 32, '32 con hexadecimal';
-  assert (select count(*) from public.colores where hex <> '' and not hex_de_fuente) = 0, 'hex de la fuente marcado';
+  assert (select count(*) from public.colores where hex_de_fuente) = 32, '32 con hexadecimal de la fuente';
+  assert (select count(*) from public.colores where hex = '') = 0, '0022: ninguno sin muestra';
+  assert (select count(*) from public.colores where hex_aproximado) = 151 and not exists (select 1 from public.colores where hex_aproximado and hex_de_fuente),
+    '0022: los 151 sin hexadecimal de la fuente, aproximados; ninguno de la fuente';
+  assert (select hex from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-18-pro' and c.nombre_es = 'Negro') = '#1C1C1E', 'la fuente no cambia';
+  assert (select hex from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-7' and c.nombre_es = 'Negro') = '#2C2D30', 'aproximado: el de la fuente para el mismo nombre';
   assert (select count(*) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug in ('iphone-17-pro', 'iphone-17-pro-max')) = 0, '17 Pro sin colores en la fuente';
   assert (select string_agg(nombre_es || '/' || nombre_en || '/' || hex, '|' order by c.orden) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-17e')
     = 'Negro//#2C2D30|Blanco//#F5F6F8|Rosa pálido/Soft Pink/#EBCBD2', 'colores del 17e tal como la fuente';
@@ -320,6 +325,13 @@ begin
 
   update public.tienda set nombre = 'Mi tienda', whatsapp = '573001234567';
   assert (select nombre from public.tienda) = 'Mi tienda', 'gestor edita la tienda';
+
+  -- 0022: el gestor cambia una muestra aproximada y deja de ser aproximada;
+  -- si no la cambia, el aproximado no se puede quitar ni poner a mano.
+  update public.colores set hex_aproximado = false where nombre_es = 'Grafito';
+  assert (select bool_and(hex_aproximado) from public.colores where nombre_es = 'Grafito'), 'sin cambiar el hex, sigue aproximado';
+  update public.colores set hex = '#505050' where nombre_es = 'Grafito';
+  assert not (select bool_or(hex_aproximado) from public.colores where nombre_es = 'Grafito'), 'cambiado, ya no es aproximado';
 
   -- Cambiar un precio actualiza la fecha del pie
   select precios_actualizados_en into antes from public.tienda;

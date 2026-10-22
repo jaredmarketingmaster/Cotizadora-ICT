@@ -51,6 +51,7 @@ supabase/
   migrations/0019_legal_pais_tienda.sql  Los legales se publican solo si el país de la tienda tiene módulo
   migrations/0020_idioma.sql             Idioma del sitio y del panel (español o portugués)
   migrations/0021_titulo_sitio.sql       Título del sitio editable
+  migrations/0022_hex_aproximado.sql     Muestra aproximada para los colores sin hexadecimal
   functions/enviar-lead/        Reenvía el pedido a GHL (la URL va en los secretos)
   functions/usuarios/           Invitar, desactivar y reactivar (solo administrador)
 tests/                     Pruebas (no se usan en producción)
@@ -108,8 +109,8 @@ Para probar:
 ### 1. Supabase (un proyecto por tienda)
 
 1. Crear el proyecto en <https://supabase.com/dashboard>. Conviene la región São Paulo, la más cercana a Colombia.
-2. En **SQL Editor**, correr **todas** las migraciones de `supabase/migrations/`, una por una y en orden de número, desde `0001_esquema.sql` hasta la última (hoy `0021_titulo_sitio.sql`):
-   `0001` esquema → `0002` catálogo → `0003` demo → `0004` stock sí/no → `0005` tamaño del texto → `0006` catálogo y colores → `0007` roles → `0008` color oficial → `0009` video → `0010` más vendido → `0011` vista de equipos → `0012` fichas → `0013` formas de pago → `0014` reseñas → `0015` legales → `0016` asistente de legales → `0017` bloqueo hasta publicar → `0018` país de la tienda → `0019` legales según el país de la tienda → `0020` idioma → `0021` título del sitio.
+2. En **SQL Editor**, correr **todas** las migraciones de `supabase/migrations/`, una por una y en orden de número, desde `0001_esquema.sql` hasta la última (hoy `0022_hex_aproximado.sql`):
+   `0001` esquema → `0002` catálogo → `0003` demo → `0004` stock sí/no → `0005` tamaño del texto → `0006` catálogo y colores → `0007` roles → `0008` color oficial → `0009` video → `0010` más vendido → `0011` vista de equipos → `0012` fichas → `0013` formas de pago → `0014` reseñas → `0015` legales → `0016` asistente de legales → `0017` bloqueo hasta publicar → `0018` país de la tienda → `0019` legales según el país de la tienda → `0020` idioma → `0021` título del sitio → `0022` hexadecimal aproximado.
 
    Saltarse una rompe las siguientes. Con la CLI, `supabase db push` las corre en orden. Las migraciones crean también los buckets de Storage (`fotos` y `marca` en `0001`, `videos` en `0009`, `resenas` en `0014`) y sus reglas: no hay que crearlos a mano.
 

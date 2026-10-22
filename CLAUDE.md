@@ -55,7 +55,7 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
 
   **Los dos tienen la misma interfaz y las mismas reglas.** Si se cambia una regla del SQL (permisos, validaciones, fecha de precios), hay que cambiarla también en `demo.js`.
 - La semilla está dos veces: en `supabase/migrations/0006_catalogo_colores.sql` (catálogo y colores), `0003_demo.sql` y `0012_fichas.sql` (fichas técnicas), y en `assets/js/datos/semilla.js`. `tests/sql/probar.sh` revisa que coincidan.
-- El catálogo y los colores salen solo de los archivos de Jared. Lo que no está queda vacío: nunca completar de memoria.
+- El catálogo y los colores salen solo de los archivos de Jared. Lo que no está queda vacío: nunca completar de memoria. Excepción pedida por Jared (C1, `0022`): los colores sin hexadecimal tienen uno **aproximado** por nombre (`HEX_APROXIMADOS`, `colores.hex_aproximado`), que solo pinta la muestra; los de la fuente no se tocan.
 - Roles: **administrador** solo gestiona accesos (Usuarios); **gestor** hace todo lo demás (incluido el catálogo completo y el modo demo). Siempre queda un administrador activo.
 - La seguridad real está en el SQL: RLS con `es_gestor()` / `es_administrador()`, disparadores (`modelos_proteger`, `tienda_proteger`, `perfiles_proteger`, `colores_proteger`) y `borrar_datos_demo` solo para el gestor. La función `usuarios` solo acepta administradores activos. El panel solo oculta lo que el rol no puede hacer.
 - Fotos:
@@ -65,7 +65,7 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
 - Video (opcional, uno por equipo): bucket `videos`, ruta en `equipos.video`, validado en `panel/video.js` antes de subir (MP4 H.264 o WebM, 15 s, 20 MB), sin comprimir. Se borra al quitarlo o al borrar el equipo.
 - Reseñas (`0014`): bucket `resenas`; imágenes comprimidas como las fotos y videos de hasta 30 s (`validarVideo(archivo, {maxSegundos: 30})`). Nunca crear reseñas de ejemplo, tampoco en demo.
 - Legales (`0016` y `0017`): el asistente del panel llena los datos y `assets/js/legal/motor.js` genera los cuatro documentos desde las plantillas y los módulos por país (`legal/paises/`; solo Colombia disponible). Si el país de la tienda no tiene módulo, falta `pais` y no se publica (`0019`). `legal_faltantes()` del SQL = `faltantes()` del motor (`tests/sql/comparar-faltantes.mjs`); la versión y la fecha las pone el disparador `publicar_legales`. Sin publicar: el pop-up no envía, las páginas dicen "Página en preparación." y la demo no se quita. Los valores iniciales están en `LEGAL_INICIAL` (`comun.js`) y en el SQL.
-- Cambios a la base: siempre una migración nueva (la próxima es `0022_…sql`). Nunca editar una ya corrida en producción. En producción se corren todas, en orden.
+- Cambios a la base: siempre una migración nueva (la próxima es `0023_…sql`). Nunca editar una ya corrida en producción. En producción se corren todas, en orden.
 
 ## Cómo verificar antes de cada commit
 

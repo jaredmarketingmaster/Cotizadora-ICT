@@ -138,7 +138,7 @@ async function dibujarModelos(vista, ctx) {
       <summary>${esc(resumen)}</summary>
       ${lista.length ? `<ul class="lista-colores">${lista.map((c) => `<li data-color="${c.id}">
         <span class="muestra-color${c.hex ? "" : " muestra-color--vacia"}" ${c.hex ? `style="background:${esc(c.hex)}"` : ""} aria-hidden="true"></span>
-        <span class="color-nombres"><span class="color-nombre">${esc(c.nombre_es)}</span>${c.nombre_en ? `<span class="ayuda">${esc(c.nombre_en)}</span>` : ""}${c.oficial ? "" : `<span class="ayuda">${esc(t("panel.catalogo.colores.de_la_tienda"))}</span>`}</span>
+        <span class="color-nombres"><span class="color-nombre">${esc(c.nombre_es)}</span>${c.nombre_en ? `<span class="ayuda">${esc(c.nombre_en)}</span>` : ""}${c.oficial ? "" : `<span class="ayuda">${esc(t("panel.catalogo.colores.de_la_tienda"))}</span>`}${c.hex_aproximado ? `<span class="ayuda">${esc(t("panel.catalogo.colores.aproximado"))}</span>` : ""}</span>
         ${c.hex_de_fuente
           ? `<span class="cifras color-hex">${esc(c.hex)}</span>`
           : `<span class="campo color-campo"><label class="oculto-visual" for="hex-${c.id}">${esc(t("panel.catalogo.colores.hex_de", { color: c.nombre_es, modelo: m.nombre }))}</label><input class="entrada cifras" id="hex-${c.id}" data-hex value="${esc(c.hex)}" maxlength="7" placeholder="#RRGGBB" spellcheck="false" aria-describedby="hex-${c.id}-error"><span class="error-campo" id="hex-${c.id}-error"></span></span>`}
@@ -154,7 +154,8 @@ async function dibujarModelos(vista, ctx) {
 
   vista.innerHTML = `
     <div class="vista-cabecera"><p>${esc(t("panel.catalogo.modelos.intro"))}${completo ? ` ${esc(t("panel.catalogo.modelos.orden"))}` : ""}</p>
-      <p class="ayuda">${esc(t("panel.catalogo.modelos.colores_ayuda"))}</p></div>
+      <p class="ayuda">${esc(t("panel.catalogo.modelos.colores_ayuda"))}</p>
+      <p class="ayuda" id="nota-hex">${esc(t("panel.catalogo.colores.nota_hex"))}</p></div>
     ${completo ? `<details class="bloque">
       <summary style="font-weight:700;cursor:pointer;min-height:44px;display:flex;align-items:center">${esc(t("panel.catalogo.agregar.titulo"))}</summary>
       <form id="form-modelo" novalidate class="grilla-2">

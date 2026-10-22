@@ -432,15 +432,21 @@ async function llenarPopup(p) {
     const burdeos = fila.locator('li:has-text("Borgoña")');
     assert.equal((await burdeos.locator(".color-hex").textContent()).trim(), "#632432");
     assert.equal(await burdeos.locator("input").count(), 0);
+    // C1 (0022): el que no trae hexadecimal tiene uno aproximado, marcado, que se puede cambiar.
+    // (Antes este caso esperaba la muestra vacía; ahora espera la aproximada.)
     const oliva = fila.locator('li:has-text("Oliva")');
-    assert.equal(await oliva.locator(".muestra-color--vacia").count(), 1);
+    assert.equal(await oliva.locator(".muestra-color--vacia").count(), 0);
+    assert.equal(await oliva.locator("input[data-hex]").inputValue(), "#6B6E4E");
+    assert.ok((await oliva.textContent()).includes("Muestra aproximada"));
+    assert.match(await p.textContent("#nota-hex"), /^El hexadecimal solo pinta la muestra del color en el sitio/);
+    assert.equal(await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).colores.filter((c) => c.hex_aproximado).length, CLAVE_DEMO), 151);
     await oliva.locator("input[data-hex]").fill("5a5d3c");
     await oliva.locator("input[data-hex]").press("Enter");
     assert.match(await oliva.locator(".error-campo").textContent(), /#RRGGBB/);
     await oliva.locator("input[data-hex]").fill("#5a5d3c");
     await oliva.locator("input[data-hex]").press("Enter");
-    await p.waitForFunction(() => [...document.querySelectorAll("[data-color]")].some((li) => li.textContent.includes("Oliva") && li.querySelector(".muestra-color")?.style.background));
-    assert.equal(await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).colores.find((c) => c.nombre_es === "Oliva").hex, CLAVE_DEMO), "#5A5D3C");
+    await p.waitForFunction((clave) => JSON.parse(localStorage.getItem(clave)).colores.find((c) => c.nombre_es === "Oliva").hex === "#5A5D3C", CLAVE_DEMO);
+    assert.deepEqual(await p.evaluate((clave) => { const c = JSON.parse(localStorage.getItem(clave)).colores.find((x) => x.nombre_es === "Oliva"); return [c.hex, c.hex_aproximado]; }, CLAVE_DEMO), ["#5A5D3C", false], "cambiado por el gestor, ya no es aproximado");
     // En un modelo con colores oficiales no se agregan otros, y la capa de
     // datos tampoco deja cambiar un hex de la fuente.
     assert.equal(await fila.locator("[data-agregar-color]").count(), 0);
@@ -1046,7 +1052,10 @@ async function llenarPopup(p) {
     assert.deepEqual(Object.fromEntries(Object.keys(LEGAL_INICIAL).map((k) => [k, e.tienda[k]])),
       { ...LEGAL_INICIAL, legal_clausula_privacidad: "Mi política propia.", legal_clausula_terminos: "Mi aviso de marca." });
     for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) assert.ok(!(k in e.tienda), k);
-    assert.equal(e.version, 17);
+    assert.equal(e.version, 18);
+    const sinFuente = e.colores.filter((c) => c.oficial && !c.hex_de_fuente);
+    assert.ok(sinFuente.length && sinFuente.every((c) => c.hex_aproximado === Boolean(c.hex)) && e.colores.every((c) => !(c.hex_de_fuente && c.hex_aproximado)),
+      `0022: los oficiales sin hex de la fuente, aproximados: ${JSON.stringify(sinFuente.filter((c) => c.hex_aproximado !== Boolean(c.hex)).slice(0, 3))}`);
     assert.equal(e.tienda.titulo_sitio, "", "0021: vacío = el título del idioma");
     assert.equal(e.tienda.pais, "co", "0018: los datos viejos del demo son de Colombia");
     assert.equal(e.tienda.idioma, "es", "0020: las tiendas que ya existían quedan en español");

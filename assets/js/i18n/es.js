@@ -282,6 +282,8 @@ export default {
   "panel.catalogo.agregar.nombre_ayuda": "Tal como lo nombra el fabricante.",
   "panel.catalogo.agregar.titulo": "Agregar modelo",
   "panel.catalogo.cargando": "Cargando…",
+  "panel.catalogo.colores.aproximado": "Muestra aproximada",
+  "panel.catalogo.colores.nota_hex": "El hexadecimal solo pinta la muestra del color en el sitio: no cambia el nombre del color. Las «Muestra aproximada» no vienen de la fuente; se pusieron por el nombre del color y puede cambiarlas.",
   "panel.catalogo.colores.agregado": "Color agregado",
   "panel.catalogo.colores.agregar": "Agregar color",
   "panel.catalogo.colores.borrado": "Color borrado",
