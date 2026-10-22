@@ -20,7 +20,7 @@ import { crearPopup } from "./popup.js";
 import { capturarAtribucion } from "./atribucion.js";
 import { abrirConTransicion, cerrarConTransicion, cerrarConEscape } from "./transiciones.js";
 import { evento, parametrosEquipo } from "./pixel.js";
-import { fijarPais } from "../datos/paises.js";
+import { fijarPais, whatsappValido } from "../datos/paises.js";
 // Alias tr/tn: en este archivo "t" es la tienda.
 import { cargarIdioma, traducirDom, idiomaActual, t as tr, tn } from "../i18n/i18n.js";
 import { iniciarConsentimiento, alCambiar, permitido } from "./consentimiento.js";
@@ -390,6 +390,12 @@ async function iniciar() {
     cargarSeguimientoGHL();
     alCambiar(cargarSeguimientoGHL);
   }, "consentimiento");
+
+  // Globo de ayuda (F): solo con un WhatsApp válido de la tienda; el módulo
+  // se pide después de todo lo demás, para no pesar en la primera carga.
+  if (whatsappValido(cat.tienda.whatsapp, cat.tienda.pais)) {
+    import("./ayuda.js").then((m) => seguro(() => m.iniciarAyuda({ tienda: cat.tienda }), "ayuda")).catch((e) => console.error("ayuda", e));
+  }
 
   // En demo, otra pestaña (el panel) puede cambiar los datos: se recargan.
   if (api.tipo === "demo") {

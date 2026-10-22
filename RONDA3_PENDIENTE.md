@@ -26,15 +26,16 @@ Un commit por punto, todos con las pruebas pasando:
 | C3 | `2919a8d` | Pasarelas por país, otras con nombre, descuentos (0024). |
 | C4 | `3260fab` | Archivo XML de productos y función `catalogo-feed` (0025). |
 | D | `06c39fb` | Carga de equipos en lote (0026): `panel/lote.js`, `crear_equipos_lote`, `archivos_en_uso`. |
-| E | (este commit) | Botón "Ver intro" en Inicio (`prepararIntro` en `panel.js`). |
+| E | `b211b96` | Botón "Ver intro" en Inicio (`prepararIntro` en `panel.js`). |
+| F | (este commit) | Globo de ayuda en el sitio (`sitio/ayuda.js`). |
 
-**Falta:** F (globo de ayuda), G (`assets/videos/LEAME.md`), H (`catalogo/FALTANTES.md`), I (pruebas finales, Lighthouse, documentación y reporte final).
+**Falta:** G (`assets/videos/LEAME.md`), H (`catalogo/FALTANTES.md`), I (pruebas finales, Lighthouse, documentación y reporte final).
 
 Números al día de hoy:
 - Próxima migración: **`0027_…sql`**.
 - Versión del demo: **21** (`VERSION` en `assets/js/datos/demo.js`). La próxima migración del demo es `MIGRACIONES[21]` y sube `VERSION` a 22.
-- Suite demo: **77 casos**. Suite Supabase: **13 casos**.
-- Diccionarios: **1142 claves**.
+- Suite demo: **79 casos**. Suite Supabase: **13 casos**.
+- Diccionarios: **1152 claves**.
 
 ---
 

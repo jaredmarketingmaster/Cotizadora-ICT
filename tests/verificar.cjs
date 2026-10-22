@@ -1825,6 +1825,21 @@ async function llenarPopup(p) {
       await p.waitForSelector("#vista h1, #vista h2");
       sinEspanol(await sinDatos(p), `panel #/${ruta}`);
     }
+    // Globo de ayuda (F) en portugués
+    await editarDemo(p, (e) => { e.tienda.whatsapp = "573001234567"; });
+    await p.goto(`${BASE}/`, { waitUntil: "networkidle" });
+    await p.click('[data-cookies="rechazar"]').catch(() => {});
+    await p.waitForSelector(".ayuda-globo:not([hidden])");
+    assert.equal(await p.getAttribute(".ayuda-globo", "aria-label"), PT["sitio.ayuda.aria"]);
+    await p.click(".ayuda-globo");
+    sinEspanol(await sinDatos(p, ".ayuda-dialogo"), "globo de ayuda");
+    await p.click('[data-dispositivo="celular"]');
+    await p.waitForSelector(".ayuda-whatsapp");
+    sinEspanol(await sinDatos(p, ".ayuda-dialogo"), "globo de ayuda: respuesta");
+    assert.equal(new URL(await p.getAttribute(".ayuda-whatsapp", "href")).searchParams.get("text"), PT["sitio.ayuda.mensaje"]);
+    await p.keyboard.press("Escape");
+    await p.goto(`${BASE}/admin/#/inicio`);
+    await p.waitForSelector(".estadisticas");
     // Asistente de carga en lote (D), paso por paso
     await abrirLote(p, "iPhone 13", "usado", ["128 GB"]);
     sinEspanol(await sinDatos(p), "lote: variantes");
@@ -2371,6 +2386,119 @@ async function llenarPopup(p) {
     await q.context().close();
   });
 
+  // ---------------------------------------------------------------- Ronda 3, F
+  const MENSAJE_AYUDA = "Hola, el cotizador está roto y no pude utilizarlo. Quiero comprar directamente por aquí.";
+  const conWhatsApp = (p) => editarDemo(p, (e) => { e.tienda.whatsapp = "573001234567"; });
+  const rectGlobo = (p) => p.$eval(".ayuda-globo", (b) => { const r = b.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, width: r.width, height: r.height }; });
+  const seTocan = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+  await caso("F: globo de ayuda: 56 px, radar de 3 s, nunca se abre solo, no tapa la barra de compra; celular sin video → texto y WhatsApp exacto; computadora con video; sin eventos del píxel", async () => {
+    const p = await nueva(360, 800, { cookies: { medicion: false, publicidad: true } });
+    await p.route("https://connect.facebook.net/**", (r) => r.fulfill({ contentType: "text/javascript", body: "" }));
+    await p.route("**/assets/videos/ayuda-computadora.mp4", (r) => r.fulfill({ status: 200, contentType: "video/mp4", body: fs.readFileSync(path.join(__dirname, "videos", "corto.mp4")) }));
+    await ir(p);
+    await conWhatsApp(p);
+    await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=256-gb");
+    await p.waitForSelector(".ayuda-globo");
+    assert.equal(await p.getAttribute(".ayuda-globo", "aria-label"), "Ayuda para comprar");
+    assert.equal((await p.textContent(".ayuda-globo")).trim(), "?");
+    const r = await rectGlobo(p);
+    assert.equal(r.width, 56); assert.equal(r.height, 56);
+    assert.ok(r.right <= 360 && r.bottom <= 800, "abajo a la derecha, dentro de la pantalla");
+    // Radar: solo transform y opacity, cada 3 s
+    const radar = await p.$eval(".ayuda-globo", (b) => { const st = getComputedStyle(b, "::after"); return { nombre: st.animationName, duracion: st.animationDuration, vueltas: st.animationIterationCount }; });
+    assert.deepEqual(radar, { nombre: "ayuda-radar", duracion: "3s", vueltas: "infinite" });
+    const propiedades = await p.evaluate(() => {
+      for (const hoja of document.styleSheets) {
+        let reglas = [];
+        try { reglas = [...hoja.cssRules]; } catch { continue; } // Google Fonts: otro origen
+        for (const regla of reglas) if (regla.name === "ayuda-radar") return [...regla.cssRules].flatMap((k) => [...k.style]);
+      }
+      return null;
+    });
+    assert.ok(propiedades && propiedades.every((x) => ["transform", "opacity"].includes(x)), JSON.stringify(propiedades));
+    // Nunca se abre solo
+    await p.waitForTimeout(3500);
+    assert.equal(await p.$eval(".ayuda-dialogo", (d) => d.open), false);
+    // Con la barra de compra visible, el globo queda arriba
+    await p.$eval("#detalle-en-linea", (el) => el.scrollIntoView({ block: "center" }));
+    await p.waitForSelector("#barra-compra:not([hidden])");
+    await p.waitForTimeout(500);
+    const barra = await p.$eval("#barra-compra", (b) => { const x = b.getBoundingClientRect(); return { top: x.top, bottom: x.bottom, left: x.left, right: x.right }; });
+    const g = await rectGlobo(p);
+    assert.ok(!seTocan(g, barra), `tapa la barra: ${JSON.stringify({ g, barra })}`);
+    assert.ok(g.bottom <= barra.top, "queda arriba de la barra");
+    const cola = () => p.evaluate(() => (window.fbq?.queue || []).length);
+    const antes = await cola();
+    // Celular sin video (404): directo al texto y al WhatsApp
+    await p.click(".ayuda-globo");
+    assert.equal(await p.textContent("#ayuda-titulo"), "¿Tiene problemas para comprar o no encuentra el modelo que busca?");
+    assert.equal(await p.textContent("#ayuda-pregunta"), "¿Está en el celular o en la computadora?");
+    assert.equal(await p.evaluate(() => document.activeElement.dataset.dispositivo), "celular");
+    await p.click('[data-dispositivo="celular"]');
+    await p.waitForSelector(".ayuda-whatsapp");
+    assert.equal(await p.locator(".ayuda-dialogo video").count(), 0);
+    assert.match(await p.textContent(".ayuda-contenido"), /Si el cotizador no funciona o ningún botón responde, escríbale directamente a la tienda\./);
+    assert.equal((await p.textContent(".ayuda-whatsapp")).trim(), "Escribir a la tienda por WhatsApp");
+    const wa = new URL(await p.getAttribute(".ayuda-whatsapp", "href"));
+    assert.equal(wa.origin + wa.pathname, "https://wa.me/573001234567");
+    assert.equal(wa.searchParams.get("text"), MENSAJE_AYUDA);
+    // Escape cierra y el foco vuelve al globo
+    await p.keyboard.press("Escape");
+    assert.equal(await p.$eval(".ayuda-dialogo", (d) => d.open), false);
+    assert.equal(await p.evaluate(() => document.activeElement.className), "ayuda-globo");
+    // Computadora con video: preload none, controls, sin autoplay
+    await p.click(".ayuda-globo");
+    await p.click('[data-dispositivo="computadora"]');
+    await p.waitForSelector(".ayuda-video--computadora");
+    const v = await p.$eval(".ayuda-video", (x) => ({ preload: x.getAttribute("preload"), controls: x.controls, autoplay: x.autoplay, paused: x.paused, src: x.getAttribute("src") }));
+    assert.deepEqual(v, { preload: "none", controls: true, autoplay: false, paused: true, src: "assets/videos/ayuda-computadora.mp4" });
+    assert.ok(await p.isVisible(".ayuda-whatsapp"));
+    await p.click(".ayuda-cerrar");
+    assert.equal(await p.$eval(".ayuda-dialogo", (d) => d.open), false);
+    // Ningún evento nuevo del píxel
+    assert.equal(await cola(), antes);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("F: globo de ayuda: oculto con el banner de cookies (celular y escritorio), sin WhatsApp válido no aparece ni se carga, y quieto con reduced-motion", async () => {
+    for (const [ancho, alto] of [[360, 800], [1440, 900]]) {
+      const p = await nueva(ancho, alto, { cookies: null });
+      await ir(p);
+      await conWhatsApp(p);
+      await ir(p);
+      await p.waitForSelector(".ayuda-globo", { state: "attached" });
+      await p.mouse.wheel(0, 700);
+      await p.waitForSelector(".banner-cookies", { state: "visible" });
+      await p.waitForTimeout(200);
+      assert.equal(await p.locator(".ayuda-globo").isHidden(), true, `${ancho}: oculto con el banner`);
+      await p.click('[data-cookies="rechazar"]');
+      await p.waitForSelector(".ayuda-globo", { state: "visible" });
+      await p.context().close();
+    }
+    // Sin WhatsApp válido: ni el globo ni el módulo
+    const q = await nueva(360, 800);
+    const modulos = [];
+    q.on("request", (r) => { if (/ayuda\.js/.test(r.url())) modulos.push(r.url()); });
+    await ir(q);
+    await editarDemo(q, (e) => { e.tienda.whatsapp = ""; });
+    await ir(q);
+    await q.waitForTimeout(500);
+    assert.equal(await q.locator(".ayuda-globo").count(), 0);
+    assert.deepEqual(modulos, []);
+    await q.context().close();
+    // Reduced-motion: sin onda
+    const m = await nueva(360, 800, { reducedMotion: "reduce" });
+    await ir(m);
+    await conWhatsApp(m);
+    await ir(m);
+    await m.waitForSelector(".ayuda-globo");
+    assert.equal(await m.$eval(".ayuda-globo", (b) => getComputedStyle(b, "::after").animationName), "none");
+    assert.deepEqual(m.errores, []);
+    await m.context().close();
+  });
+
   await caso("B2: con la tienda en Argentina, Brasil o México cambian el precio, el prefijo y el celular del pop-up, el lead, la moneda del píxel y la fecha", async () => {
     const p = await nueva(390, 844, { cookies: { medicion: false, publicidad: true } });
     await p.route("https://connect.facebook.net/**", (r) => r.fulfill({ contentType: "text/javascript", body: "" }));
@@ -2837,12 +2965,14 @@ async function llenarPopup(p) {
     for (const [nombre, cambios] of temas) {
       const p = await nueva(390, 844);
       await ir(p);
+      await conWhatsApp(p); // con el globo de ayuda (F) en pantalla
       if (cambios) { await editarDemo(p, new Function("e", `Object.assign(e.tienda, ${JSON.stringify(cambios)})`)); }
       await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=256-gb");
       await p.click(".segmento[data-valor='usado']"); // un botón marcado y otro no
       await p.click(".segmento[data-valor='nuevo']");
       await p.click(".chip[data-valor='256 GB']");
       await p.waitForTimeout(500);
+      assert.ok(await p.isVisible(".ayuda-globo"), `${nombre}: el globo se mide`);
       const malos = await p.evaluate(contrasteMalo);
       assert.deepEqual(malos, [], `${nombre}: ${JSON.stringify(malos.slice(0, 4))}`);
       await p.context().close();
