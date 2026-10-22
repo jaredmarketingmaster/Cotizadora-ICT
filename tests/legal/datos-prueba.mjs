@@ -47,5 +47,5 @@ export const TIENDA_LEGAL_PRUEBA = {
   envio_retiro: true, envio_domicilio: true, envio_todo_el_pais: false, envio_zonas: ["Medellín y su área metropolitana"],
   envio_costo: "fijo", envio_costo_fijo: 15000, envio_costos_zona: {}, envio_gratis: false, envio_gratis_zonas: [], envio_gratis_minimo: null,
   envio_plazo_desde: null, envio_plazo_hasta: null,
-  pagos_cripto: false, pagos_cripto_cuales: "", pagos_pasarelas: [], pagos_pasarela_otra: "", pagos_otras: []
+  pagos_cripto: false, pagos_cripto_cuales: "", pagos_pasarelas: [], pagos_pasarelas_otras: [], pagos_descuentos: {}, pagos_otras: []
 };

@@ -75,7 +75,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 19;
+const VERSION = 20;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -216,6 +216,15 @@ const MIGRACIONES = {
     });
     delete t.legal_entrega;
     delete t.legal_entrega_zonas;
+  },
+  // 0024_pagos.sql: la "otra" pasarela pasa a la lista con nombre; descuentos vacíos.
+  19(e) {
+    const t = e.tienda;
+    const otra = String(t.pagos_pasarela_otra || "").trim();
+    t.pagos_pasarelas_otras = (t.pagos_pasarelas || []).includes("otra") && otra ? [otra] : [];
+    t.pagos_pasarelas = (t.pagos_pasarelas || []).filter((c) => c !== "otra");
+    t.pagos_descuentos = {};
+    delete t.pagos_pasarela_otra;
   }
 };
 
@@ -233,7 +242,7 @@ const SIN_LEGALES_BORRAR = () => error("sin_legales_borrar");
 // Valores por defecto de las formas de pago estructuradas (0013).
 const PAGOS_VACIOS = {
   pagos_medios: [], pagos_cuotas: false, pagos_cuotas_max: null, pagos_sin_interes: false, pagos_sin_interes_max: null,
-  pagos_cripto: false, pagos_cripto_cuales: "", pagos_pasarelas: [], pagos_pasarela_otra: ""
+  pagos_cripto: false, pagos_cripto_cuales: "", pagos_pasarelas: [], pagos_pasarelas_otras: [], pagos_descuentos: {}
 };
 
 // El hexadecimal de la fuente o, si no trae, el aproximado por nombre (0022).

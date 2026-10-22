@@ -1053,7 +1053,8 @@ async function llenarPopup(p) {
     assert.deepEqual(Object.fromEntries(Object.keys(LEGAL_INICIAL).map((k) => [k, e.tienda[k]])),
       { ...LEGAL_INICIAL, legal_clausula_privacidad: "Mi política propia.", legal_clausula_terminos: "Mi aviso de marca." });
     for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) assert.ok(!(k in e.tienda), k);
-    assert.equal(e.version, 19);
+    assert.equal(e.version, 20);
+    assert.ok(!("pagos_pasarela_otra" in e.tienda) && Array.isArray(e.tienda.pagos_pasarelas_otras) && !e.tienda.pagos_pasarelas.includes("otra") && typeof e.tienda.pagos_descuentos === "object", "0024: otras pasarelas con nombre");
     assert.ok(!("legal_entrega" in e.tienda) && !("legal_entrega_zonas" in e.tienda) && typeof e.tienda.envio_retiro === "boolean" && Array.isArray(e.tienda.envio_zonas), "0023: la entrega pasa a Envíos");
     const sinFuente = e.colores.filter((c) => c.oficial && !c.hex_de_fuente);
     assert.ok(sinFuente.length && sinFuente.every((c) => c.hex_aproximado === Boolean(c.hex)) && e.colores.every((c) => !(c.hex_de_fuente && c.hex_aproximado)),
@@ -1282,15 +1283,20 @@ async function llenarPopup(p) {
     await p.fill("#p-sin-interes-max", "13");
     await p.click('label[for="p-cripto"]');
     await p.fill("#p-cripto-cuales", "USDT, Bitcoin");
-    for (const v of ["pse", "nequi", "otra"]) await p.check(`input[name="pasarela"][value="${v}"]`);
+    // C3: el demo es de Colombia, sus pasarelas van primero y después las regionales.
+    assert.deepEqual(await p.$$eval("#form-pagos [id^='grupo-']", (xs) => xs.map((x) => x.textContent)), ["De Colombia:", "Regionales:"]);
+    assert.deepEqual(await p.$$eval('input[name="pasarela"]', (xs) => xs.map((x) => x.value)),
+      ["pse", "nequi", "daviplata", "wompi", "bold", "epayco", "payu", "paypal", "dlocal", "stripe"]);
+    for (const v of ["pse", "nequi"]) await p.check(`input[name="pasarela"][value="${v}"]`);
+    // "Otra" (antes una clave con un nombre) ahora es la lista de otras pasarelas con nombre.
+    await p.click("#agregar-pasarela");
     await p.click("#agregar-pago");
     await p.fill("#pago-0", "Contraentrega en Bogotá");
     await p.click("#guardar-pagos");
     assert.equal(await p.textContent("#p-sin-interes-max-error"), "No pueden ser más que el máximo de cuotas.");
-    assert.equal(await p.textContent("#p-pasarela-otra-error"), "Escriba el nombre de la pasarela.");
     assert.equal(await p.evaluate(() => document.activeElement.id), "p-sin-interes-max", "foco al primer error");
     await p.fill("#p-sin-interes-max", "6");
-    await p.fill("#p-pasarela-otra", "Addi");
+    await p.fill("#pasarela-otra-0", "Addi");
     const esperadas = ["Transferencia bancaria.", "Tarjeta de crédito: hasta 12 cuotas, hasta 6 sin interés.", "Criptomonedas: USDT, Bitcoin.", "Pago en línea con PSE, Nequi y Addi.", "Contraentrega en Bogotá"];
     assert.deepEqual(await p.$$eval("#vista-pagos li", (xs) => xs.map((x) => x.textContent)), esperadas, "vista previa");
     await p.click("#guardar-pagos");
@@ -1911,6 +1917,50 @@ async function llenarPopup(p) {
     await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb");
     assert.deepEqual(await p.$$eval("#detalle-en-linea .frases-envio li", (xs) => xs.map((x) => x.textContent)),
       ["Retiro en el local.", "Envío a Palermo y Belgrano: $3.500.", "Envío gratis en Palermo y Belgrano.", "Entrega en 2 a 4 días hábiles."]);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("C3: pasarelas del país de la tienda primero; otras con nombre; el descuento se muestra en el sitio sin cambiar el precio ni el valor del píxel", async () => {
+    const p = await nueva(390, 844, { cookies: { medicion: false, publicidad: true } });
+    await p.route("https://connect.facebook.net/**", (r) => r.fulfill({ contentType: "text/javascript", body: "" }));
+    await entrarPanel(p, "gestor@demo.co");
+    await editarDemo(p, (e) => Object.assign(e.tienda, { pais: "ar", whatsapp: "5491123456789" }));
+    await p.goto(`${BASE}/admin/#/catalogo/pagos`);
+    await p.reload();
+    await p.waitForSelector("#form-pagos");
+    assert.deepEqual(await p.$$eval("#form-pagos [id^='grupo-']", (xs) => xs.map((x) => x.textContent)), ["De Argentina:", "Regionales:"]);
+    assert.deepEqual(await p.$$eval('input[name="pasarela"] + span', (xs) => xs.map((x) => x.textContent)),
+      ["Mercado Pago", "MODO", "Cuenta DNI", "Ualá", "Naranja X", "PayPal", "PayU", "dLocal", "Stripe"]);
+    await p.check('input[name="medio"][value="transferencia"]');
+    await p.check('input[name="pasarela"][value="mercado_pago"]');
+    await p.click("#agregar-pasarela");
+    await p.fill("#pasarela-otra-0", "Pago Fácil");
+    await p.click("#agregar-pasarela");
+    await p.fill("#pasarela-otra-1", "Rapipago");
+    await p.locator("#pasarela-otra-1").blur();
+    assert.deepEqual(await p.$$eval("#descuentos label", (xs) => xs.map((x) => x.textContent)),
+      ["Descuento con Transferencia bancaria (%)", "Descuento con Mercado Pago (%)", "Descuento con Pago Fácil (%)", "Descuento con Rapipago (%)"]);
+    await p.fill("#dto-0", "95");
+    await p.click("#guardar-pagos");
+    assert.equal(await p.textContent("#dto-0-error"), "Escriba un número de 1 a 90.");
+    await p.fill("#dto-0", "10");
+    await p.fill("#dto-2", "5");
+    const esperadas = ["Transferencia bancaria: 10 % de descuento.", "Pago en línea con Mercado Pago y Rapipago.", "Pago Fácil: 5 % de descuento."];
+    assert.deepEqual(await p.$$eval("#vista-pagos li", (xs) => xs.map((x) => x.textContent)), esperadas);
+    await p.click("#guardar-pagos");
+    await p.waitForSelector("text=Guardado");
+    const t = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).tienda, CLAVE_DEMO);
+    assert.deepEqual([t.pagos_pasarelas, t.pagos_pasarelas_otras, t.pagos_descuentos], [["mercado_pago"], ["Pago Fácil", "Rapipago"], { "medio:transferencia": 10, "otra:Pago Fácil": 5 }]);
+    // Sitio: las frases con el descuento; el precio y el valor del píxel, los de siempre
+    await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb");
+    await p.click(".tarjeta-boton >> nth=0");
+    await p.waitForFunction(() => document.querySelector("#hoja-detalle").open && !document.querySelector("#hoja-detalle[data-vt]"));
+    const pagos = await p.$$eval("#hoja-detalle .info-compra section", (ss) => [...(ss.find((x) => x.querySelector("h3")?.textContent === "Formas de pago")?.querySelectorAll("li") || [])].map((li) => li.textContent));
+    assert.deepEqual(pagos, esperadas);
+    assert.equal((await p.textContent("#hoja-detalle .precio-valor")).replace(/DEMO/, "").trim(), "$7.000.000");
+    const vista = (await p.evaluate(() => window.fbq.queue.map((a) => JSON.parse(JSON.stringify([...a]))))).find((a) => a[0] === "track" && a[1] === "ViewContent");
+    assert.deepEqual([vista[2].value, vista[2].currency], [7000000, "ARS"], "el píxel manda el precio sin descuento");
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });

@@ -80,8 +80,18 @@ do $$ begin
   update public.tienda set ficha_ocultas = '{}', mostrar_ficha = true;
 end $$;
 
+-- 0m. Migración 0024: la "otra" pasarela de antes_0024 pasó a la lista con su
+-- nombre, sin la clave 'otra'; la columna vieja no está; descuentos vacíos.
+do $$
+begin
+  assert (select pagos_pasarelas = '{pse}' and pagos_pasarelas_otras = '{Addi}' and pagos_descuentos = '{}'::jsonb from public.tienda), 'otra → lista con nombre';
+  assert not exists (select 1 from information_schema.columns where table_name = 'tienda' and column_name = 'pagos_pasarela_otra'), 'columna vieja fuera';
+  update public.tienda set pagos_pasarelas = '{}', pagos_pasarelas_otras = '{}';
+end $$;
+
 -- 0f. Migración 0013: formas_pago pasó a pagos_otras con sus valores, y las
--- reglas de validar_pagos y de los checks.
+-- reglas de validar_pagos y de los checks (desde 0024, con las pasarelas
+-- nuevas, las otras con nombre y los descuentos).
 do $$
 begin
   assert (select pagos_otras from public.tienda) = '{Addi,Sistecrédito}', 'la lista vieja pasó a pagos_otras';
@@ -90,7 +100,8 @@ begin
   -- Una configuración completa y válida
   update public.tienda set pagos_medios = '{transferencia,credito}', pagos_cuotas = true, pagos_cuotas_max = 12,
     pagos_sin_interes = true, pagos_sin_interes_max = 6, pagos_cripto = true, pagos_cripto_cuales = 'USDT',
-    pagos_pasarelas = '{pse,otra}', pagos_pasarela_otra = 'Addi';
+    pagos_pasarelas = '{pse,mercado_pago}', pagos_pasarelas_otras = '{Addi}',
+    pagos_descuentos = '{"medio:transferencia": 10, "cripto": 5, "pasarela:pse": 3, "otra:Addi": 90}';
   update public.tienda set pagos_sin_interes_max = 12;  -- igual al máximo: vale
 end $$;
 do $$
@@ -104,8 +115,12 @@ declare
     ['pagos_sin_interes = false', 'Sin cuotas sin interés, deje vacío hasta cuántas.'],
     ['pagos_cuotas = false', 'Sin pagos a cuotas, los datos de cuotas quedan vacíos.'],
     ['pagos_cripto = false', 'Sin criptomonedas, deje vacío cuáles.'],
-    ['pagos_pasarela_otra = ''''', 'Escriba el nombre de la otra pasarela.'],
-    ['pagos_pasarelas = ''{pse}''', 'Sin «Otra» pasarela, deje vacío el nombre.']
+    ['pagos_pasarelas_otras = ''{Addi,addi}''', 'Revise las otras pasarelas: hasta 10, sin repetir y de hasta 60 caracteres.'],
+    ['pagos_pasarelas_otras = ''{" Addi"}''', 'Revise las otras pasarelas: hasta 10, sin repetir y de hasta 60 caracteres.'],
+    ['pagos_descuentos = ''{"medio:efectivo": 10}''', 'Revise los descuentos: de 1 a 90 %, y solo en formas de pago que acepta.'],
+    ['pagos_descuentos = ''{"medio:transferencia": 91}''', 'Revise los descuentos: de 1 a 90 %, y solo en formas de pago que acepta.'],
+    ['pagos_descuentos = ''{"medio:transferencia": 2.5}''', 'Revise los descuentos: de 1 a 90 %, y solo en formas de pago que acepta.'],
+    ['pagos_pasarelas = ''{mercado_pago}''', 'Revise los descuentos: de 1 a 90 %, y solo en formas de pago que acepta.']
   ];
   i int;
 begin
@@ -123,13 +138,13 @@ do $$ begin
   raise exception 'medio que no existe';
 exception when check_violation then null; end $$;
 do $$ begin
-  update public.tienda set pagos_pasarelas = '{paypal}', pagos_pasarela_otra = '';
+  update public.tienda set pagos_pasarelas = '{pago_inventado}';
   raise exception 'pasarela que no existe';
 exception when check_violation then null; end $$;
 do $$ begin
   -- Sin cuotas y todo vacío, otra vez válido
   update public.tienda set pagos_cuotas = false, pagos_cuotas_max = null, pagos_sin_interes = false, pagos_sin_interes_max = null,
-    pagos_cripto = false, pagos_cripto_cuales = '', pagos_pasarelas = '{}', pagos_pasarela_otra = '', pagos_medios = '{}';
+    pagos_cripto = false, pagos_cripto_cuales = '', pagos_pasarelas = '{}', pagos_pasarelas_otras = '{}', pagos_descuentos = '{}', pagos_medios = '{}';
 end $$;
 
 -- Un equipo no publicado, uno sin stock y uno de un modelo inactivo.

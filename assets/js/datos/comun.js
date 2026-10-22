@@ -9,6 +9,7 @@
 
 import { t, idiomaActual } from "../i18n/i18n.js";
 import { CAMPOS_ENVIO } from "./envios.js";
+import { PASARELAS, CLAVES_PASARELAS } from "./pasarelas.js";
 
 // Un texto que se traduce cada vez que se usa como texto (para las constantes
 // exportadas, que se leen antes de cargar el idioma).
@@ -65,7 +66,7 @@ export const CAMPOS_TIENDA = [
   "texto_garantia_nuevos", "texto_garantia_usados", "etiqueta_precio", "modo_demo",
   "tamano_texto", "vista_equipos", "mostrar_ficha", "ficha_ocultas",
   "pagos_medios", "pagos_cuotas", "pagos_cuotas_max", "pagos_sin_interes", "pagos_sin_interes_max",
-  "pagos_cripto", "pagos_cripto_cuales", "pagos_pasarelas", "pagos_pasarela_otra",
+  "pagos_cripto", "pagos_cripto_cuales", "pagos_pasarelas", "pagos_pasarelas_otras", "pagos_descuentos",
   "mostrar_resenas", "titulo_resenas", "titulo_sitio",
   // Envíos (0023, assets/js/datos/envios.js)
   ...CAMPOS_ENVIO
@@ -154,25 +155,32 @@ export const MEDIOS_PAGO = [
   { clave: "credito", texto: "Tarjeta de crédito" }
 ];
 export const nombreMedioPago = (clave, idioma = idiomaActual()) => t(`datos.pago.medio.${clave}`, undefined, idioma);
-export const PASARELAS_PAGO = [
-  { clave: "mercado_pago", texto: "Mercado Pago" },
-  { clave: "pse", texto: "PSE" },
-  { clave: "nequi", texto: "Nequi" },
-  { clave: "daviplata", texto: "Daviplata" },
-  { clave: "wompi", texto: "Wompi" },
-  { clave: "bold", texto: "Bold" },
-  { clave: "otra", texto: "Otra" }
-];
-// Las pasarelas son marcas; solo "Otra" se traduce.
-export const nombrePasarela = (clave) => (clave === "otra" ? t("datos.pago.pasarela.otra") : PASARELAS_PAGO.find((p) => p.clave === clave)?.texto || "");
+// Pasarelas (C3, 0024): la lista por país está en pasarelas.js; aquí, todas
+// con su nombre (son marcas: no se traducen). "Otras pasarelas" ya no es una
+// clave: van con su nombre en pagos_pasarelas_otras.
+export const PASARELAS_PAGO = CLAVES_PASARELAS.map((clave) => ({ clave, texto: PASARELAS[clave] }));
+export const nombrePasarela = (clave) => PASARELAS[clave] || "";
 export const MIN_CUOTAS = 2;
 export const MAX_CUOTAS = 48;
+export const MAX_PASARELAS_OTRAS = 10;
+export const MAX_DESCUENTO = 90;
 
-// Las reglas de validar_pagos (0013), con los mismos mensajes. "" = bien.
+// Las formas de pago que pueden llevar descuento (las que la tienda acepta):
+// "medio:<clave>", "cripto", "pasarela:<clave>" y "otra:<nombre>".
+export function clavesDescuento(tienda, idioma = idiomaActual()) {
+  const l = [];
+  for (const m of MEDIOS_PAGO) if ((tienda?.pagos_medios || []).includes(m.clave)) l.push({ clave: `medio:${m.clave}`, nombre: nombreMedioPago(m.clave, idioma) });
+  if (tienda?.pagos_cripto) l.push({ clave: "cripto", nombre: t("datos.pago.cripto", undefined, idioma) });
+  for (const c of tienda?.pagos_pasarelas || []) if (PASARELAS[c]) l.push({ clave: `pasarela:${c}`, nombre: PASARELAS[c] });
+  for (const n of tienda?.pagos_pasarelas_otras || []) if (String(n).trim()) l.push({ clave: `otra:${String(n).trim()}`, nombre: String(n).trim() });
+  return l;
+}
+
+// Las reglas de validar_pagos (0013 y 0024), con los mismos mensajes. "" = bien.
 export function errorPagos(tienda) {
   const entre = (n) => Number.isInteger(n) && n >= MIN_CUOTAS && n <= MAX_CUOTAS;
   if (!(tienda.pagos_medios || []).every((m) => MEDIOS_PAGO.some((x) => x.clave === m)) ||
-      !(tienda.pagos_pasarelas || []).every((m) => PASARELAS_PAGO.some((x) => x.clave === m))) return t("datos.error.formato");
+      !(tienda.pagos_pasarelas || []).every((m) => PASARELAS[m])) return t("datos.error.formato");
   if (tienda.pagos_cuotas) {
     if (!entre(tienda.pagos_cuotas_max)) return t("datos.error.cuotas_max");
     if (tienda.pagos_sin_interes) {
@@ -183,10 +191,15 @@ export function errorPagos(tienda) {
     return t("datos.error.cuotas_vacias");
   }
   if (!tienda.pagos_cripto && tienda.pagos_cripto_cuales) return t("datos.error.cripto_vacio");
-  if (String(tienda.pagos_cripto_cuales || "").length > 120 || String(tienda.pagos_pasarela_otra || "").length > 60) return t("datos.error.formato");
-  if ((tienda.pagos_pasarelas || []).includes("otra")) {
-    if (!String(tienda.pagos_pasarela_otra || "").trim()) return t("datos.error.pasarela_otra");
-  } else if (tienda.pagos_pasarela_otra) return t("datos.error.pasarela_otra_vacia");
+  if (String(tienda.pagos_cripto_cuales || "").length > 120) return t("datos.error.formato");
+  const otras = tienda.pagos_pasarelas_otras;
+  if (!Array.isArray(otras) || otras.length > MAX_PASARELAS_OTRAS
+      || otras.some((n) => typeof n !== "string" || !n.trim() || n !== n.trim() || n.length > 60)
+      || new Set(otras.map((n) => n.toLowerCase())).size !== otras.length) return t("datos.error.pasarelas_otras");
+  const d = tienda.pagos_descuentos;
+  if (!d || typeof d !== "object" || Array.isArray(d)) return t("datos.error.formato");
+  const validas = new Set(clavesDescuento(tienda).map((x) => x.clave));
+  if (Object.entries(d).some(([k, v]) => !validas.has(k) || !Number.isInteger(v) || v < 1 || v > MAX_DESCUENTO)) return t("datos.error.descuentos");
   return "";
 }
 
@@ -197,11 +210,19 @@ const sinPunto = (s) => String(s || "").trim().replace(/\.+$/, "");
 
 // Las formas de pago del sitio, en frases cortas y solo con lo que marcó la
 // tienda. Ej.: "Tarjeta de crédito: hasta 12 cuotas, hasta 6 sin interés."
+// Con descuento (C3, informativo: no cambia precios ni el valor del píxel):
+// "Transferencia bancaria: 10 % de descuento."
 // En el idioma en uso; el motor legal pide "es" (los documentos van en español).
 export function frasesPagos(tienda, idioma = idiomaActual()) {
   const tx = (clave, vars) => t(clave, vars, idioma);
   const frases = [];
   const medios = new Set(tienda?.pagos_medios || []);
+  const descuentos = tienda?.pagos_descuentos || {};
+  const dto = (clave) => (Number.isInteger(descuentos[clave]) ? descuentos[clave] : 0);
+  // "Algo." o "Algo: 10 % de descuento."; "Algo: detalle." o "Algo: detalle; 10 % de descuento."
+  const frase = (forma, detalle, n) => (detalle
+    ? (n ? tx("datos.pagos.detalle_descuento", { forma, detalle, n }) : tx("datos.pagos.detalle", { forma, detalle }))
+    : (n ? tx("datos.pagos.descuento", { forma, n }) : tx("datos.pagos.medio", { medio: forma })));
   let cuotas = "";
   if (tienda?.pagos_cuotas && tienda.pagos_cuotas_max) {
     const max = tienda.pagos_cuotas_max;
@@ -210,14 +231,18 @@ export function frasesPagos(tienda, idioma = idiomaActual()) {
   }
   for (const m of MEDIOS_PAGO) {
     if (!medios.has(m.clave)) continue;
-    const nombre = nombreMedioPago(m.clave, idioma);
-    frases.push(m.clave === "credito" && cuotas ? tx("datos.pagos.medio_con_cuotas", { medio: nombre, cuotas }) : tx("datos.pagos.medio", { medio: nombre }));
+    frases.push(frase(nombreMedioPago(m.clave, idioma), m.clave === "credito" ? cuotas : "", dto(`medio:${m.clave}`)));
   }
   if (cuotas && !medios.has("credito")) frases.push(tx("datos.pagos.a_cuotas", { cuotas }));
-  if (tienda?.pagos_cripto) frases.push(sinPunto(tienda.pagos_cripto_cuales) ? tx("datos.pagos.cripto_cuales", { cuales: sinPunto(tienda.pagos_cripto_cuales) }) : tx("datos.pagos.cripto"));
-  const pasarelas = PASARELAS_PAGO.filter((p) => (tienda?.pagos_pasarelas || []).includes(p.clave))
-    .map((p) => (p.clave === "otra" ? sinPunto(tienda.pagos_pasarela_otra) : p.texto)).filter(Boolean);
-  if (pasarelas.length) frases.push(tx("datos.pagos.en_linea", { pasarelas: unirConY(pasarelas, idioma) }));
+  if (tienda?.pagos_cripto) frases.push(frase(tx("datos.pago.cripto"), sinPunto(tienda.pagos_cripto_cuales), dto("cripto")));
+  // Pasarelas: las que tienen descuento, cada una con el suyo; las demás, juntas.
+  const pasarelas = [
+    ...(tienda?.pagos_pasarelas || []).filter((c) => PASARELAS[c]).map((c) => [PASARELAS[c], dto(`pasarela:${c}`)]),
+    ...(tienda?.pagos_pasarelas_otras || []).map((n) => sinPunto(n)).filter(Boolean).map((n) => [n, dto(`otra:${n}`)])
+  ];
+  const juntas = pasarelas.filter(([, n]) => !n).map(([nombre]) => nombre);
+  if (juntas.length) frases.push(tx("datos.pagos.en_linea", { pasarelas: unirConY(juntas, idioma) }));
+  for (const [nombre, n] of pasarelas) if (n) frases.push(frase(nombre, "", n));
   for (const o of tienda?.pagos_otras || []) if (String(o).trim()) frases.push(String(o).trim());
   return frases;
 }
@@ -313,7 +338,7 @@ const ERRORES_SERVIDOR = [
   "solo_gestor.resenas", "solo_gestor.borrar_demo", "solo_gestor.modo_demo", "solo_administrador", "un_administrador",
   "propio_rol", "desactivarse", "correo_existe", "elija_rol", "elija_color", "color_modelo", "mas_vendidos", "max_resenas",
   "ficha", "cuotas_max", "sin_interes_max", "sin_interes_mayor", "sin_interes_vacio", "cuotas_vacias", "cripto_vacio",
-  "pasarela_otra", "pasarela_otra_vacia", "envio_sin_domicilio", "envio_zonas", "envio_todo_o_zonas", "envio_costo_fijo",
+  "pasarelas_otras", "descuentos", "envio_sin_domicilio", "envio_zonas", "envio_todo_o_zonas", "envio_costo_fijo",
   "envio_costo_zona", "envio_gratis_ya", "envio_gratis_condicion", "envio_gratis_zonas", "envio_plazo", "color_oficial_nombre", "color_hex_fuente", "colores_oficiales",
   "colores_fuente", "color_oficial_borrar", "borrar_color_en_uso", "sin_legales_demo", "sin_legales_borrar",
   "legales_quitar", "legales_faltan", "whatsapp_pais", "correo", "metodo", "pedido_invalido", "invitacion_perfil",
