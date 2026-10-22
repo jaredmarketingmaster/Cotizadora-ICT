@@ -461,3 +461,36 @@ select.entrada { appearance: none; -webkit-appearance: none; padding-right: 40px
 .vista-previa-legal .tabla-legal { overflow-x: auto; }
 .vista-previa-legal table { border-collapse: collapse; width: 100%; }
 .vista-previa-legal th, .vista-previa-legal td { padding: 8px 10px; border: 1px solid var(--borde); text-align: left; vertical-align: top; }
+
+/* Agregar equipos en lote (lote.js) */
+.grilla-lote-caja { overflow-x: auto; }
+.grilla-lote { border-collapse: separate; border-spacing: 0; min-width: 100%; }
+.grilla-lote th, .grilla-lote td { padding: 6px 8px; border-bottom: 1px solid var(--borde); text-align: center; vertical-align: middle; }
+.grilla-lote thead th { font-weight: 800; white-space: nowrap; }
+.grilla-lote th[scope="row"] { text-align: left; }
+.grilla-lote thead th:first-child { text-align: left; color: var(--texto-suave); }
+.lote-encabezado { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; }
+.lote-encabezado input { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--primario); cursor: pointer; }
+.lote-encabezado--fila { min-width: 150px; }
+.interruptor--celda { justify-content: center; min-width: 48px; }
+.lote-contador, .lote-total { font-weight: 800; }
+.lote-nombres, #lote-unidades:not(:empty) { display: grid; gap: 10px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--borde); }
+.lote-nombres h3, #lote-unidades h3, .medios-color-titulo { font-size: 1.0625rem; font-weight: 800; }
+.grilla-unidades { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
+.grilla-unidades .entrada { max-width: 120px; }
+.precios-lote { display: grid; gap: 12px; }
+@media (min-width: 760px) { .precios-lote { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); align-items: start; } }
+.precios-capacidad { display: grid; gap: 10px; margin: 0; padding: 12px; border: 1px solid var(--borde); border-radius: var(--radio-md); background: var(--fondo); }
+.precios-capacidad legend { padding: 0 6px; font-weight: 800; }
+.precios-capacidad .boton { justify-self: start; }
+.bloque-stock { display: grid; gap: 8px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--borde); }
+.excepciones-stock > summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; font-weight: 700; }
+.lista-excepciones { display: grid; gap: 4px; }
+.medios-color { display: grid; gap: 10px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--borde); }
+.medios-color-titulo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.medios-color-titulo .ayuda { font-weight: 400; }
+.bloque-unidad { display: grid; gap: 12px; margin: 16px 0 0; padding: 12px; border: 1px solid var(--borde); border-radius: var(--radio-md); }
+.bloque-unidad legend { padding: 0 6px; font-weight: 800; }
+.lista-resumen-lote { display: grid; gap: 8px; margin: 0; padding-left: 1.6em; }
+.lista-resumen-lote li { padding-left: 4px; }
+.lista-resumen-lote .ayuda { display: block; }

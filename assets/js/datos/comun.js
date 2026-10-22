@@ -265,6 +265,8 @@ export function nombreColor(color, mostrar = "") {
 
 // "Más vendido": hasta 3 equipos (igual que limitar_mas_vendidos en 0010).
 export const MAX_MAS_VENDIDOS = 3;
+// Equipos por lote (crear_equipos_lote, 0026).
+export const MAX_LOTE = 200;
 // Se traduce al usarlo como texto (t("datos.error.mas_vendidos")).
 export const MENSAJE_MAS_VENDIDOS = traducible("datos.error.mas_vendidos");
 
@@ -342,7 +344,7 @@ const ERRORES_SERVIDOR = [
   "envio_costo_zona", "envio_gratis_ya", "envio_gratis_condicion", "envio_gratis_zonas", "envio_plazo", "color_oficial_nombre", "color_hex_fuente", "colores_oficiales",
   "colores_fuente", "color_oficial_borrar", "borrar_color_en_uso", "sin_legales_demo", "sin_legales_borrar",
   "legales_quitar", "legales_faltan", "whatsapp_pais", "correo", "metodo", "pedido_invalido", "invitacion_perfil",
-  "cambiar_usuario", "accion_desconocida"
+  "cambiar_usuario", "accion_desconocida", "precio", "lote_vacio", "lote_grande"
 ];
 
 // Un mensaje del servidor en español → el mismo mensaje en el idioma en uso.
@@ -358,6 +360,9 @@ export function traducirServidor(texto) {
 export function mensajeDeError(error) {
   const texto = String(error?.message || error || "");
   const codigo = error?.code || "";
+  // crear_equipos_lote (0026): "Variante 3: <mensaje>" → el mensaje traducido, con la variante.
+  const variante = /^Variante (\d+): ([\s\S]*)$/.exec(texto);
+  if (variante) return t("datos.error.variante", { n: variante[1], mensaje: mensajeDeError({ message: variante[2], code: codigo }) });
   if (codigo === "42501" || /row-level security|permission denied/i.test(texto)) {
     // Los mensajes de los disparadores ya están escritos para el usuario (en español).
     return !texto || /row-level security|permission denied/i.test(texto) ? t("datos.error.permiso") : traducirServidor(texto);

@@ -367,6 +367,15 @@ do $$ begin
   perform public.borrar_datos_demo();
   raise exception 'anon no debería borrar demo';
 exception when insufficient_privilege then null; end $$;
+-- 0026: el público no crea lotes ni pregunta por archivos
+do $$ begin
+  perform public.crear_equipos_lote('[]');
+  raise exception 'anon no debería crear lotes';
+exception when insufficient_privilege then null; end $$;
+do $$ begin
+  perform public.archivos_en_uso('fotos', array['equipos/l1.webp']);
+  raise exception 'anon no debería consultar archivos en uso';
+exception when insufficient_privilege then null; end $$;
 reset role;
 
 -- 3. Usuario sin perfil y usuario inactivo: igual que el público
@@ -594,6 +603,101 @@ do $$ begin
   assert (select tamano_texto from public.tienda) = 'grande', 'gestor elige el tamaño del texto';
   update public.tienda set tamano_texto = 'normal';
 end $$;
+-- 0q. Migración 0026: lote de equipos (todo o nada, con la variante que falló)
+-- y archivos compartidos (archivos_en_uso).
+do $$
+declare
+  m17 bigint := (select id from public.modelos where slug = 'iphone-17');
+  lav bigint := (select id from public.colores where modelo_id = (select id from public.modelos where slug = 'iphone-17') and nombre_es = 'Lavanda');
+  neg bigint := (select id from public.colores where modelo_id = (select id from public.modelos where slug = 'iphone-17') and nombre_es = 'Negro');
+  antes bigint := (select count(*) from public.equipos);
+  fecha timestamptz := (select precios_actualizados_en from public.tienda);
+  creados integer;
+begin
+  perform pg_sleep(0.01);
+  select count(*) into creados from public.crear_equipos_lote(jsonb_build_array(
+    jsonb_build_object('modelo_id', m17, 'condicion', 'nuevo', 'capacidad', '256 GB', 'color_id', lav, 'color_nombre_mostrar', ' Lila ', 'precio', 4500000, 'en_stock', true, 'fotos', jsonb_build_array('equipos/l1.webp', 'equipos/l2.webp'), 'video', 'equipos/l1.mp4', 'publicado', true, 'descripcion_extra', 'Lote'),
+    jsonb_build_object('modelo_id', m17, 'condicion', 'nuevo', 'capacidad', '512 GB', 'color_id', lav, 'precio', 5000000, 'en_stock', false, 'fotos', jsonb_build_array('equipos/l1.webp', 'equipos/l2.webp'), 'video', 'equipos/l1.mp4', 'descripcion_extra', 'Lote'),
+    jsonb_build_object('modelo_id', m17, 'condicion', 'nuevo', 'capacidad', '256 GB', 'color_id', neg, 'precio', 4500000, 'descripcion_extra', 'Lote')));
+  assert creados = 3, 'el lote devuelve los 3 creados';
+  assert (select count(*) from public.equipos) = antes + 3, 'el lote crea 3';
+  assert (select color_nombre_mostrar from public.equipos where descripcion_extra = 'Lote' and color_id = lav and capacidad = '256 GB') = 'Lila', 'pasa por los disparadores (nombre recortado)';
+  assert (select en_stock and not publicado and fotos = '{}' and video = '' and not mas_vendido and not es_demo from public.equipos where descripcion_extra = 'Lote' and color_id = neg), 'valores por defecto';
+  assert (select not en_stock from public.equipos where descripcion_extra = 'Lote' and capacidad = '512 GB'), 'stock por variante';
+  assert (select precios_actualizados_en from public.tienda) > fecha, 'el lote actualiza la fecha de precios';
+  assert (select array_agg(r order by r) from public.archivos_en_uso('fotos', array['equipos/l1.webp', 'equipos/nada.webp', 'equipos/l2.webp']) as r) = array['equipos/l1.webp', 'equipos/l2.webp'], 'fotos en uso';
+  assert (select array_agg(r) from public.archivos_en_uso('videos', array['equipos/l1.mp4', 'equipos/l1.webp']) as r) = array['equipos/l1.mp4'], 'video en uso (y una foto no cuenta como video)';
+  -- Un archivo compartido sigue en uso mientras quede un equipo que lo use
+  delete from public.equipos where descripcion_extra = 'Lote' and capacidad = '256 GB' and color_id = lav;
+  assert (select count(*) from public.archivos_en_uso('fotos', array['equipos/l1.webp'])) = 1, 'sigue en uso por el de 512 GB';
+  update public.equipos set fotos = '{}', video = '' where descripcion_extra = 'Lote';
+  assert (select count(*) from public.archivos_en_uso('fotos', array['equipos/l1.webp', 'equipos/l2.webp'])) = 0, 'sin equipos que las usen';
+  assert (select count(*) from public.archivos_en_uso('videos', array['equipos/l1.mp4'])) = 0, 'video sin equipos que lo usen';
+  delete from public.equipos where descripcion_extra = 'Lote';
+end $$;
+do $$
+declare antes bigint := (select count(*) from public.equipos);
+begin
+  -- Todo o nada: la variante 2 tiene precio 0 → no se crea ninguna
+  perform public.crear_equipos_lote(jsonb_build_array(
+    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-17-pro'), 'condicion', 'nuevo', 'capacidad', '256 GB', 'precio', 100),
+    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-17-pro'), 'condicion', 'nuevo', 'capacidad', '512 GB', 'precio', 0)));
+  raise exception 'un lote con precio 0 no vale';
+exception when check_violation then
+  assert sqlerrm = 'Variante 2: El precio debe ser un número entero mayor que 0.', sqlerrm;
+  assert (select count(*) from public.equipos) = antes, 'no se creó ninguno';
+end $$;
+do $$ begin
+  perform public.crear_equipos_lote(jsonb_build_array(
+    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-17-pro'), 'condicion', 'nuevo', 'capacidad', '256 GB', 'precio', 1.5)));
+  raise exception 'un precio con decimales no vale';
+exception when check_violation then
+  assert sqlerrm = 'Variante 1: El precio debe ser un número entero mayor que 0.', sqlerrm;
+end $$;
+do $$
+declare antes bigint := (select count(*) from public.equipos);
+begin
+  -- La variante 3 trae un color de otro modelo
+  perform public.crear_equipos_lote(jsonb_build_array(
+    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-17-pro'), 'condicion', 'nuevo', 'capacidad', '256 GB', 'precio', 100),
+    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-17-pro'), 'condicion', 'nuevo', 'capacidad', '512 GB', 'precio', 100),
+    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-17-pro'), 'condicion', 'nuevo', 'capacidad', '1 TB', 'precio', 100,
+                       'color_id', (select c.id from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-14' and c.nombre_es = 'Azul'))));
+  raise exception 'un color de otro modelo en el lote no vale';
+exception when check_violation then
+  assert sqlerrm = 'Variante 3: El color elegido no es de este modelo.', sqlerrm;
+  assert (select count(*) from public.equipos) = antes, 'no se creó ninguno (color)';
+end $$;
+do $$
+declare antes bigint := (select count(*) from public.equipos);
+begin
+  -- Un cuarto "más vendido" dentro del mismo lote
+  perform public.crear_equipos_lote((select jsonb_agg(jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-17-pro'), 'condicion', 'usado', 'capacidad', '256 GB', 'precio', 100, 'mas_vendido', true, 'bateria_porcentaje', 90, 'estado_estetico', 'Excelente'))
+    from generate_series(1, 4)));
+  raise exception 'un lote con 4 más vendidos no vale';
+exception when check_violation then
+  assert sqlerrm = 'Variante 4: Ya tiene 3 equipos marcados como más vendidos. Desmarque uno para marcar este.', sqlerrm;
+  assert (select count(*) from public.equipos) = antes, 'no se creó ninguno (más vendido)';
+  assert (select count(*) from public.equipos where mas_vendido) = 0, 'ningún más vendido quedó marcado';
+end $$;
+do $$ begin
+  perform public.crear_equipos_lote('[]');
+  raise exception 'un lote vacío no vale';
+exception when invalid_parameter_value then
+  assert sqlerrm = 'El lote no tiene equipos.', sqlerrm;
+end $$;
+do $$ begin
+  perform public.crear_equipos_lote((select jsonb_agg(jsonb_build_object('precio', 1)) from generate_series(1, 201)));
+  raise exception 'un lote de 201 no vale';
+exception when invalid_parameter_value then
+  assert sqlerrm = 'Un lote puede tener hasta 200 equipos.', sqlerrm;
+end $$;
+do $$ begin
+  perform public.crear_equipos_lote(jsonb_build_array(jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-17-pro'), 'condicion', 'usado', 'capacidad', '256 GB', 'precio', 100, 'bateria_porcentaje', 101)));
+  raise exception 'batería 101 en el lote no vale';
+exception when check_violation then
+  assert sqlerrm like 'Variante 1: %', sqlerrm;
+end $$;
 -- Colores con el gestor: completa el hexadecimal que falta; no toca lo que vino
 -- de la fuente; agrega y borra colores de la tienda solo donde no hay oficiales.
 do $$ begin
@@ -700,6 +804,14 @@ do $$ begin
   perform public.borrar_datos_demo();
   raise exception 'administrador no debería borrar demo';
 exception when insufficient_privilege then null; end $$;
+do $$ begin
+  -- 0026: la RLS vale dentro del lote (solo el gestor agrega equipos)
+  perform public.crear_equipos_lote(jsonb_build_array(jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-16'), 'condicion', 'nuevo', 'capacidad', '128 GB', 'precio', 100,
+    'color_id', (select c.id from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-16' limit 1))));
+  raise exception 'administrador no debería crear lotes';
+exception when insufficient_privilege then
+  assert sqlerrm like 'Variante 1: %', sqlerrm;
+end $$;
 do $$ begin
   update public.perfiles set activo = false where correo = 'admin@prueba.co';
   raise exception 'el administrador no debería poder desactivarse a sí mismo';

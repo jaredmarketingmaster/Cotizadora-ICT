@@ -4,20 +4,20 @@
 // formulario por pasos para agregar, edición completa, duplicar y borrar.
 // =============================================================================
 
-import { formatearPrecio, formatearMiles, leerPrecio, CAPACIDADES_SUGERIDAS, capacidadEnGB } from "../utils.js";
+import { formatearMiles, leerPrecio, CAPACIDADES_SUGERIDAS, capacidadEnGB } from "../utils.js";
 import { datosPais, paisActual } from "../datos/paises.js";
 import { rutaMiniatura, ESTADOS_ESTETICOS, nombreColor, MAX_MAS_VENDIDOS } from "../datos/comun.js";
 import { telefonoSVG } from "../ilustracion.js";
 import { etiquetaGeneracion } from "../sitio/catalogo.js";
-import { $, $$, esc, avisar, confirmar, conBoton, campoTexto, interruptor, marcarError, enfocarPrimerError } from "./ui.js";
+import { $, esc, avisar, confirmar, conBoton, campoTexto, interruptor, marcarError, enfocarPrimerError } from "./ui.js";
 import { comprimirFoto } from "./imagenes.js";
 import { validarVideo } from "./video.js";
-import { t as tr, tn } from "../i18n/i18n.js";
+import { t as tr } from "../i18n/i18n.js";
 
 // El estado estético se guarda en español (la base lo valida); se muestra traducido.
 const CLAVES_ESTADO = { "Como nuevo": "como_nuevo", "Excelente": "excelente", "Muy bueno": "muy_bueno", "Bueno": "bueno" };
-const nombreEstado = (s) => (CLAVES_ESTADO[s] ? tr(`panel.inventario.estado.${CLAVES_ESTADO[s]}`) : s);
-const nombreCondicion = (c) => tr(c === "usado" ? "panel.inventario.usado" : "panel.inventario.nuevo");
+export const nombreEstado = (s) => (CLAVES_ESTADO[s] ? tr(`panel.inventario.estado.${CLAVES_ESTADO[s]}`) : s);
+export const nombreCondicion = (c) => tr(c === "usado" ? "panel.inventario.usado" : "panel.inventario.nuevo");
 const mensajeMasVendidos = () => tr("panel.inventario.max_mas_vendidos", { n: MAX_MAS_VENDIDOS });
 
 const MAX_FOTOS = 6;
@@ -37,12 +37,24 @@ function colorDe(q, colores) {
   return nombreColor(colores.get(q.color_id), q.color_nombre_mostrar);
 }
 
-function rutasDeFotos(fotos) {
+export function rutasDeFotos(fotos) {
   return (fotos || []).flatMap((r) => [r, rutaMiniatura(r)]);
 }
 
+// Un archivo puede ser de varios equipos (las fotos y el video de un color en
+// un lote): solo se borra de Storage si ningún equipo lo usa (archivos_en_uso).
+export async function borrarSinUso(api, bucket, rutas) {
+  const lista = [...new Set((rutas || []).filter(Boolean))];
+  if (!lista.length) return;
+  const enUso = new Set(await api.archivosEnUso(bucket, lista));
+  const libres = lista.filter((r) => !enUso.has(r));
+  if (libres.length) await api.borrarArchivos(bucket, bucket === "fotos" ? rutasDeFotos(libres) : libres);
+}
+
 export async function dibujar(vista, ctx, resto, params) {
-  if (resto[0] === "nuevo") return formulario(vista, ctx, { modo: params.get("desde") ? "duplicar" : "nuevo", desde: params.get("desde") });
+  // "Agregar equipo" es el asistente de carga en lote (lote.js); Duplicar sigue aquí.
+  if (resto[0] === "nuevo" && !params.get("desde")) return (await import("./lote.js")).dibujar(vista, ctx);
+  if (resto[0] === "nuevo") return formulario(vista, ctx, { modo: "duplicar", desde: params.get("desde") });
   if (resto[0]) return formulario(vista, ctx, { modo: "editar", id: resto[0] });
   return lista(vista, ctx, params);
 }
@@ -190,8 +202,8 @@ async function lista(vista, ctx, params) {
     if (!ok) return;
     await conBoton(null, async () => {
       await api.borrarEquipo(q.id);
-      await api.borrarArchivos("fotos", rutasDeFotos(q.fotos)).catch(() => {});
-      if (q.video) await api.borrarArchivos("videos", [q.video]).catch(() => {});
+      await borrarSinUso(api, "fotos", q.fotos).catch(() => {});
+      await borrarSinUso(api, "videos", [q.video]).catch(() => {});
     }, { exito: tr("panel.inventario.borrado") });
     equipos.splice(equipos.indexOf(q), 1);
     pintar();
@@ -200,11 +212,10 @@ async function lista(vista, ctx, params) {
   pintar();
 }
 
-// --- Formulario (por pasos al agregar; completo al editar o duplicar) -----------
+// --- Formulario de un equipo (editar y duplicar) --------------------------------
+// Agregar equipos va por el asistente de carga en lote (lote.js).
 
-// El nombre de cada paso sale del diccionario: panel.inventario.paso.<clave>.
-const PASOS = ["modelo", "condicion", "capacidad", "color", "precio", "fotos", "usado", "publicar"].map((k) => [k]);
-const nombrePaso = (k) => tr(`panel.inventario.paso.${k}`);
+const SECCIONES = ["modelo", "condicion", "capacidad", "color", "precio", "fotos", "usado", "publicar"];
 
 async function formulario(vista, ctx, { modo, id, desde }) {
   const { api } = ctx;
@@ -228,8 +239,6 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     bateria_porcentaje: fuente?.bateria_porcentaje ?? null, estado_estetico: fuente?.estado_estetico ?? null,
     detalles: fuente?.detalles ?? "", incluye: fuente?.incluye ?? ""
   };
-  const porPasos = modo === "nuevo";
-  let paso = 0;
   const subidas = [];   // rutas subidas en esta edición (se borran si se cancela)
   const quitadas = [];  // rutas a borrar cuando se guarde
   const videosSubidos = [];  // igual, para el bucket "videos"
@@ -242,7 +251,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     g.modelos.push(m);
   }
   const capsSugeridas = CAPACIDADES_SUGERIDAS.includes(q.capacidad) || !q.capacidad;
-  const titulo = tr({ nuevo: "panel.inventario.agregar_equipo", editar: "panel.inventario.editar_equipo", duplicar: "panel.inventario.duplicar_equipo" }[modo]);
+  const titulo = tr(modo === "editar" ? "panel.inventario.editar_equipo" : "panel.inventario.duplicar_equipo");
 
   vista.innerHTML = `
     <a class="volver" href="#/inventario">${esc(tr("panel.inventario.volver"))}</a>
@@ -250,7 +259,6 @@ async function formulario(vista, ctx, { modo, id, desde }) {
       ${modo === "duplicar" ? `<p>${esc(tr("panel.inventario.duplicar_ayuda"))}</p>` : ""}
     </div>
     <form id="form-equipo" novalidate>
-      ${porPasos ? `<div class="pasos-progreso" aria-hidden="true">${PASOS.map(() => "<span></span>").join("")}</div><p class="paso-titulo" id="paso-titulo" aria-live="polite"></p>` : ""}
 
       <fieldset class="bloque" data-paso="modelo">
         <legend class="oculto-visual">${esc(tr("panel.inventario.modelo"))}</legend>
@@ -354,13 +362,9 @@ async function formulario(vista, ctx, { modo, id, desde }) {
         ${interruptor({ id: "e-mas-vendido", etiqueta: tr("panel.inventario.mas_vendido_hasta", { n: MAX_MAS_VENDIDOS }), marcado: q.mas_vendido, atributos: 'aria-describedby="e-mas-vendido-error"' })}
         <p class="error-campo" id="e-mas-vendido-error" role="alert"></p>
         ${campoTexto({ id: "e-descripcion", etiqueta: tr("panel.inventario.descripcion"), valor: q.descripcion_extra, ayuda: esc(tr("panel.inventario.descripcion_ayuda")), multilinea: true, atributos: 'rows="3" maxlength="800"' })}
-        <div id="resumen-equipo" class="ayuda"></div>
       </fieldset>
 
       <div class="acciones-formulario">
-        ${porPasos ? `
-          <button type="button" class="boton boton--secundario" id="anterior">${esc(tr("panel.inventario.anterior"))}</button>
-          <button type="button" class="boton boton--primario" id="siguiente">${esc(tr("panel.inventario.siguiente"))}</button>` : ""}
         <button type="submit" class="boton boton--primario" id="guardar">${esc(tr(modo === "editar" ? "panel.inventario.guardar_cambios" : "panel.inventario.guardar_equipo"))}</button>
       </div>
     </form>`;
@@ -369,7 +373,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
   const valor = (sel) => $(sel, form).value.trim();
   const condicion = () => $('input[name="e-condicion"]:checked', form)?.value || "";
   const modeloSel = () => modelos.find((m) => m.id === Number(valor("#e-modelo")));
-  const pasosVisibles = () => PASOS.filter(([k]) => k !== "usado" || condicion() === "usado");
+  const seccionesVisibles = () => SECCIONES.filter((k) => k !== "usado" || condicion() === "usado");
 
   function capacidad() {
     const v = $('input[name="e-capacidad"]:checked', form)?.value || "";
@@ -401,32 +405,8 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     const m = modeloSel();
     $("#aviso-inactivo").hidden = !m || m.activo;
     const usado = condicion() === "usado";
-    $('[data-paso="usado"]', form).hidden = porPasos ? pasosVisibles()[paso]?.[0] !== "usado" : !usado;
+    $('[data-paso="usado"]', form).hidden = !usado;
     $("#caja-otra").hidden = $('input[name="e-capacidad"]:checked', form)?.value !== "otra";
-  }
-
-  function mostrarPaso() {
-    const visibles = pasosVisibles();
-    paso = Math.min(paso, visibles.length - 1);
-    const actual = visibles[paso][0];
-    $$("[data-paso]", form).forEach((f) => { f.hidden = f.dataset.paso !== actual; });
-    $$(".pasos-progreso span", form).forEach((s, i) => s.classList.toggle("hecho", i <= Math.round((paso / (visibles.length - 1)) * (PASOS.length - 1))));
-    $("#paso-titulo").textContent = tr("panel.inventario.paso_de", { n: paso + 1, total: visibles.length, paso: nombrePaso(visibles[paso][0]) });
-    $("#anterior").hidden = paso === 0;
-    const ultimo = paso === visibles.length - 1;
-    $("#siguiente").hidden = ultimo;
-    $("#guardar").hidden = !ultimo;
-    if (actual === "publicar") dibujarResumen();
-    const primero = $(`[data-paso="${actual}"]`, form).querySelector("input:not([type=hidden]):not(.oculto-visual), select, textarea");
-    primero?.focus();
-  }
-
-  function dibujarResumen() {
-    const m = modeloSel();
-    const precio = leerPrecio(valor("#e-precio"));
-    const color = nombreColor(listaColores.find((c) => c.id === colorSel()), valor("#e-color-mostrar"));
-    $("#resumen-equipo").innerHTML = `${esc(tr("panel.inventario.resumen"))} <strong>${esc([m?.nombre, nombreCondicion(condicion()), capacidad(), color].filter(Boolean).join(" · "))}</strong>
-      ${precio ? ` · ${formatearPrecio(precio)}` : ""} · ${esc(tr($("#e-stock").checked ? "panel.inventario.resumen_con_stock" : "panel.inventario.resumen_sin_stock"))} · ${esc(tn("panel.inventario.resumen_fotos", fotos.length))}${video ? ` · ${esc(tr("panel.inventario.resumen_video"))}` : ""}`;
   }
 
   // Error de un grupo de opciones: el foco va a la primera opción.
@@ -611,31 +591,13 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     if (e.target.name === "e-capacidad" || e.target.name === "e-condicion" || e.target.id === "e-modelo") actualizarVisibles();
     if (e.target.id === "e-modelo") pintarColores();
     if (e.target.name === "e-color") { q.color_id = colorSel(); errorGrupo("e-color", ""); }
-    if (porPasos && e.target.name === "e-condicion") mostrarPaso();
   });
   $("#e-precio").addEventListener("blur", (e) => { const p = leerPrecio(e.target.value); if (p) e.target.value = formatearMiles(p); });
 
-  if (porPasos) {
-    $("#siguiente").addEventListener("click", () => {
-      const actual = pasosVisibles()[paso][0];
-      if (!VALIDAR[actual]()) { enfocarPrimerError(form); return; }
-      paso++;
-      mostrarPaso();
-    });
-    $("#anterior").addEventListener("click", () => { paso = Math.max(0, paso - 1); mostrarPaso(); });
-    form.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && e.target.matches("input:not([type=checkbox]):not([type=radio])") && !$("#siguiente").hidden) {
-        e.preventDefault();
-        $("#siguiente").click();
-      }
-    });
-  }
-
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const malos = pasosVisibles().map(([k]) => k).filter((k) => !VALIDAR[k]());
+    const malos = seccionesVisibles().filter((k) => !VALIDAR[k]());
     if (malos.length) {
-      if (porPasos) { paso = pasosVisibles().findIndex(([k]) => k === malos[0]); mostrarPaso(); }
       enfocarPrimerError(form);
       if (subiendo || subiendoVideo) avisar(tr("panel.inventario.espere_subidas"), "error");
       return;
@@ -663,13 +625,13 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     try {
       await conBoton($("#guardar"), async () => {
         if (modo === "editar") await api.actualizarEquipo(original.id, datos);
-        else await api.crearEquipo(datos);
+        else await api.crearEquipo(datos);  // duplicar
         const m = modeloSel();
         if (!m.activo && $("#e-activar").checked) await api.guardarModelo(m.id, { activo: true });
       });
     } catch { return; }
-    await api.borrarArchivos("fotos", rutasDeFotos(quitadas)).catch(() => {});
-    if (videosQuitados.length) await api.borrarArchivos("videos", videosQuitados.filter((r) => r !== video)).catch(() => {});
+    await borrarSinUso(api, "fotos", quitadas).catch(() => {});
+    await borrarSinUso(api, "videos", videosQuitados.filter((r) => r !== video)).catch(() => {});
     subidas.length = 0;
     videosSubidos.length = 0;
     ctx.sucio = false;
@@ -686,5 +648,4 @@ async function formulario(vista, ctx, { modo, id, desde }) {
   pintarVideo();
   pintarColores();
   actualizarVisibles();
-  if (porPasos) mostrarPaso();
 }

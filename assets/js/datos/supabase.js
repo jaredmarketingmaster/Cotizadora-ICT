@@ -311,6 +311,23 @@ export const supabase = {
     return data;
   },
 
+  // crear_equipos_lote (0026): una sola llamada; todo o nada.
+  async crearEquiposLote(lista) {
+    const c = await cliente();
+    const { data, error } = await c.rpc("crear_equipos_lote", { lote: (lista || []).map((q) => elegir(q, CAMPOS_EQUIPO)) });
+    fallo(error);
+    return data;
+  },
+
+  // archivos_en_uso (0026): las rutas que algún equipo todavía usa.
+  async archivosEnUso(bucket, rutas) {
+    if (!rutas?.length) return [];
+    const c = await cliente();
+    const { data, error } = await c.rpc("archivos_en_uso", { bucket, rutas });
+    fallo(error);
+    return data || [];
+  },
+
   async actualizarEquipo(id, cambios) {
     const c = await cliente();
     const { data, error } = await c.from("equipos").update(elegir(cambios, CAMPOS_EQUIPO)).eq("id", id).select().single();

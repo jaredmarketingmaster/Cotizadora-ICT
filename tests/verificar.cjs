@@ -474,38 +474,47 @@ async function llenarPopup(p) {
     await q.context().close();
   });
 
-  await caso("color oficial: el equipo elige un color del modelo y el nombre a mostrar llega al sitio, WhatsApp y el píxel", async () => {
+  await caso("color oficial: el lote elige los colores del modelo y el nombre a mostrar llega al sitio, WhatsApp y el píxel", async () => {
     const p = await nueva(390, 844, { cookies: { medicion: false, publicidad: true } });
     await p.route("https://connect.facebook.net/**", (r) => r.fulfill({ contentType: "text/javascript", body: "" }));
     await entrarPanel(p, "gestor@demo.co");
     await p.goto(`${BASE}/admin/#/inventario/nuevo`);
-    await p.waitForSelector("#form-equipo");
-    await p.selectOption("#e-modelo", { label: "iPhone 17 (inactivo)" });
+    await p.waitForSelector("#form-lote");
+    await p.selectOption("#l-modelo", { label: "iPhone 17 (inactivo)" });
     await p.click("#siguiente");
-    await p.check('input[name="e-condicion"][value="nuevo"]', { force: true }); await p.click("#siguiente");
-    await p.check('input[name="e-capacidad"][value="256 GB"]', { force: true }); await p.click("#siguiente");
-    // No hay forma de crear colores ni de escribir un hexadecimal desde el equipo:
-    // solo los 5 colores oficiales del iPhone 17 y el nombre a mostrar.
-    assert.deepEqual(await p.locator(".opcion-color .opcion-color-nombres > span:first-child").allTextContents(), ["Lavender", "Sage Green", "Mist Blue", "Blanco", "Negro"]);
-    assert.equal(await p.locator('[data-paso="color"] input:not([type=radio])').count(), 1);
-    assert.equal(await p.locator('[data-paso="color"] input[type=color]').count(), 0);
-    await p.check('.opcion-color:has-text("Lavender") input', { force: true });
-    await p.fill("#e-color-mostrar", "Lila");
-    // Cambiar el modelo borra el color elegido
+    await p.check('input[name="l-condicion"][value="nuevo"]', { force: true }); await p.click("#siguiente");
+    await p.check('[data-cap="256 GB"]', { force: true }); await p.click("#siguiente");
+    // No hay forma de crear colores ni de escribir un hexadecimal desde el lote:
+    // las filas son los 5 colores oficiales del iPhone 17, cada uno con su nombre a mostrar.
+    const filas = () => p.locator(".grilla-lote tbody th .opcion-color-nombres > span:first-child").allTextContents();
+    assert.deepEqual(await filas(), ["Lavender", "Sage Green", "Mist Blue", "Blanco", "Negro"]);
+    assert.equal(await p.locator('[data-paso="grilla"] input[type=color]').count(), 0);
+    assert.equal(await p.locator('[data-paso="grilla"] input[type=text], [data-paso="grilla"] input:not([type])').count(), 5);
+    await p.fill("#l-nombre-0", "Lila");
+    // Cambiar el modelo empieza de nuevo la grilla (colores y nombres)
     await p.click("#anterior"); await p.click("#anterior"); await p.click("#anterior");
-    await p.selectOption("#e-modelo", { label: "iPhone Air (inactivo)" });
+    await p.selectOption("#l-modelo", { label: "iPhone Air (inactivo)" });
     await p.click("#siguiente"); await p.click("#siguiente"); await p.click("#siguiente");
-    assert.equal(await p.locator('input[name="e-color"]:checked').count(), 0);
-    assert.deepEqual(await p.locator(".opcion-color .opcion-color-nombres > span:first-child").allTextContents(), ["Sky Blue", "Light Gold", "Cloud White", "Space Black"]);
+    assert.deepEqual(await filas(), ["Sky Blue", "Light Gold", "Cloud White", "Space Black"]);
+    assert.equal(await p.inputValue("#l-nombre-0"), "");
     await p.click("#anterior"); await p.click("#anterior"); await p.click("#anterior");
-    await p.selectOption("#e-modelo", { label: "iPhone 17 (inactivo)" });
+    await p.selectOption("#l-modelo", { label: "iPhone 17 (inactivo)" });
     await p.click("#siguiente"); await p.click("#siguiente"); await p.click("#siguiente");
-    await p.check('.opcion-color:has-text("Lavender") input', { force: true });
+    // Solo Lavender: se apaga la columna entera y se enciende una celda
+    await p.uncheck('[data-columna="0"]', { force: true });
+    assert.equal(await p.textContent("#lote-contador"), "Se crearán 0 equipos.");
     await p.click("#siguiente");
-    await p.fill("#e-precio", "4.500.000"); await p.click("#siguiente");
+    assert.equal(await p.textContent("#l-grilla-error"), "Encienda al menos una combinación.");
+    await p.check('[data-celda$="|256 GB"] >> nth=0', { force: true });
+    assert.equal(await p.textContent("#lote-contador"), "Se creará 1 equipo.");
+    await p.fill("#l-nombre-0", "Lila");
+    await p.click("#siguiente");
+    await p.fill("#l-precio", "4.500.000"); await p.click("#siguiente");
     await p.click("#siguiente"); // fotos
-    await p.check("#e-publicado");
-    assert.match(await p.textContent("#resumen-equipo"), /iPhone 17 · Nuevo · 256 GB · Lila/);
+    await p.check("#l-publicado", { force: true });
+    await p.click("#siguiente");
+    assert.match(await p.textContent(".lista-resumen-lote"), /iPhone 17 · Nuevo · 256 GB · Lila/);
+    assert.equal((await p.textContent("#guardar")).trim(), "Crear 1 equipo");
     await p.click("#guardar");
     await p.waitForURL(/#\/inventario$/);
     assert.match(await p.textContent('.fila-equipo:has-text("iPhone 17")'), /Lila/);
@@ -1816,6 +1825,30 @@ async function llenarPopup(p) {
       await p.waitForSelector("#vista h1, #vista h2");
       sinEspanol(await sinDatos(p), `panel #/${ruta}`);
     }
+    // Asistente de carga en lote (D), paso por paso
+    await abrirLote(p, "iPhone 13", "usado", ["128 GB"]);
+    sinEspanol(await sinDatos(p), "lote: variantes");
+    await p.click("#siguiente");
+    sinEspanol(await sinDatos(p), "lote: precio");
+    await p.uncheck("#l-mismo-precio", { force: true });
+    await p.click(".excepciones-stock summary");
+    sinEspanol(await sinDatos(p), "lote: precio por variante");
+    await p.check("#l-mismo-precio", { force: true });
+    await p.fill("#l-precio", "1.000.000");
+    await p.click("#siguiente");
+    sinEspanol(await sinDatos(p), "lote: fotos");
+    await p.click("#siguiente");
+    sinEspanol(await sinDatos(p), "lote: usados");
+    await p.uncheck("#l-usado-igual", { force: true });
+    sinEspanol(await sinDatos(p), "lote: usados por unidad");
+    await p.check("#l-usado-igual", { force: true });
+    await p.fill("#l-bateria", "90");
+    await p.selectOption("#l-estado", "Excelente");
+    await p.click("#siguiente");
+    sinEspanol(await sinDatos(p), "lote: publicar");
+    await p.click("#siguiente");
+    sinEspanol(await sinDatos(p), "lote: resumen");
+    assert.equal((await p.textContent("#guardar")).trim(), PT["panel.lote.crear.varios"].replace("{n}", "6"));
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
@@ -2019,6 +2052,279 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  // ---------------------------------------------------------------- Ronda 3, D
+  // Ayudantes del asistente de carga en lote.
+  const PNG_1PX = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+  async function abrirLote(p, modelo, condicion, caps) {
+    await p.goto(`${BASE}/admin/#/inventario/nuevo`);
+    await p.waitForSelector("#form-lote");
+    await p.selectOption("#l-modelo", { label: modelo });
+    await p.click("#siguiente");
+    await p.check(`input[name="l-condicion"][value="${condicion}"]`, { force: true }); await p.click("#siguiente");
+    for (const c of caps) {
+      if (c.startsWith("otra:")) { await p.check("#l-otra-marcada", { force: true }); await p.fill("#l-otra", c.slice(5)); } else await p.check(`[data-cap="${c}"]`, { force: true });
+    }
+    await p.click("#siguiente");
+    await p.waitForSelector(".grilla-lote");
+  }
+  const estadoDemo = (p) => p.evaluate((c) => JSON.parse(localStorage.getItem(c)), CLAVE_DEMO);
+  const delModelo = async (p, slug) => {
+    const e = await estadoDemo(p);
+    const id = e.modelos.find((m) => m.slug === slug).id;
+    return { e, lista: e.equipos.filter((q) => q.modelo_id === id && !q.es_demo), colores: e.colores.filter((c) => c.modelo_id === id) };
+  };
+  const archivosDemo = (p) => p.evaluate(() => new Promise((ok) => {
+    const r = indexedDB.open("cotizadora-demo", 1);
+    r.onsuccess = () => { const g = r.result.transaction("archivos").objectStore("archivos").getAllKeys(); g.onsuccess = () => ok(g.result); };
+  }));
+  const indeterminada = (p, sel) => p.$eval(sel, (el) => el.indeterminate);
+
+  await caso("D1: lote: grilla con contador, filas y columnas, mismo precio con excepción de stock, y fotos y video compartidos por color", async () => {
+    const p = await nueva(390, 844);
+    await entrarPanel(p, "gestor@demo.co");
+    await abrirLote(p, "iPhone 17 (inactivo)", "nuevo", ["256 GB", "512 GB"]);
+    assert.equal(await p.textContent("#lote-contador"), "Se crearán 10 equipos.");
+    assert.equal(await p.getAttribute("#lote-contador", "role"), "status");
+    assert.equal(await p.locator("[data-celda]:checked").count(), 10, "todos encendidos al empezar");
+    // Fila entera (Negro) y columna entera (512 GB)
+    await p.uncheck('[data-fila="4"]', { force: true });
+    assert.equal(await p.textContent("#lote-contador"), "Se crearán 8 equipos.");
+    // Una columna a medias se enciende entera al tocarla; tocarla otra vez la apaga.
+    assert.equal(await indeterminada(p, '[data-columna="1"]'), true);
+    await p.click('[data-columna="1"]');
+    assert.equal(await p.textContent("#lote-contador"), "Se crearán 9 equipos.");
+    await p.click('[data-columna="1"]');
+    assert.equal(await p.textContent("#lote-contador"), "Se crearán 4 equipos.");
+    assert.equal(await indeterminada(p, '[data-fila="0"]'), true, "fila a medias");
+    assert.equal(await indeterminada(p, '[data-columna="0"]'), true, "columna a medias (sin Negro)");
+    await p.check('[data-columna="1"]', { force: true });
+    assert.equal(await p.textContent("#lote-contador"), "Se crearán 9 equipos.");
+    await p.uncheck('.grilla-lote tbody tr:nth-child(4) [data-celda$="|512 GB"]');
+    assert.equal(await p.textContent("#lote-contador"), "Se crearán 8 equipos.");
+    assert.equal(await p.locator("[data-celda]").first().getAttribute("role"), "switch");
+    await p.fill("#l-nombre-0", "Lila");
+    await p.click("#siguiente");
+    // Mismo precio (encendido por defecto) y una excepción de stock
+    assert.equal(await p.isChecked("#l-mismo-precio"), true);
+    await p.fill("#l-precio", "4.500.000");
+    await p.click(".excepciones-stock summary");
+    await p.uncheck("#l-stock-0", { force: true });
+    assert.equal(await p.textContent("#l-excepciones-titulo"), "Excepciones (1)");
+    await p.click("#siguiente");
+    // Fotos y video por color: 5 colores con equipos; se sube una vez por color
+    assert.equal(await p.locator(".medios-color").count(), 5);
+    assert.match(await p.textContent(".medios-color-titulo >> nth=0"), /Lila.*\(2 equipos\)/);
+    await p.setInputFiles("#l-fotos-0", { name: "a.png", mimeType: "image/png", buffer: PNG_1PX });
+    await p.waitForSelector('.medios-color >> nth=0 >> .foto-item', { timeout: 15000 });
+    await p.setInputFiles("#l-video-0", path.join(__dirname, "videos", "corto.mp4"));
+    await p.waitForSelector('.medios-color >> nth=0 >> video', { timeout: 15000 });
+    await p.click("#siguiente");
+    // Más vendido solo con 3 o menos en el lote
+    assert.equal(await p.isDisabled("#l-mas-vendido"), true);
+    await p.check("#l-publicado", { force: true });
+    await p.click("#siguiente");
+    assert.equal(await p.locator(".lista-resumen-lote li").count(), 8);
+    assert.equal((await p.textContent("#guardar")).trim(), "Crear 8 equipos");
+    await p.click("#guardar");
+    await p.waitForURL(/#\/inventario$/);
+    const { e, lista, colores } = await delModelo(p, "iphone-17");
+    assert.equal(lista.length, 8);
+    const lav = colores.find((c) => c.nombre_es === "Lavanda").id;
+    const lavs = lista.filter((q) => q.color_id === lav);
+    assert.equal(lavs.length, 2);
+    assert.equal(lavs[0].fotos.length, 1);
+    assert.deepEqual(lavs[0].fotos, lavs[1].fotos, "la misma foto en las dos capacidades");
+    assert.ok(lavs[0].video && lavs[0].video === lavs[1].video, "el mismo video");
+    assert.ok(lavs.every((q) => q.color_nombre_mostrar === "Lila"));
+    assert.ok(lista.filter((q) => q.color_id !== lav).every((q) => !q.fotos.length && !q.video), "los otros colores sin fotos");
+    assert.ok(lista.every((q) => q.precio === 4500000 && q.publicado && !q.mas_vendido));
+    assert.deepEqual(lista.filter((q) => !q.en_stock).map((q) => [q.color_id, q.capacidad]), [[lav, "256 GB"]], "la excepción de stock");
+    assert.ok(e.modelos.find((m) => m.slug === "iphone-17").activo, "activa el modelo");
+    assert.ok((await archivosDemo(p)).includes(lavs[0].fotos[0]));
+    // En el sitio, el de 512 GB Lavender muestra la foto compartida
+    await ir(p, "/?condicion=nuevo&modelo=iphone-17&capacidad=512-gb");
+    assert.ok(await p.locator("#detalle-en-linea img").count() > 0);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("D2: lote: precio por variante con «Copiar a toda la capacidad» y una capacidad escrita a mano", async () => {
+    const p = await nueva(1280, 900);
+    await entrarPanel(p, "gestor@demo.co");
+    await abrirLote(p, "iPhone Air (inactivo)", "nuevo", ["128 GB", "otra:3 TB"]);
+    assert.deepEqual(await p.locator(".grilla-lote thead th span").allTextContents(), ["128 GB", "3 TB"]);
+    assert.equal(await p.textContent("#lote-contador"), "Se crearán 8 equipos.");
+    await p.click("#siguiente");
+    await p.uncheck("#l-mismo-precio", { force: true });
+    assert.equal(await p.locator("[data-precio]").count(), 8);
+    // Variantes en el orden de la grilla: Sky Blue 128, Sky Blue 3 TB, Light Gold 128…
+    await p.fill("#l-precio-0", "3000000");
+    await p.click('[data-copiar="128 GB"]');
+    for (const i of [0, 2, 4, 6]) assert.equal(await p.inputValue(`#l-precio-${i}`), "3.000.000");
+    await p.fill("#l-precio-1", "5.000.000");
+    await p.fill("#l-precio-3", "5.100.000");
+    await p.fill("#l-precio-5", "5.200.000");
+    await p.click("#siguiente");
+    assert.equal(await p.textContent("#l-precio-7-error"), "El precio debe ser un número entero mayor que 0.");
+    assert.equal(await p.textContent("#l-precios-error"), "Escriba el precio de cada variante: un número entero mayor que 0.");
+    await p.fill("#l-precio-7", "5.300.000");
+    await p.click("#siguiente");
+    await p.click("#siguiente"); // fotos
+    await p.click("#siguiente"); // publicar
+    await p.click("#guardar");
+    await p.waitForURL(/#\/inventario$/);
+    const { lista } = await delModelo(p, "iphone-air");
+    assert.equal(lista.length, 8);
+    assert.deepEqual(lista.filter((q) => q.capacidad === "128 GB").map((q) => q.precio), [3000000, 3000000, 3000000, 3000000]);
+    assert.deepEqual(lista.filter((q) => q.capacidad === "3 TB").map((q) => q.precio), [5000000, 5100000, 5200000, 5300000]);
+    assert.ok(lista.every((q) => !q.publicado && q.en_stock));
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("D3: lote de usados: unidades por combinación y datos por unidad", async () => {
+    const p = await nueva(390, 844);
+    await entrarPanel(p, "gestor@demo.co");
+    await abrirLote(p, "iPhone 13", "usado", ["256 GB"]);
+    await p.uncheck('[data-columna="0"]', { force: true });
+    await p.check('.grilla-lote tbody tr:nth-child(1) [data-celda]', { force: true });
+    await p.check('.grilla-lote tbody tr:nth-child(2) [data-celda]', { force: true });
+    assert.equal(await p.locator("[data-unidades]").count(), 2);
+    await p.fill("#l-unidades-0", "3");
+    assert.equal(await p.textContent("#lote-contador"), "Se crearán 4 equipos.");
+    await p.click("#siguiente");
+    await p.fill("#l-precio", "1.500.000"); await p.click("#siguiente");
+    await p.click("#siguiente"); // fotos
+    // Primero lo mismo para todo el lote; después, por unidad
+    assert.equal(await p.isChecked("#l-usado-igual"), true);
+    await p.fill("#l-detalles", "Rayón leve");
+    await p.uncheck("#l-usado-igual", { force: true });
+    assert.equal(await p.locator(".bloque-unidad").count(), 4);
+    assert.match(await p.textContent(".bloque-unidad legend >> nth=1"), /^Unidad 2 · .+ · 256 GB$/);
+    assert.equal(await p.inputValue("#l-detalles-3"), "Rayón leve", "cada unidad empieza con lo escrito para todo el lote");
+    for (const i of [0, 1, 2, 3]) {
+      await p.fill(`#l-bateria-${i}`, String(90 + i));
+      if (i < 3) await p.selectOption(`#l-estado-${i}`, "Excelente");
+    }
+    await p.click("#siguiente");
+    assert.equal(await p.textContent("#l-estado-3-error"), "Elija el estado estético.");
+    await p.selectOption("#l-estado-3", "Bueno");
+    await p.click("#siguiente");
+    await p.click("#siguiente");
+    assert.equal(await p.locator(".lista-resumen-lote li").count(), 4);
+    assert.match(await p.textContent(".lista-resumen-lote li >> nth=2"), /unidad 3/);
+    await p.click("#guardar");
+    await p.waitForURL(/#\/inventario$/);
+    const { lista } = await delModelo(p, "iphone-13");
+    assert.deepEqual(lista.map((q) => q.bateria_porcentaje), [90, 91, 92, 93]);
+    assert.deepEqual(lista.map((q) => q.estado_estetico), ["Excelente", "Excelente", "Excelente", "Bueno"]);
+    assert.ok(lista.every((q) => q.condicion === "usado" && q.detalles === "Rayón leve" && q.capacidad === "256 GB"));
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("D4: lote todo o nada: si una variante falla no se crea ninguno, el error dice cuál y se borran los archivos subidos", async () => {
+    const p = await nueva(390, 844);
+    await entrarPanel(p, "gestor@demo.co");
+    const antes = (await estadoDemo(p)).equipos.length;
+    // La capa de datos: precio 0 en la variante 2, y un cuarto «más vendido» en la 4
+    const errores = await p.evaluate(async (base) => {
+      const a = await (await import(`${base}/assets/js/datos/api.js`)).api();
+      const m = (await a.listarModelos()).find((x) => x.slug === "iphone-17-pro").id;
+      const q = (cap, extra = {}) => ({ modelo_id: m, condicion: "nuevo", capacidad: cap, precio: 100, ...extra });
+      const r = [];
+      for (const lote of [[q("256 GB"), q("512 GB", { precio: 0 })], [1, 2, 3, 4].map((i) => q(`${i} TB`, { mas_vendido: true }))]) {
+        try { await a.crearEquiposLote(lote); r.push(""); } catch (e) { r.push(e.message); }
+      }
+      return r;
+    }, BASE);
+    assert.deepEqual(errores, ["Variante 2: El precio debe ser un número entero mayor que 0.", "Variante 4: Ya tiene 3 equipos marcados como más vendidos. Desmarque uno para marcar este."]);
+    assert.equal((await estadoDemo(p)).equipos.length, antes, "no se creó ninguno");
+    // En el panel: un modelo sin colores (un equipo por capacidad), con foto; mientras se carga, otro usuario marca 3 más vendidos.
+    await abrirLote(p, "iPhone 17 Pro (inactivo)", "nuevo", ["1 TB"]);
+    assert.match(await p.textContent('[data-cuerpo="grilla"]'), /no tiene colores cargados: se crea un equipo por capacidad/);
+    assert.deepEqual(await p.locator(".grilla-lote tbody th .opcion-color-nombres > span:first-child").allTextContents(), ["Sin color"]);
+    await p.click("#siguiente");
+    await p.fill("#l-precio", "9.000.000"); await p.click("#siguiente");
+    await p.setInputFiles("#l-fotos-0", { name: "a.png", mimeType: "image/png", buffer: PNG_1PX });
+    await p.waitForSelector(".foto-item", { timeout: 15000 });
+    const subidas = (await archivosDemo(p)).filter((k) => !k.endsWith("-640.webp") && !k.endsWith("-640.jpg"));
+    assert.equal(subidas.length, 1);
+    await p.click("#siguiente");
+    assert.equal(await p.isDisabled("#l-mas-vendido"), false);
+    await p.check("#l-mas-vendido", { force: true });
+    await p.click("#siguiente");
+    await editarDemo(p, (e) => { e.equipos.filter((q) => q.es_demo).slice(0, 3).forEach((q) => { q.mas_vendido = true; }); });
+    await p.click("#guardar");
+    await p.waitForSelector("#l-error-lote:not([hidden])");
+    assert.equal(await p.textContent("#l-error-lote"), "Variante 1: Ya tiene 3 equipos marcados como más vendidos. Desmarque uno para marcar este. No se creó ningún equipo. Las fotos y los videos que había subido se borraron: vuelva a cargarlos.");
+    assert.equal((await estadoDemo(p)).equipos.length, antes);
+    assert.deepEqual(await archivosDemo(p), [], "las fotos subidas se borraron");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("D5: un archivo compartido no se borra mientras otro equipo lo use (borrar un equipo y quitar la foto al editar)", async () => {
+    const p = await nueva(1280, 900);
+    await entrarPanel(p, "gestor@demo.co");
+    await p.evaluate(async (base) => {
+      const a = await (await import(`${base}/assets/js/datos/api.js`)).api();
+      const blob = await (await fetch("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")).blob();
+      await a.subirArchivo("fotos", "equipos/compartida.png", blob);
+      await a.subirArchivo("fotos", "equipos/compartida-640.png", blob);
+      const m = (await a.listarModelos()).find((x) => x.slug === "iphone-17-pro").id;
+      await a.crearEquiposLote(["256 GB", "512 GB"].map((capacidad) => ({ modelo_id: m, condicion: "nuevo", capacidad, precio: 100, fotos: ["equipos/compartida.png"] })));
+    }, BASE);
+    await p.goto(`${BASE}/admin/#/inventario`);
+    const fila = (cap) => p.locator(".fila-equipo").filter({ has: p.locator(".fila-nombre", { hasText: /^iPhone 17 Pro$/ }) }).filter({ hasText: cap });
+    await fila("256 GB").locator("[data-borrar]").click();
+    await p.click('#confirmar [value="si"]');
+    await p.waitForSelector("text=Equipo borrado");
+    assert.equal(await fila("256 GB").count(), 0);
+    assert.deepEqual((await archivosDemo(p)).sort(), ["equipos/compartida-640.png", "equipos/compartida.png"], "sigue la foto del de 512 GB");
+    await fila("512 GB").locator("text=Editar").click();
+    await p.waitForSelector("#form-equipo .foto-item");
+    await p.click(".foto-item [data-quitar]");
+    await p.click("#guardar");
+    await p.waitForURL(/#\/inventario$/);
+    await p.waitForFunction(() => new Promise((ok) => {
+      const r = indexedDB.open("cotizadora-demo", 1);
+      r.onsuccess = () => { const g = r.result.transaction("archivos").objectStore("archivos").count(); g.onsuccess = () => ok(g.result === 0); };
+    }));
+    assert.deepEqual(await archivosDemo(p), [], "sin equipos que la usen, se borra");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("D6: un lote de 36 equipos se crea de una vez sin congelar el panel", async () => {
+    const p = await nueva(1280, 900);
+    await entrarPanel(p, "gestor@demo.co");
+    const antes = (await estadoDemo(p)).equipos.length;
+    await abrirLote(p, "iPhone 13", "nuevo", ["64 GB", "128 GB", "256 GB", "512 GB", "1 TB", "2 TB"]);
+    assert.equal(await p.textContent("#lote-contador"), "Se crearán 36 equipos.");
+    await p.click("#siguiente");
+    await p.fill("#l-precio", "2.000.000"); await p.click("#siguiente");
+    await p.click("#siguiente"); await p.click("#siguiente");
+    assert.equal(await p.locator(".lista-resumen-lote li").count(), 36);
+    // Mientras se crea, la página sigue respondiendo: se mide el hueco más largo entre cuadros.
+    await p.evaluate(() => {
+      window.__hueco = 0;
+      let t = performance.now();
+      const f = () => { const n = performance.now(); window.__hueco = Math.max(window.__hueco, n - t); t = n; if (!window.__parar) requestAnimationFrame(f); };
+      requestAnimationFrame(f);
+    });
+    const inicio = Date.now();
+    await p.click("#guardar");
+    await p.waitForURL(/#\/inventario$/);
+    const ms = Date.now() - inicio;
+    const hueco = await p.evaluate(() => { window.__parar = true; return window.__hueco; });
+    assert.equal((await estadoDemo(p)).equipos.length, antes + 36);
+    assert.ok(ms < 3000, `tardó ${ms} ms`);
+    assert.ok(hueco < 250, `la página se congeló ${Math.round(hueco)} ms`);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("B2: con la tienda en Argentina, Brasil o México cambian el precio, el prefijo y el celular del pop-up, el lead, la moneda del píxel y la fecha", async () => {
     const p = await nueva(390, 844, { cookies: { medicion: false, publicidad: true } });
     await p.route("https://connect.facebook.net/**", (r) => r.fulfill({ contentType: "text/javascript", body: "" }));
@@ -2074,24 +2380,45 @@ async function llenarPopup(p) {
     await p.goto(`${BASE}/admin/#/inventario/nuevo`);
     // Hay cambios sin guardar en Mi tienda: el panel pregunta antes de salir.
     await p.click('#confirmar [value="si"]');
-    await p.selectOption("#e-modelo", { label: "iPhone 13" });
+    await p.waitForSelector("#form-lote");
     await p.click("#siguiente");
-    await p.check('input[name="e-condicion"][value="usado"]', { force: true }); await p.click("#siguiente");
-    await p.check('input[name="e-capacidad"][value="64 GB"]', { force: true }); await p.click("#siguiente");
-    // Color: solo los oficiales del modelo; sin elegir, avisa.
+    assert.equal(await p.textContent("#l-modelo-error"), "Elija el modelo.");
+    await p.selectOption("#l-modelo", { label: "iPhone 13" });
     await p.click("#siguiente");
-    assert.equal(await p.textContent("#e-color-error"), "Elija el color.");
-    await p.check('input[name="e-color"] >> nth=0', { force: true }); await p.click("#siguiente");
+    await p.click("#siguiente");
+    assert.equal(await p.textContent("#l-condicion-error"), "Elija si es nuevo o usado.");
+    await p.check('input[name="l-condicion"][value="usado"]', { force: true }); await p.click("#siguiente");
+    // Capacidades: al menos una; «Otra» pide escribirla.
+    await p.click("#siguiente");
+    assert.equal(await p.textContent("#l-capacidades-error"), "Elija al menos una capacidad.");
+    await p.check("#l-otra-marcada", { force: true });
+    await p.click("#siguiente");
+    assert.equal(await p.textContent("#l-otra-error"), "Escriba la otra capacidad.");
+    await p.uncheck("#l-otra-marcada", { force: true });
+    await p.check('[data-cap="64 GB"]', { force: true }); await p.click("#siguiente");
+    // Unidades de 1 a 20 (solo Midnight encendido)
+    await p.uncheck('[data-columna="0"]', { force: true });
+    await p.check('[data-celda$="|64 GB"] >> nth=0', { force: true });
+    await p.fill("#l-unidades-0", "21"); await p.click("#siguiente");
+    assert.equal(await p.textContent("#l-unidades-0-error"), "Escriba un número entero de 1 a 20.");
+    await p.fill("#l-unidades-0", "1"); await p.click("#siguiente");
     // El stock es un interruptor que arranca en «Con stock».
-    assert.equal(await p.isChecked("#e-stock"), true);
-    assert.equal((await p.innerText('label[for="e-stock"] .interruptor-estado')).trim(), "Con stock");
-    await p.fill("#e-precio", "0"); await p.click("#siguiente");
-    assert.equal(await p.textContent("#e-precio-error"), "El precio debe ser un número entero mayor que 0.");
-    await p.fill("#e-precio", "1.200.000"); await p.click("#siguiente");
+    assert.equal(await p.isChecked("#l-stock"), true);
+    assert.equal((await p.innerText('label[for="l-stock"] .interruptor-estado')).trim(), "Con stock");
+    await p.fill("#l-precio", "0"); await p.click("#siguiente");
+    assert.equal(await p.textContent("#l-precio-error"), "El precio debe ser un número entero mayor que 0.");
+    await p.fill("#l-precio", "1.200.000"); await p.click("#siguiente");
     await p.click("#siguiente"); // fotos
-    await p.fill("#e-bateria", "101"); await p.click("#siguiente");
-    assert.equal(await p.textContent("#e-bateria-error"), "La batería debe ser un número entero de 0 a 100.");
-    assert.equal(await p.textContent("#e-estado-error"), "Elija el estado estético.");
+    await p.fill("#l-bateria", "101"); await p.click("#siguiente");
+    assert.equal(await p.textContent("#l-bateria-error"), "La batería debe ser un número entero de 0 a 100.");
+    assert.equal(await p.textContent("#l-estado-error"), "Elija el estado estético.");
+    // Color: la capa de datos lo sigue exigiendo si el modelo tiene colores.
+    const sinColor = await p.evaluate(async (base) => {
+      const a = await (await import(`${base}/assets/js/datos/api.js`)).api();
+      const m13 = (await a.listarModelos()).find((m) => m.slug === "iphone-13").id;
+      try { await a.crearEquiposLote([{ modelo_id: m13, condicion: "usado", capacidad: "64 GB", precio: 100, bateria_porcentaje: 90, estado_estetico: "Bueno" }]); return ""; } catch (e) { return e.message; }
+    }, BASE);
+    assert.equal(sinColor, "Variante 1: Elija el color.");
     await p.context().close();
   });
 

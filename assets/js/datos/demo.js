@@ -10,7 +10,7 @@
 
 import { ENVIOS_INICIAL, errorEnvios } from "./envios.js";
 import { CATALOGO, COLORES, DEMO_EQUIPOS, HEX_APROXIMADOS, filasDeFuente } from "./semilla.js";
-import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, LEGAL_INICIAL, errorLegales, elegir } from "./comun.js";
+import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MAX_LOTE, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, LEGAL_INICIAL, errorLegales, elegir } from "./comun.js";
 import { hexValido, sesion, esperar } from "../utils.js";
 import { whatsappValido, CODIGOS_PAIS_TIENDA } from "./paises.js";
 import { CODIGOS_IDIOMA, t as tr } from "../i18n/i18n.js";
@@ -780,6 +780,47 @@ export const demo = {
     e.tienda.precios_actualizados_en = ahora();
     escribir(e);
     return copia(q);
+  },
+
+  // Como crear_equipos_lote (0026): todo o nada. Se validan todos sobre una
+  // copia (los "más vendido" del lote cuentan con los ya marcados) y se
+  // escribe una sola vez. El error dice qué variante falló.
+  async crearEquiposLote(lista) {
+    await red();
+    const e = leer();
+    exigirGestor(e);
+    if (!Array.isArray(lista) || !lista.length) throw error("lote_vacio");
+    if (lista.length > MAX_LOTE) throw error("lote_grande");
+    const t = ahora();
+    const creados = [];
+    lista.forEach((datos, i) => {
+      try {
+        if (!datos || typeof datos !== "object") throw error("formato");
+        if (!Number.isSafeInteger(datos.precio) || datos.precio <= 0) throw error("precio");
+        const q = {
+          id: uuid(), color_id: null, color_nombre_mostrar: "", en_stock: true, fotos: [], video: "", publicado: false, destacado: false, mas_vendido: false,
+          descripcion_extra: "", bateria_porcentaje: null, estado_estetico: null, detalles: "", incluye: "",
+          ...elegir(datos, CAMPOS_EQUIPO), es_demo: false, creado_en: t, actualizado_en: t
+        };
+        validarEquipo(q, e);
+        validarColorEquipo(q, e);
+        validarMasVendido(q, { ...e, equipos: e.equipos.concat(creados) });
+        creados.push(q);
+      } catch (err) {
+        throw new ErrorDatos(tr("datos.error.variante", { n: i + 1, mensaje: err.message }), err.codigo || "");
+      }
+    });
+    e.equipos.push(...creados);
+    e.tienda.precios_actualizados_en = t;
+    escribir(e);
+    return copia(creados);
+  },
+
+  // Como archivos_en_uso (0026): de esas rutas, las que algún equipo usa.
+  async archivosEnUso(bucket, rutas) {
+    const e = leer();
+    exigirSesion(e);
+    return [...new Set(rutas || [])].filter((r) => e.equipos.some((q) => (bucket === "fotos" && (q.fotos || []).includes(r)) || (bucket === "videos" && q.video === r)));
   },
 
   async actualizarEquipo(id, cambios) {

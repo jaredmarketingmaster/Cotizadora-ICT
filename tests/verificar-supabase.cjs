@@ -346,25 +346,27 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
   await caso("panel: agregar un equipo con foto (Storage simulado) y verlo en el sitio", async () => {
     const p = await pagina(390);
     await entrar(p, "gestor@local.co");
+    // "Agregar equipo" es el asistente de carga en lote (un lote de 1).
     await p.goto(`${BASE}/admin/#/inventario/nuevo`);
-    await p.selectOption("#e-modelo", { label: "iPhone 17 Pro (inactivo)" });
+    await p.waitForSelector("#form-lote");
+    await p.selectOption("#l-modelo", { label: "iPhone 17 Pro (inactivo)" });
     await p.click("#siguiente");
-    await p.check('input[name="e-condicion"][value="nuevo"]', { force: true }); await p.click("#siguiente");
-    await p.check('input[name="e-capacidad"][value="1 TB"]', { force: true }); await p.click("#siguiente");
-    // El 17 Pro no tiene colores en la fuente: se guarda sin color y con un nombre a mostrar.
-    assert.match(await p.textContent("#opciones-color"), /no tiene colores cargados/);
-    await p.fill("#e-color-mostrar", "Prueba"); await p.click("#siguiente");
-    await p.fill("#e-precio", "9000000"); await p.click("#siguiente");
+    await p.check('input[name="l-condicion"][value="nuevo"]', { force: true }); await p.click("#siguiente");
+    await p.check('[data-cap="1 TB"]', { force: true }); await p.click("#siguiente");
+    // El 17 Pro no tiene colores en la fuente: una fila "Sin color" y un nombre a mostrar.
+    assert.match(await p.textContent('[data-cuerpo="grilla"]'), /no tiene colores cargados/);
+    await p.fill("#l-nombre-0", "Prueba"); await p.click("#siguiente");
+    await p.fill("#l-precio", "9000000"); await p.click("#siguiente");
     const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
-    await p.setInputFiles("#e-fotos", { name: "a.png", mimeType: "image/png", buffer: png });
+    await p.setInputFiles("#l-fotos-0", { name: "a.png", mimeType: "image/png", buffer: png });
     await p.waitForSelector(".foto-item", { timeout: 15000 });
     // Video: el panel lo valida y lo sube al bucket "videos".
-    await p.setInputFiles("#e-video", path.join(__dirname, "videos", "corto.mp4"));
-    await p.waitForFunction(() => document.querySelector("#subiendo-video").hidden, null, { timeout: 15000 });
-    assert.equal((await p.textContent("#e-video-error")).trim(), "");
-    await p.waitForSelector("#video-actual video", { timeout: 15000 });
+    await p.setInputFiles("#l-video-0", path.join(__dirname, "videos", "corto.mp4"));
+    await p.waitForSelector("[data-video-actual] video", { timeout: 15000 });
+    assert.equal((await p.textContent("[data-error-video]")).trim(), "");
     await p.click("#siguiente");
-    await p.check("#e-publicado");
+    await p.check("#l-publicado", { force: true });
+    await p.click("#siguiente");
     await p.click("#guardar");
     await p.waitForURL(/#\/inventario$/, { timeout: 15000 });
     const s = await p.context().newPage();
@@ -400,6 +402,35 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     assert.equal(rv.headers()["content-type"], "video/mp4");
     // Storage rechaza un tipo no permitido aunque se salte el panel.
     assert.equal(video.subida, "Este formato puede no verse en todos los celulares. Súbalo en MP4.");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("lote por la RPC: todo o nada con la variante que falló, y un archivo compartido no se borra mientras se use", async () => {
+    const p = await pagina(1280);
+    await entrar(p, "gestor@local.co");
+    const r = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      const antes = (await a.listarEquipos()).length;
+      const m = (await a.listarModelos()).find((x) => x.slug === "iphone-17-pro").id;
+      const q = (capacidad, extra = {}) => ({ modelo_id: m, condicion: "nuevo", capacidad, precio: 100, fotos: ["equipos/compartida.webp"], ...extra });
+      const fallo = await a.crearEquiposLote([q("128 GB"), q("256 GB"), q("512 GB", { precio: 0 })]).then(() => "", (e) => e.message);
+      const despuesFallo = (await a.listarEquipos()).length;
+      const creados = await a.crearEquiposLote([q("128 GB"), q("256 GB")]);
+      const usoDos = await a.archivosEnUso("fotos", ["equipos/compartida.webp", "equipos/otra.webp"]);
+      await a.borrarEquipo(creados[0].id);
+      const usoUno = await a.archivosEnUso("fotos", ["equipos/compartida.webp"]);
+      await a.borrarEquipo(creados[1].id);
+      const usoNinguno = await a.archivosEnUso("fotos", ["equipos/compartida.webp"]);
+      return { antes, fallo, despuesFallo, creados: creados.length, usoDos, usoUno, usoNinguno };
+    });
+    assert.equal(r.fallo, "Variante 3: El precio debe ser un número entero mayor que 0.");
+    assert.equal(r.despuesFallo, r.antes, "no se creó ninguno");
+    assert.equal(r.creados, 2);
+    assert.deepEqual(r.usoDos, ["equipos/compartida.webp"]);
+    assert.deepEqual(r.usoUno, ["equipos/compartida.webp"]);
+    assert.deepEqual(r.usoNinguno, []);
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
