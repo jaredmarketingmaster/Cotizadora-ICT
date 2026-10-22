@@ -371,6 +371,21 @@ select.entrada { appearance: none; -webkit-appearance: none; padding-right: 40px
   box-shadow: var(--sombra-3);
 }
 .confirmar::backdrop { background: rgba(8, 10, 14, .55); }
+
+/* Inicio: "Ver intro" al lado de "Ver mi sitio", y su ventana con el video */
+.cabecera-acciones { display: flex; flex-wrap: wrap; gap: 10px; }
+.cabecera-acciones .boton[hidden] { display: none; }
+.dialogo-intro {
+  width: min(760px, calc(100vw - 32px));
+  padding: 0; border: 0; border-radius: 20px;
+  background: var(--tarjeta); color: var(--texto);
+  box-shadow: var(--sombra-3);
+}
+.dialogo-intro::backdrop { background: rgba(8, 10, 14, .7); }
+.dialogo-intro-contenido { display: grid; gap: 14px; padding: 18px; }
+.dialogo-intro h2 { font-size: 1.25rem; font-weight: 800; }
+.dialogo-intro video { display: block; width: 100%; max-height: 70vh; border-radius: 12px; background: #000; }
+.dialogo-intro form { display: flex; justify-content: flex-end; }
 .confirmar-contenido { display: grid; gap: 14px; padding: 22px; }
 .confirmar h2 { font-size: 1.25rem; font-weight: 800; }
 .confirmar-botones { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }

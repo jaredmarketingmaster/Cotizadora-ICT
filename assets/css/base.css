@@ -25,6 +25,9 @@
   --exito-fondo: #ECFDF3;
   --aviso: #6B4E00;
   --aviso-fondo: #FFF6D6;
+  /* Violeta del botón "Ver intro" del panel (texto blanco: 7,1:1) */
+  --violeta: #6D28D9;
+  --sobre-violeta: #FFFFFF;
 
   --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --radio: 20px;
@@ -56,6 +59,8 @@
   --exito-fondo: #0B2A1C;
   --aviso: #FEDF89;
   --aviso-fondo: #3A2E05;
+  --violeta: #7C3AED;
+  --sobre-violeta: #FFFFFF;
   --sombra-1: 0 1px 2px rgba(0, 0, 0, .4);
   --sombra-2: 0 12px 32px -12px rgba(0, 0, 0, .6);
   --sombra-3: 0 24px 64px -16px rgba(0, 0, 0, .7);
@@ -151,6 +156,12 @@ a { color: var(--primario-texto); text-underline-offset: .18em; }
     0 10px 24px -12px color-mix(in srgb, var(--primario) 85%, #000),
     0 2px 6px -2px color-mix(in srgb, var(--primario) 45%, transparent);
 }
+.boton--violeta {
+  background: var(--violeta);
+  color: var(--sobre-violeta);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 10px 24px -12px color-mix(in srgb, var(--violeta) 85%, #000);
+}
+.boton--violeta:hover:not(:disabled) { background: color-mix(in srgb, var(--violeta) 88%, #000); }
 .boton--secundario {
   background: transparent;
   color: var(--texto);

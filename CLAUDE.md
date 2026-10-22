@@ -83,7 +83,7 @@ node tests/i18n.test.mjs                                   # diccionarios es/pt
 node tests/envios.test.mjs                                 # envíos
 node tests/pagos.test.mjs                                  # formas de pago
 node tests/feed.test.mjs                                   # archivo XML de productos
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 76 casos, modo demo
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 77 casos, modo demo
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 ```
 

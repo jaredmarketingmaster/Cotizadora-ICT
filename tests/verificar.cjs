@@ -2325,6 +2325,52 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  await caso("E: «Ver intro» en Inicio solo si existe el video; violeta AA, al lado de «Ver mi sitio»; diálogo con preload none, sin autoplay, Escape y foco de vuelta", async () => {
+    // Sin el video: no hay botón ni errores
+    const p = await nueva(390, 844);
+    await entrarPanel(p, "gestor@demo.co");
+    await p.waitForTimeout(600);
+    assert.equal(await p.locator("#ver-intro").isHidden(), true);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+    // Con el video (simulado, responde a HEAD y GET)
+    const q = await nueva(390, 844);
+    const pedidos = [];
+    await q.route("**/assets/videos/intro-panel.mp4", (r) => { pedidos.push(r.request().method()); r.fulfill({ status: 200, contentType: "video/mp4", body: fs.readFileSync(path.join(__dirname, "videos", "corto.mp4")) }); });
+    await entrarPanel(q, "gestor@demo.co");
+    await q.waitForSelector("#ver-intro:not([hidden])");
+    assert.deepEqual(pedidos, ["HEAD"], "solo un HEAD al dibujar Inicio");
+    assert.equal((await q.textContent("#ver-intro")).trim(), "Ver intro");
+    // Al lado de "Ver mi sitio"
+    assert.equal(await q.$eval("#ver-intro", (b) => b.previousElementSibling?.textContent.trim()), "Ver mi sitio");
+    // Violeta, con texto AA y zona táctil de 44 px
+    const c = await q.$eval("#ver-intro", (b) => {
+      const st = getComputedStyle(b);
+      const rgb = (x) => x.match(/[\d.]+/g).slice(0, 3).map(Number);
+      const lum = ([r, g, bb]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(bb); };
+      const [a, d] = [lum(rgb(st.color)), lum(rgb(st.backgroundColor))];
+      return { fondo: st.backgroundColor, contraste: (Math.max(a, d) + 0.05) / (Math.min(a, d) + 0.05), alto: b.getBoundingClientRect().height };
+    });
+    assert.equal(c.fondo, "rgb(109, 40, 217)");
+    assert.ok(c.contraste >= 4.5, `contraste ${c.contraste}`);
+    assert.ok(c.alto >= 44);
+    await q.click("#ver-intro");
+    assert.equal(await q.$eval("#dialogo-intro", (d) => d.open), true);
+    const v = await q.$eval("#dialogo-intro video", (x) => ({ preload: x.getAttribute("preload"), controls: x.controls, autoplay: x.autoplay, paused: x.paused }));
+    assert.deepEqual(v, { preload: "none", controls: true, autoplay: false, paused: true });
+    assert.equal(await q.getAttribute("#dialogo-intro", "aria-labelledby"), "intro-titulo");
+    assert.deepEqual(pedidos, ["HEAD"], "abrir no descarga el video");
+    await q.keyboard.press("Escape");
+    assert.equal(await q.$eval("#dialogo-intro", (d) => d.open), false);
+    assert.equal(await q.evaluate(() => document.activeElement.id), "ver-intro");
+    // "Cerrar" también cierra
+    await q.click("#ver-intro");
+    await q.click('#dialogo-intro [value="cerrar"]');
+    assert.equal(await q.$eval("#dialogo-intro", (d) => d.open), false);
+    assert.deepEqual(q.errores, []);
+    await q.context().close();
+  });
+
   await caso("B2: con la tienda en Argentina, Brasil o México cambian el precio, el prefijo y el celular del pop-up, el lead, la moneda del píxel y la fecha", async () => {
     const p = await nueva(390, 844, { cookies: { medicion: false, publicidad: true } });
     await p.route("https://connect.facebook.net/**", (r) => r.fulfill({ contentType: "text/javascript", body: "" }));
@@ -2799,6 +2845,18 @@ async function llenarPopup(p) {
       await p.waitForTimeout(500);
       const malos = await p.evaluate(contrasteMalo);
       assert.deepEqual(malos, [], `${nombre}: ${JSON.stringify(malos.slice(0, 4))}`);
+      await p.context().close();
+    }
+    // Panel, Inicio con el botón violeta "Ver intro" (E), en claro y oscuro
+    for (const tema of ["claro", "oscuro"]) {
+      const p = await nueva(390, 844);
+      await p.route("**/assets/videos/intro-panel.mp4", (r) => r.fulfill({ status: 200, contentType: "video/mp4", body: "" }));
+      await ir(p);
+      await editarDemo(p, (e, tema) => { e.tienda.tema = tema; }, tema);
+      await entrarPanel(p, "gestor@demo.co");
+      await p.waitForSelector("#ver-intro:not([hidden])");
+      const malos = await p.evaluate(contrasteMalo);
+      assert.deepEqual(malos, [], `panel ${tema}: ${JSON.stringify(malos.slice(0, 4))}`);
       await p.context().close();
     }
   });

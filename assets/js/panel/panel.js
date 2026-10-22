@@ -214,6 +214,29 @@ async function enrutar() {
 
 // --- Inicio ------------------------------------------------------------------
 
+// Video de introducción al panel (ronda 3, E). El botón "Ver intro" solo
+// aparece si el archivo existe: un HEAD liviano al dibujar Inicio. Nada se
+// descarga hasta que se reproduce (preload="none", sin reproducción automática).
+const VIDEO_INTRO = "../assets/videos/intro-panel.mp4";
+async function prepararIntro() {
+  const boton = $("#ver-intro");
+  const dialogo = $("#dialogo-intro");
+  if (!boton || !dialogo) return;
+  let existe = false;
+  try {
+    const r = await fetch(VIDEO_INTRO, { method: "HEAD", cache: "no-store" });
+    const tipo = r.headers.get("content-type") || "";
+    // Un hosting que responde con una página para cualquier ruta no cuenta.
+    existe = r.ok && (!tipo || tipo.startsWith("video/"));
+  } catch { /* sin conexión: sin botón */ }
+  if (!existe || !boton.isConnected) return;
+  boton.hidden = false;
+  const video = $("video", dialogo);
+  boton.addEventListener("click", () => dialogo.showModal());
+  // Escape o "Cerrar": se pausa el video y el foco vuelve al botón.
+  dialogo.addEventListener("close", () => { video.pause(); boton.focus(); });
+}
+
 async function vistaInicio(vista) {
   const [equipos, modelos, tienda] = await Promise.all([ctx.api.listarEquipos(), ctx.api.listarModelos(), ctx.recargarTienda()]);
   const activos = new Set(modelos.filter((m) => m.activo).map((m) => m.id));
@@ -242,8 +265,18 @@ async function vistaInicio(vista) {
   vista.innerHTML = `
     <div class="vista-cabecera">
       <h1>${esc(t("panel.inicio.titulo"))}</h1>
-      <a class="boton boton--primario" href="../" target="_blank" rel="noopener">${esc(t("panel.comun.ver_sitio"))}</a>
+      <div class="cabecera-acciones">
+        <a class="boton boton--primario" href="../" target="_blank" rel="noopener">${esc(t("panel.comun.ver_sitio"))}</a>
+        <button type="button" class="boton boton--violeta" id="ver-intro" aria-haspopup="dialog" hidden>${esc(t("panel.inicio.ver_intro"))}</button>
+      </div>
     </div>
+    <dialog class="dialogo-intro" id="dialogo-intro" aria-labelledby="intro-titulo">
+      <div class="dialogo-intro-contenido">
+        <h2 id="intro-titulo">${esc(t("panel.inicio.intro_titulo"))}</h2>
+        <video src="${VIDEO_INTRO}" controls preload="none" playsinline aria-label="${esc(t("panel.inicio.intro_titulo"))}"></video>
+        <form method="dialog"><button class="boton boton--secundario" value="cerrar">${esc(t("panel.comun.cerrar"))}</button></form>
+      </div>
+    </dialog>
     <section class="bloque" aria-labelledby="t-inventario">
       <h2 id="t-inventario">${esc(t("panel.inicio.inventario"))}</h2>
       <div class="estadisticas cifras">
@@ -269,6 +302,7 @@ async function vistaInicio(vista) {
       ${ctx.api.tipo === "demo" ? `<button type="button" class="boton boton--secundario" id="reiniciar-demo">${esc(t("panel.inicio.reiniciar_demo"))}</button>` : ""}
     </section>` : ""}`;
 
+  prepararIntro();
   $("#i-modo-demo")?.addEventListener("change", async (e) => {
     try {
       await conBoton(null, () => ctx.api.guardarTienda({ modo_demo: e.target.checked }));
