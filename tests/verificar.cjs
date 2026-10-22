@@ -1868,6 +1868,50 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  await caso("B4b: con el idioma guardado en portugués, el primer h1 pintado ya está en portugués (sitio y página legal); si la tienda vuelve al español, el sitio también", async () => {
+    const PT = (await import(require("url").pathToFileURL(path.join(RAIZ, "assets/js/i18n/pt.js")).href)).default;
+    const ES = (await import(require("url").pathToFileURL(path.join(RAIZ, "assets/js/i18n/es.js")).href)).default;
+    const p = await nueva(1280, 900);
+    // El h1 del primer cuadro en que se ve: requestAnimationFrame corre antes de
+    // cada pintado (y no antes de que llegue el CSS, que bloquea el pintado).
+    await p.context().addInitScript(() => {
+      window.__primerH1 = null;
+      const mirar = () => {
+        const h1 = document.querySelector("h1");
+        if (h1 && h1.textContent.trim() && getComputedStyle(h1).visibility !== "hidden") {
+          window.__primerH1 = { texto: h1.textContent.trim(), lang: document.documentElement.lang };
+          return;
+        }
+        requestAnimationFrame(mirar);
+      };
+      requestAnimationFrame(mirar);
+    });
+    const primerH1 = async () => { await p.waitForFunction(() => window.__primerH1); return p.evaluate(() => window.__primerH1); };
+    // Primera visita: nada guardado, en español y sin ocultar nada.
+    await ir(p);
+    assert.deepEqual(await primerH1(), { texto: ES["sitio.titulo"], lang: "es-CO" });
+    // La tienda pasa a portugués: la visita siguiente guarda "pt".
+    await editarDemo(p, (e) => { e.tienda.idioma = "pt"; });
+    await ir(p);
+    assert.equal(await p.evaluate(() => localStorage.getItem("cotizadora:idioma")), "pt");
+    // Con "pt" guardado, el primer pintado ya sale en portugués.
+    await ir(p);
+    assert.deepEqual(await primerH1(), { texto: PT["sitio.titulo"], lang: "pt-BR" });
+    assert.equal(await p.getAttribute("html", "data-traduciendo"), null, "los textos vuelven a verse");
+    await p.goto(`${BASE}/privacidad/`, { waitUntil: "networkidle" });
+    assert.deepEqual(await primerH1(), { texto: PT["legalpag.titulo.privacidad"], lang: "pt-BR" });
+    await p.waitForSelector("#legal-texto:not([aria-busy])");
+    assert.equal(await p.getAttribute("html", "data-traduciendo"), null);
+    // La tienda vuelve al español: manda el idioma de la tienda.
+    await editarDemo(p, (e) => { e.tienda.idioma = "es"; });
+    await ir(p);
+    assert.equal(await p.textContent("h1"), ES["sitio.titulo"]);
+    assert.equal(await p.getAttribute("html", "lang"), "es-CO");
+    assert.equal(await p.evaluate(() => localStorage.getItem("cotizadora:idioma")), "es");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("B5: el título del sitio se edita en Mi tienda → Marca; vacío, el del idioma (español o portugués)", async () => {
     const PT = (await import(require("url").pathToFileURL(path.join(RAIZ, "assets/js/i18n/pt.js")).href)).default;
     const p = await nueva(1280, 900);

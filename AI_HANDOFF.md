@@ -65,7 +65,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
 - **Bloqueante para tiendas fuera de Colombia:**
   - Solo existe el módulo legal de Colombia (`assets/js/legal/paises/co.js`).
   - Las tiendas nuevas nacen en Argentina (`PAIS_POR_DEFECTO = "ar"`): sin módulo, no pueden publicar sus legales y el pop-up no envía pedidos.
-- **Primer pintado en portugués:** la primera visita a una tienda en portugués se ve un instante en español, hasta que llegan los datos y se carga `pt.js`.
+- **Primera visita en portugués:** sin idioma guardado (la primera vez en ese navegador), una tienda en portugués se ve en español hasta que llegan los datos. Desde la segunda visita sale en portugués (punto 1 hecho); el LCP en portugués es de 1,7–1,8 s simulado y 2,5 s con estrangulamiento real (sección 13 de `DOCUMENTACION.md`).
 - **Correos en español:** los de invitación y recuperación (`supabase/correos/invitacion.html` y `recuperacion.html`) solo existen en español.
 - **CLS de 0,19 solo con la franja de modo demo** (rendimiento 91). Sin la franja, 0,045. Es una limitación aceptada: no hay que corregirla.
 - **Datos de catálogo que faltan en la fuente:** colores, nombres en inglés, hexadecimales reales y fichas, listados en `catalogo/FALTANTES.md`. Esperan respuesta de Jared y **no se completan de memoria**.
@@ -74,7 +74,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
 - **Entorno:** en este contenedor el proxy bloquea jsDelivr, unpkg y esm.sh. Para la suite de Supabase local se usa un supabase-js armado con esbuild (`ICT_SUPABASE_JS`). **Nunca** usar `pkill -f` con un texto que aparezca en el mismo comando: mata la propia shell.
 
 ## 5. 🎯 DIRECTIVA EXACTA PARA OPENAI CODEX (NEXT ACTION)
-1. **Primer pintado en portugués (sin información externa; hacerlo primero).**
+1. ✅ **HECHO (Claude Code, 22/10/2026; ver la sección 19 de `DOCUMENTACION.md`).** **Primer pintado en portugués (sin información externa; hacerlo primero).**
    - En `assets/js/i18n/i18n.js`, `cargarIdioma()` ya guarda el idioma en `localStorage` (`idiomaGuardado()`).
    - En el sitio, antes de pedir los datos, cargar el idioma guardado: en `assets/js/sitio/principal.js` y `assets/js/sitio/legal.js`, llamar `await cargarIdioma(idiomaGuardado()); traducirDom();` al empezar, como ya hace `assets/js/panel/panel.js`. Después, si el idioma de la tienda difiere, recargar como hoy.
    - Agregar al script en línea del `<head>` de `index.html` y de las tres páginas legales que ponga `lang="pt-BR"` si el idioma guardado es `pt`.

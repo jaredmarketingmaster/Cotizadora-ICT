@@ -7,6 +7,7 @@
 #   npx serve -l 8090 . &                         # servidor que comprime
 #   bash tests/lighthouse/medir.sh corrida1        # sin la franja de modo demo
 #   bash tests/lighthouse/medir.sh franja true     # con la franja
+#   ICT_LH_IDIOMA=pt bash tests/lighthouse/medir.sh portugues   # tienda en portugués, idioma guardado
 #
 # Necesita Lighthouse (LIGHTHOUSE=/ruta/al/bin, o npx lighthouse) y Playwright
 # (NODE_PATH="$(npm root -g)"). CHROME: el Chromium de /opt/pw-browsers.

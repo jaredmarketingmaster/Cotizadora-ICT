@@ -13,6 +13,12 @@
 :root[data-tamano="compacto"] { --t-titulo: .84; --t-espacio: .72; }
 :root[data-tamano="grande"] { font-size: 112.5%; }
 
+/* --- Primer pintado en portugués --------------------------------------------
+   Con el idioma guardado en "pt", el script del <head> marca data-traduciendo:
+   los textos del HTML (en español) no se ven hasta que traducirDom() los
+   cambia. Ocupan su lugar, así que no mueven nada (CLS). */
+:root[data-traduciendo] [data-t] { visibility: hidden; }
+
 /* --- Franja demo ----------------------------------------------------------- */
 .franja-demo {
   padding: 10px var(--gutter);

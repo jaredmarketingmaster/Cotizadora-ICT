@@ -22,7 +22,7 @@ import { abrirConTransicion, cerrarConTransicion, cerrarConEscape } from "./tran
 import { evento, parametrosEquipo } from "./pixel.js";
 import { fijarPais, whatsappValido } from "../datos/paises.js";
 // Alias tr/tn: en este archivo "t" es la tienda.
-import { cargarIdioma, traducirDom, idiomaActual, t as tr, tn } from "../i18n/i18n.js";
+import { cargarIdioma, idiomaGuardado, traducirDom, idiomaActual, t as tr, tn } from "../i18n/i18n.js";
 import { iniciarConsentimiento, alCambiar, permitido } from "./consentimiento.js";
 
 const $ = (s) => document.querySelector(s);
@@ -315,6 +315,10 @@ function iniciarHoja() {
 // --- Arranque ------------------------------------------------------------------
 async function iniciar() {
   seguro(capturarAtribucion, "atribución");
+  // El idioma de la visita anterior, antes de pedir los datos: una tienda en
+  // portugués no se ve un instante en español. Después manda el de la tienda.
+  await cargarIdioma(idiomaGuardado()).catch(() => {});
+  traducirDom();
 
   api = await obtenerApi();
   let datos;
@@ -328,8 +332,7 @@ async function iniciar() {
     return;
   }
   fijarPais(datos.tienda?.pais);
-  await cargarIdioma(datos.tienda?.idioma);
-  traducirDom();
+  if ((datos.tienda?.idioma || "es") !== idiomaActual()) { await cargarIdioma(datos.tienda?.idioma); traducirDom(); }
   cat = prepararCatalogo(datos);
   const t = cat.tienda;
   seguro(() => aplicarTema(t), "tema");

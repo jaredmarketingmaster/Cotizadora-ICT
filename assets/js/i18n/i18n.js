@@ -11,6 +11,12 @@
 // - El HTML trae el texto en español con data-t="clave" (y data-t-<atributo>
 //   para aria-label, placeholder, content, title y alt); traducirDom() lo
 //   cambia. Así, sin JS se ve en español y el primer pintado no espera.
+// - Primer pintado: el script en línea del <head> del sitio y de las páginas
+//   legales lee el idioma guardado (cotizadora:idioma). Si es "pt", pone
+//   lang="pt-BR", marca <html data-traduciendo>, que oculta los textos con
+//   data-t (sitio.css) hasta el primer traducirDom() (o 3 s, si el JS no
+//   llega), y carga primer-pintado.js, que traduce sin esperar al resto del
+//   sitio. Así el primer pintado ya sale en portugués.
 // - Los textos legales generados (plantillas) siguen en español: todavía no
 //   hay módulo legal en portugués.
 // =============================================================================
@@ -64,4 +70,5 @@ export function traducirDom(raiz = document) {
   for (const a of ATRIBUTOS) {
     for (const el of raiz.querySelectorAll(`[data-t-${a}]`)) el.setAttribute(a, t(el.getAttribute(`data-t-${a}`)));
   }
+  if (raiz === document) document.documentElement.removeAttribute("data-traduciendo");
 }

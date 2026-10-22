@@ -9,15 +9,17 @@ import { formatoBasico, escaparHTML } from "../utils.js";
 import { conVigencia } from "../legal/vigencia.js";
 import { iniciarConsentimiento } from "./consentimiento.js";
 import { fijarPais } from "../datos/paises.js";
-import { cargarIdioma, traducirDom, idiomaActual, t } from "../i18n/i18n.js";
+import { cargarIdioma, idiomaGuardado, traducirDom, idiomaActual, t } from "../i18n/i18n.js";
 
 const caja = document.getElementById("legal-texto");
+// El idioma de la visita anterior, antes de pedir los datos (como el sitio).
+await cargarIdioma(idiomaGuardado()).catch(() => {});
+traducirDom();
 try {
   const api = await obtenerApi();
   const { tienda } = await api.cargarPublico();
   fijarPais(tienda.pais);
-  await cargarIdioma(tienda.idioma);
-  traducirDom();
+  if ((tienda.idioma || "es") !== idiomaActual()) { await cargarIdioma(tienda.idioma); traducirDom(); }
   aplicarTema(tienda);
   const logo = tienda.logo ? api.urlArchivo("marca", tienda.logo) : "";
   document.getElementById("marca-logo").innerHTML = logo ? `<img src="${escaparHTML(logo)}" alt="" width="160" height="40">` : logoGenericoSVG();
