@@ -37,6 +37,10 @@ let popup;
 let detalleEnLinea = null;
 let detalleHoja = null;
 let claveEnLinea = "";
+// ?equipo=<id> (los enlaces del archivo XML de productos, C4): si el equipo no
+// está publicado, el sitio muestra el estado vacío hasta que se cambie un filtro.
+let equipoNoDisponible = false;
+let equipoInicial = null;
 
 // --- URL ---------------------------------------------------------------------
 function leerFiltrosURL() {
@@ -47,9 +51,10 @@ function leerFiltrosURL() {
   return { condicion, modelo, capacidad };
 }
 
-// Solo cambia condicion, modelo y capacidad; los UTM y demás se quedan.
+// Solo cambia condicion, modelo y capacidad (y quita ?equipo=); los UTM y demás se quedan.
 function escribirFiltrosURL() {
   const url = new URL(location.href);
+  url.searchParams.delete("equipo");
   for (const [k, v] of Object.entries({ condicion: filtros.condicion, modelo: filtros.modelo, capacidad: filtros.capacidad && slugCapacidad(filtros.capacidad) })) {
     if (v) url.searchParams.set(k, v); else url.searchParams.delete(k);
   }
@@ -120,7 +125,8 @@ function cambiarFiltro(campo, valor) {
   filtros = corregidos;
   if (limpiados.includes("modelo")) marcarLimpiado(controles.modelo.boton);
   if (limpiados.includes("capacidad")) marcarLimpiado($("#f-capacidad"));
-  if (JSON.stringify(previo) !== JSON.stringify(filtros)) {
+  if (JSON.stringify(previo) !== JSON.stringify(filtros) || equipoNoDisponible) {
+    equipoNoDisponible = false;
     escribirFiltrosURL();
     actualizar();
   }
@@ -135,10 +141,10 @@ function actualizar() {
   controles.modelo.actualizar(grupos, modelo, modelo ? cat.porSlug.get(modelo)?.nombre : "", totalCondicion);
   controles.capacidad.dibujar(opcionesCapacidad(cat, condicion, modelo), capacidad);
 
-  const lista = filtrar(cat.equipos, filtros);
+  const lista = equipoNoDisponible ? [] : filtrar(cat.equipos, filtros);
   const cantidad = contarEquipos(lista);
   $("#contador").textContent = tn("sitio.contador", cantidad, { n: formatearMiles(cantidad) });
-  $("#limpiar").hidden = !(condicion || modelo || capacidad);
+  $("#limpiar").hidden = !(condicion || modelo || capacidad || equipoNoDisponible);
 
   ultimasTarjetas = armarTarjetas(lista);
   $("#vacio").hidden = ultimasTarjetas.length > 0;
@@ -146,7 +152,7 @@ function actualizar() {
 
   // Con los tres filtros y una sola tarjeta, el detalle se abre solo debajo.
   const unica = condicion && modelo && capacidad && ultimasTarjetas.length === 1 ? ultimasTarjetas[0] : null;
-  if (unica) mostrarEnLinea(unica); else quitarEnLinea();
+  if (unica) mostrarEnLinea(unica, equipoInicial); else quitarEnLinea();
 }
 
 // --- Vista de los equipos: cuadrícula o carrusel --------------------------------
@@ -185,10 +191,12 @@ function comprar(q) {
   popup.abrir({ tipo: "compra", equipo: q });
 }
 
-function mostrarEnLinea(tarjeta) {
-  if (claveEnLinea === tarjeta.clave && detalleEnLinea) return;
+function mostrarEnLinea(tarjeta, equipoId = null) {
+  if (claveEnLinea === tarjeta.clave && detalleEnLinea && (!equipoId || detalleEnLinea.equipo().id === equipoId)) return;
   quitarEnLinea();
-  const { lista, inicial } = diapositivas(cat, tarjeta);
+  const { lista, inicial: primera } = diapositivas(cat, tarjeta);
+  const pedido = equipoId ? lista.findIndex((q) => q.id === equipoId) : -1;
+  const inicial = pedido >= 0 ? pedido : primera;
   const barra = $("#barra-compra");
   detalleEnLinea = crearDetalle({
     api, cat, tarjeta, lista, inicial, alComprar: comprar, idTitulo: "detalle-en-linea-titulo",
@@ -340,6 +348,7 @@ async function iniciar() {
   };
   $("#limpiar").addEventListener("click", () => {
     filtros = { condicion: "", modelo: "", capacidad: "" };
+    equipoNoDisponible = false;
     escribirFiltrosURL();
     actualizar();
     $("#f-condicion .segmento").focus();
@@ -358,7 +367,21 @@ async function iniciar() {
   // Los filtros de la URL vienen marcados (aunque no tengan stock: así un
   // anuncio de un equipo agotado lleva al estado vacío con la consulta).
   filtros = leerFiltrosURL();
+  const pedido = new URLSearchParams(location.search).get("equipo");
+  const equipo = pedido ? cat.equipos.find((q) => String(q.id) === pedido) : null;
+  if (equipo) filtros = { condicion: equipo.condicion, modelo: equipo.modelo.slug, capacidad: equipo.capacidad };
+  equipoNoDisponible = Boolean(pedido && !equipo);
+  equipoInicial = equipo?.id ?? null;
   actualizar();
+  if (equipo) {
+    const tarjeta = ultimasTarjetas.find((x) => x.equipos.some((q) => q.id === equipo.id))
+      || ultimasTarjetas.find((x) => x.condicion === equipo.condicion && x.modelo.id === equipo.modelo_id && x.capacidad === equipo.capacidad);
+    if (tarjeta) {
+      mostrarEnLinea(tarjeta, equipo.id);
+      $("#detalle-en-linea").scrollIntoView({ block: "start", behavior: reducirMovimiento() ? "auto" : "smooth" });
+    }
+  }
+  equipoInicial = null;
 
   // Medición y publicidad: solo lo que la persona acepte (consentimiento.js).
   // Después de dibujar los filtros, para que el banner no los tape.

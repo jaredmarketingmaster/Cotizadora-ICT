@@ -67,7 +67,7 @@ export const CAMPOS_TIENDA = [
   "tamano_texto", "vista_equipos", "mostrar_ficha", "ficha_ocultas",
   "pagos_medios", "pagos_cuotas", "pagos_cuotas_max", "pagos_sin_interes", "pagos_sin_interes_max",
   "pagos_cripto", "pagos_cripto_cuales", "pagos_pasarelas", "pagos_pasarelas_otras", "pagos_descuentos",
-  "mostrar_resenas", "titulo_resenas", "titulo_sitio",
+  "mostrar_resenas", "titulo_resenas", "titulo_sitio", "url_sitio",
   // Envíos (0023, assets/js/datos/envios.js)
   ...CAMPOS_ENVIO
 ];
@@ -338,7 +338,7 @@ const ERRORES_SERVIDOR = [
   "solo_gestor.resenas", "solo_gestor.borrar_demo", "solo_gestor.modo_demo", "solo_administrador", "un_administrador",
   "propio_rol", "desactivarse", "correo_existe", "elija_rol", "elija_color", "color_modelo", "mas_vendidos", "max_resenas",
   "ficha", "cuotas_max", "sin_interes_max", "sin_interes_mayor", "sin_interes_vacio", "cuotas_vacias", "cripto_vacio",
-  "pasarelas_otras", "descuentos", "envio_sin_domicilio", "envio_zonas", "envio_todo_o_zonas", "envio_costo_fijo",
+  "pasarelas_otras", "descuentos", "url_sitio", "envio_sin_domicilio", "envio_zonas", "envio_todo_o_zonas", "envio_costo_fijo",
   "envio_costo_zona", "envio_gratis_ya", "envio_gratis_condicion", "envio_gratis_zonas", "envio_plazo", "color_oficial_nombre", "color_hex_fuente", "colores_oficiales",
   "colores_fuente", "color_oficial_borrar", "borrar_color_en_uso", "sin_legales_demo", "sin_legales_borrar",
   "legales_quitar", "legales_faltan", "whatsapp_pais", "correo", "metodo", "pedido_invalido", "invitacion_perfil",

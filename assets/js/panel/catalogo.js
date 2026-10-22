@@ -21,7 +21,8 @@ const PESTANAS = [
   { id: "modelos", ruta: "catalogo", cargar: async () => ({ dibujar: dibujarModelos }) },
   { id: "ficha", ruta: "catalogo/ficha", cargar: () => import("./fichas.js") },
   { id: "pagos", ruta: "catalogo/pagos", cargar: () => import("./pagos.js") },
-  { id: "envios", ruta: "catalogo/envios", cargar: () => import("./envios.js") }
+  { id: "envios", ruta: "catalogo/envios", cargar: () => import("./envios.js") },
+  { id: "xml", ruta: "catalogo/xml", cargar: () => import("./feed.js") }
 ];
 
 export async function dibujar(vista, ctx, resto = []) {
