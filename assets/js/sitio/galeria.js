@@ -5,7 +5,8 @@
 // =============================================================================
 
 import { escaparHTML, formatearPrecio, reducirMovimiento } from "../utils.js";
-import { textoCondicion, TEXTO_MAS_VENDIDO } from "./catalogo.js";
+import { textoCondicion, textoMasVendido } from "./catalogo.js";
+import { t as tr } from "../i18n/i18n.js";
 import { htmlMedio } from "./fotos.js";
 
 const SIZES = "(min-width: 1200px) 280px, (min-width: 960px) 30vw, (min-width: 640px) 45vw, 112px";
@@ -20,16 +21,16 @@ function htmlTarjeta(api, t, i) {
     const colores = t.equipos.filter((e) => e.color_nombre || e.color_hex);
     muestras = `<span class="muestras" aria-hidden="true">${colores.map((e) => `<span class="muestra"${e.color_hex ? ` style="--c:${e.color_hex}"` : ""}></span>`).join("")}</span>`;
     const nombres = colores.map((e) => e.color_nombre).filter(Boolean);
-    if (nombres.length) muestras += `<span class="oculto-visual">Colores: ${escaparHTML(nombres.join(", "))}.</span>`;
+    if (nombres.length) muestras += `<span class="oculto-visual">${escaparHTML(tr("sitio.tarjeta.colores", { colores: nombres.join(", ") }))}</span>`;
   } else {
     const partes = [t.capacidad, q.color_nombre].filter(Boolean).map(escaparHTML).join(" · ");
     const usado = [
-      q.bateria_porcentaje != null && `Batería ${q.bateria_porcentaje}%`,
+      q.bateria_porcentaje != null && escaparHTML(tr("sitio.tarjeta.bateria", { n: q.bateria_porcentaje })),
       q.estado_estetico && escaparHTML(q.estado_estetico)
     ].filter(Boolean).join(" · ");
     sub = partes + (usado ? `<br>${usado}` : "");
   }
-  const alt = [nombre, t.capacidad, t.condicion === "usado" && q.color_nombre && `color ${q.color_nombre}`].filter(Boolean).join(", ");
+  const alt = [nombre, t.capacidad, t.condicion === "usado" && q.color_nombre && tr("sitio.alt.color", { color: q.color_nombre })].filter(Boolean).join(", ");
   // Más vendido: borde con una luz que recorre el contorno (span.tarjeta-brillo,
   // decorativo) y la etiqueta junto a la condición.
   return `<li class="tarjeta${t.masVendido ? " tarjeta--mas-vendido" : ""}" data-clave="${escaparHTML(t.clave)}">
@@ -37,11 +38,11 @@ function htmlTarjeta(api, t, i) {
     <button type="button" class="tarjeta-boton" data-clave="${escaparHTML(t.clave)}">
       <span class="tarjeta-medio">${htmlMedio(api, q, alt, { sizes: SIZES, cargaInmediata: i < 2 })}</span>
       <span class="tarjeta-cuerpo">
-        <span class="tarjeta-etiquetas"><span class="etiqueta-pildora${t.condicion === "usado" ? " etiqueta-pildora--usado" : ""}">${textoCondicion(t.condicion)}</span>${t.masVendido ? `<span class="etiqueta-pildora etiqueta-pildora--mas-vendido">${TEXTO_MAS_VENDIDO}</span>` : ""}</span>
+        <span class="tarjeta-etiquetas"><span class="etiqueta-pildora${t.condicion === "usado" ? " etiqueta-pildora--usado" : ""}">${textoCondicion(t.condicion)}</span>${t.masVendido ? `<span class="etiqueta-pildora etiqueta-pildora--mas-vendido">${textoMasVendido()}</span>` : ""}</span>
         <span class="tarjeta-nombre">${escaparHTML(nombre)}</span>
         <span class="tarjeta-sub cifras">${sub}</span>
         ${muestras}
-        <span class="tarjeta-precio cifras">${t.desde ? '<span class="desde">Desde</span>' : ""}${formatearPrecio(t.precioMin)}${t.esDemo ? ' <span class="etiqueta-demo">DEMO</span>' : ""}</span>
+        <span class="tarjeta-precio cifras">${t.desde ? `<span class="desde">${tr("sitio.tarjeta.desde")}</span>` : ""}${formatearPrecio(t.precioMin)}${t.esDemo ? ` <span class="etiqueta-demo">${tr("sitio.demo")}</span>` : ""}</span>
       </span>
     </button>
   </li>`;

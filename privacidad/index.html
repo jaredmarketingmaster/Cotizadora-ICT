@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Política de tratamiento de datos personales</title>
+  <title data-t="legalpag.titulo.privacidad">Política de tratamiento de datos personales</title>
   <meta name="theme-color" content="#0F172A">
   <!-- Apariencia de la tienda de la visita anterior (tema, tamaño y colores), antes del primer pintado. La guarda assets/js/tema.js. -->
   <script>try{var a=JSON.parse(localStorage.getItem("cotizadora:apariencia")),r=document.documentElement;if(a&&a.vars){if(/^(claro|oscuro)$/.test(a.tema))r.dataset.tema=a.tema;if(/^(compacto|normal|grande)$/.test(a.tamano))r.dataset.tamano=a.tamano;for(var k in a.vars)if(/^--[a-z-]+$/.test(k)&&/^#[0-9A-Fa-f]{6}$/.test(a.vars[k]))r.style.setProperty(k,a.vars[k])}}catch(e){}</script>
@@ -22,21 +22,21 @@
     <div class="contenedor">
       <div class="marca">
         <span style="display:flex;align-items:center;gap:12px"><span class="marca-logo" id="marca-logo"></span><span class="marca-nombre" id="marca-nombre"></span></span>
-        <a class="legal-volver" href="../">Volver a los equipos</a>
+        <a class="legal-volver" href="../" data-t="legalpag.volver">Volver a los equipos</a>
       </div>
     </div>
   </header>
   <main class="contenedor legal">
-    <h1>Política de tratamiento de datos personales</h1>
+    <h1 data-t="legalpag.titulo.privacidad">Política de tratamiento de datos personales</h1>
     <div class="legal-texto" id="legal-texto" aria-busy="true"></div>
   </main>
   <footer class="pie pie--legal">
     <div class="contenedor pie-grilla">
-      <nav class="pie-enlaces" aria-label="Legales">
-        <a href="../privacidad/">Política de privacidad</a>
-        <a href="../terminos/">Términos y condiciones</a>
-        <a href="../cookies/">Política de cookies</a>
-        <button type="button" class="pie-boton" data-preferencias-cookies hidden>Preferencias de cookies</button>
+      <nav class="pie-enlaces" aria-label="Legales" data-t-aria-label="legalpag.pie.legales">
+        <a href="../privacidad/" data-t="legalpag.pie.privacidad">Política de privacidad</a>
+        <a href="../terminos/" data-t="legalpag.pie.terminos">Términos y condiciones</a>
+        <a href="../cookies/" data-t="legalpag.pie.cookies">Política de cookies</a>
+        <button type="button" class="pie-boton" data-preferencias-cookies data-t="legalpag.pie.preferencias_cookies" hidden>Preferencias de cookies</button>
       </nav>
     </div>
   </footer>

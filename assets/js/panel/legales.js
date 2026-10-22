@@ -12,21 +12,25 @@
 // - Después de publicar, cada cambio vuelve a generar y publicar los textos
 //   (republicarAlGuardar, que usa panel.js); la versión sube solo si cambió
 //   algún texto.
+// - Idioma: el texto del asistente sale de los diccionarios (claves
+//   panel.legales.* y legal.*). Lo que va dentro de los documentos (vista
+//   previa, citas de los términos) sigue en español y se marca con lang="es".
 // =============================================================================
 
 import { formatoBasico } from "../utils.js";
 import { PASOS, PERFILES, ENTREGAS, DOCUMENTOS, MARCAS, textoSinModulo, faltantes, generar, publicar, conVigencia, perfilDe, declaraApple, necesitaLocal, fechaDMA, hoyColombia, contexto } from "../legal/motor.js";
-import { PAISES, PAISES_DISPONIBLES, documentosDe, modulosDe } from "../legal/paises/indice.js";
+import { PAISES, PAISES_DISPONIBLES, ESTADOS, documentosDe, modulosDe } from "../legal/paises/indice.js";
 import { HERRAMIENTAS, OPCIONALES, idValido } from "../legal/herramientas.js";
 import { independiente } from "../legal/plantillas/terminos.js";
 import { $, $$, esc, avisar, conBoton } from "./ui.js";
+import { t as tr, idiomaActual } from "../i18n/i18n.js";
+import { whatsappValido } from "../datos/paises.js";
 
 const META = HERRAMIENTAS[0];
-const AYUDA_GARANTIA = "Si no indica un término mayor, la ley colombiana fija un año para productos nuevos.";
-const AVISO_SIN_GARANTIA = "Solo puede vender sin garantía un usado cuya garantía legal ya venció, y el cliente debe aceptarlo por escrito al comprar.";
-const AYUDA_CAPI = "Configure su workflow de GoHighLevel para revisar el campo consentimiento_publicidad antes de enviar el evento.";
-const AYUDA_CLARITY = "En Clarity, elija el enmascarado «Strict» (Settings → Masking): así las grabaciones ocultan todo el texto del sitio. Además, el pop-up marca sus campos para que Clarity no los grabe.";
 const ESPERA_TEXTO = 700;
+// Nombre y etiqueta del ID de una herramienta, en el idioma en uso.
+const nombreH = (h) => tr(`legal.herramienta.${h.clave}.nombre`);
+const idH = (h) => tr(`legal.herramienta.${h.clave}.id`);
 
 // Lo que publica después de cada guardado, si ya hay textos publicados y no
 // falta nada. Si falta algo, queda la versión publicada (no se bloquea nada).
@@ -65,10 +69,10 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
   let documento = "privacidad";
 
   vista.innerHTML = `
-    <div class="vista-cabecera"><h1>Legales</h1>
-      <p>Complete los seis pasos. Con estos datos se arman la Política de tratamiento de datos, los Términos y condiciones, la Política de cookies y el aviso del pop-up. Todo se guarda solo.</p></div>
+    <div class="vista-cabecera"><h1>${esc(tr("panel.legales.titulo"))}</h1>
+      <p>${esc(tr("panel.legales.intro"))}</p></div>
     <section class="bloque" aria-labelledby="t-progreso">
-      <h2 id="t-progreso" class="oculto-visual">Progreso</h2>
+      <h2 id="t-progreso" class="oculto-visual">${esc(tr("panel.legales.progreso"))}</h2>
       <p class="estado-legales" id="l-estado"></p>
       <div class="progreso-legales"><progress id="l-progreso" max="6" aria-labelledby="l-progreso-texto"></progress><span id="l-progreso-texto" class="cifras"></span></div>
       <ol class="pasos-legales" id="l-pasos"></ol>
@@ -77,8 +81,8 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
       <section class="bloque" id="l-paso" aria-labelledby="l-titulo"></section>
       <p class="estado-guardado" id="l-guardado" role="status" aria-live="polite"></p>
       <div class="acciones-pasos">
-        <button type="button" class="boton boton--secundario" id="l-anterior">Anterior</button>
-        <button type="button" class="boton boton--primario" id="l-siguiente">Siguiente</button>
+        <button type="button" class="boton boton--secundario" id="l-anterior">${esc(tr("panel.legales.anterior"))}</button>
+        <button type="button" class="boton boton--primario" id="l-siguiente">${esc(tr("panel.legales.siguiente"))}</button>
       </div>
     </form>`;
 
@@ -97,10 +101,10 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
     return `<div class="campo"><label for="l-${campo}">${esc(etiqueta)}</label>
       ${ayuda ? `<p class="ayuda" id="l-${campo}-ayuda">${ayuda}</p>` : ""}${control}${err(campo)}</div>`;
   }
-  function entero(campo, etiqueta, { ayuda = "", sufijo = "meses" } = {}) {
+  function entero(campo, etiqueta, { ayuda = "", sufijo = tr("panel.legales.meses") } = {}) {
     return `<div class="campo"><label for="l-${campo}">${esc(etiqueta)}</label>
       ${ayuda ? `<p class="ayuda" id="l-${campo}-ayuda">${ayuda}</p>` : ""}
-      <div class="entrada-con-sufijo"><input class="entrada cifras" id="l-${campo}" data-campo="${campo}" data-tipo="entero" inputmode="numeric" maxlength="3" value="${t[campo] ?? ""}" ${describir(campo, ayuda)}><span aria-hidden="true">${sufijo}</span></div>
+      <div class="entrada-con-sufijo"><input class="entrada cifras" id="l-${campo}" data-campo="${campo}" data-tipo="entero" inputmode="numeric" maxlength="3" value="${t[campo] ?? ""}" ${describir(campo, ayuda)}><span aria-hidden="true">${esc(sufijo)}</span></div>
       ${err(campo)}</div>`;
   }
   function opciones(campo, leyenda, lista, { ayuda = "", multiple = false } = {}) {
@@ -114,14 +118,20 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
         <span>${esc(o.texto)}${o.nota ? ` <span class="ayuda" id="l-${campo}-${i}-nota">${esc(o.nota)}</span>` : ""}</span></label>`).join("")}
       ${err(campo)}</fieldset>`;
   }
-  const siNo = (campo, leyenda, ayuda = "") => opciones(campo, leyenda, [{ valor: "si", texto: "Sí" }, { valor: "no", texto: "No" }], { ayuda });
+  const siNo = (campo, leyenda, ayuda = "") => opciones(campo, leyenda, [{ valor: "si", texto: tr("panel.legales.si") }, { valor: "no", texto: tr("panel.legales.no") }], { ayuda });
   const interruptorLegal = (campo, etiqueta, describe = "") => `<label class="interruptor" for="l-${campo}"><input type="checkbox" role="switch" id="l-${campo}" data-campo="${campo}" data-tipo="bool" ${t[campo] ? "checked" : ""} ${describe ? `aria-describedby="${describe}"` : ""}><span>${esc(etiqueta)}</span></label>`;
+  // Un enlace a Mi tienda dentro de una frase traducida.
+  const enlaceTienda = (clave) => `<a href="#/tienda">${esc(tr(clave))}</a>`;
+  // Nombre de un documento en el panel (la pestaña del aviso dice "Aviso del pop-up").
+  const nombreDocumento = (d, minuscula = false) => (d.clave === "aviso"
+    ? tr(minuscula ? "panel.legales.aviso_popup.min" : "panel.legales.aviso_popup")
+    : tr(`legal.documento.${d.clave}`));
 
   // --- Los pasos ---------------------------------------------------------------
   const PINTAR = {
-    1: () => `<h2 id="l-titulo">1. Perfil de la tienda</h2>
-      ${opciones("legal_perfil", "¿Cómo vende la tienda?", PERFILES.map((p) => ({ valor: p.clave, texto: p.nombre })),
-        { ayuda: "Cambia lo que dicen los términos sobre su relación con Apple y si se pide la dirección de un local." })}`,
+    1: () => `<h2 id="l-titulo">${esc(tr("panel.legales.paso1.titulo"))}</h2>
+      ${opciones("legal_perfil", tr("panel.legales.perfil.leyenda"), PERFILES.map((p) => ({ valor: p.clave, texto: tr(`legal.perfil.${p.clave}`) })),
+        { ayuda: esc(tr("panel.legales.perfil.ayuda")) })}`,
 
     2: () => {
       const juridica = t.legal_tipo_persona === "juridica";
@@ -129,116 +139,129 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
       const doc = docs.find((d) => d.clave === t.legal_doc_tipo);
       const perfil = perfilDe(t);
       const pais = modulosDe(t.legal_paises)[0] || modulosDe(["co"])[0];
-      return `<h2 id="l-titulo">2. Identificación</h2>
-      <p class="ayuda">Son los datos del responsable de los datos personales de sus clientes: la persona o la empresa dueña de la tienda.</p>
-      ${opciones("legal_tipo_persona", "Tipo de persona", [{ valor: "natural", texto: "Persona natural" }, { valor: "juridica", texto: "Persona jurídica (empresa)" }])}
-      ${texto("legal_nombre", juridica ? "Razón social" : "Nombre completo", { atributos: 'autocomplete="off"' })}
+      const ayudaNumero = [
+        tr("panel.legales.doc_numero.ayuda"),
+        doc ? tr("panel.legales.doc_numero.ejemplo", { ejemplo: doc.ejemplo }) : "",
+        doc?.clave === "nit" ? tr("panel.legales.doc_numero.nit") : ""
+      ].filter(Boolean).join(" ");
+      return `<h2 id="l-titulo">${esc(tr("panel.legales.paso2.titulo"))}</h2>
+      <p class="ayuda">${esc(tr("panel.legales.paso2.intro"))}</p>
+      ${opciones("legal_tipo_persona", tr("panel.legales.tipo_persona.leyenda"), [{ valor: "natural", texto: tr("panel.legales.tipo_persona.natural") }, { valor: "juridica", texto: tr("panel.legales.tipo_persona.juridica") }])}
+      ${texto("legal_nombre", juridica ? tr("panel.legales.razon_social") : tr("panel.legales.nombre_completo"), { atributos: 'autocomplete="off"' })}
       <div class="grilla-2">
-        <div class="campo"><label for="l-legal_doc_tipo">Tipo de documento</label>
+        <div class="campo"><label for="l-legal_doc_tipo">${esc(tr("panel.legales.doc_tipo"))}</label>
           <select class="entrada" id="l-legal_doc_tipo" data-campo="legal_doc_tipo" ${describir("legal_doc_tipo")}>
-            <option value="">Elija una opción</option>
+            <option value="">${esc(tr("panel.legales.elija_opcion"))}</option>
             ${docs.map((d) => `<option value="${d.clave}" ${d.clave === t.legal_doc_tipo ? "selected" : ""}>${esc(d.nombre)}</option>`).join("")}
           </select>${err("legal_doc_tipo")}</div>
-        ${texto("legal_doc_numero", "Número de documento", { max: 20, ayuda: `Sin puntos ni espacios.${doc ? ` Ej.: ${doc.ejemplo}.` : ""}${doc?.clave === "nit" ? " Con el dígito de verificación después del guion." : ""}`, atributos: 'autocomplete="off" spellcheck="false"' })}
+        ${texto("legal_doc_numero", tr("panel.legales.doc_numero"), { max: 20, ayuda: esc(ayudaNumero), atributos: 'autocomplete="off" spellcheck="false"' })}
       </div>
       <div class="grilla-2">
-        ${texto("legal_direccion", "Dirección para notificaciones", { atributos: 'autocomplete="street-address"' })}
-        ${texto("legal_ciudad", "Ciudad", { max: 80, atributos: 'autocomplete="address-level2"' })}
+        ${texto("legal_direccion", tr("panel.legales.direccion"), { atributos: 'autocomplete="street-address"' })}
+        ${texto("legal_ciudad", tr("panel.legales.ciudad"), { max: 80, atributos: 'autocomplete="address-level2"' })}
       </div>
       <div class="grilla-2">
-        ${texto("legal_correo", "Correo para temas de datos personales", { tipo: "email", ayuda: "Aquí le escriben sus clientes para consultar, corregir o borrar sus datos.", atributos: 'inputmode="email" autocomplete="email"' })}
-        ${texto("legal_telefono", "Teléfono de contacto", { tipo: "tel", max: 20, ayuda: "Con el indicativo del país, solo números. Ej.: 573001234567.", atributos: 'inputmode="tel" autocomplete="tel"' })}
+        ${texto("legal_correo", tr("panel.legales.correo"), { tipo: "email", ayuda: esc(tr("panel.legales.correo.ayuda")), atributos: 'inputmode="email" autocomplete="email"' })}
+        ${texto("legal_telefono", tr("panel.legales.telefono"), { tipo: "tel", max: 20, ayuda: esc(tr("panel.legales.telefono.ayuda")), atributos: 'inputmode="tel" autocomplete="tel"' })}
       </div>
-      ${juridica ? `${texto("legal_representante", "Representante legal")}
+      ${juridica ? `${texto("legal_representante", tr("panel.legales.representante"))}
       <div class="grilla-2">
-        ${texto("legal_matricula_numero", "Número de matrícula mercantil", { max: 40 })}
-        ${texto("legal_matricula_camara", "Cámara de comercio", { max: 80, ayuda: "La de la matrícula. Ej.: Cámara de Comercio de Medellín para Antioquia." })}
+        ${texto("legal_matricula_numero", tr("panel.legales.matricula_numero"), { max: 40 })}
+        ${texto("legal_matricula_camara", tr("panel.legales.matricula_camara"), { max: 80, ayuda: esc(tr("panel.legales.matricula_camara.ayuda")) })}
       </div>` : ""}
-      ${!perfil || necesitaLocal(t) ? texto("legal_direccion_local", "Dirección del local", { ayuda: perfil ? "" : "Si la tienda no tiene local, elija en el paso 1 «Emprendedor sin local físico» o «Revendedor particular»." }) : ""}
-      ${opciones("legal_rnbd", "Registro Nacional de Bases de Datos (opcional)", [
-        { valor: "si", texto: "Estamos obligados a inscribir nuestras bases de datos" },
-        { valor: "no", texto: "No estamos obligados" },
-        { valor: "", texto: "No indicarlo" }
-      ], { ayuda: `Es el registro de la ${esc(pais.autoridad.corto)}. Según la norma, ${esc(pais.datos.rnbd)}. Si lo indica, la política lo dice.` })}`;
+      ${!perfil || necesitaLocal(t) ? texto("legal_direccion_local", tr("panel.legales.direccion_local"), {
+        ayuda: perfil ? "" : esc(tr("panel.legales.direccion_local.ayuda", { emprendedor: tr("legal.perfil.emprendedor"), particular: tr("legal.perfil.particular") }))
+      }) : ""}
+      ${opciones("legal_rnbd", tr("panel.legales.rnbd.leyenda"), [
+        { valor: "si", texto: tr("panel.legales.rnbd.si") },
+        { valor: "no", texto: tr("panel.legales.rnbd.no") },
+        { valor: "", texto: tr("panel.legales.rnbd.vacio") }
+      ], { ayuda: esc(tr("panel.legales.rnbd.ayuda", { autoridad: pais.autoridad.corto, norma: pais.datos.rnbd })) })}`;
     },
 
-    3: () => `<h2 id="l-titulo">3. Países donde vende</h2>
+    3: () => `<h2 id="l-titulo">${esc(tr("panel.legales.paso3.titulo"))}</h2>
       ${PAISES_DISPONIBLES.includes(t.pais) ? "" : `<div class="aviso-legal" id="l-pais" tabindex="-1" role="note">
         <p>${esc(textoSinModulo(t.pais))}</p>
-        <p>El país de la tienda se elige en <a href="#/tienda">Mi tienda</a>. Mientras tanto no se pueden publicar los textos legales.</p></div>`}
-      ${opciones("legal_paises", "Elija los países", PAISES.map((p) => ({
-        valor: p.codigo, texto: p.nombre, desactivado: p.estado !== "disponible" && !(t.legal_paises || []).includes(p.codigo),
-        nota: p.estado === "disponible" ? "" : p.nota || "Próximamente"
-      })), { multiple: true, ayuda: "Por ahora los textos están listos para Colombia. Los demás países se habilitan a medida que estén sus módulos." })}`,
+        <p>${tr("panel.legales.pais.elegir", { enlace: enlaceTienda("panel.legales.mi_tienda") })}</p></div>`}
+      ${opciones("legal_paises", tr("panel.legales.paises.leyenda"), PAISES.map((p) => ({
+        valor: p.codigo, texto: tr(`pais.${p.codigo}`), desactivado: p.estado !== "disponible" && !(t.legal_paises || []).includes(p.codigo),
+        nota: p.estado === "disponible" ? "" : p.nota || ESTADOS[p.estado] || ESTADOS.proximamente
+      })), { multiple: true, ayuda: esc(tr("panel.legales.paises.ayuda")) })}`,
 
     4: () => {
-      const tienda = contexto(t).tienda || "La tienda";
-      return `<h2 id="l-titulo">4. Condiciones de venta</h2>
+      // La tienda tal como la nombran los términos (texto del documento: en español).
+      const tienda = contexto(t).tienda || tr("legal.doc.la_tienda", undefined, "es");
+      return `<h2 id="l-titulo">${esc(tr("panel.legales.paso4.titulo"))}</h2>
       <fieldset class="opciones-legales" id="l-legal_impuestos" ${describir("legal_impuestos", "imp")}>
-        <legend>Impuestos</legend>
-        <p class="ayuda" id="l-legal_impuestos-ayuda">Los que aplican al precio publicado. Indique si ya están incluidos.</p>
+        <legend>${esc(tr("panel.legales.impuestos.leyenda"))}</legend>
+        <p class="ayuda" id="l-legal_impuestos-ayuda">${esc(tr("panel.legales.impuestos.ayuda"))}</p>
         <ul class="lista-impuestos">${(t.legal_impuestos || []).map((i, n) => `<li class="fila-impuesto">
-          <div class="campo"><label for="imp-${n}-nombre">Impuesto ${n + 1}</label><input class="entrada" id="imp-${n}-nombre" data-imp="${n}" data-imp-campo="nombre" value="${esc(i?.nombre ?? "")}" maxlength="40" aria-describedby="l-legal_impuestos.${n}.nombre-error">${err(`legal_impuestos.${n}.nombre`)}</div>
-          <div class="campo"><label for="imp-${n}-porcentaje">Porcentaje</label><div class="entrada-con-sufijo"><input class="entrada cifras" id="imp-${n}-porcentaje" data-imp="${n}" data-imp-campo="porcentaje" inputmode="decimal" maxlength="6" value="${i?.porcentaje == null ? "" : String(i.porcentaje).replace(".", ",")}" aria-describedby="l-legal_impuestos.${n}.porcentaje-error"><span aria-hidden="true">%</span></div>${err(`legal_impuestos.${n}.porcentaje`)}</div>
-          <fieldset class="opciones-legales" aria-describedby="l-legal_impuestos.${n}.incluido-error"><legend>¿Incluido en el precio?</legend>
-            ${[["si", "Sí", true], ["no", "No", false]].map(([v, txt, b]) => `<label class="casilla" for="imp-${n}-${v}"><input type="radio" name="imp-${n}" id="imp-${n}-${v}" data-imp="${n}" data-imp-campo="incluido" value="${v}" ${i?.incluido === b ? "checked" : ""}><span>${txt}</span></label>`).join("")}
+          <div class="campo"><label for="imp-${n}-nombre">${esc(tr("panel.legales.impuesto.nombre", { n: n + 1 }))}</label><input class="entrada" id="imp-${n}-nombre" data-imp="${n}" data-imp-campo="nombre" value="${esc(i?.nombre ?? "")}" maxlength="40" aria-describedby="l-legal_impuestos.${n}.nombre-error">${err(`legal_impuestos.${n}.nombre`)}</div>
+          <div class="campo"><label for="imp-${n}-porcentaje">${esc(tr("panel.legales.impuesto.porcentaje"))}</label><div class="entrada-con-sufijo"><input class="entrada cifras" id="imp-${n}-porcentaje" data-imp="${n}" data-imp-campo="porcentaje" inputmode="decimal" maxlength="6" value="${i?.porcentaje == null ? "" : String(i.porcentaje).replace(".", ",")}" aria-describedby="l-legal_impuestos.${n}.porcentaje-error"><span aria-hidden="true">%</span></div>${err(`legal_impuestos.${n}.porcentaje`)}</div>
+          <fieldset class="opciones-legales" aria-describedby="l-legal_impuestos.${n}.incluido-error"><legend>${esc(tr("panel.legales.impuesto.incluido"))}</legend>
+            ${[["si", tr("panel.legales.si"), true], ["no", tr("panel.legales.no"), false]].map(([v, txt, b]) => `<label class="casilla" for="imp-${n}-${v}"><input type="radio" name="imp-${n}" id="imp-${n}-${v}" data-imp="${n}" data-imp-campo="incluido" value="${v}" ${i?.incluido === b ? "checked" : ""}><span>${esc(txt)}</span></label>`).join("")}
             ${err(`legal_impuestos.${n}.incluido`)}</fieldset>
-          <button type="button" class="boton boton--secundario" data-quitar-impuesto="${n}">Quitar impuesto ${n + 1}</button>
+          <button type="button" class="boton boton--secundario" data-quitar-impuesto="${n}">${esc(tr("panel.legales.impuesto.quitar", { n: n + 1 }))}</button>
         </li>`).join("")}</ul>
         ${err("legal_impuestos")}
-        <button type="button" class="boton boton--secundario" id="l-agregar-impuesto" ${(t.legal_impuestos || []).length >= 6 ? "disabled" : ""}>Agregar impuesto</button>
+        <button type="button" class="boton boton--secundario" id="l-agregar-impuesto" ${(t.legal_impuestos || []).length >= 6 ? "disabled" : ""}>${esc(tr("panel.legales.impuesto.agregar"))}</button>
       </fieldset>
-      ${entero("legal_garantia_nuevos", "Garantía de los equipos nuevos", { ayuda: AYUDA_GARANTIA })}
-      ${opciones("legal_garantia_usados", "Garantía de los equipos usados", [{ valor: "con", texto: "Con garantía" }, { valor: "sin", texto: "Sin garantía" }])}
-      ${t.legal_garantia_usados === "con" ? entero("legal_garantia_usados_meses", "Meses de garantía de los usados") : ""}
-      ${t.legal_garantia_usados === "sin" ? `<p class="aviso-datos" role="note">${AVISO_SIN_GARANTIA}</p>` : ""}
-      ${opciones("legal_retracto_canal", "¿Por dónde pide el cliente el retracto?", [
-        { valor: "correo", texto: `Por correo${t.legal_correo ? ` (${t.legal_correo})` : ""}` },
-        { valor: "whatsapp", texto: "Por WhatsApp (el de Mi tienda)" }
-      ], { ayuda: "En las compras a distancia, el cliente puede retractarse dentro de los 5 días hábiles siguientes a la entrega." })}
-      ${t.legal_retracto_canal === "whatsapp" && !/^57\d{10}$/.test(t.whatsapp || "") ? '<p class="aviso-datos" role="note">Falta el WhatsApp de la tienda. <a href="#/tienda">Complételo en Mi tienda</a>.</p>' : ""}
-      ${opciones("legal_entrega", "¿Cómo entrega los equipos?", ENTREGAS.map((e) => ({ valor: e.clave, texto: e.nombre })), { multiple: true })}
-      ${texto("legal_entrega_zonas", "Zonas de entrega", { max: 200, ayuda: "Ej.: Medellín y su área metropolitana; el resto del país con transportadora." })}
+      ${entero("legal_garantia_nuevos", tr("panel.legales.garantia_nuevos"), { ayuda: esc(tr("panel.legales.garantia_nuevos.ayuda")) })}
+      ${opciones("legal_garantia_usados", tr("panel.legales.garantia_usados"), [{ valor: "con", texto: tr("panel.legales.garantia_usados.con") }, { valor: "sin", texto: tr("panel.legales.garantia_usados.sin") }])}
+      ${t.legal_garantia_usados === "con" ? entero("legal_garantia_usados_meses", tr("panel.legales.garantia_usados_meses")) : ""}
+      ${t.legal_garantia_usados === "sin" ? `<p class="aviso-datos" role="note">${esc(tr("panel.legales.garantia_usados.sin_aviso"))}</p>` : ""}
+      ${opciones("legal_retracto_canal", tr("panel.legales.retracto.leyenda"), [
+        { valor: "correo", texto: t.legal_correo ? tr("panel.legales.retracto.correo_con", { correo: t.legal_correo }) : tr("panel.legales.retracto.correo") },
+        { valor: "whatsapp", texto: tr("panel.legales.retracto.whatsapp") }
+      ], { ayuda: esc(tr("panel.legales.retracto.ayuda")) })}
+      ${t.legal_retracto_canal === "whatsapp" && !whatsappValido(t.whatsapp || "", t.pais) ? `<p class="aviso-datos" role="note">${tr("panel.legales.retracto.falta_whatsapp", { enlace: enlaceTienda("panel.legales.retracto.completar") })}</p>` : ""}
+      ${opciones("legal_entrega", tr("panel.legales.entrega.leyenda"), ENTREGAS.map((e) => ({ valor: e.clave, texto: tr(`legal.entrega.${e.clave}`) })), { multiple: true })}
+      ${texto("legal_entrega_zonas", tr("panel.legales.entrega_zonas"), { max: 200, ayuda: esc(tr("panel.legales.entrega_zonas.ayuda")) })}
       <section class="sub-bloque" aria-labelledby="t-apple">
-        <h3 id="t-apple">Relación con Apple</h3>
+        <h3 id="t-apple">${esc(tr("panel.legales.apple.titulo"))}</h3>
         ${declaraApple(t)
-          ? texto("legal_apple_detalle", "Detalle de su relación con Apple", { multilinea: true, max: 400, ayuda: `Ej.: el tipo de autorización y desde cuándo. Los términos agregan: «${esc(tienda)} declara, bajo su responsabilidad, que esta información es cierta.»` })
-          : `<p class="ayuda">${perfilDe(t) ? "Con su perfil, los términos dicen, sin cambios:" : "Si no es tienda oficial ni revendedor autorizado, los términos dicen, sin cambios:"}</p>
-             <blockquote class="texto-fijo">${esc(independiente(tienda))}</blockquote>`}
+          ? texto("legal_apple_detalle", tr("panel.legales.apple.detalle"), { multilinea: true, max: 400, ayuda: esc(tr("panel.legales.apple.ayuda", { cita: tr("legal.doc.apple_declara", { tienda }, "es") })) })
+          : `<p class="ayuda">${esc(tr(perfilDe(t) ? "panel.legales.apple.con_perfil" : "panel.legales.apple.sin_perfil"))}</p>
+             <blockquote class="texto-fijo" lang="es">${esc(independiente(tienda))}</blockquote>`}
       </section>
-      ${siNo("legal_homologados", "¿Los equipos están homologados y con el IMEI registrado?", "Si responde que sí, los términos lo declaran.")}`;
+      ${siNo("legal_homologados", tr("panel.legales.homologados.leyenda"), esc(tr("panel.legales.homologados.ayuda")))}`;
     },
 
-    5: () => `<h2 id="l-titulo">5. Herramientas de medición y publicidad</h2>
-      <p class="ayuda">Cambian la Política de cookies, la de datos y el banner de cookies. Ninguna se carga antes de que la persona acepte su categoría.</p>
+    5: () => `<h2 id="l-titulo">${esc(tr("panel.legales.paso5.titulo"))}</h2>
+      <p class="ayuda">${esc(tr("panel.legales.paso5.intro"))}</p>
       <section class="sub-bloque" aria-labelledby="t-meta">
-        <h3 id="t-meta">${esc(META.nombre)} y API de Conversiones</h3>
-        <p class="ayuda">Siempre activos. ${esc(META.para)}</p>
-        ${texto(META.campo, META.etiquetaId, { max: 30, ayuda: `Solo números. Ej.: ${META.ejemplo}.`, atributos: 'inputmode="numeric" spellcheck="false" autocomplete="off"' })}
-        ${opciones("capi_solo_consentimiento", "¿Enviar a la API de Conversiones solo si la persona aceptó las cookies de publicidad?",
-          [{ valor: "si", texto: "Sí", marcado: t.capi_solo_consentimiento !== false }, { valor: "no", texto: "No", marcado: t.capi_solo_consentimiento === false }], { ayuda: AYUDA_CAPI })}
+        <h3 id="t-meta">${esc(tr("panel.legales.meta.titulo", { nombre: nombreH(META) }))}</h3>
+        <p class="ayuda">${esc(tr("panel.legales.meta.siempre", { para: tr(`legal.herramienta.${META.clave}.para`) }))}</p>
+        ${texto(META.campo, idH(META), { max: 30, ayuda: esc(tr("panel.legales.meta.id_ayuda", { ejemplo: META.ejemplo })), atributos: 'inputmode="numeric" spellcheck="false" autocomplete="off"' })}
+        ${opciones("capi_solo_consentimiento", tr("panel.legales.capi.leyenda"),
+          [{ valor: "si", texto: tr("panel.legales.si"), marcado: t.capi_solo_consentimiento !== false }, { valor: "no", texto: tr("panel.legales.no"), marcado: t.capi_solo_consentimiento === false }], { ayuda: esc(tr("panel.legales.capi.ayuda")) })}
       </section>
       ${OPCIONALES.map((h) => `<section class="sub-bloque" aria-labelledby="t-${h.clave}">
-        <h3 id="t-${h.clave}">${esc(h.nombre)}</h3>
-        <p class="ayuda" id="l-${h.activo}-ayuda">${esc(h.para)}</p>
-        ${interruptorLegal(h.activo, `Usar ${h.nombre}`, `l-${h.activo}-ayuda`)}
-        ${t[h.activo] ? texto(h.campo, h.etiquetaId, { max: 30, ayuda: `Ej.: ${h.ejemplo}.${h.clave === "clarity" ? ` ${AYUDA_CLARITY}` : ""}`, atributos: 'spellcheck="false" autocomplete="off"' }) : ""}
+        <h3 id="t-${h.clave}">${esc(nombreH(h))}</h3>
+        <p class="ayuda" id="l-${h.activo}-ayuda">${esc(tr(`legal.herramienta.${h.clave}.para`))}</p>
+        ${interruptorLegal(h.activo, tr("panel.legales.herramienta.usar", { nombre: nombreH(h) }), `l-${h.activo}-ayuda`)}
+        ${t[h.activo] ? texto(h.campo, idH(h), {
+          max: 30,
+          ayuda: esc([tr("panel.legales.herramienta.ejemplo", { ejemplo: h.ejemplo }), h.clave === "clarity" ? tr("panel.legales.clarity.ayuda") : ""].filter(Boolean).join(" ")),
+          atributos: 'spellcheck="false" autocomplete="off"'
+        }) : ""}
       </section>`).join("")}
-      ${texto("plataforma_sitio", "Plataforma del sitio", { max: 80, ayuda: "Donde está alojado el CRM que recibe las cotizaciones. Aparece en la política de datos." })}`,
+      ${texto("plataforma_sitio", tr("panel.legales.plataforma"), { max: 80, ayuda: esc(tr("panel.legales.plataforma.ayuda")) })}`,
 
-    6: () => `<h2 id="l-titulo">6. Vista previa y publicación</h2>
+    6: () => `<h2 id="l-titulo">${esc(tr("panel.legales.paso6.titulo"))}</h2>
+      ${idiomaActual() === "es" ? "" : `<p class="ayuda" role="note">${esc(tr("panel.legales.solo_espanol"))}</p>`}
       <div id="l-faltan"></div>
-      <div class="pestanas" role="tablist" aria-label="Documentos">
-        ${DOCUMENTOS.map((d) => `<button type="button" class="pestana" role="tab" id="pestana-${d.clave}" data-documento="${d.clave}" aria-controls="panel-${d.clave}" aria-selected="${d.clave === documento}" tabindex="${d.clave === documento ? 0 : -1}">${esc(d.clave === "aviso" ? "Aviso del pop-up" : d.titulo)}</button>`).join("")}
+      <div class="pestanas" role="tablist" aria-label="${esc(tr("panel.legales.documentos"))}">
+        ${DOCUMENTOS.map((d) => `<button type="button" class="pestana" role="tab" id="pestana-${d.clave}" data-documento="${d.clave}" aria-controls="panel-${d.clave}" aria-selected="${d.clave === documento}" tabindex="${d.clave === documento ? 0 : -1}">${esc(nombreDocumento(d))}</button>`).join("")}
       </div>
       ${DOCUMENTOS.map((d) => `<div class="panel-pestana" role="tabpanel" id="panel-${d.clave}" aria-labelledby="pestana-${d.clave}" tabindex="0" ${d.clave === documento ? "" : "hidden"}>
-        <div class="vista-previa-legal" data-previa="${d.clave}"></div>
+        <div class="vista-previa-legal" data-previa="${d.clave}" lang="es"></div>
         ${t[d.clausula] || tocados.has(d.clausula)
-          ? texto(d.clausula, `Cláusula propia: ${d.clave === "aviso" ? "aviso del pop-up" : d.titulo}`, { multilinea: true, max: 4000, ayuda: "Va al final del documento, en «Condiciones adicionales de la tienda». Mismo formato: ## para títulos y - para listas." })
-          : `<button type="button" class="boton boton--secundario" data-agregar-clausula="${d.clausula}">Agregar una cláusula propia</button>`}
+          ? texto(d.clausula, tr("panel.legales.clausula.etiqueta", { documento: nombreDocumento(d, true) }), { multilinea: true, max: 4000, ayuda: esc(tr("panel.legales.clausula.ayuda")) })
+          : `<button type="button" class="boton boton--secundario" data-agregar-clausula="${d.clausula}">${esc(tr("panel.legales.clausula.agregar"))}</button>`}
       </div>`).join("")}
       <div class="publicar-legales">
-        <button type="button" class="boton boton--primario boton--grande" id="l-publicar" aria-describedby="l-publicar-ayuda">Publicar textos legales</button>
+        <button type="button" class="boton boton--primario boton--grande" id="l-publicar" aria-describedby="l-publicar-ayuda">${esc(tr("panel.legales.publicar"))}</button>
         <p class="ayuda" id="l-publicar-ayuda"></p>
       </div>`
   };
@@ -250,15 +273,16 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
     const docs = lista.length ? null : generar(t);
     const pub = t.legal_publicado;
     const alDia = pasoCompleto(t, 6, lista);
-    $("#l-faltan").innerHTML = lista.length ? `<h3 id="t-faltan">Lo que falta</h3>
-      <ul class="avisos" aria-labelledby="t-faltan">${lista.map((f) => `<li><span>${esc(f.texto)}</span><a href="${f.paso === 0 ? "#/tienda" : `#/legales/${f.paso}?campo=${encodeURIComponent(f.campo)}`}">Resolver</a></li>`).join("")}</ul>` : "";
+    $("#l-faltan").innerHTML = lista.length ? `<h3 id="t-faltan">${esc(tr("panel.legales.faltan.titulo"))}</h3>
+      <ul class="avisos" aria-labelledby="t-faltan">${lista.map((f) => `<li><span>${esc(f.texto)}</span><a href="${f.paso === 0 ? "#/tienda" : `#/legales/${f.paso}?campo=${encodeURIComponent(f.campo)}`}">${esc(tr("panel.legales.faltan.resolver"))}</a></li>`).join("")}</ul>` : "";
     for (const d of DOCUMENTOS) {
+      // La vista previa es el documento: en español, con su pie de vigencia.
       $(`[data-previa="${d.clave}"]`, caja).innerHTML = docs
-        ? formatoBasico(pub && alDia ? conVigencia(pub, d.clave) : `${docs[d.clave]}\n\nVigente desde ${fechaDMA(hoyColombia())} · versión ${(pub?.version || 0) + 1}.`)
-        : "<p>La vista previa aparece cuando no falte ningún dato.</p>";
+        ? formatoBasico(pub && alDia ? conVigencia(pub, d.clave) : `${docs[d.clave]}\n\n${tr("legal.doc.vigencia", { fecha: fechaDMA(hoyColombia()), version: (pub?.version || 0) + 1 }, "es")}`)
+        : `<p lang="${esc(idiomaActual())}">${esc(tr("panel.legales.previa.vacia"))}</p>`;
     }
     $("#l-publicar").disabled = Boolean(lista.length || alDia);
-    $("#l-publicar-ayuda").textContent = lista.length ? "Se habilita cuando no falte ningún dato." : alDia ? "Los textos publicados están al día." : pub ? "Hay cambios sin publicar." : "Todavía no hay textos publicados.";
+    $("#l-publicar-ayuda").textContent = tr(lista.length ? "panel.legales.publicar.falta" : alDia ? "panel.legales.publicar.al_dia" : pub ? "panel.legales.publicar.cambios" : "panel.legales.publicar.nunca");
   }
 
   // --- Errores por campo ----------------------------------------------------------
@@ -267,23 +291,23 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
     const vacio = v === null || v === undefined || String(v).trim() === "" || (Array.isArray(v) && !v.length);
     if (campo === "legal_doc_numero" && !vacio) {
       const d = documentosDe(t.legal_paises).find((x) => x.clave === t.legal_doc_tipo);
-      return `Revise el número: sin puntos ni espacios${d ? `, como ${d.ejemplo}` : ""}.`;
+      return d ? tr("panel.legales.error.doc_numero.ejemplo", { ejemplo: d.ejemplo }) : tr("panel.legales.error.doc_numero");
     }
-    if (campo === "legal_correo" && !vacio) return "Revise el correo.";
-    if (campo === "legal_telefono" && !vacio) return "Escriba solo números, con el indicativo del país. Ej.: 573001234567.";
+    if (campo === "legal_correo" && !vacio) return tr("panel.legales.error.correo");
+    if (campo === "legal_telefono" && !vacio) return tr("panel.legales.error.telefono");
     if (campo === "legal_garantia_nuevos" && !vacio) {
       const min = Math.max(1, ...modulosDe(t.legal_paises).map((m) => m.consumo.garantiaNuevosMinMeses));
-      return min > 1 ? `Con Colombia, la garantía de los equipos nuevos debe ser de ${min} meses o más.` : "Escriba los meses de garantía.";
+      return min > 1 ? tr("panel.legales.error.garantia_minima", { min }) : tr("panel.legales.error.garantia");
     }
-    if (campo === "legal_paises") return vacio ? "Elija al menos un país." : "Solo se pueden elegir países disponibles.";
-    if (/^legal_impuestos\.\d+\.porcentaje$/.test(campo)) return "Escriba un porcentaje entre 0 y 100.";
-    if (/^legal_impuestos\.\d+\.incluido$/.test(campo)) return "Indique si está incluido.";
-    if (campo === "legal_impuestos") return "Agregue al menos un impuesto.";
-    if (DOCUMENTOS.some((d) => d.clausula === campo)) return "Quite las marcas del texto anterior ([PENDIENTE: …] y {{…}}).";
+    if (campo === "legal_paises") return tr(vacio ? "panel.legales.error.paises" : "panel.legales.error.paises_disponibles");
+    if (/^legal_impuestos\.\d+\.porcentaje$/.test(campo)) return tr("panel.legales.error.porcentaje");
+    if (/^legal_impuestos\.\d+\.incluido$/.test(campo)) return tr("panel.legales.error.incluido");
+    if (campo === "legal_impuestos") return tr("panel.legales.error.impuestos");
+    if (DOCUMENTOS.some((d) => d.clausula === campo)) return tr("panel.legales.error.marcas");
     const h = HERRAMIENTAS.find((x) => x.campo === campo);
-    if (h && !vacio) return `Revise el ${h.etiquetaId}. Ej.: ${h.ejemplo}.`;
-    if (["legal_perfil", "legal_tipo_persona", "legal_doc_tipo", "legal_garantia_usados", "legal_retracto_canal", "legal_homologados", "legal_entrega"].includes(campo)) return "Elija una opción.";
-    return "Complete este dato.";
+    if (h && !vacio) return tr("panel.legales.error.herramienta", { id: idH(h), ejemplo: h.ejemplo });
+    if (["legal_perfil", "legal_tipo_persona", "legal_doc_tipo", "legal_garantia_usados", "legal_retracto_canal", "legal_homologados", "legal_entrega"].includes(campo)) return tr("panel.legales.error.elija");
+    return tr("panel.legales.error.complete");
   }
 
   function pintarErrores(lista = faltantes(t)) {
@@ -302,15 +326,18 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
     const pub = t.legal_publicado;
     const completos = [1, 2, 3, 4, 5, 6].filter((n) => pasoCompleto(t, n, lista));
     $("#l-estado").innerHTML = pub
-      ? `Publicados: <strong>versión ${pub.version}</strong>, vigentes desde <strong class="cifras">${fechaDMA(pub.vigente_desde)}</strong>.`
-      : "Todavía no están publicados. Mientras tanto, el pop-up no envía pedidos y las páginas legales dicen «Página en preparación».";
+      ? tr("panel.legales.estado.publicados", {
+        version: `<strong>${esc(tr("panel.legales.estado.version", { n: pub.version }))}</strong>`,
+        fecha: `<strong class="cifras">${esc(fechaDMA(pub.vigente_desde))}</strong>`
+      })
+      : esc(tr("panel.legales.estado.sin_publicar"));
     $("#l-progreso").value = completos.length;
-    $("#l-progreso-texto").textContent = `${completos.length} de 6 pasos completos`;
-    $("#l-pasos").innerHTML = PASOS.map((nombre, i) => {
+    $("#l-progreso-texto").textContent = tr("panel.legales.progreso.texto", { n: completos.length });
+    $("#l-pasos").innerHTML = PASOS.map((clave, i) => {
       const n = i + 1;
       const hecho = completos.includes(n);
       return `<li><a href="#/legales/${n}" class="paso-legal${hecho ? " paso-legal--hecho" : ""}" ${n === paso ? 'aria-current="step"' : ""}>
-        <span class="paso-legal-numero" aria-hidden="true">${hecho ? "✓" : n}</span><span>${esc(nombre)}<span class="oculto-visual">${hecho ? ", completo" : ", falta completar"}</span></span></a></li>`;
+        <span class="paso-legal-numero" aria-hidden="true">${hecho ? "✓" : n}</span><span>${esc(tr(`legal.paso.${clave}`))}<span class="oculto-visual">${esc(tr(hecho ? "panel.legales.paso.completo" : "panel.legales.paso.falta"))}</span></span></a></li>`;
     }).join("");
   }
 
@@ -331,18 +358,18 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
     const cambios = { ...pendientes };
     for (const k of Object.keys(pendientes)) delete pendientes[k];
     if (!Object.keys(cambios).length) return guardando;
-    aviso("Guardando…");
+    aviso(tr("panel.legales.guardando"));
     guardando = guardando.then(async () => {
       try {
         const antes = t.legal_publicado?.version;
         t = { ...t, ...(await ctx.api.guardarTienda(cambios)), ...pendientes };
         ctx.tienda = t;
         aviso(t.legal_publicado && t.legal_publicado.version !== antes && antes
-          ? `Guardado. Textos legales actualizados: versión ${t.legal_publicado.version}.`
-          : "Guardado.");
+          ? tr("panel.legales.guardado.version", { version: t.legal_publicado.version })
+          : tr("panel.legales.guardado"));
       } catch (e) {
         aviso("");
-        avisar(e?.message || "No se pudo guardar. Inténtelo de nuevo.", "error");
+        avisar(e?.message || tr("panel.legales.error.guardar"), "error");
         t = { ...(await ctx.api.leerTienda()), ...pendientes };
       }
       // Si la persona ya salió de Legales, el guardado terminó y no hay qué pintar.
@@ -435,9 +462,9 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
       if (faltantes(t).length) return pintarPaso();
       try {
         const nuevo = publicar(t, t.legal_publicado);
-        t = await conBoton($("#l-publicar"), () => ctx.api.guardarTienda({ legal_publicado: nuevo }), { exito: "Textos legales publicados" });
+        t = await conBoton($("#l-publicar"), () => ctx.api.guardarTienda({ legal_publicado: nuevo }), { exito: tr("panel.legales.publicados.exito") });
         ctx.tienda = t;
-        aviso(`Publicados: versión ${t.legal_publicado.version}.`);
+        aviso(tr("panel.legales.publicados.version", { version: t.legal_publicado.version }));
         pintarPaso("l-titulo");
       } catch { /* aviso mostrado */ }
     }

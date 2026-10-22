@@ -7,7 +7,7 @@ import { CONFIG } from "../../../config.js";
 import { api as obtenerApi } from "../datos/api.js";
 import { aplicarTema } from "../tema.js";
 import { logoGenericoSVG } from "../ilustracion.js";
-import { escaparHTML, fechaCorta, plural, seguro, slugCapacidad, capacidadDeSlug, reducirMovimiento } from "../utils.js";
+import { escaparHTML, fechaCorta, formatearMiles, seguro, slugCapacidad, capacidadDeSlug, reducirMovimiento } from "../utils.js";
 import {
   prepararCatalogo, filtrar, contarEquipos, opcionesModelo, opcionesCapacidad, encadenar,
   tarjetas as armarTarjetas, diapositivas, describirBusqueda
@@ -21,6 +21,8 @@ import { capturarAtribucion } from "./atribucion.js";
 import { abrirConTransicion, cerrarConTransicion, cerrarConEscape } from "./transiciones.js";
 import { evento, parametrosEquipo } from "./pixel.js";
 import { fijarPais } from "../datos/paises.js";
+// Alias tr/tn: en este archivo "t" es la tienda.
+import { cargarIdioma, traducirDom, idiomaActual, t as tr, tn } from "../i18n/i18n.js";
 import { iniciarConsentimiento, alCambiar, permitido } from "./consentimiento.js";
 
 const $ = (s) => document.querySelector(s);
@@ -59,7 +61,7 @@ function dibujarMarca(t) {
   const logo = t.logo ? api.urlArchivo("marca", t.logo) : "";
   $("#marca-logo").innerHTML = logo ? `<img src="${escaparHTML(logo)}" alt="" width="160" height="40">` : logoGenericoSVG();
   $("#marca-nombre").textContent = t.nombre || "";
-  if (t.nombre) document.title = `${t.nombre} · Elija su iPhone y cómprelo por WhatsApp`;
+  if (t.nombre) document.title = `${t.nombre} · ${tr("sitio.titulo_pagina")}`;
   if (t.favicon) {
     const link = document.querySelector('link[rel="icon"]');
     link.href = api.urlArchivo("marca", t.favicon);
@@ -82,9 +84,9 @@ async function dibujarResenasSiHay() {
 
 function dibujarInfo(t) {
   const datos = [
-    t.direccion && ["Dirección", [t.direccion, t.ciudad].filter(Boolean).join(", ")],
-    !t.direccion && t.ciudad && ["Ciudad", t.ciudad],
-    t.horario_texto && ["Horario", t.horario_texto]
+    t.direccion && [tr("sitio.info.direccion"), [t.direccion, t.ciudad].filter(Boolean).join(", ")],
+    !t.direccion && t.ciudad && [tr("sitio.info.ciudad"), t.ciudad],
+    t.horario_texto && [tr("sitio.info.horario"), t.horario_texto]
   ].filter(Boolean);
   const redes = [
     t.instagram_url && ["Instagram", t.instagram_url],
@@ -93,17 +95,17 @@ function dibujarInfo(t) {
   ].filter(Boolean).filter(([, u]) => /^https?:\/\//i.test(u));
   if (!datos.length && !redes.length) { $("#info-tienda").hidden = true; return; }
   $("#info-tienda").hidden = false;
-  $("#info-titulo").textContent = t.nombre || "La tienda";
+  $("#info-titulo").textContent = t.nombre || tr("sitio.info.la_tienda");
   $("#info-datos").innerHTML = datos.map(([k, v]) => `<div><dt>${k}</dt><dd>${escaparHTML(v)}</dd></div>`).join("");
   $("#info-acciones").innerHTML = `
-    ${t.direccion ? `<a class="boton boton--primario" href="${escaparHTML(urlMapa(t))}" target="_blank" rel="noopener">Cómo llegar</a>` : ""}
+    ${t.direccion ? `<a class="boton boton--primario" href="${escaparHTML(urlMapa(t))}" target="_blank" rel="noopener">${tr("sitio.info.como_llegar")}</a>` : ""}
     ${redes.length ? `<div class="redes">${redes.map(([n, u]) => `<a class="boton boton--secundario" href="${escaparHTML(u)}" target="_blank" rel="noopener">${n}</a>`).join("")}</div>` : ""}`;
 }
 
 function dibujarPie(t) {
   $("#pie-tienda").textContent = [t.nombre, t.ciudad].filter(Boolean).join(" · ");
   const fecha = fechaCorta(t.precios_actualizados_en);
-  $("#pie-precios").textContent = fecha ? `Precios actualizados al ${fecha}` : "";
+  $("#pie-precios").textContent = fecha ? tr("sitio.pie.precios_actualizados", { fecha }) : "";
 }
 
 // --- Filtros y galería ---------------------------------------------------------
@@ -131,7 +133,7 @@ function actualizar() {
 
   const lista = filtrar(cat.equipos, filtros);
   const cantidad = contarEquipos(lista);
-  $("#contador").textContent = plural(cantidad, "equipo disponible", "equipos disponibles");
+  $("#contador").textContent = tn("sitio.contador", cantidad, { n: formatearMiles(cantidad) });
   $("#limpiar").hidden = !(condicion || modelo || capacidad);
 
   ultimasTarjetas = armarTarjetas(lista);
@@ -157,8 +159,8 @@ function aplicarVista(t) {
   lista.classList.toggle("galeria--carrusel", enCarrusel);
   if (enCarrusel) {
     region.setAttribute("role", "region");
-    region.setAttribute("aria-roledescription", "carrusel");
-    region.setAttribute("aria-label", "Equipos disponibles");
+    region.setAttribute("aria-roledescription", tr("sitio.carrusel.descripcion"));
+    region.setAttribute("aria-label", tr("sitio.galeria.titulo"));
     carrusel ??= crearCarruselEquipos(region, lista);
     galeria.usarCarrusel(carrusel);
   } else {
@@ -308,12 +310,14 @@ async function iniciar() {
     datos = await api.cargarPublico();
   } catch (e) {
     const aviso = $("#aviso-carga");
-    aviso.textContent = e?.message || "No pudimos cargar los equipos. Recargue la página.";
+    aviso.textContent = e?.message || tr("sitio.error_carga");
     aviso.hidden = false;
     $("#lista-equipos").innerHTML = "";
     return;
   }
   fijarPais(datos.tienda?.pais);
+  await cargarIdioma(datos.tienda?.idioma);
+  traducirDom();
   cat = prepararCatalogo(datos);
   const t = cat.tienda;
   seguro(() => aplicarTema(t), "tema");
@@ -364,7 +368,10 @@ async function iniciar() {
   if (api.tipo === "demo") {
     window.addEventListener("storage", async (e) => {
       if (e.key !== "cotizadora-demo:v1") return;
-      cat = prepararCatalogo(await api.cargarPublico());
+      const nuevos = await api.cargarPublico();
+      // Otro idioma: se vuelve a cargar la página entera en ese idioma.
+      if ((nuevos.tienda?.idioma || "es") !== idiomaActual()) { location.reload(); return; }
+      cat = prepararCatalogo(nuevos);
       aplicarTema(cat.tienda); dibujarMarca(cat.tienda); dibujarInfo(cat.tienda); dibujarPie(cat.tienda);
       dibujarResenasSiHay().catch((e) => console.error("reseñas", e));
       aplicarVista(cat.tienda);

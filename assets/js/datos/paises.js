@@ -17,7 +17,12 @@
 //     número va sin el 15.
 //   - `grupos`: cómo se agrupan los dígitos al mostrarlos.
 // Debe coincidir con whatsapp_valido() de 0018_pais.sql (las pruebas lo comparan).
+// - Nombre: `PAISES_TIENDA[c].nombre` es el nombre en español (dato fijo);
+//   datosPais(c).nombre es el que se muestra, en el idioma en uso (clave i18n
+//   "pais.<código>").
 // =============================================================================
+
+import { t } from "../i18n/i18n.js";
 
 export const PAISES_TIENDA = {
   ar: { nombre: "Argentina", moneda: "ARS", simbolo: "$", miles: ".", zona: "America/Argentina/Buenos_Aires", prefijo: "54",
@@ -56,7 +61,8 @@ export function datosPais(codigo) {
   const p = PAISES_TIENDA[codigo] || PAISES_TIENDA.co;
   const celular = { ...GENERAL, internacional: p.prefijo, ...p.celular };
   celular.visible = celular.visible || `+${celular.internacional}`;
-  return { codigo: PAISES_TIENDA[codigo] ? codigo : "co", ...p, celular };
+  const c = PAISES_TIENDA[codigo] ? codigo : "co";
+  return { codigo: c, ...p, nombre: t(`pais.${c}`), celular };
 }
 
 // --- País de la tienda en uso ---------------------------------------------------

@@ -9,9 +9,14 @@
 // =============================================================================
 
 import { CATALOGO, COLORES, DEMO_EQUIPOS, filasDeFuente } from "./semilla.js";
-import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, MENSAJE_MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, LEGAL_INICIAL, errorLegales, elegir } from "./comun.js";
+import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, LEGAL_INICIAL, errorLegales, elegir } from "./comun.js";
 import { hexValido, sesion, esperar } from "../utils.js";
 import { whatsappValido, CODIGOS_PAIS_TIENDA } from "./paises.js";
+import { CODIGOS_IDIOMA, t as tr } from "../i18n/i18n.js";
+
+// Los mensajes de error se traducen al lanzarlos (claves datos.error.*): son
+// los mismos del SQL, que llegan en español y traduce traducirServidor().
+const error = (clave, codigo) => new ErrorDatos(tr(`datos.error.${clave}`), codigo);
 
 const CLAVE = "cotizadora-demo:v1";
 const CLAVE_SESION = "cotizadora-demo:sesion";
@@ -49,7 +54,7 @@ function estadoInicial() {
     version: VERSION,
     tienda: {
       // El demo es una tienda de Colombia (sus precios de ejemplo están en pesos colombianos)
-      id: 1, nombre: "Tienda de demostración", pais: "co", ciudad: "", direccion: "", horario_texto: "", whatsapp: "",
+      id: 1, nombre: "Tienda de demostración", pais: "co", idioma: "es", ciudad: "", direccion: "", horario_texto: "", whatsapp: "",
       correo_contacto: "", instagram_url: "", facebook_url: "", tiktok_url: "", logo: "", favicon: "",
       color_primario: "#1A73E8", color_secundario: "#0F172A", tema: "claro", texto_entrega: "",
       pagos_otras: [], ...PAGOS_VACIOS, texto_garantia_nuevos: "", texto_garantia_usados: "", etiqueta_precio: "Precio",
@@ -69,7 +74,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 15;
+const VERSION = 16;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -186,7 +191,9 @@ const MIGRACIONES = {
   // 0018_pais.sql: el país de la tienda. Los datos del demo eran de Colombia.
   14(e) {
     e.tienda.pais = "co";
-  }
+  },
+  // 0020_idioma.sql: las tiendas que ya existían quedan en español.
+  15(e) { e.tienda.idioma = "es"; }
 };
 
 // FNV-1a de 32 bits (la misma huella de motor.js).
@@ -196,9 +203,9 @@ function huellaTexto(s) {
   return h.toString(16).padStart(8, "0");
 }
 
-// Como 0017: sin textos legales publicados, la demo se queda.
-const SIN_LEGALES_DEMO = "Publique los textos legales antes de quitar el modo demo.";
-const SIN_LEGALES_BORRAR = "Publique los textos legales antes de borrar los datos de demostración.";
+// Como 0017: sin textos legales publicados, la demo se queda (se traducen al usarlos).
+const SIN_LEGALES_DEMO = () => error("sin_legales_demo");
+const SIN_LEGALES_BORRAR = () => error("sin_legales_borrar");
 
 // Valores por defecto de las formas de pago estructuradas (0013).
 const PAGOS_VACIOS = {
@@ -238,7 +245,7 @@ function leer() {
 
 function escribir(e) {
   try { localStorage.setItem(CLAVE, JSON.stringify(e)); } catch {
-    throw new ErrorDatos("El navegador no tiene espacio para guardar los datos de demostración.");
+    throw error("sin_espacio");
   }
 }
 
@@ -302,19 +309,21 @@ function perfilActual(e) {
 // el gestor, todo lo demás.
 function exigirSesion(e) {
   const p = perfilActual(e);
-  if (!p) throw new ErrorDatos("Su sesión terminó. Vuelva a iniciar sesión.", "sin-sesion");
+  if (!p) throw error("sesion", "sin-sesion");
   return p;
 }
 
-function exigirGestor(e, que = "hacer este cambio") {
+// que: la acción, como clave (datos.error.solo_gestor.<que>).
+function exigirGestor(e, que = "cambio") {
   const p = exigirSesion(e);
-  if (p.rol !== "gestor") throw new ErrorDatos(`Solo el gestor puede ${que}.`, "42501");
+  if (p.rol !== "gestor") throw error(`solo_gestor.${que}`, "42501");
   return p;
 }
 
-function exigirAdministrador(e, que) {
+// El administrador solo gestiona usuarios (datos.error.solo_administrador).
+function exigirAdministrador(e) {
   const p = exigirSesion(e);
-  if (p.rol !== "administrador") throw new ErrorDatos(`Solo el administrador puede ${que}.`, "42501");
+  if (p.rol !== "administrador") throw error("solo_administrador", "42501");
   return p;
 }
 
@@ -323,11 +332,11 @@ function esGestor(e) { return perfilActual(e)?.rol === "gestor"; }
 // Como perfiles_proteger: siempre queda al menos un administrador activo.
 function cambiarPerfil(e, userId, cambios) {
   const p = e.perfiles.find((x) => x.user_id === userId);
-  if (!p) throw new ErrorDatos("Ese usuario ya no existe.");
+  if (!p) throw error("usuario_no_existe");
   const nuevo = { ...p, ...cambios };
   const otros = e.perfiles.some((x) => x.user_id !== userId && x.rol === "administrador" && x.activo);
   if (p.rol === "administrador" && p.activo && (nuevo.rol !== "administrador" || !nuevo.activo) && !otros) {
-    throw new ErrorDatos("Debe quedar al menos un administrador activo.", "42501");
+    throw error("un_administrador", "42501");
   }
   Object.assign(p, nuevo);
 }
@@ -336,23 +345,24 @@ function cambiarPerfil(e, userId, cambios) {
 
 function validarTienda(t) {
   // Como 0018: el país es uno de la lista y el WhatsApp sigue su formato
-  if (!CODIGOS_PAIS_TIENDA.includes(t.pais)) throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
-  if (t.whatsapp && !whatsappValido(t.whatsapp, t.pais)) throw new ErrorDatos("El WhatsApp no tiene el formato del país de la tienda.");
-  if (!hexValido(t.color_primario) || !hexValido(t.color_secundario)) throw new ErrorDatos("Los colores deben estar en formato hexadecimal, ej. #1A73E8.");
-  if (!["claro", "oscuro"].includes(t.tema)) throw new ErrorDatos("El tema debe ser claro u oscuro.");
-  if (!TAMANOS_TEXTO.includes(t.tamano_texto)) throw new ErrorDatos("El tamaño del texto debe ser compacto, normal o grande.");
-  if (!VISTAS_EQUIPOS.includes(t.vista_equipos)) throw new ErrorDatos("La vista de los equipos debe ser cuadrícula o carrusel.");
+  if (!CODIGOS_IDIOMA.includes(t.idioma)) throw error("formato");
+  if (!CODIGOS_PAIS_TIENDA.includes(t.pais)) throw error("formato");
+  if (t.whatsapp && !whatsappValido(t.whatsapp, t.pais)) throw error("whatsapp_pais");
+  if (!hexValido(t.color_primario) || !hexValido(t.color_secundario)) throw error("colores_hex");
+  if (!["claro", "oscuro"].includes(t.tema)) throw error("tema");
+  if (!TAMANOS_TEXTO.includes(t.tamano_texto)) throw error("tamano");
+  if (!VISTAS_EQUIPOS.includes(t.vista_equipos)) throw error("vista");
   // Como los checks de 0012
   if (typeof t.mostrar_ficha !== "boolean" || !Array.isArray(t.ficha_ocultas) ||
       t.ficha_ocultas.some((c) => !CATEGORIAS_FICHA.some((x) => x.clave === c))) {
-    throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
+    throw error("formato");
   }
   // Como validar_pagos (0013)
   const pagos = errorPagos(t);
   if (pagos) throw new ErrorDatos(pagos);
   // 0014
   if (typeof t.mostrar_resenas !== "boolean" || typeof t.titulo_resenas !== "string" || t.titulo_resenas.length > 80) {
-    throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
+    throw error("formato");
   }
   // Como los checks de 0016
   const legales = errorLegales(t);
@@ -365,12 +375,12 @@ function validarTienda(t) {
 async function publicarLegales(nueva, anterior) {
   const viejo = anterior.legal_publicado;
   if (JSON.stringify(nueva.legal_publicado) === JSON.stringify(viejo)) return;
-  if (!nueva.legal_publicado) throw new ErrorDatos("Los textos legales publicados no se pueden quitar.");
+  if (!nueva.legal_publicado) throw error("legales_quitar");
   const { faltantes, hoyColombia, DOCUMENTOS, MARCAS } = await import("../legal/motor.js");
-  if (faltantes(nueva).length) throw new ErrorDatos("Faltan datos para publicar los textos legales.");
+  if (faltantes(nueva).length) throw error("legales_faltan");
   const docs = nueva.legal_publicado.documentos || {};
   if (DOCUMENTOS.some((d) => typeof docs[d.clave] !== "string" || !docs[d.clave].trim() || MARCAS.test(docs[d.clave]))) {
-    throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
+    throw error("formato");
   }
   const iguales = viejo && DOCUMENTOS.every((d) => viejo.documentos?.[d.clave] === docs[d.clave]);
   nueva.legal_publicado = iguales ? viejo : {
@@ -386,49 +396,49 @@ function validarResena(r) {
     (r.origen === "" || ORIGENES_RESENA.some((o) => o.clave === r.origen)) &&
     typeof r.origen_otro === "string" && r.origen_otro.length <= 40 && (r.origen === "otro" || r.origen_otro === "") &&
     r.autorizado === true && Number.isInteger(r.orden);
-  if (!bien) throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
+  if (!bien) throw error("formato");
 }
 
 // Como validar_color_equipo (0008): el color es del modelo y es obligatorio
 // si el modelo tiene colores (al crear, o al cambiar el modelo o el color).
 function validarColorEquipo(q, e, anterior = null) {
   q.color_nombre_mostrar = String(q.color_nombre_mostrar || "").trim();
-  if (q.color_nombre_mostrar.length > 40) throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
+  if (q.color_nombre_mostrar.length > 40) throw error("formato");
   if (q.color_id != null) {
-    if (!e.colores.some((c) => c.id === q.color_id && c.modelo_id === q.modelo_id)) throw new ErrorDatos("El color elegido no es de este modelo.");
+    if (!e.colores.some((c) => c.id === q.color_id && c.modelo_id === q.modelo_id)) throw error("color_modelo");
   } else if ((!anterior || anterior.modelo_id !== q.modelo_id || anterior.color_id != null) && e.colores.some((c) => c.modelo_id === q.modelo_id)) {
-    throw new ErrorDatos("Elija el color.");
+    throw error("elija_color");
   }
 }
 
 // Como limitar_mas_vendidos (0010): no más de 3 marcados.
 function validarMasVendido(q, e, anterior = null) {
   if (q.mas_vendido && !anterior?.mas_vendido && e.equipos.filter((x) => x.mas_vendido && x.id !== q.id).length >= MAX_MAS_VENDIDOS) {
-    throw new ErrorDatos(MENSAJE_MAS_VENDIDOS);
+    throw error("mas_vendidos");
   }
 }
 
 function validarEquipo(q, e) {
-  if (!e.modelos.some((m) => m.id === q.modelo_id)) throw new ErrorDatos("Elija un modelo.");
-  if (!["nuevo", "usado"].includes(q.condicion)) throw new ErrorDatos("Elija si es nuevo o usado.");
-  if (!String(q.capacidad || "").trim()) throw new ErrorDatos("Elija la capacidad.");
-  if (!Number.isSafeInteger(q.precio) || q.precio <= 0) throw new ErrorDatos("El precio debe ser un número entero mayor que 0.");
-  if (typeof q.en_stock !== "boolean") throw new ErrorDatos("Indique si el equipo tiene stock.");
-  if (typeof q.mas_vendido !== "boolean") throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
-  if ((q.fotos || []).length > 6) throw new ErrorDatos("Máximo 6 fotos por equipo.");
-  if ((q.video ?? "") !== "" && !RUTA_VIDEO.test(q.video)) throw new ErrorDatos("Algún dato no tiene el formato correcto. Revise los campos.");
+  if (!e.modelos.some((m) => m.id === q.modelo_id)) throw error("elija_modelo");
+  if (!["nuevo", "usado"].includes(q.condicion)) throw error("elija_condicion");
+  if (!String(q.capacidad || "").trim()) throw error("elija_capacidad");
+  if (!Number.isSafeInteger(q.precio) || q.precio <= 0) throw error("precio");
+  if (typeof q.en_stock !== "boolean") throw error("stock");
+  if (typeof q.mas_vendido !== "boolean") throw error("formato");
+  if ((q.fotos || []).length > 6) throw error("max_fotos");
+  if ((q.video ?? "") !== "" && !RUTA_VIDEO.test(q.video)) throw error("formato");
   if (q.bateria_porcentaje != null && !(Number.isInteger(q.bateria_porcentaje) && q.bateria_porcentaje >= 0 && q.bateria_porcentaje <= 100)) {
-    throw new ErrorDatos("La batería debe estar entre 0 y 100.");
+    throw error("bateria");
   }
-  if (q.estado_estetico != null && !ESTADOS_ESTETICOS.includes(q.estado_estetico)) throw new ErrorDatos("Elija un estado estético de la lista.");
+  if (q.estado_estetico != null && !ESTADOS_ESTETICOS.includes(q.estado_estetico)) throw error("estado_estetico");
 }
 
 function validarColor(c, e) {
-  if (!e.modelos.some((m) => m.id === c.modelo_id)) throw new ErrorDatos("Elija un modelo.");
-  if (!String(c.nombre_es || "").trim()) throw new ErrorDatos("Escriba el nombre del color.");
-  if (c.hex !== "" && !hexValido(c.hex)) throw new ErrorDatos("El color debe estar en formato hexadecimal, ej. #1C1C1E.");
+  if (!e.modelos.some((m) => m.id === c.modelo_id)) throw error("elija_modelo");
+  if (!String(c.nombre_es || "").trim()) throw error("nombre_color");
+  if (c.hex !== "" && !hexValido(c.hex)) throw error("color_hex");
   if (e.colores.some((x) => x.id !== c.id && x.modelo_id === c.modelo_id && x.nombre_es === c.nombre_es)) {
-    throw new ErrorDatos("Ya existe un registro con ese nombre.");
+    throw error("duplicado");
   }
 }
 
@@ -495,8 +505,8 @@ export const demo = {
     await red();
     const e = leer();
     const p = e.perfiles.find((x) => x.correo.toLowerCase() === String(correo).trim().toLowerCase());
-    if (!p || p.clave !== clave) throw new ErrorDatos("El correo o la contraseña no coinciden.");
-    if (!p.activo) throw new ErrorDatos("Este usuario está desactivado. Hable con el administrador.");
+    if (!p || p.clave !== clave) throw error("credenciales");
+    if (!p.activo) throw error("desactivado");
     sesion.guardar(CLAVE_SESION, p.user_id);
     avisarSesion();
     return { id: p.user_id, correo: p.correo, rol: p.rol };
@@ -513,7 +523,7 @@ export const demo = {
   async cambiarClave(nueva) {
     const e = leer();
     const p = exigirSesion(e);
-    if (String(nueva).length < 8) throw new ErrorDatos("La contraseña debe tener al menos 8 caracteres.");
+    if (String(nueva).length < 8) throw error("clave_corta");
     e.perfiles.find((x) => x.user_id === p.user_id).clave = nueva;
     escribir(e);
   },
@@ -529,16 +539,16 @@ export const demo = {
   async guardarTienda(cambios) {
     await red();
     const e = leer();
-    const p = exigirGestor(e, "cambiar la tienda");
+    const p = exigirGestor(e, "tienda");
     const datos = elegir(cambios, CAMPOS_TIENDA);
     if ("modo_demo" in datos && datos.modo_demo !== e.tienda.modo_demo && p.rol !== "gestor") {
-      throw new ErrorDatos("Solo el gestor puede cambiar el modo demo.", "42501");
+      throw error("solo_gestor.modo_demo", "42501");
     }
     const nueva = copia({ ...e.tienda, ...datos, actualizado_en: ahora() });
     validarTienda(nueva);
     if ("legal_publicado" in datos) await publicarLegales(nueva, e.tienda);
     // Como proteger_tienda (0017)
-    if (e.tienda.modo_demo && !nueva.modo_demo && !nueva.legal_publicado) throw new ErrorDatos(SIN_LEGALES_DEMO);
+    if (e.tienda.modo_demo && !nueva.modo_demo && !nueva.legal_publicado) throw SIN_LEGALES_DEMO();
     e.tienda = nueva;
     escribir(e);
     return copia(nueva);
@@ -554,11 +564,11 @@ export const demo = {
   async guardarModelo(id, cambios) {
     await red();
     const e = leer();
-    exigirGestor(e, "cambiar el catálogo");
+    exigirGestor(e, "catalogo");
     const m = e.modelos.find((x) => x.id === id);
-    if (!m) throw new ErrorDatos("Ese modelo ya no existe.");
-    if ("nombre" in cambios && e.modelos.some((x) => x.id !== id && x.nombre === cambios.nombre)) throw new ErrorDatos("Ya existe un modelo con ese nombre.");
-    if ("slug" in cambios && e.modelos.some((x) => x.id !== id && x.slug === cambios.slug)) throw new ErrorDatos("Ya existe un modelo con ese nombre.");
+    if (!m) throw error("modelo_no_existe");
+    if ("nombre" in cambios && e.modelos.some((x) => x.id !== id && x.nombre === cambios.nombre)) throw error("modelo_duplicado");
+    if ("slug" in cambios && e.modelos.some((x) => x.id !== id && x.slug === cambios.slug)) throw error("modelo_duplicado");
     if ("activo" in cambios && cambios.activo !== m.activo) m.activo_por_demo = false;
     Object.assign(m, elegir(cambios, ["nombre", "slug", "generacion", "orden", "activo"]));
     escribir(e);
@@ -568,8 +578,8 @@ export const demo = {
   async agregarModelo(datos) {
     await red();
     const e = leer();
-    exigirGestor(e, "cambiar el catálogo");
-    if (e.modelos.some((x) => x.nombre === datos.nombre || x.slug === datos.slug)) throw new ErrorDatos("Ya existe un modelo con ese nombre.");
+    exigirGestor(e, "catalogo");
+    if (e.modelos.some((x) => x.nombre === datos.nombre || x.slug === datos.slug)) throw error("modelo_duplicado");
     const id = Math.max(0, ...e.modelos.map((m) => m.id)) + 1;
     const m = { id, nombre: datos.nombre, slug: datos.slug, generacion: datos.generacion, orden: datos.orden, activo: Boolean(datos.activo), activo_por_demo: false, creado_en: ahora() };
     e.modelos.push(m);
@@ -591,12 +601,12 @@ export const demo = {
     const e = leer();
     exigirGestor(e);
     const c = e.colores.find((x) => x.id === id);
-    if (!c) throw new ErrorDatos("Ese color ya no existe.");
+    if (!c) throw error("color_no_existe");
     const nuevo = { ...c, ...elegir(cambios, CAMPOS_COLOR) };
     if (nuevo.modelo_id !== c.modelo_id || (c.oficial && ["nombre_es", "nombre_en", "orden"].some((k) => nuevo[k] !== c[k]))) {
-      throw new ErrorDatos("El nombre de un color oficial no se puede cambiar.", "42501");
+      throw error("color_oficial_nombre", "42501");
     }
-    if (c.hex_de_fuente && nuevo.hex !== c.hex) throw new ErrorDatos("El hexadecimal de este color viene de la fuente y no se puede cambiar.", "42501");
+    if (c.hex_de_fuente && nuevo.hex !== c.hex) throw error("color_hex_fuente", "42501");
     validarColor(nuevo, e);
     Object.assign(c, nuevo);
     escribir(e);
@@ -606,9 +616,9 @@ export const demo = {
   async agregarColor(datos) {
     await red();
     const e = leer();
-    exigirGestor(e, "cambiar el catálogo");
+    exigirGestor(e, "catalogo");
     if (e.colores.some((c) => c.modelo_id === datos.modelo_id && c.oficial)) {
-      throw new ErrorDatos("Este modelo tiene colores oficiales: no se le pueden agregar otros.", "42501");
+      throw error("colores_oficiales", "42501");
     }
     const c = {
       id: Math.max(0, ...e.colores.map((x) => x.id)) + 1, nombre_en: "", hex: "", orden: 0,
@@ -623,11 +633,11 @@ export const demo = {
   async borrarColor(id) {
     await red();
     const e = leer();
-    exigirGestor(e, "cambiar el catálogo");
+    exigirGestor(e, "catalogo");
     const c = e.colores.find((x) => x.id === id);
     if (!c) return;
-    if (c.oficial) throw new ErrorDatos("Un color oficial no se puede borrar.", "42501");
-    if (e.equipos.some((q) => q.color_id === id)) throw new ErrorDatos("No se puede borrar: hay equipos con este color.");
+    if (c.oficial) throw error("color_oficial_borrar", "42501");
+    if (e.equipos.some((q) => q.color_id === id)) throw error("borrar_color_en_uso");
     e.colores.splice(e.colores.indexOf(c), 1);
     escribir(e);
   },
@@ -645,7 +655,7 @@ export const demo = {
     const e = leer();
     exigirGestor(e);
     // Como validar_ficha (0012)
-    if (!especificacionesValidas(especificaciones ?? [])) throw new ErrorDatos("Alguna fila de la ficha técnica no tiene el formato correcto.");
+    if (!especificacionesValidas(especificaciones ?? [])) throw error("ficha");
     let f = e.fichas.find((x) => x.modelo_id === modeloId);
     if (!f) { f = { modelo_id: modeloId }; e.fichas.push(f); }
     Object.assign(f, { descripcion: descripcion ?? "", especificaciones: especificaciones ?? [], actualizado_en: ahora() });
@@ -665,8 +675,8 @@ export const demo = {
   async agregarResena(datos) {
     await red();
     const e = leer();
-    exigirGestor(e, "cambiar las reseñas");
-    if (e.resenas.length >= MAX_RESENAS) throw new ErrorDatos(MENSAJE_MAX_RESENAS);
+    exigirGestor(e, "resenas");
+    if (e.resenas.length >= MAX_RESENAS) throw error("max_resenas");
     const r = { id: uuid(), texto: "", origen: "", origen_otro: "", orden: 0, ...elegir(datos, CAMPOS_RESENA), creado_en: ahora() };
     validarResena(r);
     e.resenas.push(r);
@@ -677,9 +687,9 @@ export const demo = {
   async guardarResena(id, cambios) {
     await red();
     const e = leer();
-    exigirGestor(e, "cambiar las reseñas");
+    exigirGestor(e, "resenas");
     const r = e.resenas.find((x) => x.id === id);
-    if (!r) throw new ErrorDatos("Esa reseña ya no existe.");
+    if (!r) throw error("resena_no_existe");
     const nueva = { ...r, ...elegir(cambios, CAMPOS_RESENA) };
     validarResena(nueva);
     Object.assign(r, nueva);
@@ -690,7 +700,7 @@ export const demo = {
   async borrarResena(id) {
     await red();
     const e = leer();
-    exigirGestor(e, "cambiar las reseñas");
+    exigirGestor(e, "resenas");
     e.resenas = e.resenas.filter((x) => x.id !== id);
     escribir(e);
   },
@@ -727,7 +737,7 @@ export const demo = {
     const e = leer();
     exigirGestor(e);
     const q = e.equipos.find((x) => x.id === id);
-    if (!q) throw new ErrorDatos("Ese equipo ya no existe.");
+    if (!q) throw error("equipo_no_existe");
     const nuevo = { ...q, ...elegir(cambios, CAMPOS_EQUIPO), actualizado_en: ahora() };
     validarEquipo(nuevo, e);
     if (["modelo_id", "color_id", "color_nombre_mostrar"].some((k) => k in cambios)) validarColorEquipo(nuevo, e, q);
@@ -752,7 +762,7 @@ export const demo = {
     exigirGestor(e);
     // Como Storage: cada bucket con su límite y sus tipos.
     const reglas = BUCKETS[bucket];
-    if (!reglas) throw new ErrorDatos("No se pudo subir el archivo.");
+    if (!reglas) throw error("subir_archivo");
     if (!reglas.tipos.includes(blob.type)) throw new ErrorDatos(mensajeArchivo(bucket, "tipo"));
     if (blob.size > reglas.max) throw new ErrorDatos(mensajeArchivo(bucket, "peso"));
     await idb("readwrite", (s) => s.put(blob, ruta));
@@ -772,8 +782,8 @@ export const demo = {
   async borrarDatosDemo() {
     await red();
     const e = leer();
-    exigirGestor(e, "borrar los datos de demostración");
-    if (!e.tienda.legal_publicado) throw new ErrorDatos(SIN_LEGALES_BORRAR);
+    exigirGestor(e, "borrar_demo");
+    if (!e.tienda.legal_publicado) throw SIN_LEGALES_BORRAR();
     e.equipos = e.equipos.filter((q) => !q.es_demo);
     for (const m of e.modelos) if (m.activo_por_demo) Object.assign(m, { activo: false, activo_por_demo: false });
     e.tienda.modo_demo = false;
@@ -799,10 +809,10 @@ export const demo = {
   async invitarUsuario(correo, rol) {
     await red();
     const e = leer();
-    exigirAdministrador(e, "gestionar usuarios");
-    if (!["administrador", "gestor"].includes(rol)) throw new ErrorDatos("Elija el rol.");
+    exigirAdministrador(e);
+    if (!["administrador", "gestor"].includes(rol)) throw error("elija_rol");
     const c = String(correo).trim().toLowerCase();
-    if (e.perfiles.some((p) => p.correo === c)) throw new ErrorDatos("Ese correo ya tiene usuario.");
+    if (e.perfiles.some((p) => p.correo === c)) throw error("correo_existe");
     // En demo el invitado entra con la clave de prueba.
     e.perfiles.push({ user_id: uuid(), correo: c, rol, activo: true, clave: CLAVE_DEMO, creado_en: ahora() });
     escribir(e);
@@ -812,8 +822,8 @@ export const demo = {
   async cambiarEstadoUsuario(userId, activo) {
     await red();
     const e = leer();
-    const yo = exigirAdministrador(e, "gestionar usuarios");
-    if (yo.user_id === userId) throw new ErrorDatos("No puede desactivarse a sí mismo.");
+    const yo = exigirAdministrador(e);
+    if (yo.user_id === userId) throw error("desactivarse");
     cambiarPerfil(e, userId, { activo });
     escribir(e);
   },
@@ -821,9 +831,9 @@ export const demo = {
   async cambiarRolUsuario(userId, rol) {
     await red();
     const e = leer();
-    const yo = exigirAdministrador(e, "gestionar usuarios");
-    if (yo.user_id === userId) throw new ErrorDatos("No puede cambiar su propio rol ni desactivarse.", "42501");
-    if (!["administrador", "gestor"].includes(rol)) throw new ErrorDatos("Elija el rol.");
+    const yo = exigirAdministrador(e);
+    if (yo.user_id === userId) throw error("propio_rol", "42501");
+    if (!["administrador", "gestor"].includes(rol)) throw error("elija_rol");
     cambiarPerfil(e, userId, { rol });
     escribir(e);
   }

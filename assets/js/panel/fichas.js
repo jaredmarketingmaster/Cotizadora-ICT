@@ -7,11 +7,14 @@
 //   agrega la tienda (agregar, editar, subir, bajar y borrar).
 // =============================================================================
 
-import { CATEGORIAS_FICHA, MAX_ETIQUETA_FICHA, MAX_VALOR_FICHA } from "../datos/comun.js";
+import { CATEGORIAS_FICHA, MAX_ETIQUETA_FICHA, MAX_VALOR_FICHA, etiquetaCategoriaFicha } from "../datos/comun.js";
+import { t, tn } from "../i18n/i18n.js";
 import { $, $$, esc, conBoton, confirmar, campoTexto, interruptor } from "./ui.js";
 
 const FIJAS = CATEGORIAS_FICHA.filter((c) => c.clave !== "otras");
-const SUGERIDAS = ["Desbloqueo", "Resistencia al agua", "Conectividad", "Sensores"];
+// Etiquetas sugeridas para las filas de la tienda (panel.fichas.sugerida.<clave>).
+const SUGERIDAS = ["desbloqueo", "agua", "conectividad", "sensores"];
+const volver = () => `<a class="volver" href="#/catalogo/ficha">${esc(t("panel.fichas.volver"))}</a>`;
 
 export async function dibujar(vista, ctx, resto) {
   const { api } = ctx;
@@ -27,22 +30,22 @@ export async function dibujar(vista, ctx, resto) {
   if (!id) {
     vista.innerHTML = `
       <section class="bloque" aria-labelledby="t-ficha-sitio">
-        <h2 id="t-ficha-sitio">En el sitio</h2>
-        ${interruptor({ id: "i-mostrar-ficha", etiqueta: "Mostrar la ficha técnica en el sitio", marcado: tienda.mostrar_ficha !== false })}
+        <h2 id="t-ficha-sitio">${esc(t("panel.fichas.sitio.titulo"))}</h2>
+        ${interruptor({ id: "i-mostrar-ficha", etiqueta: t("panel.fichas.sitio.mostrar"), marcado: tienda.mostrar_ficha !== false })}
         <fieldset class="categorias-ficha" id="categorias-ficha" ${tienda.mostrar_ficha === false ? "disabled" : ""}>
-          <legend>Categorías que se muestran</legend>
-          ${CATEGORIAS_FICHA.map((c) => interruptor({ id: `i-cat-${c.clave}`, etiqueta: c.etiqueta, marcado: !ocultas.has(c.clave), atributos: `data-categoria="${c.clave}"` })).join("")}
+          <legend>${esc(t("panel.fichas.sitio.categorias"))}</legend>
+          ${CATEGORIAS_FICHA.map((c) => interruptor({ id: `i-cat-${c.clave}`, etiqueta: etiquetaCategoriaFicha(c.clave), marcado: !ocultas.has(c.clave), atributos: `data-categoria="${c.clave}"` })).join("")}
         </fieldset>
-        <p class="ayuda">En cada modelo se ven solo las categorías encendidas que tienen dato, en este orden.</p>
+        <p class="ayuda">${esc(t("panel.fichas.sitio.ayuda"))}</p>
       </section>
       <section class="bloque" aria-labelledby="t-fichas-modelos">
-        <h2 id="t-fichas-modelos">Fichas por modelo</h2>
-        <p>Una por cada modelo activo. Lo que quede vacío no se muestra en el sitio.</p>
+        <h2 id="t-fichas-modelos">${esc(t("panel.fichas.modelos.titulo"))}</h2>
+        <p>${esc(t("panel.fichas.modelos.intro"))}</p>
         ${activos.length ? `<ul class="avisos avisos--neutro">${activos.map((m) => {
           const f = fichaDe(m.id);
           const n = conValor(f).length;
-          return `<li><span>${esc(m.nombre)}<br><span class="ayuda">${llenas(f) ? `${n} dato${n === 1 ? "" : "s"}${f.descripcion.trim() ? " · con descripción" : ""}` : "Vacía"}</span></span><a class="boton boton--suave boton--chico" href="#/catalogo/ficha/${m.id}">Editar</a></li>`;
-        }).join("")}</ul>` : '<p class="vacio-panel">No hay modelos activos. Actívelos en <a href="#/catalogo">Modelos y colores</a>.</p>'}
+          return `<li><span>${esc(m.nombre)}<br><span class="ayuda">${esc(llenas(f) ? [tn("panel.fichas.modelos.datos", n), f.descripcion.trim() && t("panel.fichas.modelos.con_descripcion")].filter(Boolean).join(" · ") : t("panel.fichas.modelos.vacia"))}</span></span><a class="boton boton--suave boton--chico" href="#/catalogo/ficha/${m.id}">${esc(t("panel.fichas.modelos.editar"))}</a></li>`;
+        }).join("")}</ul>` : `<p class="vacio-panel">${t("panel.fichas.modelos.sin_activos", { enlace: `<a href="#/catalogo">${esc(t("panel.fichas.modelos.sin_activos_enlace"))}</a>` })}</p>`}
       </section>`;
 
     $("#i-mostrar-ficha", vista).addEventListener("change", async (e) => {
@@ -65,7 +68,7 @@ export async function dibujar(vista, ctx, resto) {
   }
 
   const modelo = modelos.find((m) => m.id === id);
-  if (!modelo) { vista.innerHTML = '<p class="popup-alerta">Ese modelo no existe.</p><a class="volver" href="#/catalogo/ficha">← Ficha técnica</a>'; return; }
+  if (!modelo) { vista.innerHTML = `<p class="popup-alerta">${esc(t("panel.fichas.no_existe"))}</p>${volver()}`; return; }
   const ficha = fichaDe(id);
   const valorDe = (f, clave) => (f.especificaciones || []).find((x) => x.clave === clave)?.valor || "";
   // Filas que agrega la tienda (sin categoría fija)
@@ -73,51 +76,51 @@ export async function dibujar(vista, ctx, resto) {
   const otras = modelos.filter((m) => m.id !== id && llenas(fichaDe(m.id)));
 
   vista.innerHTML = `
-    <a class="volver" href="#/catalogo/ficha">← Ficha técnica</a>
-    <div class="vista-cabecera"><h2>${esc(modelo.nombre)}</h2>${modelo.activo ? "" : "<p>Este modelo está inactivo: su ficha no se ve en el sitio.</p>"}</div>
+    ${volver()}
+    <div class="vista-cabecera"><h2>${esc(modelo.nombre)}</h2>${modelo.activo ? "" : `<p>${esc(t("panel.fichas.editor.inactivo"))}</p>`}</div>
     <form id="form-ficha" novalidate>
       <section class="bloque">
-        ${campoTexto({ id: "f-descripcion", etiqueta: "Descripción", valor: ficha.descripcion, ayuda: "Texto libre de la tienda. Se muestra en la ficha de todos los equipos de este modelo.", multilinea: true, atributos: 'rows="4" maxlength="1500"' })}
+        ${campoTexto({ id: "f-descripcion", etiqueta: t("panel.fichas.editor.descripcion"), valor: ficha.descripcion, ayuda: esc(t("panel.fichas.editor.descripcion_ayuda")), multilinea: true, atributos: 'rows="4" maxlength="1500"' })}
       </section>
       <section class="bloque" aria-labelledby="t-categorias">
-        <h3 id="t-categorias">Especificaciones</h3>
-        <p class="ayuda">Vienen de los datos del catálogo. Puede corregirlas o completarlas; lo que quede vacío no se muestra.</p>
+        <h3 id="t-categorias">${esc(t("panel.fichas.editor.especificaciones"))}</h3>
+        <p class="ayuda">${esc(t("panel.fichas.editor.especificaciones_ayuda"))}</p>
         ${FIJAS.map((c) => campoTexto({
-          id: `fc-${c.clave}`, etiqueta: c.etiqueta, valor: valorDe(ficha, c.clave), multilinea: true,
-          ayuda: ocultas.has(c.clave) ? "Esta categoría está apagada: no se ve en el sitio." : "",
+          id: `fc-${c.clave}`, etiqueta: etiquetaCategoriaFicha(c.clave), valor: valorDe(ficha, c.clave), multilinea: true,
+          ayuda: ocultas.has(c.clave) ? esc(t("panel.fichas.editor.apagada")) : "",
           atributos: `rows="3" maxlength="${MAX_VALOR_FICHA}" data-categoria="${c.clave}"`
         })).join("")}
       </section>
       <section class="bloque" aria-labelledby="t-filas">
-        <h3 id="t-filas">Otras filas de la tienda</h3>
-        <p class="ayuda">Solo se muestran las filas que tienen etiqueta y valor, después de las especificaciones.</p>
+        <h3 id="t-filas">${esc(t("panel.fichas.filas.titulo"))}</h3>
+        <p class="ayuda">${esc(t("panel.fichas.filas.ayuda"))}</p>
         <ul class="filas-ficha" id="filas"></ul>
         <div class="zona-subida-botones" style="justify-content:flex-start">
-          <button type="button" class="boton boton--secundario" id="agregar-fila">Agregar fila</button>
-          ${otras.length ? `<button type="button" class="boton boton--secundario" id="copiar">Copiar ficha de otro modelo</button>` : ""}
+          <button type="button" class="boton boton--secundario" id="agregar-fila">${esc(t("panel.fichas.filas.agregar"))}</button>
+          ${otras.length ? `<button type="button" class="boton boton--secundario" id="copiar">${esc(t("panel.fichas.copiar.abrir"))}</button>` : ""}
         </div>
         <div id="caja-copiar" hidden>
           <div class="campo">
-            <label for="copiar-de">Copiar de</label>
+            <label for="copiar-de">${esc(t("panel.fichas.copiar.de"))}</label>
             <select class="entrada" id="copiar-de">${otras.map((m) => `<option value="${m.id}">${esc(m.nombre)}</option>`).join("")}</select>
           </div>
-          <button type="button" class="boton boton--primario" id="copiar-ya">Copiar</button>
+          <button type="button" class="boton boton--primario" id="copiar-ya">${esc(t("panel.fichas.copiar.boton"))}</button>
         </div>
       </section>
-      <div class="acciones-formulario"><button type="submit" class="boton boton--primario" id="guardar-ficha">Guardar</button></div>
+      <div class="acciones-formulario"><button type="submit" class="boton boton--primario" id="guardar-ficha">${esc(t("panel.fichas.guardar"))}</button></div>
     </form>
-    <datalist id="etiquetas-sugeridas">${SUGERIDAS.map((s) => `<option value="${s}">`).join("")}</datalist>`;
+    <datalist id="etiquetas-sugeridas">${SUGERIDAS.map((s) => `<option value="${esc(t(`panel.fichas.sugerida.${s}`))}">`).join("")}</datalist>`;
 
   function pintar() {
     $("#filas").innerHTML = filas.length ? filas.map((f, i) => `<li class="fila-ficha">
-      <div class="campo"><label for="fe-${i}">Etiqueta</label><input class="entrada" id="fe-${i}" data-i="${i}" data-k="etiqueta" value="${esc(f.etiqueta)}" list="etiquetas-sugeridas" maxlength="${MAX_ETIQUETA_FICHA}"></div>
-      <div class="campo"><label for="fv-${i}">Valor</label><textarea class="entrada" id="fv-${i}" data-i="${i}" data-k="valor" rows="2" maxlength="${MAX_VALOR_FICHA}">${esc(f.valor)}</textarea></div>
+      <div class="campo"><label for="fe-${i}">${esc(t("panel.fichas.filas.etiqueta"))}</label><input class="entrada" id="fe-${i}" data-i="${i}" data-k="etiqueta" value="${esc(f.etiqueta)}" list="etiquetas-sugeridas" maxlength="${MAX_ETIQUETA_FICHA}"></div>
+      <div class="campo"><label for="fv-${i}">${esc(t("panel.fichas.filas.valor"))}</label><textarea class="entrada" id="fv-${i}" data-i="${i}" data-k="valor" rows="2" maxlength="${MAX_VALOR_FICHA}">${esc(f.valor)}</textarea></div>
       <div class="fila-ficha-botones">
-        <button type="button" class="boton-icono" data-mover="-1" data-i="${i}" aria-label="Subir la fila ${i + 1}" ${i === 0 ? "disabled" : ""}>↑</button>
-        <button type="button" class="boton-icono" data-mover="1" data-i="${i}" aria-label="Bajar la fila ${i + 1}" ${i === filas.length - 1 ? "disabled" : ""}>↓</button>
-        <button type="button" class="boton-icono" data-borrar data-i="${i}" aria-label="Borrar la fila ${i + 1}">✕</button>
+        <button type="button" class="boton-icono" data-mover="-1" data-i="${i}" aria-label="${esc(t("panel.fichas.filas.subir", { n: i + 1 }))}" ${i === 0 ? "disabled" : ""}>↑</button>
+        <button type="button" class="boton-icono" data-mover="1" data-i="${i}" aria-label="${esc(t("panel.fichas.filas.bajar", { n: i + 1 }))}" ${i === filas.length - 1 ? "disabled" : ""}>↓</button>
+        <button type="button" class="boton-icono" data-borrar data-i="${i}" aria-label="${esc(t("panel.fichas.filas.borrar", { n: i + 1 }))}">✕</button>
       </div>
-    </li>`).join("") : '<li class="vacio-panel">Sin filas todavía.</li>';
+    </li>`).join("") : `<li class="vacio-panel">${esc(t("panel.fichas.filas.vacio"))}</li>`;
   }
 
   const form = $("#form-ficha");
@@ -147,7 +150,7 @@ export async function dibujar(vista, ctx, resto) {
   $("#copiar-ya")?.addEventListener("click", async () => {
     const origen = fichaDe(Number($("#copiar-de").value));
     const hayAlgo = filas.length || $("#f-descripcion").value.trim() || $$("[data-categoria]", form).some((el) => el.value.trim());
-    if (hayAlgo && !(await confirmar({ titulo: "¿Reemplazar esta ficha?", texto: "Se cambian la descripción, las especificaciones y las filas por las del otro modelo. Se guarda al tocar «Guardar».", aceptar: "Reemplazar" }))) return;
+    if (hayAlgo && !(await confirmar({ titulo: t("panel.fichas.copiar.confirmar_titulo"), texto: t("panel.fichas.copiar.confirmar_texto"), aceptar: t("panel.fichas.copiar.reemplazar") }))) return;
     filas = (origen.especificaciones || []).filter((f) => !f.clave).map((f) => ({ etiqueta: f.etiqueta, valor: f.valor }));
     for (const el of $$("[data-categoria]", form)) el.value = valorDe(origen, el.dataset.categoria);
     $("#f-descripcion").value = origen.descripcion;

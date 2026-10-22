@@ -12,6 +12,7 @@
 import { escaparHTML } from "../utils.js";
 import { rutaMiniatura, LADO_MINIATURA, LADO_GRANDE, TITULO_RESENAS, textoOrigen } from "../datos/comun.js";
 import { abrirConTransicion, cerrarConTransicion, cerrarConEscape } from "./transiciones.js";
+import { t as tr } from "../i18n/i18n.js";
 
 const ICONO_PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="11" fill="currentColor" opacity=".14"/><path d="M10 8l6 4-6 4z" fill="currentColor"/></svg>';
 
@@ -26,16 +27,19 @@ export function dibujarResenas({ seccion, dialogo, api, tienda, resenas }) {
   const ul = seccion.querySelector(".resenas-lista");
   seccion.hidden = !lista.length;
   if (!lista.length) { ul.innerHTML = ""; return; }
-  seccion.querySelector(".resenas-titulo").textContent = String(tienda.titulo_resenas || "").trim() || TITULO_RESENAS;
+  // El título por defecto (guardado en español) se muestra en el idioma del
+  // sitio; si la tienda escribió otro, el suyo.
+  const titulo = String(tienda.titulo_resenas || "").trim();
+  seccion.querySelector(".resenas-titulo").textContent = !titulo || titulo === TITULO_RESENAS ? tr("sitio.resenas.titulo") : titulo;
   const n = lista.length;
   ul.innerHTML = lista.map((r, i) => {
     const origen = textoOrigen(r);
     return `<li class="resena">
       <button type="button" class="resena-boton" data-i="${i}" aria-haspopup="dialog">
-        <span class="oculto-visual">Ver la reseña ${i + 1} de ${n}. </span>
+        <span class="oculto-visual">${tr("sitio.resenas.ver", { i: i + 1, n })} </span>
         <span class="resena-medio${r.tipo === "video" ? " resena-medio--video" : ""}">${r.tipo === "imagen"
-          ? htmlImagen(api, r, `Imagen de la reseña ${i + 1}`, { sizes: "(min-width: 900px) 260px, 72vw" })
-          : `<span class="resena-play">${ICONO_PLAY}<span>Video</span></span>`}</span>
+          ? htmlImagen(api, r, tr("sitio.resenas.imagen", { i: i + 1 }), { sizes: "(min-width: 900px) 260px, 72vw" })
+          : `<span class="resena-play">${ICONO_PLAY}<span>${tr("sitio.resenas.video")}</span></span>`}</span>
         ${r.texto ? `<span class="resena-texto">${escaparHTML(r.texto)}</span>` : ""}
         ${origen ? `<span class="resena-origen">${escaparHTML(origen)}</span>` : ""}
       </button>
@@ -49,12 +53,12 @@ export function dibujarResenas({ seccion, dialogo, api, tienda, resenas }) {
   function mostrar(i) {
     actual = (i + n) % n;
     const r = lista[actual];
-    dialogo.querySelector(".visor-titulo").textContent = `Reseña ${actual + 1} de ${n}`;
+    dialogo.querySelector(".visor-titulo").textContent = tr("sitio.resenas.posicion", { i: actual + 1, n });
     // El video se crea recién aquí, sin descargar nada hasta que se toque
     // reproducir; el anterior se quita (y deja de sonar).
     medio.innerHTML = r.tipo === "imagen"
-      ? htmlImagen(api, r, `Imagen de la reseña ${actual + 1}`, { sizes: "100vw", diferida: false })
-      : `<video controls playsinline preload="none" src="${escaparHTML(api.urlArchivo("resenas", r.ruta))}" aria-label="Video de la reseña ${actual + 1}"></video>`;
+      ? htmlImagen(api, r, tr("sitio.resenas.imagen", { i: actual + 1 }), { sizes: "100vw", diferida: false })
+      : `<video controls playsinline preload="none" src="${escaparHTML(api.urlArchivo("resenas", r.ruta))}" aria-label="${tr("sitio.resenas.video_de", { i: actual + 1 })}"></video>`;
     const texto = dialogo.querySelector(".visor-texto");
     texto.textContent = r.texto || "";
     texto.hidden = !r.texto;

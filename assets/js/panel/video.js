@@ -9,12 +9,14 @@
 // =============================================================================
 
 import { ErrorDatos } from "../datos/comun.js";
+import { t as tr } from "../i18n/i18n.js";
 
 export const MAX_BYTES_VIDEO = 20 * 1024 * 1024;
 export const MAX_SEGUNDOS = 15;
 // Los celulares graban "15 s" como 15,0x s: un margen de una décima.
 const MARGEN = 0.1;
-export const MENSAJE_FORMATO = "Este formato puede no verse en todos los celulares. Súbalo en MP4.";
+// Es una función: el idioma se carga después de importar este módulo.
+export const MENSAJE_FORMATO = () => tr("panel.video.formato");
 
 // Por el tipo; si el navegador no lo informa, por la extensión.
 function tipoDe(archivo) {
@@ -60,13 +62,13 @@ export function leerMp4(buffer) {
   const vista = new DataView(buffer);
   const bytes = new Uint8Array(buffer);
   const moov = cajas(vista, 0, buffer.byteLength).find((c) => c.tipo === "moov");
-  if (!moov) throw new ErrorDatos(MENSAJE_FORMATO);
+  if (!moov) throw new ErrorDatos(MENSAJE_FORMATO());
   const mvhd = cajas(vista, moov.datos, moov.fin).find((c) => c.tipo === "mvhd");
-  if (!mvhd) throw new ErrorDatos(MENSAJE_FORMATO);
+  if (!mvhd) throw new ErrorDatos(MENSAJE_FORMATO());
   const version = vista.getUint8(mvhd.datos);
   const escala = version === 1 ? vista.getUint32(mvhd.datos + 20) : vista.getUint32(mvhd.datos + 12);
   const duracion = version === 1 ? Number(vista.getBigUint64(mvhd.datos + 24)) : vista.getUint32(mvhd.datos + 16);
-  if (!escala) throw new ErrorDatos(MENSAJE_FORMATO);
+  if (!escala) throw new ErrorDatos(MENSAJE_FORMATO());
   const h264 = contiene(bytes, moov.datos, moov.fin, "avc1") || contiene(bytes, moov.datos, moov.fin, "avc3");
   return { segundos: duracion / escala, h264 };
 }
@@ -78,10 +80,10 @@ function duracionConVideo(archivo) {
     const v = document.createElement("video");
     const url = URL.createObjectURL(archivo);
     const terminar = (fn, x) => { clearTimeout(t); v.removeAttribute("src"); v.load(); URL.revokeObjectURL(url); fn(x); };
-    const t = setTimeout(() => terminar(rechazar, new ErrorDatos("No pudimos leer el video. Pruebe con otro.")), 15000);
+    const t = setTimeout(() => terminar(rechazar, new ErrorDatos(tr("panel.video.no_se_pudo_leer"))), 15000);
     v.preload = "metadata";
     v.muted = true;
-    v.onerror = () => terminar(rechazar, new ErrorDatos(MENSAJE_FORMATO));
+    v.onerror = () => terminar(rechazar, new ErrorDatos(MENSAJE_FORMATO()));
     v.onloadedmetadata = () => {
       if (Number.isFinite(v.duration)) { terminar(resolver, v.duration); return; }
       v.ondurationchange = () => { if (Number.isFinite(v.duration)) terminar(resolver, v.duration); };
@@ -95,16 +97,16 @@ function duracionConVideo(archivo) {
 // mensaje para el usuario si no sirve.
 export async function validarVideo(archivo, { maxSegundos = MAX_SEGUNDOS } = {}) {
   const tipo = tipoDe(archivo);
-  if (!tipo) throw new ErrorDatos(MENSAJE_FORMATO);
-  if (archivo.size > MAX_BYTES_VIDEO) throw new ErrorDatos("El video pesa más de 20 MB.");
+  if (!tipo) throw new ErrorDatos(MENSAJE_FORMATO());
+  if (archivo.size > MAX_BYTES_VIDEO) throw new ErrorDatos(tr("panel.video.muy_pesado"));
   let segundos;
   if (tipo === "mp4") {
     const info = leerMp4(await archivo.arrayBuffer());
-    if (!info.h264) throw new ErrorDatos(MENSAJE_FORMATO);
+    if (!info.h264) throw new ErrorDatos(MENSAJE_FORMATO());
     segundos = info.segundos;
   } else {
     segundos = await duracionConVideo(archivo);
   }
-  if (segundos > maxSegundos + MARGEN) throw new ErrorDatos(`El video dura más de ${maxSegundos} segundos. Súbalo más corto.`);
+  if (segundos > maxSegundos + MARGEN) throw new ErrorDatos(tr("panel.video.muy_largo", { n: maxSegundos }));
   return { ext: tipo, segundos };
 }

@@ -1046,8 +1046,9 @@ async function llenarPopup(p) {
     assert.deepEqual(Object.fromEntries(Object.keys(LEGAL_INICIAL).map((k) => [k, e.tienda[k]])),
       { ...LEGAL_INICIAL, legal_clausula_privacidad: "Mi política propia.", legal_clausula_terminos: "Mi aviso de marca." });
     for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) assert.ok(!(k in e.tienda), k);
-    assert.equal(e.version, 15);
+    assert.equal(e.version, 16);
     assert.equal(e.tienda.pais, "co", "0018: los datos viejos del demo son de Colombia");
+    assert.equal(e.tienda.idioma, "es", "0020: las tiendas que ya existían quedan en español");
     assert.deepEqual(e.equipos.map((q) => q.en_stock), [false, true, true, true, true, true]);
     assert.equal(new Set(e.modelos.map((m) => m.orden)).size, 42);
     assert.equal(e.modelos.find((m) => m.slug === "iphone-17e").orden > e.modelos.find((m) => m.slug === "iphone-17-pro-max").orden, true);
@@ -1740,6 +1741,65 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  await caso("B4: con la tienda en portugués cambian el sitio, el pop-up, el banner de cookies, las páginas legales y el panel (sin texto en español suelto)", async () => {
+    const PT = (await import(require("url").pathToFileURL(path.join(RAIZ, "assets/js/i18n/pt.js")).href)).default;
+    // Palabras de la interfaz en español que no deben quedar con la tienda en portugués
+    // (los datos de la tienda y del catálogo, como las fichas técnicas, sí quedan como se cargaron).
+    const ESPANOL = /\b(usted|Elija|Guardar|Agregar|Cargando|Limpiar|Cerrar|Aceptar|Rechazar|Salir|Mi tienda|Inventario|Su|Sus|equipos?|disponibles|Precio|Continuar a)\b/;
+    const sinDatos = (p, sel = "body") => p.$eval(sel, (b) => {
+      const c = b.cloneNode(true);
+      c.querySelectorAll(".ficha dd, .marca-nombre, script, style, [lang='es'], option:not(:checked)").forEach((x) => x.remove());
+      return c.innerText;
+    });
+    const sinEspanol = (texto, donde) => { const m = texto.match(ESPANOL); assert.ok(!m, `${donde}: queda «${m?.[0]}» en español: …${m ? texto.slice(Math.max(0, m.index - 60), m.index + 40).replace(/\s+/g, " ") : ""}…`); };
+    const p = await nueva(1280, 900, { cookies: null });
+    await ir(p);
+    await editarDemo(p, (e) => { e.tienda.idioma = "pt"; });
+    await ir(p);
+    assert.equal(await p.getAttribute("html", "lang"), "pt-BR");
+    assert.equal(await p.textContent("h1"), PT["sitio.titulo"]);
+    assert.equal(await p.textContent("#f-condicion-titulo"), PT["sitio.filtros.condicion"]);
+    assert.equal(await p.textContent("#f-modelo-titulo"), PT["sitio.filtros.modelo"]);
+    assert.ok((await p.title()).endsWith(PT["sitio.titulo_pagina"]), await p.title());
+    // Banner de cookies
+    await p.mouse.wheel(0, 600);
+    await p.waitForSelector(".banner-cookies", { state: "visible" });
+    assert.equal(await p.textContent("#cookies-titulo"), PT["cookies.titulo"]);
+    sinEspanol(await sinDatos(p, ".banner-cookies"), "banner");
+    await p.click(".banner-cookies button >> nth=0");
+    sinEspanol(await sinDatos(p), "sitio");
+    // Pop-up
+    await p.click(".tarjeta-boton >> nth=0");
+    await p.locator("[data-comprar]:visible").first().click();
+    await p.waitForSelector("#popup[open]");
+    assert.equal(await p.textContent("#popup-titulo"), PT["popup.titulo"]);
+    sinEspanol(await sinDatos(p, "#popup"), "pop-up");
+    await p.keyboard.press("Escape");
+    // Página legal: el marco en portugués y la línea que avisa que el documento está en español
+    await p.goto(`${BASE}/privacidad/`, { waitUntil: "networkidle" });
+    await p.waitForSelector("#legal-texto:not([aria-busy])");
+    assert.ok((await p.textContent("body")).includes(PT["legalpag.solo_espanol"]));
+    assert.equal(await p.getAttribute("#legal-texto", "lang"), "es");
+    sinEspanol(await sinDatos(p), "página legal");
+    // Panel completo
+    await p.goto(`${BASE}/admin/`);
+    await p.waitForSelector("#l-correo");
+    sinEspanol(await sinDatos(p), "acceso al panel");
+    await p.fill("#l-correo", "gestor@demo.co");
+    await p.fill("#l-clave", "demo1234");
+    await p.click("#form-login [type=submit]");
+    await p.waitForSelector(".estadisticas");
+    assert.equal(await p.textContent('[data-ruta="inventario"]'), PT["panel.nav.inventario"]);
+    for (const ruta of ["inicio", "inventario", "inventario/nuevo", "tienda", "catalogo", "catalogo/fichas", "catalogo/pagos", "legales/1", "legales/2", "legales/3", "legales/4", "legales/5", "legales/6"]) {
+      await p.goto(`${BASE}/admin/#/${ruta}`);
+      await p.waitForTimeout(400);
+      await p.waitForSelector("#vista h1, #vista h2");
+      sinEspanol(await sinDatos(p), `panel #/${ruta}`);
+    }
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("B2: con la tienda en Argentina, Brasil o México cambian el precio, el prefijo y el celular del pop-up, el lead, la moneda del píxel y la fecha", async () => {
     const p = await nueva(390, 844, { cookies: { medicion: false, publicidad: true } });
     await p.route("https://connect.facebook.net/**", (r) => r.fulfill({ contentType: "text/javascript", body: "" }));
@@ -2387,15 +2447,23 @@ async function llenarPopup(p) {
     const sitio = ["index.html", "privacidad/index.html", "terminos/index.html", "cookies/index.html", ...legal]
       .concat(fs.readdirSync(path.join(RAIZ, "assets/js/sitio")).map((f) => `assets/js/sitio/${f}`))
       .map((f) => fs.readFileSync(path.join(RAIZ, f), "utf8")).join("\n");
+    // Desde B4 los textos están en assets/js/i18n/es.js: las claves del sitio
+    // (sitio., popup., cookies., legalpag.) cuentan como sitio y todas, como
+    // panel. pt.js no se revisa aquí (portugués con "você", ver tests/i18n.test.mjs).
+    const ES = (await import(require("url").pathToFileURL(path.join(RAIZ, "assets/js/i18n/es.js")).href)).default;
+    const esSitio = Object.entries(ES).filter(([k]) => /^(sitio|popup|cookies|legalpag)\./.test(k)).map(([, v]) => v).join("\n");
+    const esTodo = Object.values(ES).join("\n");
     // Ni borradores ni "revise con un abogado" en lo que ve el cliente
-    assert.ok(!/\bborrador\b|\babogad[oa]\b|\ben revisi[oó]n\b|revise con/i.test(sitio.replace(/\/\/.*$/gm, "")), "aviso de borrador o de abogado en el sitio");
+    assert.ok(!/\bborrador\b|\babogad[oa]\b|\ben revisi[oó]n\b|revise con/i.test(sitio.replace(/\/\/.*$/gm, "") + esSitio), "aviso de borrador o de abogado en el sitio");
     const t = ["index.html", "admin/index.html", "privacidad/index.html", "terminos/index.html", "cookies/index.html"]
       .concat(fs.readdirSync(path.join(RAIZ, "assets/js/sitio")).map((f) => `assets/js/sitio/${f}`))
       .concat(fs.readdirSync(path.join(RAIZ, "assets/js/panel")).map((f) => `assets/js/panel/${f}`))
-      .map((f) => fs.readFileSync(path.join(RAIZ, f), "utf8")).join("\n");
+      .map((f) => fs.readFileSync(path.join(RAIZ, f), "utf8")).join("\n") + "\n" + esTodo;
     // El tuteo se revisa también en los textos legales; las promesas, no (los
     // plazos de la ley sí van en ellos).
-    const sinComentarios = (t + legal.map((f) => fs.readFileSync(path.join(RAIZ, f), "utf8")).join("\n")).replace(/\/\/.*$/gm, "");
+    const sinComentarios = (t + legal.map((f) => fs.readFileSync(path.join(RAIZ, f), "utf8")).join("\n")).replace(/\/\/.*$/gm, "")
+      // Los nombres de las claves de i18n ("panel.pagos.cripto.acepta") no son texto visible.
+      .replace(/(["'`])[a-z0-9_]+(?:\.[a-z0-9_]+)+\1/g, '""');
     const tuteo = sinComentarios.match(/\b(tú|vos|tienes|puedes|quieres|tu pedido|tus datos|tu nombre|tu correo|tu whatsapp)\b|(^|[>"'.!?]\s*)(Elige|Escribe|Toca|Revisa|Acepta|Ingresa|Llena)\b/i);
     assert.ok(!tuteo, `aparece tuteo o voseo: ${tuteo?.[0]}`);
     assert.ok(!/envío gratis|garantía de 12 meses|respondemos en/i.test(t), "promesa no cargada por la tienda");

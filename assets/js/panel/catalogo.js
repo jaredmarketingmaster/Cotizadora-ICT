@@ -11,22 +11,24 @@
 import { slugDe } from "../datos/semilla.js";
 import { hexValido } from "../utils.js";
 import { etiquetaGeneracion } from "../sitio/catalogo.js";
+import { t } from "../i18n/i18n.js";
 import { $, esc, conBoton, campoTexto, marcarError, enfocarPrimerError, avisar, confirmar } from "./ui.js";
 
 // Pestañas del Catálogo. Cada una tiene su ruta (#/catalogo/…); #/fichas
-// lleva a "Ficha técnica" (panel.js).
+// lleva a "Ficha técnica" (panel.js). El nombre visible sale de
+// panel.catalogo.pestana.<id> al dibujar.
 const PESTANAS = [
-  { id: "modelos", ruta: "catalogo", texto: "Modelos y colores", cargar: async () => ({ dibujar: dibujarModelos }) },
-  { id: "ficha", ruta: "catalogo/ficha", texto: "Ficha técnica", cargar: () => import("./fichas.js") },
-  { id: "pagos", ruta: "catalogo/pagos", texto: "Formas de pago", cargar: () => import("./pagos.js") }
+  { id: "modelos", ruta: "catalogo", cargar: async () => ({ dibujar: dibujarModelos }) },
+  { id: "ficha", ruta: "catalogo/ficha", cargar: () => import("./fichas.js") },
+  { id: "pagos", ruta: "catalogo/pagos", cargar: () => import("./pagos.js") }
 ];
 
 export async function dibujar(vista, ctx, resto = []) {
   let actual = PESTANAS.find((p) => p.id === resto[0]) || PESTANAS[0];
   vista.innerHTML = `
-    <div class="vista-cabecera"><h1>Catálogo</h1></div>
-    <div class="pestanas" role="tablist" aria-label="Secciones del catálogo">
-      ${PESTANAS.map((p) => `<button type="button" class="pestana" role="tab" id="pestana-${p.id}" data-pestana="${p.id}" aria-controls="panel-catalogo" aria-selected="${p === actual}" tabindex="${p === actual ? 0 : -1}">${p.texto}</button>`).join("")}
+    <div class="vista-cabecera"><h1>${esc(t("panel.catalogo.titulo"))}</h1></div>
+    <div class="pestanas" role="tablist" aria-label="${esc(t("panel.catalogo.secciones"))}">
+      ${PESTANAS.map((p) => `<button type="button" class="pestana" role="tab" id="pestana-${p.id}" data-pestana="${p.id}" aria-controls="panel-catalogo" aria-selected="${p === actual}" tabindex="${p === actual ? 0 : -1}">${esc(t(`panel.catalogo.pestana.${p.id}`))}</button>`).join("")}
     </div>
     <div class="panel-pestana" id="panel-catalogo" role="tabpanel" aria-labelledby="pestana-${actual.id}" tabindex="0"></div>`;
   const lista = $(".pestanas", vista);
@@ -49,7 +51,7 @@ export async function dibujar(vista, ctx, resto = []) {
     // Cada vez, un contenedor nuevo: si se cambia de pestaña mientras carga,
     // el anterior queda fuera de la página y su módulo no dibuja nada.
     const contenedor = document.createElement("div");
-    contenedor.innerHTML = '<p class="subiendo"><span class="spinner" aria-hidden="true"></span>Cargando…</p>';
+    contenedor.innerHTML = `<p class="subiendo"><span class="spinner" aria-hidden="true"></span>${esc(t("panel.catalogo.cargando"))}</p>`;
     panel.replaceChildren(contenedor);
     const modulo = await p.cargar();
     if (mia !== version || !contenedor.isConnected) return;
@@ -59,7 +61,7 @@ export async function dibujar(vista, ctx, resto = []) {
   // Cambiar de pestaña no recarga la vista (el foco queda en la pestaña).
   async function cambiar(p, enfocar) {
     if (p === actual) { if (enfocar) $(`#pestana-${p.id}`).focus(); return; }
-    if (ctx.sucio && !(await confirmar({ titulo: "Hay cambios sin guardar", texto: "Si sale ahora, se pierden.", aceptar: "Salir sin guardar", peligro: true }))) {
+    if (ctx.sucio && !(await confirmar({ titulo: t("panel.catalogo.sin_guardar.titulo"), texto: t("panel.catalogo.sin_guardar.texto"), aceptar: t("panel.catalogo.sin_guardar.salir"), peligro: true }))) {
       $(`#pestana-${actual.id}`).focus();
       return;
     }
@@ -112,12 +114,12 @@ async function dibujarModelos(vista, ctx) {
         const i = ordenados.indexOf(m);
         return `<div class="modelo-fila" data-id="${m.id}">
           ${completo
-            ? `<label class="oculto-visual" for="n-${m.id}">Nombre</label><input class="entrada nombre" id="n-${m.id}" data-renombrar value="${esc(m.nombre)}" maxlength="60">`
+            ? `<label class="oculto-visual" for="n-${m.id}">${esc(t("panel.catalogo.modelo.nombre"))}</label><input class="entrada nombre" id="n-${m.id}" data-renombrar value="${esc(m.nombre)}" maxlength="60">`
             : `<span class="nombre">${esc(m.nombre)}</span>`}
           <div class="botones">
-            ${completo ? `<button type="button" class="boton-icono" data-mover="-1" aria-label="Mover ${esc(m.nombre)} antes" ${i === 0 ? "disabled" : ""}>↑</button>
-            <button type="button" class="boton-icono" data-mover="1" aria-label="Mover ${esc(m.nombre)} después" ${i === ordenados.length - 1 ? "disabled" : ""}>↓</button>` : ""}
-            <label class="interruptor" for="a-${m.id}"><input type="checkbox" role="switch" id="a-${m.id}" data-activar ${m.activo ? "checked" : ""}><span class="oculto-visual">${esc(m.nombre)}: </span><span>${m.activo ? "Activo" : "Inactivo"}</span></label>
+            ${completo ? `<button type="button" class="boton-icono" data-mover="-1" aria-label="${esc(t("panel.catalogo.modelo.mover_antes", { nombre: m.nombre }))}" ${i === 0 ? "disabled" : ""}>↑</button>
+            <button type="button" class="boton-icono" data-mover="1" aria-label="${esc(t("panel.catalogo.modelo.mover_despues", { nombre: m.nombre }))}" ${i === ordenados.length - 1 ? "disabled" : ""}>↓</button>` : ""}
+            <label class="interruptor" for="a-${m.id}"><input type="checkbox" role="switch" id="a-${m.id}" data-activar ${m.activo ? "checked" : ""}><span class="oculto-visual">${esc(m.nombre)}: </span><span>${esc(t(m.activo ? "panel.catalogo.modelo.activo" : "panel.catalogo.modelo.inactivo"))}</span></label>
           </div>
           ${bloqueColores(m)}
         </div>`;
@@ -129,36 +131,36 @@ async function dibujarModelos(vista, ctx) {
     const lista = colores.filter((c) => c.modelo_id === m.id).sort((a, b) => a.orden - b.orden);
     const oficiales = lista.some((c) => c.oficial);
     const faltan = lista.filter((c) => !c.hex).length;
-    const resumen = lista.length
-      ? `Colores (${lista.length})${faltan ? ` · ${faltan} sin muestra` : ""}`
-      : "Colores: la fuente no tiene colores oficiales";
+    const resumen = !lista.length ? t("panel.catalogo.colores.sin_oficiales")
+      : faltan ? t("panel.catalogo.colores.cuenta_faltan", { n: lista.length, faltan })
+      : t("panel.catalogo.colores.cuenta", { n: lista.length });
     return `<details class="colores-modelo" data-modelo="${m.id}" ${abiertos.has(m.id) ? "open" : ""}>
-      <summary>${resumen}</summary>
+      <summary>${esc(resumen)}</summary>
       ${lista.length ? `<ul class="lista-colores">${lista.map((c) => `<li data-color="${c.id}">
         <span class="muestra-color${c.hex ? "" : " muestra-color--vacia"}" ${c.hex ? `style="background:${esc(c.hex)}"` : ""} aria-hidden="true"></span>
-        <span class="color-nombres"><span class="color-nombre">${esc(c.nombre_es)}</span>${c.nombre_en ? `<span class="ayuda">${esc(c.nombre_en)}</span>` : ""}${c.oficial ? "" : '<span class="ayuda">De la tienda</span>'}</span>
+        <span class="color-nombres"><span class="color-nombre">${esc(c.nombre_es)}</span>${c.nombre_en ? `<span class="ayuda">${esc(c.nombre_en)}</span>` : ""}${c.oficial ? "" : `<span class="ayuda">${esc(t("panel.catalogo.colores.de_la_tienda"))}</span>`}</span>
         ${c.hex_de_fuente
           ? `<span class="cifras color-hex">${esc(c.hex)}</span>`
-          : `<span class="campo color-campo"><label class="oculto-visual" for="hex-${c.id}">Hexadecimal de ${esc(c.nombre_es)} (${esc(m.nombre)})</label><input class="entrada cifras" id="hex-${c.id}" data-hex value="${esc(c.hex)}" maxlength="7" placeholder="#RRGGBB" spellcheck="false" aria-describedby="hex-${c.id}-error"><span class="error-campo" id="hex-${c.id}-error"></span></span>`}
-        ${completo && !c.oficial ? `<button type="button" class="boton boton--peligro boton--chico" data-borrar-color>Borrar</button>` : ""}
+          : `<span class="campo color-campo"><label class="oculto-visual" for="hex-${c.id}">${esc(t("panel.catalogo.colores.hex_de", { color: c.nombre_es, modelo: m.nombre }))}</label><input class="entrada cifras" id="hex-${c.id}" data-hex value="${esc(c.hex)}" maxlength="7" placeholder="#RRGGBB" spellcheck="false" aria-describedby="hex-${c.id}-error"><span class="error-campo" id="hex-${c.id}-error"></span></span>`}
+        ${completo && !c.oficial ? `<button type="button" class="boton boton--peligro boton--chico" data-borrar-color>${esc(t("panel.catalogo.colores.borrar"))}</button>` : ""}
       </li>`).join("")}</ul>` : ""}
       ${completo && !oficiales ? `<form class="agregar-color" data-agregar-color novalidate>
-        ${campoTexto({ id: `cn-${m.id}`, etiqueta: "Nombre del color", atributos: 'maxlength="40" data-nombre-color' })}
-        ${campoTexto({ id: `ch-${m.id}`, etiqueta: "Hexadecimal (opcional)", atributos: 'maxlength="7" placeholder="#RRGGBB" spellcheck="false" data-hex-nuevo' })}
-        <div><button type="submit" class="boton boton--secundario">Agregar color</button></div>
+        ${campoTexto({ id: `cn-${m.id}`, etiqueta: t("panel.catalogo.colores.nombre"), atributos: 'maxlength="40" data-nombre-color' })}
+        ${campoTexto({ id: `ch-${m.id}`, etiqueta: t("panel.catalogo.colores.hex_opcional"), atributos: 'maxlength="7" placeholder="#RRGGBB" spellcheck="false" data-hex-nuevo' })}
+        <div><button type="submit" class="boton boton--secundario">${esc(t("panel.catalogo.colores.agregar"))}</button></div>
       </form>` : ""}
     </details>`;
   }
 
   vista.innerHTML = `
-    <div class="vista-cabecera"><p>Active solo los modelos que vende. Un modelo inactivo y sus equipos no se ven en el sitio.${completo ? " El orden define qué generación es más nueva." : ""}</p>
-      <p class="ayuda">Los colores oficiales vienen de la fuente y su nombre no se cambia. Si a un color le falta la muestra (el hexadecimal), puede completarla.</p></div>
+    <div class="vista-cabecera"><p>${esc(t("panel.catalogo.modelos.intro"))}${completo ? ` ${esc(t("panel.catalogo.modelos.orden"))}` : ""}</p>
+      <p class="ayuda">${esc(t("panel.catalogo.modelos.colores_ayuda"))}</p></div>
     ${completo ? `<details class="bloque">
-      <summary style="font-weight:700;cursor:pointer;min-height:44px;display:flex;align-items:center">Agregar modelo</summary>
+      <summary style="font-weight:700;cursor:pointer;min-height:44px;display:flex;align-items:center">${esc(t("panel.catalogo.agregar.titulo"))}</summary>
       <form id="form-modelo" novalidate class="grilla-2">
-        ${campoTexto({ id: "m-nombre", etiqueta: "Nombre", ayuda: "Tal como lo nombra el fabricante.", atributos: 'maxlength="60"' })}
-        ${campoTexto({ id: "m-generacion", etiqueta: "Generación", ayuda: "Ej. 19, o un grupo como «Plegable».", atributos: 'maxlength="30"' })}
-        <div><button type="submit" class="boton boton--primario">Agregar al final</button></div>
+        ${campoTexto({ id: "m-nombre", etiqueta: t("panel.catalogo.agregar.nombre"), ayuda: esc(t("panel.catalogo.agregar.nombre_ayuda")), atributos: 'maxlength="60"' })}
+        ${campoTexto({ id: "m-generacion", etiqueta: t("panel.catalogo.agregar.generacion"), ayuda: esc(t("panel.catalogo.agregar.generacion_ayuda")), atributos: 'maxlength="30"' })}
+        <div><button type="submit" class="boton boton--primario">${esc(t("panel.catalogo.agregar.boton"))}</button></div>
       </form>
     </details>` : ""}
     <div id="lista-catalogo"></div>`;
@@ -178,7 +180,7 @@ async function dibujarModelos(vista, ctx) {
     const v = input.value.trim().toUpperCase();
     const error = $(`#hex-${id}-error`);
     if (v === (c.hex || "")) { error.textContent = ""; return; }
-    if (v && !hexValido(v)) { error.textContent = "Use el formato #RRGGBB, ej. #1C1C1E."; input.setAttribute("aria-invalid", "true"); return; }
+    if (v && !hexValido(v)) { error.textContent = t("panel.catalogo.error.hex"); input.setAttribute("aria-invalid", "true"); return; }
     error.textContent = ""; input.removeAttribute("aria-invalid");
     try {
       Object.assign(c, await conBoton(null, () => api.guardarColor(id, { hex: v })));
@@ -194,12 +196,12 @@ async function dibujarModelos(vista, ctx) {
     const nombre = $("[data-nombre-color]", form);
     const hex = $("[data-hex-nuevo]", form);
     const v = hex.value.trim().toUpperCase();
-    marcarError(form, nombre.id, nombre.value.trim() ? "" : "Escriba el nombre del color.");
-    marcarError(form, hex.id, !v || hexValido(v) ? "" : "Use el formato #RRGGBB, ej. #1C1C1E.");
+    marcarError(form, nombre.id, nombre.value.trim() ? "" : t("panel.catalogo.error.nombre_color"));
+    marcarError(form, hex.id, !v || hexValido(v) ? "" : t("panel.catalogo.error.hex"));
     if (enfocarPrimerError(form)) return;
     const orden = Math.max(0, ...colores.filter((c) => c.modelo_id === modeloId).map((c) => c.orden)) + 1;
     try {
-      colores.push(await conBoton(form.querySelector("[type=submit]"), () => api.agregarColor({ modelo_id: modeloId, nombre_es: nombre.value.trim(), hex: v, orden }), { exito: "Color agregado" }));
+      colores.push(await conBoton(form.querySelector("[type=submit]"), () => api.agregarColor({ modelo_id: modeloId, nombre_es: nombre.value.trim(), hex: v, orden }), { exito: t("panel.catalogo.colores.agregado") }));
       pintar();
       $(`#cn-${modeloId}`)?.focus();
     } catch { /* aviso mostrado */ }
@@ -214,12 +216,12 @@ async function dibujarModelos(vista, ctx) {
     if (e.target.dataset.activar !== undefined) {
       try {
         Object.assign(m, await conBoton(null, () => api.guardarModelo(id, { activo: e.target.checked })));
-        e.target.nextElementSibling.nextElementSibling.textContent = m.activo ? "Activo" : "Inactivo";
+        e.target.nextElementSibling.nextElementSibling.textContent = t(m.activo ? "panel.catalogo.modelo.activo" : "panel.catalogo.modelo.inactivo");
       } catch { e.target.checked = !e.target.checked; }
     }
     if (e.target.dataset.renombrar !== undefined) {
       const nombre = e.target.value.trim();
-      if (!nombre) { e.target.value = m.nombre; avisar("El nombre no puede quedar vacío.", "error"); return; }
+      if (!nombre) { e.target.value = m.nombre; avisar(t("panel.catalogo.error.nombre_vacio"), "error"); return; }
       if (nombre === m.nombre) return;
       try { Object.assign(m, await conBoton(null, () => api.guardarModelo(id, { nombre }))); } catch { e.target.value = m.nombre; }
     }
@@ -230,9 +232,9 @@ async function dibujarModelos(vista, ctx) {
     if (borrar) {
       const id = Number(borrar.closest("[data-color]").dataset.color);
       const c = colores.find((x) => x.id === id);
-      if (!await confirmar({ titulo: "¿Borrar este color?", texto: c.nombre_es, aceptar: "Borrar", peligro: true })) return;
+      if (!await confirmar({ titulo: t("panel.catalogo.colores.borrar_titulo"), texto: c.nombre_es, aceptar: t("panel.catalogo.colores.borrar"), peligro: true })) return;
       try {
-        await conBoton(null, () => api.borrarColor(id), { exito: "Color borrado" });
+        await conBoton(null, () => api.borrarColor(id), { exito: t("panel.catalogo.colores.borrado") });
         colores = colores.filter((x) => x.id !== id);
         pintar();
       } catch { /* aviso mostrado */ }
@@ -265,12 +267,12 @@ async function dibujarModelos(vista, ctx) {
     const nombre = $("#m-nombre").value.trim();
     const generacion = $("#m-generacion").value.trim();
     const slug = slugDe(nombre);
-    marcarError(form, "m-nombre", !nombre ? "Escriba el nombre." : modelos.some((m) => m.nombre === nombre || m.slug === slug) ? "Ya existe un modelo con ese nombre." : "");
-    marcarError(form, "m-generacion", generacion ? "" : "Escriba la generación.");
+    marcarError(form, "m-nombre", !nombre ? t("panel.catalogo.error.nombre") : modelos.some((m) => m.nombre === nombre || m.slug === slug) ? t("panel.catalogo.error.repetido") : "");
+    marcarError(form, "m-generacion", generacion ? "" : t("panel.catalogo.error.generacion"));
     if (enfocarPrimerError(form)) return;
     const orden = Math.max(0, ...modelos.map((m) => m.orden)) + 10;
     try {
-      const m = await conBoton(form.querySelector("[type=submit]"), () => api.agregarModelo({ nombre, slug, generacion, orden, activo: false }), { exito: "Modelo agregado" });
+      const m = await conBoton(form.querySelector("[type=submit]"), () => api.agregarModelo({ nombre, slug, generacion, orden, activo: false }), { exito: t("panel.catalogo.agregar.agregado") });
       modelos.push(m);
       form.reset();
       pintar();

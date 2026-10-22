@@ -175,6 +175,18 @@ begin
   update public.tienda set pais = 'co', whatsapp = '573001234567';
 end $$;
 
+-- 0j. Migración 0020: idioma español por defecto; solo es o pt.
+do $$
+begin
+  assert (select idioma from public.tienda) = 'es', 'las tiendas que ya existían quedan en español';
+  update public.tienda set idioma = 'pt';
+  begin
+    update public.tienda set idioma = 'en';
+    raise exception 'idioma fuera de la lista';
+  exception when check_violation then null; end;
+  update public.tienda set idioma = 'es';
+end $$;
+
 -- 0i. Migración 0019: sin módulo legal para el país de la tienda, falta "pais".
 do $$
 begin

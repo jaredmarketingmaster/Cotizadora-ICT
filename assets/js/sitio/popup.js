@@ -21,18 +21,24 @@ import { htmlMedio } from "./fotos.js";
 import { ICONO_WA } from "./detalle.js";
 import { cerrarConTransicion, cerrarConEscape } from "./transiciones.js";
 import { estado as estadoCookies, permitido } from "./consentimiento.js";
+import { t } from "../i18n/i18n.js";
 
 const CERRAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 const OK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
+// Funciones: el idioma se carga después de importar este módulo.
 const ERRORES = {
-  nombre: "Escriba su nombre.",
-  correo: "Revise su correo.",
+  nombre: () => t("popup.error.nombre"),
+  correo: () => t("popup.error.correo"),
   // Colombia: texto literal del prompt. Los demás países, con su prefijo.
-  telefono: () => (paisActual() === "co"
-    ? "Escriba un celular de 10 dígitos que empiece por 3, sin el +57."
-    : `Revise su celular: escríbalo sin el ${datosPais(paisActual()).celular.visible}${datosPais(paisActual()).celular.ejemplo ? `, como ${datosPais(paisActual()).celular.ejemplo}` : ""}.`),
-  autorizacion: "Para continuar, acepte la autorización de datos."
+  telefono: () => {
+    if (paisActual() === "co") return t("popup.error.telefono.co");
+    const cel = datosPais(paisActual()).celular;
+    return cel.ejemplo
+      ? t("popup.error.telefono.ejemplo", { prefijo: cel.visible, ejemplo: cel.ejemplo })
+      : t("popup.error.telefono", { prefijo: cel.visible });
+  },
+  autorizacion: () => t("popup.error.autorizacion")
 };
 
 const OCULTOS = ["modelo", "condicion", "capacidad", "color", "precio_cotizado", "equipo_id", "tipo_consulta", "codigo_cotizacion", ...CLAVES_ATRIBUCION];
@@ -66,12 +72,12 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
         <div>
           <p class="resumen-nombre">${escaparHTML(q.modelo.nombre)} · ${textoCondicion(q.condicion)}</p>
           <p class="resumen-sub cifras">${[q.capacidad, q.color_nombre].filter(Boolean).map(escaparHTML).join(" · ")}</p>
-          <p class="resumen-precio cifras">${formatearPrecio(q.precio)}${q.es_demo ? ' <span class="etiqueta-demo">DEMO</span>' : ""}</p>
+          <p class="resumen-precio cifras">${formatearPrecio(q.precio)}${q.es_demo ? ` <span class="etiqueta-demo">${t("popup.demo")}</span>` : ""}</p>
         </div>
       </div>`;
     }
     return `<div class="resumen" data-clarity-mask="true"><span class="resumen-medio">${htmlMedio(api, { color_hex: "#8E8E93" }, "")}</span>
-      <div><p class="resumen-nombre">Consulta: ${escaparHTML(contexto.busqueda)}</p></div></div>`;
+      <div><p class="resumen-nombre">${t("popup.consulta", { busqueda: escaparHTML(contexto.busqueda) })}</p></div></div>`;
   }
 
   function dibujarFormulario() {
@@ -83,57 +89,57 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
       <div class="popup-contenido">
         <div class="popup-cabecera">
           <div>
-            <h2 class="popup-titulo" id="popup-titulo">Antes de pasar a WhatsApp</h2>
-            <p class="popup-texto">Así sabemos que usted es una persona y no un bot.</p>
+            <h2 class="popup-titulo" id="popup-titulo">${t("popup.titulo")}</h2>
+            <p class="popup-texto">${t("popup.texto")}</p>
           </div>
-          <button type="button" class="boton-icono" data-cerrar aria-label="Cerrar">${CERRAR}</button>
+          <button type="button" class="boton-icono" data-cerrar aria-label="${t("popup.cerrar")}">${CERRAR}</button>
         </div>
         ${resumenHTML()}
-        ${whatsappValido(tienda.whatsapp, tienda.pais) ? "" : '<p class="popup-alerta" role="alert">Esta tienda todavía no tiene WhatsApp configurado.</p>'}
+        ${whatsappValido(tienda.whatsapp, tienda.pais) ? "" : `<p class="popup-alerta" role="alert">${t("popup.sin_whatsapp")}</p>`}
         <form class="popup-form" id="form-cotizacion" name="cotizadora-ict" action="#" method="post" novalidate data-clarity-mask="true">
           <div class="campo">
-            <label for="p-nombre">Su nombre</label>
+            <label for="p-nombre">${t("popup.nombre")}</label>
             <input class="entrada" id="p-nombre" name="name" type="text" autocomplete="name" required aria-describedby="p-nombre-error" maxlength="80">
             <p class="error-campo" id="p-nombre-error"></p>
           </div>
           <div class="campo">
-            <label for="p-correo">Su correo</label>
+            <label for="p-correo">${t("popup.correo")}</label>
             <input class="entrada" id="p-correo" name="email" type="email" autocomplete="email" inputmode="email" required aria-describedby="p-correo-error" maxlength="120">
             <p class="error-campo" id="p-correo-error"></p>
           </div>
           <div class="campo">
-            <label for="p-telefono">Su WhatsApp</label>
+            <label for="p-telefono">${t("popup.whatsapp")}</label>
             <div class="telefono">
               <span class="prefijo" aria-hidden="true">${escaparHTML(cel.visible)}</span>
               <input class="entrada cifras" id="p-telefono" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="${escaparHTML(cel.ejemplo)}" required aria-describedby="p-telefono-prefijo p-telefono-error" maxlength="18">
             </div>
-            <span class="oculto-visual" id="p-telefono-prefijo">Número de ${escaparHTML(pais.nombre)}, con el prefijo ${escaparHTML(cel.visible)} ya puesto.</span>
+            <span class="oculto-visual" id="p-telefono-prefijo">${t("popup.telefono.prefijo", { pais: escaparHTML(pais.nombre), prefijo: escaparHTML(cel.visible) })}</span>
             <p class="error-campo" id="p-telefono-error"></p>
           </div>
           <input type="hidden" name="phone" value="">
           ${OCULTOS.map((n) => `<input type="hidden" name="${n}" value="">`).join("")}
           <div class="oculto-visual" aria-hidden="true">
-            <label for="p-sitio">No llene este campo</label>
+            <label for="p-sitio">${t("popup.trampa")}</label>
             <input id="p-sitio" name="sitio_web" type="text" tabindex="-1" autocomplete="off">
           </div>
           <div class="popup-aviso-legal" id="p-aviso">${formatoBasico(tienda.legal_publicado.documentos.aviso)}</div>
           <div class="campo">
             <label class="casilla" for="p-autorizacion">
               <input id="p-autorizacion" name="autorizacion_datos" type="checkbox" required aria-describedby="p-autorizacion-error">
-              <span>Soy mayor de 18 años y autorizo el tratamiento de mis datos para recibir mi cotización y ser contactado sobre ella por WhatsApp y correo, según la <a href="privacidad/" target="_blank" rel="noopener">Política de privacidad</a>.</span>
+              <span>${t("popup.autorizacion", { enlace: `<a href="privacidad/" target="_blank" rel="noopener">${t("popup.autorizacion.enlace")}</a>` })}</span>
             </label>
             <p class="error-campo" id="p-autorizacion-error"></p>
           </div>
           <div class="campo">
             <label class="casilla" for="p-promociones">
               <input id="p-promociones" name="promociones" type="checkbox">
-              <span>Quiero recibir promociones y novedades de ${escaparHTML(tienda.nombre || "la tienda")} por WhatsApp y correo.</span>
+              <span>${tienda.nombre ? t("popup.promociones", { tienda: escaparHTML(tienda.nombre) }) : t("popup.promociones.sin_nombre")}</span>
             </label>
           </div>
           <div class="popup-alerta" data-alerta role="alert" hidden></div>
-          <button type="button" class="boton boton--primario boton--grande boton--bloque" data-enviar>${ICONO_WA}Continuar a WhatsApp</button>
-          <a class="boton boton--secundario boton--grande boton--bloque" data-wa-respaldo hidden target="_blank" rel="noopener">${ICONO_WA}Abrir WhatsApp</a>
-          <p class="nota-pequena">Se abrirá WhatsApp con su pedido escrito. Solo toque Enviar.</p>
+          <button type="button" class="boton boton--primario boton--grande boton--bloque" data-enviar>${ICONO_WA}${t("popup.continuar")}</button>
+          <a class="boton boton--secundario boton--grande boton--bloque" data-wa-respaldo hidden target="_blank" rel="noopener">${ICONO_WA}${t("popup.abrir_whatsapp")}</a>
+          <p class="nota-pequena">${t("popup.nota")}</p>
         </form>
       </div>`;
 
@@ -161,10 +167,10 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
     dialogo.innerHTML = `
       <div class="popup-contenido">
         <div class="popup-cabecera">
-          <div><h2 class="popup-titulo" id="popup-titulo" tabindex="-1">Antes de pasar a WhatsApp</h2></div>
-          <button type="button" class="boton-icono" data-cerrar aria-label="Cerrar">${CERRAR}</button>
+          <div><h2 class="popup-titulo" id="popup-titulo" tabindex="-1">${t("popup.titulo")}</h2></div>
+          <button type="button" class="boton-icono" data-cerrar aria-label="${t("popup.cerrar")}">${CERRAR}</button>
         </div>
-        <p class="popup-alerta" role="alert">Esta tienda todavía no completó su información legal.</p>
+        <p class="popup-alerta" role="alert">${t("popup.sin_legales")}</p>
       </div>`;
   }
 
@@ -172,10 +178,10 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
     const f = dialogo.querySelector("form");
     const el = f.querySelector(`#${id}`);
     let error = "";
-    if (id === "p-nombre" && el.value.trim().length < 2) error = ERRORES.nombre;
-    if (id === "p-correo" && !correoValido(el.value)) error = ERRORES.correo;
+    if (id === "p-nombre" && el.value.trim().length < 2) error = ERRORES.nombre();
+    if (id === "p-correo" && !correoValido(el.value)) error = ERRORES.correo();
     if (id === "p-telefono" && !celularNacionalValido(soloDigitos(el.value), paisActual())) error = ERRORES.telefono();
-    if (id === "p-autorizacion" && !el.checked) error = ERRORES.autorizacion;
+    if (id === "p-autorizacion" && !el.checked) error = ERRORES.autorizacion();
     el.setAttribute("aria-invalid", String(Boolean(error)));
     f.querySelector(`#${id}-error`).textContent = error;
     return !error;
@@ -205,7 +211,8 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
     return {
       nombre, correo, telefono,
       modelo: compra ? q.modelo.nombre : contexto.nombreModelo || "",
-      condicion: compra ? textoCondicion(q.condicion) : (filtros.condicion ? textoCondicion(filtros.condicion) : ""),
+      // El dato que va a GHL sigue en español, sea cual sea el idioma del sitio.
+      condicion: compra ? textoCondicion(q.condicion, "es") : (filtros.condicion ? textoCondicion(filtros.condicion, "es") : ""),
       capacidad: compra ? q.capacidad : filtros.capacidad || "",
       color: compra ? q.color_nombre : "",
       precio_cotizado: compra ? q.precio : "",
@@ -251,7 +258,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
     enlace = whatsappValido(tienda.whatsapp, tienda.pais) ? enlaceWhatsApp(tienda.whatsapp, mensaje(datos)) : "";
 
     boton.disabled = true;
-    boton.innerHTML = '<span class="spinner" aria-hidden="true"></span>Enviando…';
+    boton.innerHTML = `<span class="spinner" aria-hidden="true"></span>${t("popup.enviando")}`;
     alerta.hidden = true;
     const r = await api.enviarLead(datos);
     if (!dialogo.open) return;
@@ -265,8 +272,8 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
 
     intentos++;
     boton.disabled = false;
-    boton.innerHTML = `${ICONO_WA}Reintentar`;
-    alerta.textContent = "No pudimos guardar sus datos. Inténtelo de nuevo.";
+    boton.innerHTML = `${ICONO_WA}${t("popup.reintentar")}`;
+    alerta.textContent = t("popup.error.envio");
     alerta.hidden = false;
     if (intentos >= 2 && enlace) {
       const respaldo = f.querySelector("[data-wa-respaldo]");
@@ -278,13 +285,13 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
   function confirmar(abrirSolo) {
     dialogo.innerHTML = `
       <div class="popup-contenido">
-        <div class="popup-cabecera"><span></span><button type="button" class="boton-icono" data-cerrar aria-label="Cerrar">${CERRAR}</button></div>
+        <div class="popup-cabecera"><span></span><button type="button" class="boton-icono" data-cerrar aria-label="${t("popup.cerrar")}">${CERRAR}</button></div>
         <div class="popup-estado">
           <span class="sello-ok">${OK}</span>
-          <h2 class="popup-titulo" id="popup-titulo" tabindex="-1">Su pedido está listo</h2>
-          ${enlace ? `<p class="popup-texto">Si WhatsApp no se abrió, toque el botón.</p>
-          <a class="boton boton--primario boton--grande boton--bloque" href="${escaparHTML(enlace)}" target="_blank" rel="noopener" data-abrir-wa>${ICONO_WA}Abrir WhatsApp</a>` : ""}
-          <p class="cifras">Su código: <span class="codigo">${escaparHTML(codigo)}</span>. Si nos escribe desde otro número, menciónelo.</p>
+          <h2 class="popup-titulo" id="popup-titulo" tabindex="-1">${t("popup.listo")}</h2>
+          ${enlace ? `<p class="popup-texto">${t("popup.listo.texto")}</p>
+          <a class="boton boton--primario boton--grande boton--bloque" href="${escaparHTML(enlace)}" target="_blank" rel="noopener" data-abrir-wa>${ICONO_WA}${t("popup.abrir_whatsapp")}</a>` : ""}
+          <p class="cifras">${t("popup.codigo", { codigo: `<span class="codigo">${escaparHTML(codigo)}</span>` })}</p>
         </div>
       </div>`;
     dialogo.querySelector("#popup-titulo").focus();

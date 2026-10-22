@@ -16,6 +16,7 @@
 // =============================================================================
 
 import { reducirMovimiento } from "../utils.js";
+import { t as tr } from "../i18n/i18n.js";
 
 const VECINAS = 2;          // vecinas que se dibujan a cada lado
 const UMBRAL_ARRASTRE = 6;  // px antes de considerar que es un arrastre
@@ -78,7 +79,7 @@ export function crearCarruselEquipos(region, lista) {
       li.setAttribute("aria-hidden", String(!centro));
       li.querySelector(".tarjeta-boton")?.setAttribute("tabindex", centro ? "0" : "-1");
     });
-    indicador.textContent = n ? `${actual() + 1} de ${n}` : "";
+    indicador.textContent = n ? tr("sitio.carrusel.posicion", { i: actual() + 1, n }) : "";
     return fundiendo;
   }
 
@@ -238,7 +239,7 @@ export function crearCarruselEquipos(region, lista) {
     saltos = new Map();
     // Cada tarjeta sigue siendo un ítem de la lista (un <li> no admite
     // role="group"); su nombre es "N de M".
-    tarjetas.forEach((li, i) => li.setAttribute("aria-label", `${i + 1} de ${n}`));
+    tarjetas.forEach((li, i) => li.setAttribute("aria-label", tr("sitio.carrusel.posicion", { i: i + 1, n })));
     region.hidden = n === 0;
     region.classList.toggle("ce-una", n <= 1);
     anterior.hidden = siguiente.hidden = n <= 1;

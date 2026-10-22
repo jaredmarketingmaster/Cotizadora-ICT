@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Elija su iPhone y cómprelo por WhatsApp</title>
-  <meta name="description" content="Elija su iPhone nuevo o usado, vea el precio y cómprelo por WhatsApp.">
+  <title data-t="sitio.titulo_pagina">Elija su iPhone y cómprelo por WhatsApp</title>
+  <meta name="description" data-t-content="sitio.meta_descripcion" content="Elija su iPhone nuevo o usado, vea el precio y cómprelo por WhatsApp.">
   <meta name="theme-color" content="#0F172A">
   <!-- Apariencia de la tienda de la visita anterior (tema, tamaño y colores), antes del primer pintado. La guarda assets/js/tema.js. -->
   <script>try{var a=JSON.parse(localStorage.getItem("cotizadora:apariencia")),r=document.documentElement;if(a&&a.vars){if(/^(claro|oscuro)$/.test(a.tema))r.dataset.tema=a.tema;if(/^(compacto|normal|grande)$/.test(a.tamano))r.dataset.tamano=a.tamano;for(var k in a.vars)if(/^--[a-z-]+$/.test(k)&&/^#[0-9A-Fa-f]{6}$/.test(a.vars[k]))r.style.setProperty(k,a.vars[k])}}catch(e){}</script>
@@ -28,11 +28,9 @@
   <script type="module" src="assets/js/sitio/principal.js"></script>
 </head>
 <body>
-  <a class="salto" href="#galeria">Ir a los equipos</a>
+  <a class="salto" href="#galeria" data-t="sitio.saltar">Ir a los equipos</a>
 
-  <div class="franja-demo" id="franja-demo" role="status" hidden>
-    Sitio en preparación: los equipos y precios son de demostración.
-  </div>
+  <div class="franja-demo" id="franja-demo" role="status" data-t="sitio.franja_demo" hidden>Sitio en preparación: los equipos y precios son de demostración.</div>
 
   <header class="encabezado">
     <div class="contenedor">
@@ -40,45 +38,45 @@
         <span class="marca-logo" id="marca-logo"></span>
         <span class="marca-nombre" id="marca-nombre"></span>
       </div>
-      <h1 class="titulo">Elija su iPhone y cómprelo por WhatsApp.</h1>
+      <h1 class="titulo" data-t="sitio.titulo">Elija su iPhone y cómprelo por WhatsApp.</h1>
     </div>
   </header>
 
   <main id="contenido">
     <section class="contenedor filtros-envoltura" aria-labelledby="filtros-titulo">
-      <h2 class="oculto-visual" id="filtros-titulo">Filtros</h2>
+      <h2 class="oculto-visual" id="filtros-titulo" data-t="sitio.filtros.titulo">Filtros</h2>
       <div class="filtros" id="filtros">
         <div class="filtro" role="group" aria-labelledby="f-condicion-titulo">
-          <p class="filtro-pregunta" id="f-condicion-titulo">¿Nuevo o usado?</p>
+          <p class="filtro-pregunta" id="f-condicion-titulo" data-t="sitio.filtros.condicion">¿Nuevo o usado?</p>
           <div class="segmentado" id="f-condicion">
-            <button type="button" class="segmento" data-valor="nuevo" aria-pressed="false">Nuevo</button>
-            <button type="button" class="segmento" data-valor="usado" aria-pressed="false">Usado</button>
+            <button type="button" class="segmento" data-valor="nuevo" aria-pressed="false" data-t="sitio.condicion.nuevo">Nuevo</button>
+            <button type="button" class="segmento" data-valor="usado" aria-pressed="false" data-t="sitio.condicion.usado">Usado</button>
           </div>
         </div>
 
         <div class="filtro">
-          <p class="filtro-pregunta" id="f-modelo-titulo">¿Qué modelo?</p>
+          <p class="filtro-pregunta" id="f-modelo-titulo" data-t="sitio.filtros.modelo">¿Qué modelo?</p>
           <div class="desplegable" id="f-modelo"></div>
         </div>
 
         <div class="filtro" role="group" aria-labelledby="f-capacidad-titulo">
-          <p class="filtro-pregunta" id="f-capacidad-titulo">¿Qué almacenamiento?</p>
+          <p class="filtro-pregunta" id="f-capacidad-titulo" data-t="sitio.filtros.capacidad">¿Qué almacenamiento?</p>
           <div class="chips" id="f-capacidad"></div>
         </div>
 
         <div class="filtros-pie">
           <p class="contador cifras" id="contador" role="status" aria-live="polite"></p>
-          <button type="button" class="boton--enlace boton" id="limpiar" hidden>Limpiar filtros</button>
+          <button type="button" class="boton--enlace boton" id="limpiar" data-t="sitio.filtros.limpiar" hidden>Limpiar filtros</button>
         </div>
       </div>
     </section>
 
     <section class="contenedor galeria-envoltura" id="galeria" aria-labelledby="galeria-titulo" tabindex="-1">
-      <h2 class="oculto-visual" id="galeria-titulo">Equipos disponibles</h2>
+      <h2 class="oculto-visual" id="galeria-titulo" data-t="sitio.galeria.titulo">Equipos disponibles</h2>
       <p class="aviso-carga" id="aviso-carga" role="alert" hidden></p>
       <!-- Vista de los equipos: cuadrícula (por defecto) o carrusel (flechas e indicador solo en carrusel) -->
       <div class="vista-equipos" id="vista-equipos">
-        <button type="button" class="ce-flecha ce-anterior" aria-label="Equipo anterior" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button type="button" class="ce-flecha ce-anterior" aria-label="Equipo anterior" data-t-aria-label="sitio.carrusel.anterior" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div class="ce-ventana">
           <ul class="galeria" id="lista-equipos" aria-busy="true">
             <li class="tarjeta tarjeta--esqueleto" aria-hidden="true"></li>
@@ -86,16 +84,16 @@
             <li class="tarjeta tarjeta--esqueleto" aria-hidden="true"></li>
           </ul>
         </div>
-        <button type="button" class="ce-flecha ce-siguiente" aria-label="Equipo siguiente" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button type="button" class="ce-flecha ce-siguiente" aria-label="Equipo siguiente" data-t-aria-label="sitio.carrusel.siguiente" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <p class="ce-indicador cifras" aria-live="polite" hidden></p>
       </div>
       <div class="vacio" id="vacio" hidden>
-        <p class="vacio-texto">En este momento no tenemos ese equipo publicado.</p>
-        <button type="button" class="boton boton--secundario boton--grande" id="consultar-sin-stock">Consultar por WhatsApp</button>
+        <p class="vacio-texto" data-t="sitio.vacio.texto">En este momento no tenemos ese equipo publicado.</p>
+        <button type="button" class="boton boton--secundario boton--grande" id="consultar-sin-stock" data-t="sitio.vacio.consultar">Consultar por WhatsApp</button>
       </div>
     </section>
 
-    <section class="contenedor detalle-en-linea" id="detalle-en-linea" aria-label="Detalle del equipo" hidden></section>
+    <section class="contenedor detalle-en-linea" id="detalle-en-linea" aria-label="Detalle del equipo" data-t-aria-label="sitio.detalle.region" hidden></section>
 
     <!-- Reseñas: solo si la tienda las muestra y hay alguna (assets/js/sitio/resenas.js) -->
     <section class="resenas" id="resenas" aria-labelledby="resenas-titulo" hidden>
@@ -120,11 +118,11 @@
     <div class="contenedor pie-grilla">
       <p class="pie-tienda" id="pie-tienda"></p>
       <p class="pie-precios cifras" id="pie-precios"></p>
-      <nav class="pie-enlaces" aria-label="Legales">
-        <a href="privacidad/">Política de privacidad</a>
-        <a href="terminos/">Términos y condiciones</a>
-        <a href="cookies/">Política de cookies</a>
-        <button type="button" class="pie-boton" data-preferencias-cookies hidden>Preferencias de cookies</button>
+      <nav class="pie-enlaces" aria-label="Legales" data-t-aria-label="sitio.pie.legales">
+        <a href="privacidad/" data-t="sitio.pie.privacidad">Política de privacidad</a>
+        <a href="terminos/" data-t="sitio.pie.terminos">Términos y condiciones</a>
+        <a href="cookies/" data-t="sitio.pie.cookies">Política de cookies</a>
+        <button type="button" class="pie-boton" data-preferencias-cookies data-t="sitio.pie.preferencias_cookies" hidden>Preferencias de cookies</button>
       </nav>
     </div>
   </footer>
@@ -133,7 +131,7 @@
   <dialog class="hoja" id="hoja-detalle" aria-labelledby="detalle-titulo">
     <div class="hoja-cabecera" id="hoja-agarre">
       <span class="hoja-agarradera" aria-hidden="true"></span>
-      <button type="button" class="boton-icono hoja-cerrar" id="cerrar-detalle" aria-label="Cerrar el detalle">
+      <button type="button" class="boton-icono hoja-cerrar" id="cerrar-detalle" aria-label="Cerrar el detalle" data-t-aria-label="sitio.detalle.cerrar">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
       </button>
     </div>
@@ -148,14 +146,14 @@
   <dialog class="visor" id="visor-resena" aria-labelledby="visor-titulo">
     <div class="visor-barra">
       <p class="visor-titulo cifras" id="visor-titulo"></p>
-      <button type="button" class="visor-cerrar" aria-label="Cerrar"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+      <button type="button" class="visor-cerrar" aria-label="Cerrar" data-t-aria-label="sitio.visor.cerrar"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
     </div>
     <div class="visor-medio"></div>
     <p class="visor-texto" hidden></p>
     <p class="visor-origen" hidden></p>
     <div class="visor-nav" hidden>
-      <button type="button" class="boton boton--secundario" data-paso="-1">Anterior</button>
-      <button type="button" class="boton boton--secundario" data-paso="1">Siguiente</button>
+      <button type="button" class="boton boton--secundario" data-paso="-1" data-t="sitio.visor.anterior">Anterior</button>
+      <button type="button" class="boton boton--secundario" data-paso="1" data-t="sitio.visor.siguiente">Siguiente</button>
     </div>
   </dialog>
 </body>

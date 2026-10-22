@@ -18,13 +18,13 @@
 import { HERRAMIENTAS, activas } from "../legal/herramientas.js";
 import { iniciarPixel, retirarPixel } from "./pixel.js";
 import { escaparHTML } from "../utils.js";
+import { t } from "../i18n/i18n.js";
 
 const CLAVE = "cotizadora:cookies";
 const SEIS_MESES = 183 * 24 * 3600 * 1000;
-const CATEGORIAS = [
-  { clave: "medicion", nombre: "Medición", texto: "Cuentan visitas y muestran cómo se usa el sitio." },
-  { clave: "publicidad", nombre: "Publicidad", texto: "Miden qué anuncios llevan a una cotización y muestran anuncios a quienes visitaron el sitio." }
-];
+// Los textos (nombre y explicación) salen del diccionario al dibujar el banner:
+// cookies.categoria.<clave> y cookies.categoria.<clave>.texto.
+const CATEGORIAS = [{ clave: "medicion" }, { clave: "publicidad" }];
 // Cookies propias de cada categoría, para borrarlas al retirar el permiso.
 const COOKIES = { medicion: /^(_ga|_ga_.+|_clck|_clsk)$/, publicidad: /^(_fbp|_fbc|_gcl_.+|_ttp)$/ };
 
@@ -172,7 +172,14 @@ function aplicar() {
 // --- Banner ------------------------------------------------------------------
 function categoriasEnUso() {
   const usadas = activas(tienda.datos);
-  return CATEGORIAS.map((c) => ({ ...c, herramientas: usadas.filter((h) => h.categoria === c.clave).map((h) => h.nombre) }))
+  // Los nombres de las herramientas, del diccionario (cookies.herramienta.<clave>);
+  // herramientas.js sigue en español para la Política de cookies.
+  return CATEGORIAS.map((c) => ({
+    ...c,
+    nombre: t(`cookies.categoria.${c.clave}`),
+    texto: t(`cookies.categoria.${c.clave}.texto`),
+    herramientas: usadas.filter((h) => h.categoria === c.clave).map((h) => t(`cookies.herramienta.${h.clave}`))
+  }))
     .filter((c) => c.herramientas.length);
 }
 
@@ -181,27 +188,27 @@ function htmlBanner(configurar) {
   const cats = categoriasEnUso();
   const actual = estado();
   return `<div class="banner-cookies-caja">
-    <h2 class="banner-cookies-titulo" id="cookies-titulo" tabindex="-1">Cookies</h2>
-    <p class="banner-cookies-texto" id="cookies-texto">Usamos cookies necesarias para que el sitio funcione. Con su permiso, también usamos cookies de medición y de publicidad. <a href="${ruta}">Política de cookies</a></p>
+    <h2 class="banner-cookies-titulo" id="cookies-titulo" tabindex="-1">${t("cookies.titulo")}</h2>
+    <p class="banner-cookies-texto" id="cookies-texto">${t("cookies.texto")} <a href="${ruta}">${t("cookies.politica")}</a></p>
     ${configurar ? `<form class="banner-cookies-config" id="cookies-config" aria-labelledby="cookies-config-titulo">
-      <h3 class="oculto-visual" id="cookies-config-titulo">Configurar cookies</h3>
+      <h3 class="oculto-visual" id="cookies-config-titulo">${t("cookies.configurar.titulo")}</h3>
       <div class="cookie-categoria">
-        <label class="interruptor-cookie" for="ck-necesarias"><input type="checkbox" role="switch" id="ck-necesarias" checked disabled aria-describedby="ck-necesarias-texto"><span>Necesarias</span></label>
-        <p class="cookie-categoria-texto" id="ck-necesarias-texto">Siempre activas. Guardan su elección de cookies y la apariencia del sitio.</p>
+        <label class="interruptor-cookie" for="ck-necesarias"><input type="checkbox" role="switch" id="ck-necesarias" checked disabled aria-describedby="ck-necesarias-texto"><span>${t("cookies.categoria.necesarias")}</span></label>
+        <p class="cookie-categoria-texto" id="ck-necesarias-texto">${t("cookies.categoria.necesarias.texto")}</p>
       </div>
       ${cats.map((c) => {
         const bloqueada = c.clave === "publicidad" && gpc();
         return `<div class="cookie-categoria">
         <label class="interruptor-cookie" for="ck-${c.clave}"><input type="checkbox" role="switch" id="ck-${c.clave}" data-categoria="${c.clave}" ${actual[c.clave] ? "checked" : ""} ${bloqueada ? "disabled" : ""} aria-describedby="ck-${c.clave}-texto"><span>${c.nombre}</span></label>
-        <p class="cookie-categoria-texto" id="ck-${c.clave}-texto">${c.texto} ${escaparHTML(c.herramientas.join(", "))}.${bloqueada ? " Su navegador pide no compartir sus datos para publicidad (Global Privacy Control): queda apagada." : ""}</p>
+        <p class="cookie-categoria-texto" id="ck-${c.clave}-texto">${c.texto} ${escaparHTML(c.herramientas.join(", "))}.${bloqueada ? ` ${t("cookies.gpc")}` : ""}</p>
       </div>`;
       }).join("")}
-      <button type="submit" class="boton boton--primario banner-cookies-guardar">Guardar mi elección</button>
+      <button type="submit" class="boton boton--primario banner-cookies-guardar">${t("cookies.guardar")}</button>
     </form>` : ""}
     <div class="banner-cookies-botones">
-      <button type="button" class="boton boton--secundario" data-cookies="aceptar">Aceptar todas</button>
-      <button type="button" class="boton boton--secundario" data-cookies="rechazar">Rechazar todas</button>
-      <button type="button" class="boton boton--secundario" data-cookies="configurar" aria-expanded="${configurar}" ${configurar ? 'aria-controls="cookies-config"' : ""}>Configurar</button>
+      <button type="button" class="boton boton--secundario" data-cookies="aceptar">${t("cookies.aceptar")}</button>
+      <button type="button" class="boton boton--secundario" data-cookies="rechazar">${t("cookies.rechazar")}</button>
+      <button type="button" class="boton boton--secundario" data-cookies="configurar" aria-expanded="${configurar}" ${configurar ? 'aria-controls="cookies-config"' : ""}>${t("cookies.configurar")}</button>
     </div>
   </div>`;
 }

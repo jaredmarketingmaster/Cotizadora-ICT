@@ -3,13 +3,14 @@
 // =============================================================================
 
 import { escaparHTML } from "../utils.js";
+import { t } from "../i18n/i18n.js";
 
 export const $ = (s, raiz = document) => raiz.querySelector(s);
 export const $$ = (s, raiz = document) => [...raiz.querySelectorAll(s)];
 export const esc = escaparHTML;
 
 let reloj = 0;
-export function avisar(texto = "Guardado", tipo = "ok") {
+export function avisar(texto = t("panel.comun.guardado"), tipo = "ok") {
   const el = $("#aviso-flotante");
   el.textContent = texto;
   el.classList.toggle("error", tipo === "error");
@@ -18,13 +19,13 @@ export function avisar(texto = "Guardado", tipo = "ok") {
   reloj = setTimeout(() => el.classList.remove("visible"), tipo === "error" ? 5000 : 2200);
 }
 
-export function confirmar({ titulo, texto = "", aceptar = "Aceptar", peligro = false }) {
+export function confirmar({ titulo, texto = "", aceptar = t("panel.comun.aceptar"), peligro = false }) {
   const d = $("#confirmar");
   d.innerHTML = `<form method="dialog" class="confirmar-contenido">
     <h2 id="confirmar-titulo">${esc(titulo)}</h2>
     ${texto ? `<p>${esc(texto)}</p>` : ""}
     <div class="confirmar-botones">
-      <button class="boton boton--secundario" value="no">Cancelar</button>
+      <button class="boton boton--secundario" value="no">${esc(t("panel.comun.cancelar"))}</button>
       <button class="boton ${peligro ? "boton--peligro" : "boton--primario"}" value="si">${esc(aceptar)}</button>
     </div>
   </form>`;
@@ -35,7 +36,7 @@ export function confirmar({ titulo, texto = "", aceptar = "Aceptar", peligro = f
 }
 
 // Ejecuta una acción con el botón en estado "cargando" y avisa el resultado.
-export async function conBoton(boton, accion, { exito = "Guardado" } = {}) {
+export async function conBoton(boton, accion, { exito = t("panel.comun.guardado") } = {}) {
   const original = boton?.innerHTML;
   if (boton) { boton.disabled = true; boton.innerHTML = `<span class="spinner" aria-hidden="true"></span>${boton.textContent.trim()}`; }
   try {
@@ -43,7 +44,7 @@ export async function conBoton(boton, accion, { exito = "Guardado" } = {}) {
     if (exito) avisar(exito);
     return r;
   } catch (e) {
-    avisar(e?.message || "Algo salió mal. Inténtelo de nuevo.", "error");
+    avisar(e?.message || t("panel.comun.error_generico"), "error");
     throw e;
   } finally {
     if (boton) { boton.disabled = false; boton.innerHTML = original; }

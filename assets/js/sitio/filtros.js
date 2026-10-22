@@ -5,6 +5,7 @@
 
 import { escaparHTML, formatearMiles } from "../utils.js";
 import { etiquetaGeneracion } from "./catalogo.js";
+import { t as tr } from "../i18n/i18n.js";
 
 const FLECHA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
@@ -50,7 +51,7 @@ export function iniciarChips(contenedor, alCambiar) {
       const enfocado = document.activeElement?.closest?.(".chip")?.dataset.valor;
       contenedor.innerHTML = lista.length
         ? lista.map((c) => `<button type="button" class="chip" data-valor="${escaparHTML(c)}" aria-pressed="${c === valor}">${escaparHTML(c)}</button>`).join("")
-        : '<p class="chips-vacio">Sin opciones para lo elegido.</p>';
+        : `<p class="chips-vacio">${tr("sitio.filtros.sin_opciones")}</p>`;
       if (enfocado) contenedor.querySelector(`.chip[data-valor="${CSS.escape(enfocado)}"]`)?.focus();
     }
   };
@@ -67,8 +68,8 @@ export function iniciarDesplegable(contenedor, { etiquetaId, alElegir }) {
     </button>
     <div class="desplegable-panel" id="${id}-panel" hidden>
       <div class="desplegable-buscar" hidden>
-        <label class="oculto-visual" for="${id}-buscar">Buscar modelo</label>
-        <input class="entrada" id="${id}-buscar" type="search" placeholder="Buscar modelo" autocomplete="off" role="combobox" aria-controls="${id}-lista" aria-expanded="true" aria-autocomplete="list">
+        <label class="oculto-visual" for="${id}-buscar">${tr("sitio.filtros.buscar_modelo")}</label>
+        <input class="entrada" id="${id}-buscar" type="search" placeholder="${tr("sitio.filtros.buscar_modelo")}" autocomplete="off" role="combobox" aria-controls="${id}-lista" aria-expanded="true" aria-autocomplete="list">
       </div>
       <ul class="desplegable-lista" id="${id}-lista" role="listbox" aria-labelledby="${etiquetaId}" tabindex="-1"></ul>
     </div>`;
@@ -91,16 +92,16 @@ export function iniciarDesplegable(contenedor, { etiquetaId, alElegir }) {
     const filtrar = (o) => !q || o.nombre.toLowerCase().includes(q);
     let html = "";
     if (!q) {
-      html += `<li role="option" id="${id}-op-todos" class="desplegable-opcion" data-valor="" aria-selected="${valor === ""}"><span>Todos los modelos</span><span class="cantidad cifras">${formatearMiles(total)}</span></li>`;
+      html += `<li role="option" id="${id}-op-todos" class="desplegable-opcion" data-valor="" aria-selected="${valor === ""}"><span>${tr("sitio.filtros.todos_modelos")}</span><span class="cantidad cifras">${formatearMiles(total)}</span></li>`;
     }
     grupos.forEach((g, i) => {
       const ops = g.opciones.filter(filtrar);
       if (!ops.length) return;
       html += `<li role="group" aria-labelledby="${id}-g${i}"><div class="desplegable-grupo" id="${id}-g${i}" role="presentation">${escaparHTML(etiquetaGeneracion(g.generacion))}</div>`;
-      html += ops.map((o) => `<div role="option" id="${id}-op-${escaparHTML(o.slug)}" class="desplegable-opcion" data-valor="${escaparHTML(o.slug)}" aria-selected="${o.slug === valor}"><span>${escaparHTML(o.nombre)}</span><span class="cantidad cifras" aria-label="${o.cantidad} disponibles">${formatearMiles(o.cantidad)}</span></div>`).join("");
+      html += ops.map((o) => `<div role="option" id="${id}-op-${escaparHTML(o.slug)}" class="desplegable-opcion" data-valor="${escaparHTML(o.slug)}" aria-selected="${o.slug === valor}"><span>${escaparHTML(o.nombre)}</span><span class="cantidad cifras" aria-label="${tr("sitio.filtros.disponibles", { n: o.cantidad })}">${formatearMiles(o.cantidad)}</span></div>`).join("");
       html += "</li>";
     });
-    lista.innerHTML = html || '<li class="desplegable-vacio" role="presentation">No hay modelos con ese nombre.</li>';
+    lista.innerHTML = html || `<li class="desplegable-vacio" role="presentation">${tr("sitio.filtros.sin_resultados")}</li>`;
     const ops = opcionesVisibles();
     const sel = ops.findIndex((o) => o.dataset.valor === valor);
     marcarActivo(sel >= 0 ? sel : 0, false);
@@ -183,7 +184,7 @@ export function iniciarDesplegable(contenedor, { etiquetaId, alElegir }) {
       grupos = nuevosGrupos;
       valor = nuevoValor;
       total = nuevoTotal;
-      textoValor.textContent = nombreValor || "Todos los modelos";
+      textoValor.textContent = nombreValor || tr("sitio.filtros.todos_modelos");
       textoValor.classList.toggle("valor--vacio", !nombreValor);
       if (!panel.hidden) dibujarLista();
     },

@@ -26,7 +26,7 @@ Cómo se hace cumplir:
 
 ## Reglas que no se rompen (del prompt)
 
-1. Español de Colombia y trato de **"usted"** en todo: sitio, panel, errores, `aria-label`. Nada de "tú" ni voseo.
+1. Español de Colombia y trato de **"usted"** en todo: sitio, panel, errores, `aria-label`. Nada de "tú" ni voseo. La tienda puede estar en portugués de Brasil (`tienda.idioma`, "você"). **Ningún texto visible suelto en el código:** todo va en `assets/js/i18n/es.js` y `pt.js` (mismas claves) y se usa con `t(clave)`; los textos legales generados siguen en español.
 2. Sin logo, imágenes, íconos ni tipografías de Apple. Los marcadores de posición son el SVG genérico de `ilustracion.js`.
 3. No inventar especificaciones, precios, colores, garantías, plazos ni promesas. Lo que no cargó la tienda no se muestra.
 4. Moneda y fechas del país de la tienda (`tienda.pais`, `assets/js/datos/paises.js`): `formatearPrecio` (`$5.299.000` en Colombia) y `fechaCorta` (D/M/AAAA en su zona horaria). No usar `Intl` para números.
@@ -65,7 +65,7 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
 - Video (opcional, uno por equipo): bucket `videos`, ruta en `equipos.video`, validado en `panel/video.js` antes de subir (MP4 H.264 o WebM, 15 s, 20 MB), sin comprimir. Se borra al quitarlo o al borrar el equipo.
 - Reseñas (`0014`): bucket `resenas`; imágenes comprimidas como las fotos y videos de hasta 30 s (`validarVideo(archivo, {maxSegundos: 30})`). Nunca crear reseñas de ejemplo, tampoco en demo.
 - Legales (`0016` y `0017`): el asistente del panel llena los datos y `assets/js/legal/motor.js` genera los cuatro documentos desde las plantillas y los módulos por país (`legal/paises/`; solo Colombia disponible). Si el país de la tienda no tiene módulo, falta `pais` y no se publica (`0019`). `legal_faltantes()` del SQL = `faltantes()` del motor (`tests/sql/comparar-faltantes.mjs`); la versión y la fecha las pone el disparador `publicar_legales`. Sin publicar: el pop-up no envía, las páginas dicen "Página en preparación." y la demo no se quita. Los valores iniciales están en `LEGAL_INICIAL` (`comun.js`) y en el SQL.
-- Cambios a la base: siempre una migración nueva (la próxima es `0020_…sql`). Nunca editar una ya corrida en producción. En producción se corren todas, en orden.
+- Cambios a la base: siempre una migración nueva (la próxima es `0021_…sql`). Nunca editar una ya corrida en producción. En producción se corren todas, en orden.
 
 ## Cómo verificar antes de cada commit
 
@@ -75,7 +75,8 @@ bash tests/sql/probar.sh                                   # SQL y RLS (Postgres
 python3 -m http.server 8080 &
 node tests/legal/motor.test.mjs                            # motor legal
 node tests/paises.test.mjs                                 # datos de país
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 65 casos, modo demo
+node tests/i18n.test.mjs                                   # diccionarios es/pt
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 66 casos, modo demo
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 ```
 
@@ -88,7 +89,7 @@ Después de correr la suite:
 - **Mirar las capturas** a 360, 768 y 1440 px.
 - Revisar el tuteo a mano:
   ```bash
-  grep -rniE "\btú\b|\bvos\b|tienes|puedes" --include=*.html --include=*.js .
+  grep -rniE "\btú\b|\bvos\b|tienes|puedes" --include=*.html --include=*.js --exclude=pt.js .
   ```
 
 ## Lo que falta y no se puede resolver desde el código

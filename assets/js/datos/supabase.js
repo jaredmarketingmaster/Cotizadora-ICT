@@ -5,7 +5,11 @@
 // =============================================================================
 
 import { CONFIG } from "../../../config.js";
-import { ErrorDatos, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, CAMPOS_RESENA, elegir, mensajeDeError, mensajeArchivo } from "./comun.js";
+import { ErrorDatos, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, CAMPOS_RESENA, elegir, mensajeDeError, mensajeArchivo, traducirServidor } from "./comun.js";
+import { t as tr } from "../i18n/i18n.js";
+
+// Mensaje para la persona, en el idioma en uso (claves datos.error.*).
+const msj = (clave) => tr(`datos.error.${clave}`);
 
 const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm";
 const URL_BASE = String(CONFIG.supabase.url || "").replace(/\/+$/, "");
@@ -61,12 +65,12 @@ function fallo(error) {
 
 function traducirAuth(error) {
   const t = String(error?.message || "");
-  if (/invalid login credentials/i.test(t)) return "El correo o la contraseña no coinciden.";
-  if (/email not confirmed/i.test(t)) return "Ese correo todavía no está confirmado. Revise su bandeja de entrada.";
-  if (/banned|user is banned/i.test(t)) return "Este usuario está desactivado. Hable con el administrador.";
-  if (/password should be at least/i.test(t)) return "La contraseña debe tener al menos 8 caracteres.";
-  if (/rate limit|too many/i.test(t)) return "Demasiados intentos. Espere unos minutos e inténtelo de nuevo.";
-  if (/same password|different from the old/i.test(t)) return "La contraseña nueva debe ser distinta de la anterior.";
+  if (/invalid login credentials/i.test(t)) return msj("credenciales");
+  if (/email not confirmed/i.test(t)) return msj("no_confirmado");
+  if (/banned|user is banned/i.test(t)) return msj("desactivado");
+  if (/password should be at least/i.test(t)) return msj("clave_corta");
+  if (/rate limit|too many/i.test(t)) return msj("demasiados_intentos");
+  if (/same password|different from the old/i.test(t)) return msj("clave_igual");
   return mensajeDeError(error);
 }
 
@@ -83,7 +87,8 @@ async function funcion(nombre, cuerpo) {
   if (error) {
     let mensaje = "";
     try { mensaje = (await error.context.json()).error; } catch { /* sin cuerpo */ }
-    throw new ErrorDatos(mensaje || "No se pudo completar la acción. Inténtelo de nuevo.");
+    // La función responde en español: se pasa al idioma en uso.
+    throw new ErrorDatos(traducirServidor(mensaje) || msj("accion"));
   }
   return data;
 }
@@ -101,7 +106,7 @@ export const supabase = {
     } catch (e) {
       throw new ErrorDatos(mensajeDeError(e));
     }
-    if (!r.ok) throw new ErrorDatos("No pudimos cargar los equipos. Recargue la página.");
+    if (!r.ok) throw new ErrorDatos(msj("cargar_equipos"));
     return r.json();
   },
 
@@ -138,7 +143,7 @@ export const supabase = {
     const perfil = await perfilDe(c, data.user);
     if (!perfil) {
       await c.auth.signOut();
-      throw new ErrorDatos("Su usuario no tiene acceso al panel o está desactivado. Hable con el administrador.");
+      throw new ErrorDatos(msj("sin_acceso"));
     }
     return perfil;
   },
@@ -365,7 +370,7 @@ export const supabase = {
     const c = await cliente();
     const { data, error } = await c.from("perfiles").update({ rol }).eq("user_id", userId).select();
     fallo(error);
-    if (!data?.length) throw new ErrorDatos("Su usuario no tiene permiso para hacer este cambio.", "42501");
+    if (!data?.length) throw new ErrorDatos(msj("permiso"), "42501");
     return data[0];
   }
 };

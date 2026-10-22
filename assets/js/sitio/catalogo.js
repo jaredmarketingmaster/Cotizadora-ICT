@@ -6,6 +6,7 @@
 
 import { capacidadEnGB, formatearPrecio } from "../utils.js";
 import { nombreColor } from "../datos/comun.js";
+import { t as tr } from "../i18n/i18n.js";
 
 // Recencia de cada generación = el mayor "orden" de sus modelos en el catálogo.
 // Así el plegable (último del catálogo) y los modelos que se agreguen después
@@ -62,7 +63,7 @@ export function opcionesModelo(cat, condicion) {
 // "11" → "Generación 11"; "XS y XR" → "Generación XS y XR"; un grupo con
 // nombre propio ("Plegable") queda igual.
 export function etiquetaGeneracion(generacion) {
-  return /^(\d+|X)/.test(generacion) ? `Generación ${generacion}` : generacion;
+  return /^(\d+|X)/.test(generacion) ? tr("sitio.generacion", { generacion }) : generacion;
 }
 
 export function opcionesCapacidad(cat, condicion, modelo) {
@@ -135,42 +136,45 @@ export function diapositivas(cat, tarjeta) {
   return { lista, inicial: Math.max(0, lista.findIndex((q) => q.id === tarjeta.equipos[0].id)) };
 }
 
-export const TEXTO_MAS_VENDIDO = "Más vendido";
+// Textos en el idioma de la tienda (i18n): se piden al usarlos, no al cargar.
+export const textoMasVendido = () => tr("sitio.mas_vendido");
 
-export function textoCondicion(condicion) {
-  return condicion === "usado" ? "Usado" : "Nuevo";
+// idioma (opcional): forzar uno, p. ej. "es" para un dato que no depende del sitio.
+export function textoCondicion(condicion, idioma) {
+  return tr(condicion === "usado" ? "sitio.condicion.usado" : "sitio.condicion.nuevo", undefined, idioma);
 }
 
 export function textoAlternativo(q) {
-  return [q.modelo.nombre, q.capacidad, q.color_nombre && `color ${q.color_nombre}`].filter(Boolean).join(", ");
+  return [q.modelo.nombre, q.capacidad, q.color_nombre && tr("sitio.alt.color", { color: q.color_nombre })].filter(Boolean).join(", ");
 }
 
 // Lo que el cliente buscó (para el mensaje "sin stock").
 export function describirBusqueda(cat, { condicion, modelo, capacidad }) {
   const nombre = (modelo && cat.porSlug.get(modelo)?.nombre) || "iPhone";
-  return [nombre, condicion, capacidad && `de ${capacidad}`].filter(Boolean).join(" ");
+  const textoCond = condicion && tr(condicion === "usado" ? "sitio.busqueda.usado" : "sitio.busqueda.nuevo");
+  return [nombre, textoCond, capacidad && tr("sitio.busqueda.capacidad", { capacidad })].filter(Boolean).join(" ");
 }
 
 export function mensajeCompra(q, codigo, nombre) {
   const lineas = [
-    "Hola, quiero comprar este equipo:",
+    tr("sitio.wa.saludo_compra"),
     `${q.modelo.nombre} ${textoCondicion(q.condicion)}`,
     [q.capacidad, q.color_nombre].filter(Boolean).join(" · "),
-    `Precio: ${formatearPrecio(q.precio)}`
+    tr("sitio.wa.precio", { precio: formatearPrecio(q.precio) })
   ];
   if (q.condicion === "usado") {
     const usado = [
-      q.bateria_porcentaje != null && `Batería ${q.bateria_porcentaje}%`,
-      q.estado_estetico && `Estado: ${q.estado_estetico}`
+      q.bateria_porcentaje != null && tr("sitio.wa.bateria", { n: q.bateria_porcentaje }),
+      q.estado_estetico && tr("sitio.wa.estado", { estado: q.estado_estetico })
     ].filter(Boolean).join(" · ");
     if (usado) lineas.push(usado);
   }
-  lineas.push(`Código: ${codigo}`, `Soy ${nombre.trim()}.`);
+  lineas.push(tr("sitio.wa.codigo", { codigo }), tr("sitio.wa.soy", { nombre: nombre.trim() }));
   return lineas.join("\n");
 }
 
 export function mensajeSinStock(busqueda, codigo, nombre) {
-  return `Hola, busco un ${busqueda}. ¿Lo tienen disponible? Código: ${codigo}. Soy ${nombre.trim()}.`;
+  return tr("sitio.wa.sin_stock", { busqueda, codigo, nombre: nombre.trim() });
 }
 
 export function enlaceWhatsApp(numero, mensaje) {

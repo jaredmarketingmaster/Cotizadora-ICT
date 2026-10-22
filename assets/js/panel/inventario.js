@@ -6,17 +6,24 @@
 
 import { formatearPrecio, formatearMiles, leerPrecio, CAPACIDADES_SUGERIDAS, capacidadEnGB } from "../utils.js";
 import { datosPais, paisActual } from "../datos/paises.js";
-import { rutaMiniatura, ESTADOS_ESTETICOS, nombreColor, MAX_MAS_VENDIDOS, MENSAJE_MAS_VENDIDOS } from "../datos/comun.js";
+import { rutaMiniatura, ESTADOS_ESTETICOS, nombreColor, MAX_MAS_VENDIDOS } from "../datos/comun.js";
 import { telefonoSVG } from "../ilustracion.js";
 import { etiquetaGeneracion } from "../sitio/catalogo.js";
 import { $, $$, esc, avisar, confirmar, conBoton, campoTexto, interruptor, marcarError, enfocarPrimerError } from "./ui.js";
 import { comprimirFoto } from "./imagenes.js";
 import { validarVideo } from "./video.js";
+import { t as tr, tn } from "../i18n/i18n.js";
+
+// El estado estético se guarda en español (la base lo valida); se muestra traducido.
+const CLAVES_ESTADO = { "Como nuevo": "como_nuevo", "Excelente": "excelente", "Muy bueno": "muy_bueno", "Bueno": "bueno" };
+const nombreEstado = (s) => (CLAVES_ESTADO[s] ? tr(`panel.inventario.estado.${CLAVES_ESTADO[s]}`) : s);
+const nombreCondicion = (c) => tr(c === "usado" ? "panel.inventario.usado" : "panel.inventario.nuevo");
+const mensajeMasVendidos = () => tr("panel.inventario.max_mas_vendidos", { n: MAX_MAS_VENDIDOS });
 
 const MAX_FOTOS = 6;
 
 function nombreModelo(modelos, id) {
-  return modelos.find((m) => m.id === id)?.nombre || "Modelo borrado";
+  return modelos.find((m) => m.id === id)?.nombre || tr("panel.inventario.modelo_borrado");
 }
 
 function miniatura(api, q, colores, alt = "") {
@@ -56,14 +63,14 @@ async function lista(vista, ctx, params) {
 
   vista.innerHTML = `
     <div class="vista-cabecera">
-      <h1>Inventario</h1>
-      <a class="boton boton--primario" href="#/inventario/nuevo">Agregar equipo</a>
+      <h1>${esc(tr("panel.inventario.titulo"))}</h1>
+      <a class="boton boton--primario" href="#/inventario/nuevo">${esc(tr("panel.inventario.agregar_equipo"))}</a>
     </div>
     <div class="barra-filtros">
-      <div class="campo"><label for="b-texto">Buscar</label><input class="entrada" id="b-texto" type="search" placeholder="Modelo, color o capacidad"></div>
-      <div class="campo"><label for="b-modelo">Modelo</label><select class="entrada" id="b-modelo"><option value="">Todos</option>${conEquipos.map((m) => `<option value="${m.id}">${esc(m.nombre)}</option>`).join("")}</select></div>
-      <div class="campo"><label for="b-condicion">Condición</label><select class="entrada" id="b-condicion"><option value="">Todas</option><option value="nuevo">Nuevo</option><option value="usado">Usado</option></select></div>
-      <div class="campo"><label for="b-publicado">Publicado</label><select class="entrada" id="b-publicado"><option value="">Todos</option><option value="si">Sí</option><option value="no">No</option></select></div>
+      <div class="campo"><label for="b-texto">${esc(tr("panel.inventario.buscar"))}</label><input class="entrada" id="b-texto" type="search" placeholder="${esc(tr("panel.inventario.buscar_placeholder"))}"></div>
+      <div class="campo"><label for="b-modelo">${esc(tr("panel.inventario.modelo"))}</label><select class="entrada" id="b-modelo"><option value="">${esc(tr("panel.inventario.todos"))}</option>${conEquipos.map((m) => `<option value="${m.id}">${esc(m.nombre)}</option>`).join("")}</select></div>
+      <div class="campo"><label for="b-condicion">${esc(tr("panel.inventario.condicion"))}</label><select class="entrada" id="b-condicion"><option value="">${esc(tr("panel.inventario.todas"))}</option><option value="nuevo">${esc(tr("panel.inventario.nuevo"))}</option><option value="usado">${esc(tr("panel.inventario.usado"))}</option></select></div>
+      <div class="campo"><label for="b-publicado">${esc(tr("panel.inventario.publicado"))}</label><select class="entrada" id="b-publicado"><option value="">${esc(tr("panel.inventario.todos"))}</option><option value="si">${esc(tr("panel.inventario.si"))}</option><option value="no">${esc(tr("panel.inventario.no"))}</option></select></div>
     </div>
     <p id="filtro-especial" class="avisos" hidden></p>
     <p class="ayuda" id="cuenta" role="status"></p>
@@ -89,28 +96,28 @@ async function lista(vista, ctx, params) {
   function fila(q) {
     const nombre = nombreModelo(modelos, q.modelo_id);
     const notas = [
-      q.es_demo && "DEMO",
-      !activos.has(q.modelo_id) && "modelo inactivo: no se ve",
-      !q.en_stock && "sin stock: no se ve",
-      q.condicion === "usado" && q.bateria_porcentaje != null && `batería ${q.bateria_porcentaje}%`
+      q.es_demo && tr("panel.inventario.nota_demo"),
+      !activos.has(q.modelo_id) && tr("panel.inventario.nota_inactivo"),
+      !q.en_stock && tr("panel.inventario.nota_sin_stock"),
+      q.condicion === "usado" && q.bateria_porcentaje != null && tr("panel.inventario.nota_bateria", { n: q.bateria_porcentaje })
     ].filter(Boolean);
     return `<li class="fila-equipo" data-id="${q.id}">
       <span class="fila-foto">${miniatura(api, q, colores)}</span>
       <div class="fila-info">
         <span class="fila-nombre">${esc(nombre)}</span>
-        <span class="fila-sub">${[q.condicion === "usado" ? "Usado" : "Nuevo", q.capacidad, colorDe(q, colores)].filter(Boolean).map(esc).join(" · ")}</span>
+        <span class="fila-sub">${[nombreCondicion(q.condicion), q.capacidad, colorDe(q, colores)].filter(Boolean).map(esc).join(" · ")}</span>
         ${notas.length ? `<span class="fila-sub">${esc(notas.join(" · "))}</span>` : ""}
       </div>
       <div class="fila-edicion">
-        <div class="campo"><label for="p-${q.id}">Precio</label><input class="entrada cifras" id="p-${q.id}" data-campo="precio" inputmode="numeric" value="${formatearMiles(q.precio)}"></div>
-        ${interruptor({ id: `s-${q.id}`, etiqueta: "Stock", marcado: q.en_stock, atributos: 'data-campo="en_stock"', estados: ["Con stock", "Sin stock"] })}
-        ${interruptor({ id: `v-${q.id}`, etiqueta: "Publicado", marcado: q.publicado, atributos: 'data-campo="publicado"' })}
-        ${interruptor({ id: `mv-${q.id}`, etiqueta: "Más vendido", marcado: q.mas_vendido, atributos: 'data-campo="mas_vendido"' })}
+        <div class="campo"><label for="p-${q.id}">${esc(tr("panel.inventario.precio"))}</label><input class="entrada cifras" id="p-${q.id}" data-campo="precio" inputmode="numeric" value="${formatearMiles(q.precio)}"></div>
+        ${interruptor({ id: `s-${q.id}`, etiqueta: tr("panel.inventario.stock"), marcado: q.en_stock, atributos: 'data-campo="en_stock"', estados: [tr("panel.inventario.con_stock"), tr("panel.inventario.sin_stock")] })}
+        ${interruptor({ id: `v-${q.id}`, etiqueta: tr("panel.inventario.publicado"), marcado: q.publicado, atributos: 'data-campo="publicado"' })}
+        ${interruptor({ id: `mv-${q.id}`, etiqueta: tr("panel.inventario.mas_vendido"), marcado: q.mas_vendido, atributos: 'data-campo="mas_vendido"' })}
       </div>
       <div class="fila-acciones">
-        <a class="boton boton--suave boton--chico" href="#/inventario/${q.id}">Editar</a>
-        <a class="boton boton--suave boton--chico" href="#/inventario/nuevo?desde=${q.id}">Duplicar</a>
-        <button type="button" class="boton boton--peligro boton--chico" data-borrar>Borrar</button>
+        <a class="boton boton--suave boton--chico" href="#/inventario/${q.id}">${esc(tr("panel.inventario.editar"))}</a>
+        <a class="boton boton--suave boton--chico" href="#/inventario/nuevo?desde=${q.id}">${esc(tr("panel.inventario.duplicar"))}</a>
+        <button type="button" class="boton boton--peligro boton--chico" data-borrar>${esc(tr("panel.inventario.borrar"))}</button>
       </div>
       <p class="error-campo fila-error" role="alert"></p>
     </li>`;
@@ -121,13 +128,13 @@ async function lista(vista, ctx, params) {
     const especial = $("#filtro-especial");
     especial.hidden = !estado.especial;
     especial.innerHTML = estado.especial
-      ? `<span>Mostrando solo ${estado.especial === "sin-stock" ? "equipos sin stock" : "equipos sin foto"}.</span> <button type="button" class="boton boton--enlace" id="quitar-especial">Ver todos</button>`
+      ? `<span>${esc(tr(estado.especial === "sin-stock" ? "panel.inventario.solo_sin_stock" : "panel.inventario.solo_sin_foto"))}</span> <button type="button" class="boton boton--enlace" id="quitar-especial">${esc(tr("panel.inventario.ver_todos"))}</button>`
       : "";
     $("#quitar-especial")?.addEventListener("click", () => { estado.especial = ""; pintar(); });
-    $("#cuenta").textContent = `${lista.length} de ${equipos.length} equipos`;
+    $("#cuenta").textContent = tr("panel.inventario.cuenta", { m: lista.length, n: equipos.length });
     $("#lista").innerHTML = lista.length
       ? lista.map(fila).join("")
-      : `<li class="vacio-panel">${equipos.length ? "No hay equipos con esos filtros." : "Todavía no hay equipos. Toque «Agregar equipo» para cargar el primero."}</li>`;
+      : `<li class="vacio-panel">${esc(tr(equipos.length ? "panel.inventario.sin_resultados" : "panel.inventario.vacio"))}</li>`;
   }
 
   $("#b-texto").addEventListener("input", (e) => { estado.texto = e.target.value.trim(); pintar(); });
@@ -144,13 +151,13 @@ async function lista(vista, ctx, params) {
     let valor;
     if (campo === "precio") {
       valor = leerPrecio(input.value);
-      if (valor == null) { error.textContent = "El precio debe ser un número entero mayor que 0."; input.setAttribute("aria-invalid", "true"); return; }
+      if (valor == null) { error.textContent = tr("panel.inventario.precio_invalido"); input.setAttribute("aria-invalid", "true"); return; }
       if (valor === q.precio) { input.value = formatearMiles(q.precio); return; }
     } else {
       valor = input.checked;
       // Hasta 3 "más vendidos": se avisa antes de ir a la base (que igual lo exige).
       if (campo === "mas_vendido" && valor && equipos.filter((x) => x.mas_vendido && x.id !== q.id).length >= MAX_MAS_VENDIDOS) {
-        error.textContent = MENSAJE_MAS_VENDIDOS;
+        error.textContent = mensajeMasVendidos();
         input.checked = false;
         return;
       }
@@ -176,16 +183,16 @@ async function lista(vista, ctx, params) {
     const li = e.target.closest(".fila-equipo");
     const q = equipos.find((x) => x.id === li.dataset.id);
     const ok = await confirmar({
-      titulo: "¿Borrar este equipo?",
-      texto: `${nombreModelo(modelos, q.modelo_id)} ${q.capacidad}${colorDe(q, colores) ? ` ${colorDe(q, colores)}` : ""}. Se borran también sus fotos y su video. Si solo quiere ocultarlo, márquelo «Sin stock» o desmarque «Publicado».`,
-      aceptar: "Borrar", peligro: true
+      titulo: tr("panel.inventario.borrar_titulo"),
+      texto: tr("panel.inventario.borrar_texto", { equipo: `${nombreModelo(modelos, q.modelo_id)} ${q.capacidad}${colorDe(q, colores) ? ` ${colorDe(q, colores)}` : ""}` }),
+      aceptar: tr("panel.inventario.borrar"), peligro: true
     });
     if (!ok) return;
     await conBoton(null, async () => {
       await api.borrarEquipo(q.id);
       await api.borrarArchivos("fotos", rutasDeFotos(q.fotos)).catch(() => {});
       if (q.video) await api.borrarArchivos("videos", [q.video]).catch(() => {});
-    }, { exito: "Equipo borrado" });
+    }, { exito: tr("panel.inventario.borrado") });
     equipos.splice(equipos.indexOf(q), 1);
     pintar();
   });
@@ -195,23 +202,16 @@ async function lista(vista, ctx, params) {
 
 // --- Formulario (por pasos al agregar; completo al editar o duplicar) -----------
 
-const PASOS = [
-  ["modelo", "Modelo"],
-  ["condicion", "Condición"],
-  ["capacidad", "Capacidad"],
-  ["color", "Color"],
-  ["precio", "Precio y stock"],
-  ["fotos", "Fotos y video"],
-  ["usado", "Datos del usado"],
-  ["publicar", "Publicar"]
-];
+// El nombre de cada paso sale del diccionario: panel.inventario.paso.<clave>.
+const PASOS = ["modelo", "condicion", "capacidad", "color", "precio", "fotos", "usado", "publicar"].map((k) => [k]);
+const nombrePaso = (k) => tr(`panel.inventario.paso.${k}`);
 
 async function formulario(vista, ctx, { modo, id, desde }) {
   const { api } = ctx;
   const [equipos, modelos, listaColores] = await Promise.all([api.listarEquipos(), api.listarModelos(), api.listarColores()]);
   const original = id ? equipos.find((q) => q.id === id) : null;
   if (modo === "editar" && !original) {
-    vista.innerHTML = '<p class="popup-alerta">Ese equipo ya no existe.</p><a class="volver" href="#/inventario">← Volver al inventario</a>';
+    vista.innerHTML = `<p class="popup-alerta">${esc(tr("panel.inventario.no_existe"))}</p><a class="volver" href="#/inventario">${esc(tr("panel.inventario.volver_inventario"))}</a>`;
     return;
   }
   const fuente = modo === "duplicar" ? equipos.find((q) => q.id === desde) : original;
@@ -242,78 +242,78 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     g.modelos.push(m);
   }
   const capsSugeridas = CAPACIDADES_SUGERIDAS.includes(q.capacidad) || !q.capacidad;
-  const titulo = { nuevo: "Agregar equipo", editar: "Editar equipo", duplicar: "Duplicar equipo" }[modo];
+  const titulo = tr({ nuevo: "panel.inventario.agregar_equipo", editar: "panel.inventario.editar_equipo", duplicar: "panel.inventario.duplicar_equipo" }[modo]);
 
   vista.innerHTML = `
-    <a class="volver" href="#/inventario">← Inventario</a>
-    <div class="vista-cabecera"><h1>${titulo}</h1>
-      ${modo === "duplicar" ? "<p>Se copiaron los datos del equipo. Cambie el color o la capacidad y cargue sus fotos.</p>" : ""}
+    <a class="volver" href="#/inventario">${esc(tr("panel.inventario.volver"))}</a>
+    <div class="vista-cabecera"><h1>${esc(titulo)}</h1>
+      ${modo === "duplicar" ? `<p>${esc(tr("panel.inventario.duplicar_ayuda"))}</p>` : ""}
     </div>
     <form id="form-equipo" novalidate>
       ${porPasos ? `<div class="pasos-progreso" aria-hidden="true">${PASOS.map(() => "<span></span>").join("")}</div><p class="paso-titulo" id="paso-titulo" aria-live="polite"></p>` : ""}
 
       <fieldset class="bloque" data-paso="modelo">
-        <legend class="oculto-visual">Modelo</legend>
+        <legend class="oculto-visual">${esc(tr("panel.inventario.modelo"))}</legend>
         <div class="campo">
-          <label for="e-modelo">Modelo</label>
+          <label for="e-modelo">${esc(tr("panel.inventario.modelo"))}</label>
           <select class="entrada" id="e-modelo" aria-describedby="e-modelo-error">
-            <option value="">Elija el modelo</option>
-            ${generaciones.map((g) => `<optgroup label="${esc(etiquetaGeneracion(g.nombre))}">${g.modelos.map((m) => `<option value="${m.id}" ${m.id === q.modelo_id ? "selected" : ""}>${esc(m.nombre)}${m.activo ? "" : " (inactivo)"}</option>`).join("")}</optgroup>`).join("")}
+            <option value="">${esc(tr("panel.inventario.elija_modelo"))}</option>
+            ${generaciones.map((g) => `<optgroup label="${esc(etiquetaGeneracion(g.nombre))}">${g.modelos.map((m) => `<option value="${m.id}" ${m.id === q.modelo_id ? "selected" : ""}>${esc(m.nombre)}${m.activo ? "" : ` ${esc(tr("panel.inventario.inactivo"))}`}</option>`).join("")}</optgroup>`).join("")}
           </select>
           <p class="error-campo" id="e-modelo-error"></p>
         </div>
         <div id="aviso-inactivo" hidden>
-          <p class="ayuda">Este modelo está inactivo en el catálogo: sus equipos no se ven en el sitio.</p>
-          ${interruptor({ id: "e-activar", etiqueta: "Activar el modelo al guardar", marcado: true })}
+          <p class="ayuda">${esc(tr("panel.inventario.aviso_inactivo"))}</p>
+          ${interruptor({ id: "e-activar", etiqueta: tr("panel.inventario.activar_modelo"), marcado: true })}
         </div>
       </fieldset>
 
       <fieldset class="bloque" data-paso="condicion" aria-describedby="e-condicion-error">
-        <legend>Condición</legend>
+        <legend>${esc(tr("panel.inventario.condicion"))}</legend>
         <div class="opciones-chip">
-          ${["nuevo", "usado"].map((c) => `<label class="opcion-chip"><input type="radio" name="e-condicion" value="${c}" ${q.condicion === c ? "checked" : ""}><span>${c === "nuevo" ? "Nuevo" : "Usado"}</span></label>`).join("")}
+          ${["nuevo", "usado"].map((c) => `<label class="opcion-chip"><input type="radio" name="e-condicion" value="${c}" ${q.condicion === c ? "checked" : ""}><span>${esc(nombreCondicion(c))}</span></label>`).join("")}
         </div>
-        <p class="ayuda">Un nuevo es una variante (modelo, capacidad y color). Un usado es una sola unidad física.</p>
+        <p class="ayuda">${esc(tr("panel.inventario.condicion_ayuda"))}</p>
         <p class="error-campo" id="e-condicion-error"></p>
       </fieldset>
 
       <fieldset class="bloque" data-paso="capacidad" aria-describedby="e-capacidad-error">
-        <legend>Capacidad</legend>
+        <legend>${esc(tr("panel.inventario.capacidad"))}</legend>
         <div class="opciones-chip">
           ${CAPACIDADES_SUGERIDAS.map((c) => `<label class="opcion-chip"><input type="radio" name="e-capacidad" value="${c}" ${q.capacidad === c ? "checked" : ""}><span>${c}</span></label>`).join("")}
-          <label class="opcion-chip"><input type="radio" name="e-capacidad" value="otra" ${!capsSugeridas ? "checked" : ""}><span>Otra</span></label>
+          <label class="opcion-chip"><input type="radio" name="e-capacidad" value="otra" ${!capsSugeridas ? "checked" : ""}><span>${esc(tr("panel.inventario.otra"))}</span></label>
         </div>
         <div class="campo" id="caja-otra" ${capsSugeridas ? "hidden" : ""}>
-          <label for="e-capacidad-otra">Escriba la capacidad</label>
-          <input class="entrada" id="e-capacidad-otra" value="${capsSugeridas ? "" : esc(q.capacidad)}" placeholder="Ej. 32 GB">
+          <label for="e-capacidad-otra">${esc(tr("panel.inventario.escriba_capacidad"))}</label>
+          <input class="entrada" id="e-capacidad-otra" value="${capsSugeridas ? "" : esc(q.capacidad)}" placeholder="${esc(tr("panel.inventario.capacidad_placeholder"))}">
         </div>
         <p class="error-campo" id="e-capacidad-error"></p>
       </fieldset>
 
       <fieldset class="bloque" data-paso="color" aria-describedby="e-color-error">
-        <legend>Color</legend>
-        <p class="ayuda">Los colores oficiales del modelo. Para agregar o completar colores, vaya a Catálogo.</p>
+        <legend>${esc(tr("panel.inventario.color"))}</legend>
+        <p class="ayuda">${esc(tr("panel.inventario.color_ayuda"))}</p>
         <div class="opciones-color" id="opciones-color"></div>
         <p class="error-campo" id="e-color-error"></p>
-        ${campoTexto({ id: "e-color-mostrar", etiqueta: "Nombre que verá el cliente (opcional)", valor: q.color_nombre_mostrar, ayuda: "Por ejemplo, el nombre en español. Si lo deja vacío, se muestra el nombre oficial en inglés.", atributos: 'maxlength="40"' })}
+        ${campoTexto({ id: "e-color-mostrar", etiqueta: tr("panel.inventario.color_mostrar"), valor: q.color_nombre_mostrar, ayuda: esc(tr("panel.inventario.color_mostrar_ayuda")), atributos: 'maxlength="40"' })}
       </fieldset>
 
       <fieldset class="bloque" data-paso="precio">
-        <legend>Precio y stock</legend>
-        ${campoTexto({ id: "e-precio", etiqueta: `Precio (${datosPais(paisActual()).moneda})`, valor: q.precio ? formatearMiles(q.precio) : "", ayuda: "Número entero, sin decimales. Ej. 5.299.000", atributos: 'inputmode="numeric" autocomplete="off"' })}
-        ${interruptor({ id: "e-stock", etiqueta: "Stock", marcado: q.en_stock, estados: ["Con stock", "Sin stock"] })}
-        <p class="ayuda">Sin stock, el equipo deja de verse en el sitio, sin borrarse.</p>
+        <legend>${esc(tr("panel.inventario.paso.precio"))}</legend>
+        ${campoTexto({ id: "e-precio", etiqueta: tr("panel.inventario.precio_moneda", { moneda: datosPais(paisActual()).moneda }), valor: q.precio ? formatearMiles(q.precio) : "", ayuda: esc(tr("panel.inventario.precio_ayuda")), atributos: 'inputmode="numeric" autocomplete="off"' })}
+        ${interruptor({ id: "e-stock", etiqueta: tr("panel.inventario.stock"), marcado: q.en_stock, estados: [tr("panel.inventario.con_stock"), tr("panel.inventario.sin_stock")] })}
+        <p class="ayuda">${esc(tr("panel.inventario.stock_ayuda"))}</p>
       </fieldset>
 
       <fieldset class="bloque" data-paso="fotos">
-        <legend>Fotos</legend>
-        <p class="ayuda">Hasta ${MAX_FOTOS}. La primera es la principal. Se comprimen solas (WebP, máx. 1600 px). JPG, PNG, WebP o HEIC de hasta 10 MB.</p>
+        <legend>${esc(tr("panel.inventario.fotos"))}</legend>
+        <p class="ayuda">${esc(tr("panel.inventario.fotos_ayuda", { n: MAX_FOTOS }))}</p>
         <ul class="fotos-lista" id="fotos-lista"></ul>
         <div class="zona-subida" id="zona-subida">
-          <p>Arrastre las fotos aquí o</p>
+          <p>${esc(tr("panel.inventario.arrastre"))}</p>
           <div class="zona-subida-botones">
-            <label class="boton boton--secundario" for="e-fotos">Elegir fotos</label>
-            <label class="boton boton--secundario" for="e-camara">Usar la cámara</label>
+            <label class="boton boton--secundario" for="e-fotos">${esc(tr("panel.inventario.elegir_fotos"))}</label>
+            <label class="boton boton--secundario" for="e-camara">${esc(tr("panel.inventario.usar_camara"))}</label>
           </div>
           <input class="oculto-visual" id="e-fotos" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" multiple>
           <input class="oculto-visual" id="e-camara" type="file" accept="image/*" capture="environment">
@@ -321,8 +321,8 @@ async function formulario(vista, ctx, { modo, id, desde }) {
         <p class="subiendo" id="subiendo" role="status" hidden></p>
         <p class="error-campo" id="e-fotos-error" role="alert"></p>
         <div class="campo bloque-video">
-          <span class="etiqueta" id="e-video-titulo">Video (opcional)</span>
-          <p class="ayuda" id="e-video-ayuda">Un video corto del equipo: MP4 o WebM, de hasta 15 segundos y 20 MB. Se sube tal cual, sin comprimir. En el sitio solo se descarga si el cliente lo toca.</p>
+          <span class="etiqueta" id="e-video-titulo">${esc(tr("panel.inventario.video"))}</span>
+          <p class="ayuda" id="e-video-ayuda">${esc(tr("panel.inventario.video_ayuda"))}</p>
           <div id="video-actual"></div>
           <input class="oculto-visual" id="e-video" type="file" accept="video/mp4,video/webm,.mp4,.webm" aria-describedby="e-video-ayuda e-video-error">
           <p class="subiendo" id="subiendo-video" role="status" hidden></p>
@@ -331,37 +331,37 @@ async function formulario(vista, ctx, { modo, id, desde }) {
       </fieldset>
 
       <fieldset class="bloque" data-paso="usado">
-        <legend>Datos del usado</legend>
+        <legend>${esc(tr("panel.inventario.paso.usado"))}</legend>
         <div class="grilla-2">
-          ${campoTexto({ id: "e-bateria", etiqueta: "Batería (%)", valor: q.bateria_porcentaje ?? "", tipo: "number", ayuda: "De 0 a 100.", atributos: 'inputmode="numeric" min="0" max="100"' })}
+          ${campoTexto({ id: "e-bateria", etiqueta: tr("panel.inventario.bateria"), valor: q.bateria_porcentaje ?? "", tipo: "number", ayuda: esc(tr("panel.inventario.bateria_ayuda")), atributos: 'inputmode="numeric" min="0" max="100"' })}
           <div class="campo">
-            <label for="e-estado">Estado estético</label>
+            <label for="e-estado">${esc(tr("panel.inventario.estado_estetico"))}</label>
             <select class="entrada" id="e-estado" aria-describedby="e-estado-error">
-              <option value="">Elija el estado</option>
-              ${ESTADOS_ESTETICOS.map((s) => `<option ${q.estado_estetico === s ? "selected" : ""}>${s}</option>`).join("")}
+              <option value="">${esc(tr("panel.inventario.elija_estado"))}</option>
+              ${ESTADOS_ESTETICOS.map((s) => `<option value="${esc(s)}" ${q.estado_estetico === s ? "selected" : ""}>${esc(nombreEstado(s))}</option>`).join("")}
             </select>
             <p class="error-campo" id="e-estado-error"></p>
           </div>
         </div>
-        ${campoTexto({ id: "e-detalles", etiqueta: "Detalles", valor: q.detalles, ayuda: "Ej. rayón leve en el marco.", multilinea: true, atributos: 'rows="3" maxlength="500"' })}
-        ${campoTexto({ id: "e-incluye", etiqueta: "Qué incluye", valor: q.incluye, ayuda: "Ej. caja y cable.", atributos: 'maxlength="200"' })}
+        ${campoTexto({ id: "e-detalles", etiqueta: tr("panel.inventario.detalles"), valor: q.detalles, ayuda: esc(tr("panel.inventario.detalles_ayuda")), multilinea: true, atributos: 'rows="3" maxlength="500"' })}
+        ${campoTexto({ id: "e-incluye", etiqueta: tr("panel.inventario.incluye"), valor: q.incluye, ayuda: esc(tr("panel.inventario.incluye_ayuda")), atributos: 'maxlength="200"' })}
       </fieldset>
 
       <fieldset class="bloque" data-paso="publicar">
-        <legend>Publicar</legend>
-        ${interruptor({ id: "e-publicado", etiqueta: "Publicado (se ve en el sitio si tiene stock)", marcado: q.publicado })}
-        ${interruptor({ id: "e-destacado", etiqueta: "Destacado (sale primero en la galería)", marcado: q.destacado })}
-        ${interruptor({ id: "e-mas-vendido", etiqueta: `Más vendido (hasta ${MAX_MAS_VENDIDOS} equipos)`, marcado: q.mas_vendido, atributos: 'aria-describedby="e-mas-vendido-error"' })}
+        <legend>${esc(tr("panel.inventario.paso.publicar"))}</legend>
+        ${interruptor({ id: "e-publicado", etiqueta: tr("panel.inventario.publicado_ayuda"), marcado: q.publicado })}
+        ${interruptor({ id: "e-destacado", etiqueta: tr("panel.inventario.destacado"), marcado: q.destacado })}
+        ${interruptor({ id: "e-mas-vendido", etiqueta: tr("panel.inventario.mas_vendido_hasta", { n: MAX_MAS_VENDIDOS }), marcado: q.mas_vendido, atributos: 'aria-describedby="e-mas-vendido-error"' })}
         <p class="error-campo" id="e-mas-vendido-error" role="alert"></p>
-        ${campoTexto({ id: "e-descripcion", etiqueta: "Descripción extra (opcional)", valor: q.descripcion_extra, ayuda: "Se muestra en la ficha, debajo de la descripción del modelo.", multilinea: true, atributos: 'rows="3" maxlength="800"' })}
+        ${campoTexto({ id: "e-descripcion", etiqueta: tr("panel.inventario.descripcion"), valor: q.descripcion_extra, ayuda: esc(tr("panel.inventario.descripcion_ayuda")), multilinea: true, atributos: 'rows="3" maxlength="800"' })}
         <div id="resumen-equipo" class="ayuda"></div>
       </fieldset>
 
       <div class="acciones-formulario">
         ${porPasos ? `
-          <button type="button" class="boton boton--secundario" id="anterior">Anterior</button>
-          <button type="button" class="boton boton--primario" id="siguiente">Siguiente</button>` : ""}
-        <button type="submit" class="boton boton--primario" id="guardar">${modo === "editar" ? "Guardar cambios" : "Guardar equipo"}</button>
+          <button type="button" class="boton boton--secundario" id="anterior">${esc(tr("panel.inventario.anterior"))}</button>
+          <button type="button" class="boton boton--primario" id="siguiente">${esc(tr("panel.inventario.siguiente"))}</button>` : ""}
+        <button type="submit" class="boton boton--primario" id="guardar">${esc(tr(modo === "editar" ? "panel.inventario.guardar_cambios" : "panel.inventario.guardar_equipo"))}</button>
       </div>
     </form>`;
 
@@ -384,13 +384,13 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     if (m?.id !== modeloColores) { q.color_id = null; modeloColores = m?.id; }
     const lista = m ? listaColores.filter((c) => c.modelo_id === m.id).sort((a, b) => a.orden - b.orden) : [];
     $("#opciones-color").innerHTML = !m
-      ? '<p class="ayuda">Elija primero el modelo.</p>'
+      ? `<p class="ayuda">${esc(tr("panel.inventario.elija_modelo_primero"))}</p>`
       : lista.length
         ? lista.map((c) => `<label class="opcion-color"><input type="radio" name="e-color" value="${c.id}" ${q.color_id === c.id ? "checked" : ""}>
             <span class="muestra-color${c.hex ? "" : " muestra-color--vacia"}" ${c.hex ? `style="background:${esc(c.hex)}"` : ""} aria-hidden="true"></span>
             <span class="opcion-color-nombres"><span>${esc(c.nombre_en || c.nombre_es)}</span>${c.nombre_en ? `<span class="ayuda">${esc(c.nombre_es)}</span>` : ""}</span>
           </label>`).join("")
-        : '<p class="ayuda">Este modelo no tiene colores cargados. Puede guardar el equipo sin color o agregar los colores en Catálogo.</p>';
+        : `<p class="ayuda">${esc(tr("panel.inventario.sin_colores"))}</p>`;
   }
   const colorSel = () => {
     const v = $('input[name="e-color"]:checked', form)?.value;
@@ -411,7 +411,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     const actual = visibles[paso][0];
     $$("[data-paso]", form).forEach((f) => { f.hidden = f.dataset.paso !== actual; });
     $$(".pasos-progreso span", form).forEach((s, i) => s.classList.toggle("hecho", i <= Math.round((paso / (visibles.length - 1)) * (PASOS.length - 1))));
-    $("#paso-titulo").textContent = `Paso ${paso + 1} de ${visibles.length}: ${visibles[paso][1]}`;
+    $("#paso-titulo").textContent = tr("panel.inventario.paso_de", { n: paso + 1, total: visibles.length, paso: nombrePaso(visibles[paso][0]) });
     $("#anterior").hidden = paso === 0;
     const ultimo = paso === visibles.length - 1;
     $("#siguiente").hidden = ultimo;
@@ -425,8 +425,8 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     const m = modeloSel();
     const precio = leerPrecio(valor("#e-precio"));
     const color = nombreColor(listaColores.find((c) => c.id === colorSel()), valor("#e-color-mostrar"));
-    $("#resumen-equipo").innerHTML = `Resumen: <strong>${esc([m?.nombre, condicion() === "usado" ? "Usado" : "Nuevo", capacidad(), color].filter(Boolean).join(" · "))}</strong>
-      ${precio ? ` · ${formatearPrecio(precio)}` : ""} · ${$("#e-stock").checked ? "con stock" : "sin stock"} · ${fotos.length} foto${fotos.length === 1 ? "" : "s"}${video ? " · con video" : ""}`;
+    $("#resumen-equipo").innerHTML = `${esc(tr("panel.inventario.resumen"))} <strong>${esc([m?.nombre, nombreCondicion(condicion()), capacidad(), color].filter(Boolean).join(" · "))}</strong>
+      ${precio ? ` · ${formatearPrecio(precio)}` : ""} · ${esc(tr($("#e-stock").checked ? "panel.inventario.resumen_con_stock" : "panel.inventario.resumen_sin_stock"))} · ${esc(tn("panel.inventario.resumen_fotos", fotos.length))}${video ? ` · ${esc(tr("panel.inventario.resumen_video"))}` : ""}`;
   }
 
   // Error de un grupo de opciones: el foco va a la primera opción.
@@ -439,28 +439,28 @@ async function formulario(vista, ctx, { modo, id, desde }) {
 
   // Validación por sección
   const VALIDAR = {
-    modelo: () => marcarError(form, "e-modelo", modeloSel() ? "" : "Elija el modelo."),
-    condicion: () => errorGrupo("e-condicion", condicion() ? "" : "Elija si es nuevo o usado."),
-    capacidad: () => errorGrupo("e-capacidad", capacidad() ? "" : "Elija o escriba la capacidad."),
+    modelo: () => marcarError(form, "e-modelo", modeloSel() ? "" : tr("panel.inventario.error_modelo")),
+    condicion: () => errorGrupo("e-condicion", condicion() ? "" : tr("panel.inventario.error_condicion")),
+    capacidad: () => errorGrupo("e-capacidad", capacidad() ? "" : tr("panel.inventario.error_capacidad")),
     color: () => {
       const hay = Boolean(modeloSel()) && listaColores.some((c) => c.modelo_id === modeloSel().id);
-      return errorGrupo("e-color", hay && !colorSel() ? "Elija el color." : "");
+      return errorGrupo("e-color", hay && !colorSel() ? tr("panel.inventario.error_color") : "");
     },
     precio: () => {
-      return marcarError(form, "e-precio", leerPrecio(valor("#e-precio")) ? "" : "El precio debe ser un número entero mayor que 0.");
+      return marcarError(form, "e-precio", leerPrecio(valor("#e-precio")) ? "" : tr("panel.inventario.precio_invalido"));
     },
     fotos: () => !subiendo && !subiendoVideo,
     usado: () => {
       if (condicion() !== "usado") return true;
       const b = valor("#e-bateria");
       const n = Number(b);
-      const a = marcarError(form, "e-bateria", b !== "" && Number.isInteger(n) && n >= 0 && n <= 100 ? "" : "La batería debe ser un número entero de 0 a 100.");
-      const c = marcarError(form, "e-estado", valor("#e-estado") ? "" : "Elija el estado estético.");
+      const a = marcarError(form, "e-bateria", b !== "" && Number.isInteger(n) && n >= 0 && n <= 100 ? "" : tr("panel.inventario.error_bateria"));
+      const c = marcarError(form, "e-estado", valor("#e-estado") ? "" : tr("panel.inventario.error_estado"));
       return a && c;
     },
     publicar: () => {
       const otros = equipos.filter((x) => x.mas_vendido && x.id !== original?.id).length;
-      return marcarError(form, "e-mas-vendido", $("#e-mas-vendido").checked && otros >= MAX_MAS_VENDIDOS ? MENSAJE_MAS_VENDIDOS : "");
+      return marcarError(form, "e-mas-vendido", $("#e-mas-vendido").checked && otros >= MAX_MAS_VENDIDOS ? mensajeMasVendidos() : "");
     }
   };
 
@@ -473,12 +473,12 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     $("#fotos-lista").innerHTML = fotos.map((r, i) => {
       const url = api.urlArchivo("fotos", rutaMiniatura(r)) || api.urlArchivo("fotos", r);
       return `<li class="foto-item" draggable="true" data-i="${i}">
-        ${i === 0 ? '<span class="principal">Principal</span>' : ""}
-        <img src="${esc(url)}" alt="Foto ${i + 1}">
+        ${i === 0 ? `<span class="principal">${esc(tr("panel.inventario.principal"))}</span>` : ""}
+        <img src="${esc(url)}" alt="${esc(tr("panel.inventario.foto_alt", { n: i + 1 }))}">
         <div class="foto-botones">
-          <button type="button" class="boton-icono" data-mover="-1" aria-label="Mover la foto ${i + 1} antes" ${i === 0 ? "disabled" : ""}>←</button>
-          <button type="button" class="boton-icono" data-quitar aria-label="Quitar la foto ${i + 1}">✕</button>
-          <button type="button" class="boton-icono" data-mover="1" aria-label="Mover la foto ${i + 1} después" ${i === fotos.length - 1 ? "disabled" : ""}>→</button>
+          <button type="button" class="boton-icono" data-mover="-1" aria-label="${esc(tr("panel.inventario.foto_antes", { n: i + 1 }))}" ${i === 0 ? "disabled" : ""}>←</button>
+          <button type="button" class="boton-icono" data-quitar aria-label="${esc(tr("panel.inventario.foto_quitar", { n: i + 1 }))}">✕</button>
+          <button type="button" class="boton-icono" data-mover="1" aria-label="${esc(tr("panel.inventario.foto_despues", { n: i + 1 }))}" ${i === fotos.length - 1 ? "disabled" : ""}>→</button>
         </div>
       </li>`;
     }).join("");
@@ -489,14 +489,14 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     const errorEl = $("#e-fotos-error");
     errorEl.textContent = "";
     const lista = [...archivos].slice(0, MAX_FOTOS - fotos.length);
-    if (archivos.length > lista.length) errorEl.textContent = `Máximo ${MAX_FOTOS} fotos por equipo.`;
+    if (archivos.length > lista.length) errorEl.textContent = tr("panel.inventario.max_fotos", { n: MAX_FOTOS });
     if (!lista.length) return;
     subiendo = true;
     const estadoEl = $("#subiendo");
     estadoEl.hidden = false;
     let i = 0;
     for (const archivo of lista) {
-      estadoEl.innerHTML = `<span class="spinner" aria-hidden="true"></span>Subiendo ${++i} de ${lista.length}…`;
+      estadoEl.innerHTML = `<span class="spinner" aria-hidden="true"></span>${esc(tr("panel.inventario.subiendo_fotos", { n: ++i, total: lista.length }))}`;
       try {
         const { grande, miniatura: mini, ext } = await comprimirFoto(archivo);
         const ruta = `equipos/${crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2)}.${ext}`;
@@ -563,10 +563,10 @@ async function formulario(vista, ctx, { modo, id, desde }) {
   function pintarVideo() {
     const url = video ? api.urlArchivo("videos", video) : "";
     $("#video-actual").innerHTML = video
-      ? `<video class="video-vista" src="${esc(url)}" controls preload="metadata" playsinline aria-label="Video del equipo"></video>
-         <div class="zona-subida-botones"><label class="boton boton--secundario" for="e-video">Cambiar video</label>
-         <button type="button" class="boton boton--enlace" id="quitar-video">Quitar video</button></div>`
-      : '<label class="boton boton--secundario" for="e-video">Elegir video</label>';
+      ? `<video class="video-vista" src="${esc(url)}" controls preload="metadata" playsinline aria-label="${esc(tr("panel.inventario.video_aria"))}"></video>
+         <div class="zona-subida-botones"><label class="boton boton--secundario" for="e-video">${esc(tr("panel.inventario.cambiar_video"))}</label>
+         <button type="button" class="boton boton--enlace" id="quitar-video">${esc(tr("panel.inventario.quitar_video"))}</button></div>`
+      : `<label class="boton boton--secundario" for="e-video">${esc(tr("panel.inventario.elegir_video"))}</label>`;
     $("#quitar-video")?.addEventListener("click", () => {
       videosQuitados.push(video);
       video = "";
@@ -584,11 +584,11 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     errorEl.textContent = "";
     subiendoVideo = true;
     estadoEl.hidden = false;
-    estadoEl.innerHTML = '<span class="spinner" aria-hidden="true"></span>Revisando el video…';
+    estadoEl.innerHTML = `<span class="spinner" aria-hidden="true"></span>${esc(tr("panel.inventario.revisando_video"))}`;
     try {
       // Se valida antes de subir: no se sube nada que no sirva.
       const { ext } = await validarVideo(archivo);
-      estadoEl.innerHTML = '<span class="spinner" aria-hidden="true"></span>Subiendo el video…';
+      estadoEl.innerHTML = `<span class="spinner" aria-hidden="true"></span>${esc(tr("panel.inventario.subiendo_video"))}`;
       const ruta = `equipos/${crypto.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2)}.${ext}`;
       await api.subirArchivo("videos", ruta, archivo);
       if (video) videosQuitados.push(video);
@@ -637,7 +637,7 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     if (malos.length) {
       if (porPasos) { paso = pasosVisibles().findIndex(([k]) => k === malos[0]); mostrarPaso(); }
       enfocarPrimerError(form);
-      if (subiendo || subiendoVideo) avisar("Espere a que terminen de subir las fotos y el video.", "error");
+      if (subiendo || subiendoVideo) avisar(tr("panel.inventario.espere_subidas"), "error");
       return;
     }
     const usado = condicion() === "usado";

@@ -6,13 +6,21 @@
 // =============================================================================
 
 import CO from "./co.js";
+import { t } from "../../i18n/i18n.js";
 
-export const ESTADOS = { disponible: "Disponible", proximamente: "Próximamente", portugues: "Próximamente" };
+// Lo que se muestra en el paso 3 (en el idioma en uso; se traduce al leerlo).
+// El nombre de cada país que se muestra es t(`pais.${codigo}`); `nombre` queda
+// en español (dato fijo).
+export const ESTADOS = {
+  get disponible() { return t("legal.estado.disponible"); },
+  get proximamente() { return t("legal.estado.proximamente"); },
+  get portugues() { return t("legal.estado.portugues"); }
+};
 
 export const PAISES = [
   { codigo: "ar", nombre: "Argentina", estado: "proximamente" },
   { codigo: "bo", nombre: "Bolivia", estado: "proximamente" },
-  { codigo: "br", nombre: "Brasil", estado: "portugues", nota: "Necesita el sitio en portugués." },
+  { codigo: "br", nombre: "Brasil", estado: "portugues", get nota() { return t("legal.pais.nota.br"); } },
   { codigo: "cl", nombre: "Chile", estado: "proximamente" },
   { codigo: "co", nombre: "Colombia", estado: "disponible", modulo: CO },
   { codigo: "cr", nombre: "Costa Rica", estado: "proximamente" },

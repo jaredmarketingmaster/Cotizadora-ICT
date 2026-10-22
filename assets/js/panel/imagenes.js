@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { ErrorDatos, LADO_GRANDE, LADO_MINIATURA } from "../datos/comun.js";
+import { t } from "../i18n/i18n.js";
 
 export const MAX_BYTES = 10 * 1024 * 1024;
 const TIPOS = /^image\/(jpeg|png|webp|heic|heif)$/i;
@@ -14,10 +15,10 @@ const EXTENSIONES = /\.(jpe?g|png|webp|heic|heif)$/i;
 
 export function validarArchivo(archivo) {
   if (!TIPOS.test(archivo.type) && !EXTENSIONES.test(archivo.name)) {
-    throw new ErrorDatos(`"${archivo.name}" no es una foto JPG, PNG, WebP o HEIC.`);
+    throw new ErrorDatos(t("panel.imagenes.no_es_foto", { archivo: archivo.name }));
   }
   if (archivo.size > MAX_BYTES) {
-    throw new ErrorDatos(`"${archivo.name}" pesa más de 10 MB.`);
+    throw new ErrorDatos(t("panel.imagenes.muy_pesada", { archivo: archivo.name }));
   }
 }
 
@@ -36,8 +37,8 @@ async function decodificar(archivo) {
     } catch {
       const heic = /heic|heif/i.test(archivo.type) || /\.(heic|heif)$/i.test(archivo.name);
       throw new ErrorDatos(heic
-        ? `Este navegador no puede leer "${archivo.name}" (HEIC). Súbala desde el iPhone o guárdela como JPG.`
-        : `No pudimos leer "${archivo.name}". Pruebe con otra foto.`);
+        ? t("panel.imagenes.heic", { archivo: archivo.name })
+        : t("panel.imagenes.no_se_pudo_leer", { archivo: archivo.name }));
     } finally {
       URL.revokeObjectURL(url);
     }
@@ -52,7 +53,7 @@ export async function codificar(canvas, { conTransparencia = false } = {}) {
   let blob = await aBlob(canvas, "image/webp", 0.82);
   if (blob && blob.type === "image/webp") return { blob, ext: "webp" };
   blob = conTransparencia ? await aBlob(canvas, "image/png") : await aBlob(canvas, "image/jpeg", 0.85);
-  if (!blob) throw new ErrorDatos("No pudimos procesar la foto. Pruebe con otra.");
+  if (!blob) throw new ErrorDatos(t("panel.imagenes.no_se_pudo_procesar"));
   return { blob, ext: conTransparencia ? "png" : "jpg" };
 }
 

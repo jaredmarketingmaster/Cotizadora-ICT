@@ -8,16 +8,17 @@ import { hexValido, soloDigitos, correoValido, contraste, reducirMovimiento } fr
 import { PAISES_TIENDA, datosPais, whatsappValido } from "../datos/paises.js";
 import { PAISES_DISPONIBLES } from "../legal/paises/indice.js";
 import { textoSinModulo } from "../legal/motor.js";
+import { t as t_, CODIGOS_IDIOMA, IDIOMAS, idiomaActual } from "../i18n/i18n.js";
 import { variablesTema, aplicarTema, FONDOS } from "../tema.js";
 import { logoGenericoSVG } from "../ilustracion.js";
 import { $, $$, esc, avisar, conBoton, campoTexto, marcarError, enfocarPrimerError } from "./ui.js";
 import { cargarImagen, codificar } from "./imagenes.js";
 
-const TAMANOS = [["compacto", "Compacto"], ["normal", "Normal"], ["grande", "Grande"]];
-const VISTAS = [
-  ["cuadricula", "Cuadrícula", "Todas las tarjetas a la vista, en filas. Es la más rápida para comparar precios."],
-  ["carrusel", "Carrusel", "Una tarjeta al centro y las vecinas a los lados. El cliente pasa de una a otra con el dedo, las flechas o el teclado."]
-];
+const TAMANOS = ["compacto", "normal", "grande"];
+const VISTAS = ["cuadricula", "carrusel"];
+// Valor por defecto guardado en la base (dato, en español); en pantalla se
+// muestra traducido y, si se guarda tal cual, vuelve a ser "Precio".
+const PRECIO_POR_DEFECTO = "Precio";
 
 export async function dibujar(vista, ctx) {
   const { api } = ctx;
@@ -26,105 +27,114 @@ export async function dibujar(vista, ctx) {
   let favicon = t.favicon;
   const nuevos = [];     // archivos subidos en esta edición
   const viejos = [];     // archivos a borrar al guardar
+  const precioMostrado = t.etiqueta_precio === PRECIO_POR_DEFECTO ? t_("panel.tienda.precio.defecto") : t.etiqueta_precio;
+  const paises = Object.keys(PAISES_TIENDA).map((c) => [c, datosPais(c).nombre]).sort((a, b) => a[1].localeCompare(b[1], idiomaActual()));
 
   vista.innerHTML = `
-    <div class="vista-cabecera"><h1>Mi tienda</h1><p>Todo lo que se ve en el sitio. Los campos vacíos no se muestran.</p></div>
+    <div class="vista-cabecera"><h1>${esc(t_("panel.tienda.titulo"))}</h1><p>${esc(t_("panel.tienda.intro"))}</p></div>
     <form id="form-tienda" novalidate>
       <section class="bloque" aria-labelledby="t-pais">
-        <h2 id="t-pais">País, moneda e idioma</h2>
+        <h2 id="t-pais">${esc(t_("panel.tienda.pais.titulo"))}</h2>
         <div class="campo">
-          <label for="pais">País de la tienda</label>
+          <label for="pais">${esc(t_("panel.tienda.pais.etiqueta"))}</label>
           <select class="entrada" id="pais" aria-describedby="pais-ayuda">
-            ${Object.entries(PAISES_TIENDA).sort((a, b) => a[1].nombre.localeCompare(b[1].nombre, "es")).map(([c, p]) => `<option value="${c}" ${c === (t.pais || "co") ? "selected" : ""}>${esc(p.nombre)}</option>`).join("")}
+            ${paises.map(([c, nombre]) => `<option value="${c}" ${c === (t.pais || "co") ? "selected" : ""}>${esc(nombre)}</option>`).join("")}
           </select>
           <p class="ayuda" id="pais-ayuda"></p>
+        </div>
+        <div class="campo">
+          <label for="idioma">${esc(t_("panel.tienda.idioma.etiqueta"))}</label>
+          <select class="entrada" id="idioma" aria-describedby="idioma-ayuda">
+            ${CODIGOS_IDIOMA.map((c) => `<option value="${c}" lang="${IDIOMAS[c].lang}" ${c === (t.idioma || "es") ? "selected" : ""}>${esc(t_(`idioma.${c}`))}</option>`).join("")}
+          </select>
+          <p class="ayuda" id="idioma-ayuda">${esc(t_("panel.tienda.idioma.ayuda"))}</p>
         </div>
       </section>
 
       <section class="bloque" aria-labelledby="t-datos">
-        <h2 id="t-datos">Datos de la tienda</h2>
+        <h2 id="t-datos">${esc(t_("panel.tienda.datos.titulo"))}</h2>
         <div class="grilla-2">
-          ${campoTexto({ id: "nombre", etiqueta: "Nombre de la tienda", valor: t.nombre, atributos: 'maxlength="80"' })}
-          ${campoTexto({ id: "ciudad", etiqueta: "Ciudad", valor: t.ciudad, atributos: 'maxlength="80"' })}
+          ${campoTexto({ id: "nombre", etiqueta: t_("panel.tienda.datos.nombre"), valor: t.nombre, atributos: 'maxlength="80"' })}
+          ${campoTexto({ id: "ciudad", etiqueta: t_("panel.tienda.datos.ciudad"), valor: t.ciudad, atributos: 'maxlength="80"' })}
         </div>
-        ${campoTexto({ id: "direccion", etiqueta: "Dirección", valor: t.direccion, ayuda: "Se usa también para el botón «Cómo llegar».", atributos: 'maxlength="160"' })}
-        ${campoTexto({ id: "horario_texto", etiqueta: "Horario", valor: t.horario_texto, ayuda: "Ej. Lunes a sábado, 9:00 a. m. a 7:00 p. m.", multilinea: true, atributos: 'rows="3" maxlength="300"' })}
+        ${campoTexto({ id: "direccion", etiqueta: t_("panel.tienda.datos.direccion"), valor: t.direccion, ayuda: esc(t_("panel.tienda.datos.direccion_ayuda")), atributos: 'maxlength="160"' })}
+        ${campoTexto({ id: "horario_texto", etiqueta: t_("panel.tienda.datos.horario"), valor: t.horario_texto, ayuda: esc(t_("panel.tienda.datos.horario_ayuda")), multilinea: true, atributos: 'rows="3" maxlength="300"' })}
         <div class="grilla-2">
-          ${campoTexto({ id: "whatsapp", etiqueta: "WhatsApp de ventas", valor: t.whatsapp, ayuda: ayudaWhatsapp(t.pais), atributos: 'inputmode="numeric" autocomplete="off"' })}
-          ${campoTexto({ id: "correo_contacto", etiqueta: "Correo de contacto (opcional)", valor: t.correo_contacto, tipo: "email" })}
+          ${campoTexto({ id: "whatsapp", etiqueta: t_("panel.tienda.datos.whatsapp"), valor: t.whatsapp, ayuda: esc(ayudaWhatsapp(t.pais)), atributos: 'inputmode="numeric" autocomplete="off"' })}
+          ${campoTexto({ id: "correo_contacto", etiqueta: t_("panel.tienda.datos.correo"), valor: t.correo_contacto, tipo: "email" })}
         </div>
       </section>
 
       <section class="bloque" aria-labelledby="t-redes">
-        <h2 id="t-redes">Redes sociales (opcionales)</h2>
-        ${campoTexto({ id: "instagram_url", etiqueta: "Instagram", valor: t.instagram_url, tipo: "url", ayuda: "Enlace completo, ej. https://instagram.com/sutienda" })}
+        <h2 id="t-redes">${esc(t_("panel.tienda.redes.titulo"))}</h2>
+        ${campoTexto({ id: "instagram_url", etiqueta: "Instagram", valor: t.instagram_url, tipo: "url", ayuda: esc(t_("panel.tienda.redes.ayuda")) })}
         ${campoTexto({ id: "facebook_url", etiqueta: "Facebook", valor: t.facebook_url, tipo: "url" })}
         ${campoTexto({ id: "tiktok_url", etiqueta: "TikTok", valor: t.tiktok_url, tipo: "url" })}
       </section>
 
       <section class="bloque" aria-labelledby="t-marca">
-        <h2 id="t-marca">Marca</h2>
+        <h2 id="t-marca">${esc(t_("panel.tienda.marca.titulo"))}</h2>
         <div class="campo">
-          <span class="etiqueta">Logo</span>
+          <span class="etiqueta">${esc(t_("panel.tienda.marca.logo"))}</span>
           <div class="logo-actual" id="logo-actual"></div>
           <input class="oculto-visual" type="file" id="logo-archivo" accept="image/png,image/jpeg,image/webp">
-          <p class="ayuda">PNG con fondo transparente, idealmente. Después de elegirlo puede recortarlo.</p>
+          <p class="ayuda">${esc(t_("panel.tienda.marca.logo_ayuda"))}</p>
           <div id="recorte" hidden></div>
           <p class="error-campo" id="logo-error" role="alert"></p>
         </div>
         <div class="campo">
-          <span class="etiqueta">Ícono de la pestaña (opcional)</span>
+          <span class="etiqueta">${esc(t_("panel.tienda.marca.favicon"))}</span>
           <div class="logo-actual" id="favicon-actual"></div>
           <input class="oculto-visual" type="file" id="favicon-archivo" accept="image/png,image/jpeg,image/webp">
         </div>
         <div class="grilla-2">
-          ${selectorColor("color_primario", "Color primario (botones)", t.color_primario)}
-          ${selectorColor("color_secundario", "Color secundario (encabezado)", t.color_secundario)}
+          ${selectorColor("color_primario", t_("panel.tienda.color.primario"), t.color_primario)}
+          ${selectorColor("color_secundario", t_("panel.tienda.color.secundario"), t.color_secundario)}
         </div>
         <fieldset class="campo">
-          <legend>Tema</legend>
+          <legend>${esc(t_("panel.tienda.tema.titulo"))}</legend>
           <div class="opciones-chip">
-            ${["claro", "oscuro"].map((v) => `<label class="opcion-chip"><input type="radio" name="tema" value="${v}" ${t.tema === v ? "checked" : ""}><span>${v === "claro" ? "Claro" : "Oscuro"}</span></label>`).join("")}
+            ${["claro", "oscuro"].map((v) => `<label class="opcion-chip"><input type="radio" name="tema" value="${v}" ${t.tema === v ? "checked" : ""}><span>${esc(t_(`panel.tienda.tema.${v}`))}</span></label>`).join("")}
           </div>
         </fieldset>
         <fieldset class="campo" aria-describedby="tamano-ayuda">
-          <legend>Tamaño del texto</legend>
+          <legend>${esc(t_("panel.tienda.tamano.titulo"))}</legend>
           <div class="opciones-chip">
-            ${TAMANOS.map(([v, nombre]) => `<label class="opcion-chip"><input type="radio" name="tamano_texto" value="${v}" ${(t.tamano_texto || "normal") === v ? "checked" : ""}><span>${nombre}</span></label>`).join("")}
+            ${TAMANOS.map((v) => `<label class="opcion-chip"><input type="radio" name="tamano_texto" value="${v}" ${(t.tamano_texto || "normal") === v ? "checked" : ""}><span>${esc(t_(`panel.tienda.tamano.${v}`))}</span></label>`).join("")}
           </div>
-          <p class="ayuda" id="tamano-ayuda">Se aplica al sitio, al pop-up y a las páginas legales. Compacto achica títulos, precios y espacios; Grande agranda todo el texto. Ningún texto queda por debajo de 16 px.</p>
+          <p class="ayuda" id="tamano-ayuda">${esc(t_("panel.tienda.tamano.ayuda"))}</p>
         </fieldset>
         <div>
-          <p class="etiqueta" style="font-weight:600;margin-bottom:6px">Vista previa</p>
+          <p class="etiqueta" style="font-weight:600;margin-bottom:6px">${esc(t_("panel.tienda.vista.titulo"))}</p>
           <div class="vista-previa" id="vista-previa" aria-hidden="true"></div>
           <p class="contraste-nota" id="contraste-nota"></p>
         </div>
       </section>
 
       <section class="bloque" aria-labelledby="t-diseno">
-        <h2 id="t-diseno">Diseño del sitio</h2>
+        <h2 id="t-diseno">${esc(t_("panel.tienda.diseno.titulo"))}</h2>
         <fieldset class="campo">
-          <legend>Cómo se ven los equipos</legend>
+          <legend>${esc(t_("panel.tienda.diseno.equipos"))}</legend>
           <div class="opciones-vista">
-            ${VISTAS.map(([v, nombre, ayuda]) => `<label class="opcion-vista"><input type="radio" name="vista_equipos" value="${v}" aria-describedby="vista-${v}-ayuda" ${(t.vista_equipos || "cuadricula") === v ? "checked" : ""}>
-              <span class="opcion-vista-nombre">${nombre}</span>
-              <span class="ayuda" id="vista-${v}-ayuda">${ayuda}</span>
+            ${VISTAS.map((v) => `<label class="opcion-vista"><input type="radio" name="vista_equipos" value="${v}" aria-describedby="vista-${v}-ayuda" ${(t.vista_equipos || "cuadricula") === v ? "checked" : ""}>
+              <span class="opcion-vista-nombre">${esc(t_(`panel.tienda.diseno.${v}`))}</span>
+              <span class="ayuda" id="vista-${v}-ayuda">${esc(t_(`panel.tienda.diseno.${v}_ayuda`))}</span>
             </label>`).join("")}
           </div>
         </fieldset>
       </section>
 
       <section class="bloque" aria-labelledby="t-venta">
-        <h2 id="t-venta">Venta</h2>
-        ${campoTexto({ id: "etiqueta_precio", etiqueta: "Etiqueta del precio", valor: t.etiqueta_precio, ayuda: "Por defecto «Precio». Puede ser, por ejemplo, «Precio de contado».", atributos: 'maxlength="40"' })}
-        <p class="ayuda">Las formas de pago se configuran en <a href="#/catalogo/pagos">Catálogo → Formas de pago</a>.</p>
-        ${campoTexto({ id: "texto_entrega", etiqueta: "Entrega", valor: t.texto_entrega, ayuda: "Ej. Retiro en tienda o envío a todo Colombia.", multilinea: true, atributos: 'rows="2" maxlength="300"' })}
-        ${campoTexto({ id: "texto_garantia_nuevos", etiqueta: "Garantía de los nuevos (opcional)", valor: t.texto_garantia_nuevos, multilinea: true, atributos: 'rows="2" maxlength="400"' })}
-        ${campoTexto({ id: "texto_garantia_usados", etiqueta: "Garantía de los usados (opcional)", valor: t.texto_garantia_usados, multilinea: true, atributos: 'rows="2" maxlength="400"' })}
+        <h2 id="t-venta">${esc(t_("panel.tienda.venta.titulo"))}</h2>
+        ${campoTexto({ id: "etiqueta_precio", etiqueta: t_("panel.tienda.precio.etiqueta"), valor: precioMostrado, ayuda: esc(t_("panel.tienda.precio.ayuda")), atributos: 'maxlength="40"' })}
+        <p class="ayuda">${t_("panel.tienda.venta.pagos", { enlace: `<a href="#/catalogo/pagos">${esc(t_("panel.tienda.venta.pagos_enlace"))}</a>` })}</p>
+        ${campoTexto({ id: "texto_entrega", etiqueta: t_("panel.tienda.venta.entrega"), valor: t.texto_entrega, ayuda: esc(t_("panel.tienda.venta.entrega_ayuda")), multilinea: true, atributos: 'rows="2" maxlength="300"' })}
+        ${campoTexto({ id: "texto_garantia_nuevos", etiqueta: t_("panel.tienda.venta.garantia_nuevos"), valor: t.texto_garantia_nuevos, multilinea: true, atributos: 'rows="2" maxlength="400"' })}
+        ${campoTexto({ id: "texto_garantia_usados", etiqueta: t_("panel.tienda.venta.garantia_usados"), valor: t.texto_garantia_usados, multilinea: true, atributos: 'rows="2" maxlength="400"' })}
       </section>
 
       <div class="acciones-formulario">
-        <button type="submit" class="boton boton--primario" id="guardar-tienda">Guardar</button>
+        <button type="submit" class="boton boton--primario" id="guardar-tienda">${esc(t_("panel.tienda.guardar"))}</button>
       </div>
     </form>
     <div id="seccion-resenas"></div>`;
@@ -133,7 +143,7 @@ export async function dibujar(vista, ctx) {
   // --- País: moneda, prefijo y zona horaria ---
   function pintarPais() {
     const p = datosPais($("#pais").value);
-    $("#pais-ayuda").textContent = `Moneda: ${p.moneda} (${p.simbolo}). Prefijo del celular: +${p.celular.internacional}. Zona horaria: ${p.zona}. Define cómo se muestran los precios y las fechas, y cómo se validan los celulares.${PAISES_DISPONIBLES.includes(p.codigo) ? "" : ` ${textoSinModulo(p.codigo)}`}`;
+    $("#pais-ayuda").textContent = `${t_("panel.tienda.pais.ayuda", { moneda: p.moneda, simbolo: p.simbolo, prefijo: p.celular.internacional, zona: p.zona })}${PAISES_DISPONIBLES.includes(p.codigo) ? "" : ` ${textoSinModulo(p.codigo)}`}`;
     $("#whatsapp-ayuda").textContent = ayudaWhatsapp(p.codigo);
   }
   $("#pais").addEventListener("change", () => { ctx.sucio = true; pintarPais(); });
@@ -157,29 +167,29 @@ export async function dibujar(vista, ctx) {
     const logoUrl = logo ? api.urlArchivo("marca", logo) : "";
     $("#vista-previa").innerHTML = `
       <div class="vista-previa-encabezado" style="background:${vars["--secundario"]};color:${vars["--sobre-secundario"]}">
-        <span class="vista-previa-marca">${logoUrl ? `<img src="${esc(logoUrl)}" alt="">` : logoGenericoSVG()}${esc($("#nombre").value || "Su tienda")}</span>
-        <span class="vista-previa-titulo">Elija su iPhone y cómprelo por WhatsApp.</span>
+        <span class="vista-previa-marca">${logoUrl ? `<img src="${esc(logoUrl)}" alt="">` : logoGenericoSVG()}${esc($("#nombre").value || t_("panel.tienda.vista.nombre"))}</span>
+        <span class="vista-previa-titulo">${esc(t_("panel.tienda.vista.lema"))}</span>
       </div>
       <div class="vista-previa-cuerpo" style="background:${fondo};color:${tema === "oscuro" ? "#F2F4F7" : "#0F1115"}">
-        <span class="boton boton--primario" style="background:${vars["--primario"]};color:${vars["--sobre-primario"]}">Comprar por WhatsApp</span>
-        <span style="color:${vars["--primario-texto"]};font-weight:700;text-decoration:underline">Limpiar filtros</span>
+        <span class="boton boton--primario" style="background:${vars["--primario"]};color:${vars["--sobre-primario"]}">${esc(t_("panel.tienda.vista.comprar"))}</span>
+        <span style="color:${vars["--primario-texto"]};font-weight:700;text-decoration:underline">${esc(t_("panel.tienda.vista.limpiar"))}</span>
       </div>`;
     const r1 = contraste(vars["--primario"], vars["--sobre-primario"]).toFixed(2).replace(".", ",");
     const r2 = contraste(vars["--secundario"], vars["--sobre-secundario"]).toFixed(2).replace(".", ",");
-    $("#contraste-nota").textContent = `El color del texto se elige solo para que se lea bien (contraste ${r1}:1 en el botón y ${r2}:1 en el encabezado; el mínimo es 4,5:1).`;
+    $("#contraste-nota").textContent = t_("panel.tienda.vista.contraste", { boton: r1, encabezado: r2 });
   }
 
   // --- Logo y favicon ---
   function pintarLogo() {
     const url = logo ? api.urlArchivo("marca", logo) : "";
-    $("#logo-actual").innerHTML = `${url ? `<img src="${esc(url)}" alt="Logo actual">` : '<span class="ayuda">Sin logo: se muestra un ícono genérico.</span>'}
-      <label class="boton boton--secundario" for="logo-archivo">${url ? "Cambiar logo" : "Subir logo"}</label>
-      ${url ? '<button type="button" class="boton boton--enlace" id="quitar-logo">Quitar</button>' : ""}`;
+    $("#logo-actual").innerHTML = `${url ? `<img src="${esc(url)}" alt="${esc(t_("panel.tienda.marca.logo_actual"))}">` : `<span class="ayuda">${esc(t_("panel.tienda.marca.sin_logo"))}</span>`}
+      <label class="boton boton--secundario" for="logo-archivo">${esc(t_(url ? "panel.tienda.marca.cambiar_logo" : "panel.tienda.marca.subir_logo"))}</label>
+      ${url ? `<button type="button" class="boton boton--enlace" id="quitar-logo">${esc(t_("panel.tienda.marca.quitar"))}</button>` : ""}`;
     $("#quitar-logo")?.addEventListener("click", () => { if (logo) viejos.push(logo); logo = ""; ctx.sucio = true; pintarLogo(); pintarVista(); });
     const fav = favicon ? api.urlArchivo("marca", favicon) : "";
-    $("#favicon-actual").innerHTML = `${fav ? `<img src="${esc(fav)}" alt="Ícono actual" style="max-height:40px">` : ""}
-      <label class="boton boton--secundario" for="favicon-archivo">${fav ? "Cambiar ícono" : "Subir ícono"}</label>
-      ${fav ? '<button type="button" class="boton boton--enlace" id="quitar-favicon">Quitar</button>' : ""}`;
+    $("#favicon-actual").innerHTML = `${fav ? `<img src="${esc(fav)}" alt="${esc(t_("panel.tienda.marca.favicon_actual"))}" style="max-height:40px">` : ""}
+      <label class="boton boton--secundario" for="favicon-archivo">${esc(t_(fav ? "panel.tienda.marca.cambiar_favicon" : "panel.tienda.marca.subir_favicon"))}</label>
+      ${fav ? `<button type="button" class="boton boton--enlace" id="quitar-favicon">${esc(t_("panel.tienda.marca.quitar"))}</button>` : ""}`;
     $("#quitar-favicon")?.addEventListener("click", () => { if (favicon) viejos.push(favicon); favicon = ""; ctx.sucio = true; pintarLogo(); });
   }
 
@@ -206,7 +216,7 @@ export async function dibujar(vista, ctx) {
       c.getContext("2d").drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, 128, 128);
       const blob = await new Promise((r) => c.toBlob(r, "image/png"));
       const ruta = `favicon-${Date.now()}.png`;
-      await conBoton(null, () => api.subirArchivo("marca", ruta, blob), { exito: "Ícono listo. Toque «Guardar»." });
+      await conBoton(null, () => api.subirArchivo("marca", ruta, blob), { exito: t_("panel.tienda.marca.favicon_listo") });
       if (favicon) viejos.push(favicon);
       favicon = ruta; nuevos.push(ruta); ctx.sucio = true;
       pintarLogo();
@@ -218,16 +228,16 @@ export async function dibujar(vista, ctx) {
     const caja = $("#recorte");
     caja.hidden = false;
     caja.innerHTML = `<div class="recorte bloque">
-      <h3>Recortar el logo</h3>
-      <div class="opciones-chip" role="radiogroup" aria-label="Forma del recorte">
-        <label class="opcion-chip"><input type="radio" name="forma" value="3" checked><span>Horizontal</span></label>
-        <label class="opcion-chip"><input type="radio" name="forma" value="1"><span>Cuadrado</span></label>
+      <h3>${esc(t_("panel.tienda.recorte.titulo"))}</h3>
+      <div class="opciones-chip" role="radiogroup" aria-label="${esc(t_("panel.tienda.recorte.forma"))}">
+        <label class="opcion-chip"><input type="radio" name="forma" value="3" checked><span>${esc(t_("panel.tienda.recorte.horizontal"))}</span></label>
+        <label class="opcion-chip"><input type="radio" name="forma" value="1"><span>${esc(t_("panel.tienda.recorte.cuadrado"))}</span></label>
       </div>
-      <div class="recorte-marco" id="marco" tabindex="0" aria-label="Arrastre para mover el logo; use las flechas del teclado para moverlo"></div>
-      <div class="campo"><label for="zoom">Zoom</label><input id="zoom" type="range" min="1" max="4" step="0.01" value="1"></div>
+      <div class="recorte-marco" id="marco" tabindex="0" aria-label="${esc(t_("panel.tienda.recorte.marco"))}"></div>
+      <div class="campo"><label for="zoom">${esc(t_("panel.tienda.recorte.zoom"))}</label><input id="zoom" type="range" min="1" max="4" step="0.01" value="1"></div>
       <div class="confirmar-botones">
-        <button type="button" class="boton boton--secundario" id="cancelar-recorte">Cancelar</button>
-        <button type="button" class="boton boton--primario" id="usar-recorte">Usar este recorte</button>
+        <button type="button" class="boton boton--secundario" id="cancelar-recorte">${esc(t_("panel.tienda.recorte.cancelar"))}</button>
+        <button type="button" class="boton boton--primario" id="usar-recorte">${esc(t_("panel.tienda.recorte.usar"))}</button>
       </div>
     </div>`;
     const marco = $("#marco");
@@ -304,7 +314,7 @@ export async function dibujar(vista, ctx) {
       try {
         const { blob, ext } = await codificar(c, { conTransparencia: true });
         const ruta = `logo-${Date.now()}.${ext}`;
-        await conBoton(e.currentTarget, () => api.subirArchivo("marca", ruta, blob), { exito: "Logo listo. Toque «Guardar»." });
+        await conBoton(e.currentTarget, () => api.subirArchivo("marca", ruta, blob), { exito: t_("panel.tienda.marca.logo_listo") });
         if (logo) viejos.push(logo);
         logo = ruta; nuevos.push(ruta); ctx.sucio = true;
         caja.hidden = true; caja.innerHTML = "";
@@ -330,22 +340,23 @@ export async function dibujar(vista, ctx) {
     const v = (id) => $(`#${id}`).value.trim();
     const whatsapp = soloDigitos(v("whatsapp"));
     const pais = $("#pais").value;
-    marcarError(form, "whatsapp", !whatsapp || whatsappValido(whatsapp, pais) ? "" : `No tiene el formato de ${datosPais(pais).nombre}. ${ayudaWhatsapp(pais)}`);
-    marcarError(form, "correo_contacto", !v("correo_contacto") || correoValido(v("correo_contacto")) ? "" : "Revise el correo.");
+    marcarError(form, "whatsapp", !whatsapp || whatsappValido(whatsapp, pais) ? "" : `${t_("panel.tienda.error.whatsapp", { pais: datosPais(pais).nombre })} ${ayudaWhatsapp(pais)}`);
+    marcarError(form, "correo_contacto", !v("correo_contacto") || correoValido(v("correo_contacto")) ? "" : t_("panel.tienda.error.correo"));
     for (const id of ["instagram_url", "facebook_url", "tiktok_url"]) {
-      marcarError(form, id, !v(id) || /^https?:\/\/\S+\.\S+/i.test(v(id)) ? "" : "Pegue el enlace completo, empezando por https://");
+      marcarError(form, id, !v(id) || /^https?:\/\/\S+\.\S+/i.test(v(id)) ? "" : t_("panel.tienda.error.enlace"));
     }
     for (const id of ["color_primario", "color_secundario"]) {
-      marcarError(form, id, hexValido(v(id)) ? "" : "Use el formato #RRGGBB, ej. #1A73E8.");
+      marcarError(form, id, hexValido(v(id)) ? "" : t_("panel.tienda.error.color"));
     }
     if (enfocarPrimerError(form)) return;
     const cambios = {
-      nombre: v("nombre"), pais, ciudad: v("ciudad"), direccion: v("direccion"), horario_texto: v("horario_texto"),
+      nombre: v("nombre"), pais, idioma: $("#idioma").value, ciudad: v("ciudad"), direccion: v("direccion"), horario_texto: v("horario_texto"),
       whatsapp, correo_contacto: v("correo_contacto"),
       instagram_url: v("instagram_url"), facebook_url: v("facebook_url"), tiktok_url: v("tiktok_url"),
       logo, favicon, ...datosColores(),
       vista_equipos: $('input[name="vista_equipos"]:checked').value,
-      etiqueta_precio: v("etiqueta_precio") || "Precio",
+      // Vacío o igual al texto por defecto mostrado: se guarda el valor por defecto.
+      etiqueta_precio: !v("etiqueta_precio") || v("etiqueta_precio") === t_("panel.tienda.precio.defecto") ? PRECIO_POR_DEFECTO : v("etiqueta_precio"),
       texto_entrega: v("texto_entrega"), texto_garantia_nuevos: v("texto_garantia_nuevos"), texto_garantia_usados: v("texto_garantia_usados")
     };
     try {
@@ -355,6 +366,9 @@ export async function dibujar(vista, ctx) {
     nuevos.length = 0;
     ctx.sucio = false;
     $("#whatsapp").value = whatsapp;
+    $("#etiqueta_precio").value = cambios.etiqueta_precio === PRECIO_POR_DEFECTO ? t_("panel.tienda.precio.defecto") : cambios.etiqueta_precio;
+    // Otro idioma: el panel se vuelve a dibujar entero en ese idioma.
+    if (cambios.idioma !== idiomaActual()) { location.reload(); return; }
     await ctx.recargarTienda();
     aplicarTema(ctx.tienda);
   });
@@ -375,15 +389,15 @@ export async function dibujar(vista, ctx) {
 function ayudaWhatsapp(codigo) {
   const c = datosPais(codigo).celular;
   return c.verificado
-    ? `Formato internacional sin «+»: ${c.internacional} y el número. Ej. ${c.internacional}${c.ejemplo.replace(/\s/g, "")}.`
-    : `Formato internacional sin «+»: ${c.internacional} y el número, de 8 a 15 dígitos en total.`;
+    ? t_("panel.tienda.whatsapp.ayuda", { prefijo: c.internacional, ejemplo: `${c.internacional}${c.ejemplo.replace(/\s/g, "")}` })
+    : t_("panel.tienda.whatsapp.ayuda_sin_ejemplo", { prefijo: c.internacional });
 }
 
 function selectorColor(id, etiqueta, valor) {
   return `<div class="campo">
     <label for="${id}">${esc(etiqueta)}</label>
     <div class="selector-color">
-      <input type="color" id="${id}-picker" value="${esc(valor.toLowerCase())}" aria-label="${esc(etiqueta)}: elegir en la paleta">
+      <input type="color" id="${id}-picker" value="${esc(valor.toLowerCase())}" aria-label="${esc(t_("panel.tienda.color.paleta", { etiqueta }))}">
       <input class="entrada cifras" id="${id}" value="${esc(valor)}" maxlength="7" spellcheck="false" aria-describedby="${id}-error">
     </div>
     <p class="error-campo" id="${id}-error"></p>

@@ -10,6 +10,10 @@
 //   genera si falta algo.
 // - publicar(tienda, anterior, hoy): la versión publicada. Si los textos no
 //   cambiaron, conserva la versión; si cambiaron, sube el número y la fecha.
+// - Idioma: los documentos siguen en español (los nombres de PERFILES y
+//   ENTREGAS y frasesPagos(t, "es") van tal cual a las plantillas). Lo que se
+//   muestra en el panel (faltantes, textoSinModulo, nombres de pasos, perfiles
+//   y entregas) sale de los diccionarios: claves legal.*.
 // =============================================================================
 
 import { frasesPagos, PLATAFORMA_POR_DEFECTO } from "../datos/comun.js";
@@ -21,6 +25,7 @@ import * as terminos from "./plantillas/terminos.js";
 import * as cookies from "./plantillas/cookies.js";
 import * as aviso from "./plantillas/aviso.js";
 import { fechaDMA, conVigencia } from "./vigencia.js";
+import { t as tr } from "../i18n/i18n.js";
 
 export const DOCUMENTOS = [
   { clave: "privacidad", titulo: "Política de tratamiento de datos personales", ruta: "privacidad/", clausula: "legal_clausula_privacidad" },
@@ -43,7 +48,8 @@ export const ENTREGAS = [
   { clave: "transportadora", nombre: "Envío con transportadora" },
   { clave: "personal", nombre: "Entrega personal" }
 ];
-export const PASOS = ["Perfil", "Identificación", "Países", "Condiciones de venta", "Herramientas", "Publicar"];
+// Los seis pasos del asistente; el nombre que se muestra es t(`legal.paso.${clave}`).
+export const PASOS = ["perfil", "identificacion", "paises", "condiciones", "herramientas", "publicar"];
 
 const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const TELEFONO = /^\+?\d{7,15}$/;
@@ -68,68 +74,76 @@ export function formatearTelefono(t) {
   return m ? `+57 ${m[1]} ${m[2]} ${m[3]}` : d;
 }
 
-// "Los textos legales para Argentina todavía no están disponibles."
-export const textoSinModulo = (pais) => `Los textos legales para ${datosPais(pais).codigo === pais ? datosPais(pais).nombre : "el país de la tienda"} todavía no están disponibles.`;
+// "Los textos legales para Argentina todavía no están disponibles." (en el idioma en uso)
+export const textoSinModulo = (pais) => tr("legal.sin_modulo.texto", {
+  pais: datosPais(pais).codigo === pais ? datosPais(pais).nombre : tr("legal.sin_modulo.generico")
+});
 
 // --- Lo que falta para publicar --------------------------------------------------
 // { paso (1 a 6 del asistente, o 0 = Mi tienda), campo, texto }. El mismo criterio está en
 // legal_faltantes() del SQL (la última versión, 0019_legal_pais_tienda.sql).
+// El texto se muestra en el panel: sale de las claves legal.falta.* (idioma en uso).
 export function faltantes(t) {
   const f = [];
-  const falta = (paso, campo, que) => f.push({ paso, campo, texto: que });
-  if (!texto(t.nombre)) falta(0, "nombre", "El nombre de la tienda (Mi tienda)");
+  const falta = (paso, campo, clave, vars) => f.push({ paso, campo, texto: tr(clave, vars) });
+  if (!texto(t.nombre)) falta(0, "nombre", "legal.falta.nombre");
   // Paso 1
-  if (!perfilDe(t)) falta(1, "legal_perfil", "El perfil de la tienda");
+  if (!perfilDe(t)) falta(1, "legal_perfil", "legal.falta.perfil");
   // Paso 2
-  if (!["natural", "juridica"].includes(t.legal_tipo_persona)) falta(2, "legal_tipo_persona", "El tipo de persona");
-  if (!texto(t.legal_nombre)) falta(2, "legal_nombre", t.legal_tipo_persona === "juridica" ? "La razón social" : "El nombre completo");
+  if (!["natural", "juridica"].includes(t.legal_tipo_persona)) falta(2, "legal_tipo_persona", "legal.falta.tipo_persona");
+  if (!texto(t.legal_nombre)) falta(2, "legal_nombre", t.legal_tipo_persona === "juridica" ? "legal.falta.razon_social" : "legal.falta.nombre_completo");
   const doc = documentosDe(t.legal_paises).find((d) => d.clave === t.legal_doc_tipo);
-  if (!doc) falta(2, "legal_doc_tipo", "El tipo de documento");
-  else if (!doc.patron.test(texto(t.legal_doc_numero))) falta(2, "legal_doc_numero", `El número de ${doc.nombre.toLowerCase().replace("nit", "NIT")}`);
-  if (!texto(t.legal_direccion)) falta(2, "legal_direccion", "La dirección para notificaciones");
-  if (!texto(t.legal_ciudad)) falta(2, "legal_ciudad", "La ciudad");
-  if (!CORREO.test(texto(t.legal_correo))) falta(2, "legal_correo", "El correo para temas de datos personales");
-  if (!TELEFONO.test(texto(t.legal_telefono))) falta(2, "legal_telefono", "El teléfono de contacto");
+  if (!doc) falta(2, "legal_doc_tipo", "legal.falta.doc_tipo");
+  else if (!doc.patron.test(texto(t.legal_doc_numero))) falta(2, "legal_doc_numero", "legal.falta.doc_numero", { documento: doc.nombre.toLowerCase().replace("nit", "NIT") });
+  if (!texto(t.legal_direccion)) falta(2, "legal_direccion", "legal.falta.direccion");
+  if (!texto(t.legal_ciudad)) falta(2, "legal_ciudad", "legal.falta.ciudad");
+  if (!CORREO.test(texto(t.legal_correo))) falta(2, "legal_correo", "legal.falta.correo");
+  if (!TELEFONO.test(texto(t.legal_telefono))) falta(2, "legal_telefono", "legal.falta.telefono");
   if (t.legal_tipo_persona === "juridica") {
-    if (!texto(t.legal_representante)) falta(2, "legal_representante", "El representante legal");
-    if (!texto(t.legal_matricula_numero)) falta(2, "legal_matricula_numero", "El número de matrícula mercantil");
-    if (!texto(t.legal_matricula_camara)) falta(2, "legal_matricula_camara", "La cámara de comercio de la matrícula");
+    if (!texto(t.legal_representante)) falta(2, "legal_representante", "legal.falta.representante");
+    if (!texto(t.legal_matricula_numero)) falta(2, "legal_matricula_numero", "legal.falta.matricula_numero");
+    if (!texto(t.legal_matricula_camara)) falta(2, "legal_matricula_camara", "legal.falta.matricula_camara");
   }
-  if (perfilDe(t) && necesitaLocal(t) && !texto(t.legal_direccion_local)) falta(2, "legal_direccion_local", "La dirección del local");
+  if (perfilDe(t) && necesitaLocal(t) && !texto(t.legal_direccion_local)) falta(2, "legal_direccion_local", "legal.falta.direccion_local");
   // Paso 3
   const paises = t.legal_paises || [];
-  if (!paises.length) falta(3, "legal_paises", "Los países donde vende");
-  else if (paises.some((p) => !PAISES_DISPONIBLES.includes(p))) falta(3, "legal_paises", "Solo se pueden elegir países disponibles");
+  if (!paises.length) falta(3, "legal_paises", "legal.falta.paises");
+  else if (paises.some((p) => !PAISES_DISPONIBLES.includes(p))) falta(3, "legal_paises", "legal.falta.paises_disponibles");
   // El país de la tienda (Mi tienda) tiene que tener su módulo legal.
-  if (!PAISES_DISPONIBLES.includes(t.pais)) falta(3, "pais", textoSinModulo(t.pais));
+  if (!PAISES_DISPONIBLES.includes(t.pais)) f.push({ paso: 3, campo: "pais", texto: textoSinModulo(t.pais) });
   // Paso 4
   const impuestos = Array.isArray(t.legal_impuestos) ? t.legal_impuestos : [];
-  if (!impuestos.length) falta(4, "legal_impuestos", "Los impuestos que se muestran junto al precio");
+  if (!impuestos.length) falta(4, "legal_impuestos", "legal.falta.impuestos");
   impuestos.forEach((i, n) => {
     const p = Number(i?.porcentaje);
-    if (!texto(i?.nombre)) falta(4, `legal_impuestos.${n}.nombre`, `El nombre del impuesto ${n + 1}`);
-    if (typeof i?.porcentaje !== "number" || !Number.isFinite(p) || p < 0 || p > 100) falta(4, `legal_impuestos.${n}.porcentaje`, `El porcentaje de ${texto(i?.nombre) || `el impuesto ${n + 1}`}`);
-    if (typeof i?.incluido !== "boolean") falta(4, `legal_impuestos.${n}.incluido`, `Si ${texto(i?.nombre) || `el impuesto ${n + 1}`} está incluido en el precio`);
+    const impuesto = texto(i?.nombre) || tr("legal.falta.impuesto_n", { n: n + 1 });
+    if (!texto(i?.nombre)) falta(4, `legal_impuestos.${n}.nombre`, "legal.falta.impuesto_nombre", { n: n + 1 });
+    if (typeof i?.porcentaje !== "number" || !Number.isFinite(p) || p < 0 || p > 100) falta(4, `legal_impuestos.${n}.porcentaje`, "legal.falta.impuesto_porcentaje", { impuesto });
+    if (typeof i?.incluido !== "boolean") falta(4, `legal_impuestos.${n}.incluido`, "legal.falta.impuesto_incluido", { impuesto });
   });
   const minimo = Math.max(1, ...modulosDe(paises).map((m) => m.consumo.garantiaNuevosMinMeses));
-  if (!Number.isInteger(t.legal_garantia_nuevos) || t.legal_garantia_nuevos < minimo) falta(4, "legal_garantia_nuevos", `La garantía de los equipos nuevos (${minimo} meses o más)`);
+  if (!Number.isInteger(t.legal_garantia_nuevos) || t.legal_garantia_nuevos < minimo) falta(4, "legal_garantia_nuevos", "legal.falta.garantia_nuevos", { min: minimo });
   if (t.legal_garantia_usados === "con") {
-    if (!Number.isInteger(t.legal_garantia_usados_meses) || t.legal_garantia_usados_meses < 1) falta(4, "legal_garantia_usados_meses", "Los meses de garantía de los equipos usados");
-  } else if (t.legal_garantia_usados !== "sin") falta(4, "legal_garantia_usados", "La garantía de los equipos usados");
+    if (!Number.isInteger(t.legal_garantia_usados_meses) || t.legal_garantia_usados_meses < 1) falta(4, "legal_garantia_usados_meses", "legal.falta.garantia_usados_meses");
+  } else if (t.legal_garantia_usados !== "sin") falta(4, "legal_garantia_usados", "legal.falta.garantia_usados");
   if (t.legal_retracto_canal === "whatsapp") {
-    if (!whatsappValido(texto(t.whatsapp), t.pais)) falta(0, "whatsapp", "El WhatsApp de la tienda (Mi tienda), para pedir el retracto");
-  } else if (t.legal_retracto_canal !== "correo") falta(4, "legal_retracto_canal", "El canal para pedir el retracto");
-  if (!(t.legal_entrega || []).length) falta(4, "legal_entrega", "Cómo se entregan los equipos");
-  if (!texto(t.legal_entrega_zonas)) falta(4, "legal_entrega_zonas", "Las zonas de entrega");
-  if (declaraApple(t) && !texto(t.legal_apple_detalle)) falta(4, "legal_apple_detalle", "El detalle de su autorización de Apple");
-  if (!["si", "no"].includes(t.legal_homologados)) falta(4, "legal_homologados", "Si los equipos están homologados");
+    if (!whatsappValido(texto(t.whatsapp), t.pais)) falta(0, "whatsapp", "legal.falta.whatsapp");
+  } else if (t.legal_retracto_canal !== "correo") falta(4, "legal_retracto_canal", "legal.falta.retracto_canal");
+  if (!(t.legal_entrega || []).length) falta(4, "legal_entrega", "legal.falta.entrega");
+  if (!texto(t.legal_entrega_zonas)) falta(4, "legal_entrega_zonas", "legal.falta.entrega_zonas");
+  if (declaraApple(t) && !texto(t.legal_apple_detalle)) falta(4, "legal_apple_detalle", "legal.falta.apple_detalle");
+  if (!["si", "no"].includes(t.legal_homologados)) falta(4, "legal_homologados", "legal.falta.homologados");
   // Paso 5
-  if (!idValido(HERRAMIENTAS[0], t.meta_pixel_id)) falta(5, "meta_pixel_id", "El ID del píxel de Meta");
-  for (const h of OPCIONALES) if (t[h.activo] && !idValido(h, t[h.campo])) falta(5, h.campo, `El ${h.etiquetaId} de ${h.nombre}`);
-  if (!texto(t.plataforma_sitio)) falta(5, "plataforma_sitio", "La plataforma del sitio");
+  if (!idValido(HERRAMIENTAS[0], t.meta_pixel_id)) falta(5, "meta_pixel_id", "legal.falta.meta_pixel");
+  for (const h of OPCIONALES) {
+    if (t[h.activo] && !idValido(h, t[h.campo])) {
+      falta(5, h.campo, "legal.falta.herramienta_id", { id: tr(`legal.herramienta.${h.clave}.id`), nombre: tr(`legal.herramienta.${h.clave}.nombre`) });
+    }
+  }
+  if (!texto(t.plataforma_sitio)) falta(5, "plataforma_sitio", "legal.falta.plataforma");
   // Paso 6: una cláusula propia con marcas del texto anterior (0016 pasó ahí
   // lo que la tienda había escrito).
-  for (const d of DOCUMENTOS) if (MARCAS.test(texto(t[d.clausula]))) falta(6, d.clausula, `Corregir la cláusula propia de: ${d.titulo}`);
+  for (const d of DOCUMENTOS) if (MARCAS.test(texto(t[d.clausula]))) falta(6, d.clausula, "legal.falta.clausula", { documento: tr(`legal.documento.${d.clave}`) });
   return f;
 }
 
@@ -174,7 +188,8 @@ export function contexto(t, { rutas = {} } = {}) {
         : { autorizado: false },
       homologados: t.legal_homologados === "si",
       rnbd: t.legal_rnbd,
-      pagos: frasesPagos(t)
+      // Las formas de pago van al documento: siempre en español.
+      pagos: frasesPagos(t, "es")
     },
     herramientas: activas(t),
     capiSoloConsentimiento: t.capi_solo_consentimiento !== false,
@@ -202,7 +217,7 @@ function armar(secciones, clausula, { numerar = true } = {}) {
 }
 
 export function generar(t) {
-  if (faltantes(t).length) throw new Error("Faltan datos para generar los textos legales.");
+  if (faltantes(t).length) throw new Error(tr("legal.error.faltan_datos"));
   const ctx = contexto(t);
   const docs = {};
   for (const d of DOCUMENTOS) {
