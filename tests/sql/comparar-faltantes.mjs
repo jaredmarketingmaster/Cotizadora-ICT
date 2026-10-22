@@ -40,7 +40,11 @@ const VARIANTES = [
   { pais: "ar" },
   { pais: "br", legal_paises: ["co", "br"] },
   { legal_correo: "datos@", legal_telefono: "12" },
-  { nombre: "  ", legal_entrega: [], legal_entrega_zonas: "", legal_homologados: "", plataforma_sitio: "" },
+  { nombre: "  ", legal_homologados: "", plataforma_sitio: "" },
+  // Envíos (0023)
+  { envio_retiro: false, envio_domicilio: false, envio_zonas: [], envio_costo: "", envio_costo_fijo: null },
+  { envio_retiro: true, direccion: " ", envio_domicilio: true, envio_zonas: [], envio_costo: "" },
+  { envio_domicilio: true, envio_todo_el_pais: true, envio_zonas: [], envio_costo: "al_recibir", envio_costo_fijo: null, envio_retiro: false },
   { legal_clausula_privacidad: "Texto con [PENDIENTE: dato].", legal_clausula_aviso: "Hola {{nombre}}." }
 ].map((v) => ({ ...base, ...v }));
 

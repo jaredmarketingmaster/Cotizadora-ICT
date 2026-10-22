@@ -161,14 +161,14 @@ caso("versión: sube solo si cambia un texto; la vigencia va al pie", () => {
 
 caso("el contexto no deja pasar formato de la tienda a los textos", () => {
   const t = base();
-  t.legal_entrega_zonas = "[Medellín] **todo**";
-  assert.equal(contexto(t).venta.zonas, "Medellín todo");
+  t.envio_zonas = ["[Medellín] **todo**"];
+  assert.deepEqual(contexto(t).venta.envio.domicilio.zonas, ["Medellín todo"]);
 });
 
 caso("los valores iniciales se pueden guardar y los checks de 0016 rechazan lo que no corresponde", () => {
   assert.equal(errorLegales(LEGAL_INICIAL), "");
   assert.equal(errorLegales({ ...LEGAL_INICIAL, ...base() }), "");
-  for (const malo of [{ legal_perfil: "otro" }, { legal_paises: ["us"] }, { legal_garantia_nuevos: 0 }, { legal_entrega: ["dron"] },
+  for (const malo of [{ legal_perfil: "otro" }, { legal_paises: ["us"] }, { legal_garantia_nuevos: 0 },
     { ga4_activo: "si" }, { legal_clausula_terminos: "x".repeat(4001) }, { legal_publicado: [] }, { legal_paso: 7 }]) {
     assert.notEqual(errorLegales({ ...LEGAL_INICIAL, ...malo }), "", JSON.stringify(malo).slice(0, 60));
   }
@@ -183,6 +183,22 @@ caso("B3: si el país de la tienda no tiene módulo legal, falta en el paso 3 y 
   }
   assert.ok(!claves(base()).includes("pais"), "Colombia tiene módulo");
   assert.ok(claves({ ...base(), pais: undefined }).includes("pais"), "sin país también falta");
+});
+
+caso("C2: los términos arman la entrega desde Envíos; con plazo, sin el máximo legal; sin ninguna forma de entrega, falta", () => {
+  const t = visible(generar(base()).terminos);
+  for (const x of ["Retiro en el local: Carrera 70 # 44-20, local 3, Medellín, Lunes a sábado de 9 a. m. a 7 p. m.",
+    "Envío a domicilio: a Medellín y su área metropolitana.", "Costo del envío: $15.000."]) assert.ok(t.includes(x), x);
+  const conPlazo = { ...base(), envio_plazo_desde: 2, envio_plazo_hasta: 4, envio_costo: "zona", envio_costo_fijo: null,
+    envio_costos_zona: { "Medellín y su área metropolitana": 0 }, envio_gratis: false };
+  const c = visible(generar(conPlazo).terminos);
+  assert.ok(c.includes("Plazo de entrega: de 2 a 4 días hábiles."));
+  assert.ok(c.includes("Costo del envío a Medellín y su área metropolitana: gratis."));
+  assert.ok(!c.includes("Si no acordamos otro plazo con usted"), "con plazo, no va el máximo legal");
+  const sinEnvios = { ...base(), envio_retiro: false, envio_domicilio: false, envio_zonas: [], envio_costo: "", envio_costo_fijo: null };
+  assert.deepEqual(faltantes(sinEnvios).map((f) => [f.paso, f.campo]), [[4, "envio"]]);
+  assert.deepEqual(faltantes({ ...base(), direccion: "" }).map((f) => [f.paso, f.campo]), [[0, "direccion"]], "retiro sin dirección");
+  assert.deepEqual(claves({ ...base(), envio_costo: "" }), ["envio_costo"]);
 });
 
 console.log(`\nOK: ${casos} casos del motor legal`);

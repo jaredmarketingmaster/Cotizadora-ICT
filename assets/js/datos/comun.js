@@ -8,6 +8,7 @@
 // =============================================================================
 
 import { t, idiomaActual } from "../i18n/i18n.js";
+import { CAMPOS_ENVIO } from "./envios.js";
 
 // Un texto que se traduce cada vez que se usa como texto (para las constantes
 // exportadas, que se leen antes de cargar el idioma).
@@ -65,7 +66,9 @@ export const CAMPOS_TIENDA = [
   "tamano_texto", "vista_equipos", "mostrar_ficha", "ficha_ocultas",
   "pagos_medios", "pagos_cuotas", "pagos_cuotas_max", "pagos_sin_interes", "pagos_sin_interes_max",
   "pagos_cripto", "pagos_cripto_cuales", "pagos_pasarelas", "pagos_pasarela_otra",
-  "mostrar_resenas", "titulo_resenas", "titulo_sitio"
+  "mostrar_resenas", "titulo_resenas", "titulo_sitio",
+  // Envíos (0023, assets/js/datos/envios.js)
+  ...CAMPOS_ENVIO
 ];
 
 // Legales (0016): los datos del asistente, con sus valores iniciales (los
@@ -78,7 +81,7 @@ export const LEGAL_INICIAL = {
   legal_matricula_numero: "", legal_matricula_camara: "", legal_direccion_local: "", legal_rnbd: "",
   legal_paises: [], legal_impuestos: [{ nombre: "IVA", porcentaje: null, incluido: null }],
   legal_garantia_nuevos: null, legal_garantia_usados: "", legal_garantia_usados_meses: null, legal_retracto_canal: "",
-  legal_entrega: [], legal_entrega_zonas: "", legal_apple_detalle: "", legal_homologados: "",
+  legal_apple_detalle: "", legal_homologados: "",
   legal_clausula_privacidad: "", legal_clausula_terminos: "", legal_clausula_cookies: "", legal_clausula_aviso: "",
   meta_pixel_id: "", ga4_activo: false, ga4_id: "", gtm_activo: false, gtm_id: "", clarity_activo: false, clarity_id: "",
   tiktok_activo: false, tiktok_id: "", gads_activo: false, gads_id: "",
@@ -92,7 +95,7 @@ CAMPOS_TIENDA.push(...CAMPOS_LEGALES);
 const LARGOS_LEGALES = {
   legal_nombre: 160, legal_doc_numero: 20, legal_direccion: 160, legal_ciudad: 80, legal_correo: 160, legal_telefono: 20,
   legal_representante: 160, legal_matricula_numero: 40, legal_matricula_camara: 80, legal_direccion_local: 160,
-  legal_entrega_zonas: 200, legal_apple_detalle: 400, legal_clausula_privacidad: 4000, legal_clausula_terminos: 4000,
+  legal_apple_detalle: 400, legal_clausula_privacidad: 4000, legal_clausula_terminos: 4000,
   legal_clausula_cookies: 4000, legal_clausula_aviso: 4000, meta_pixel_id: 30, ga4_id: 30, gtm_id: 30, clarity_id: 30,
   tiktok_id: 30, gads_id: 30, plataforma_sitio: 80
 };
@@ -109,7 +112,6 @@ export function errorLegales(tienda) {
   const meses = (v) => v === null || (Number.isInteger(v) && v >= 1 && v <= 120);
   if (!Number.isInteger(tienda.legal_paso) || tienda.legal_paso < 1 || tienda.legal_paso > 6) return MAL;
   if (!Array.isArray(tienda.legal_paises) || tienda.legal_paises.some((p) => !CODIGOS_PAISES_SQL.includes(p))) return MAL;
-  if (!Array.isArray(tienda.legal_entrega) || tienda.legal_entrega.some((e) => !["retiro", "transportadora", "personal"].includes(e))) return MAL;
   if (!Array.isArray(tienda.legal_impuestos) || tienda.legal_impuestos.length > 6) return MAL;
   if (!meses(tienda.legal_garantia_nuevos) || !meses(tienda.legal_garantia_usados_meses)) return MAL;
   for (const k of ["ga4_activo", "gtm_activo", "clarity_activo", "tiktok_activo", "gads_activo", "capi_solo_consentimiento"]) if (typeof tienda[k] !== "boolean") return MAL;
@@ -311,7 +313,8 @@ const ERRORES_SERVIDOR = [
   "solo_gestor.resenas", "solo_gestor.borrar_demo", "solo_gestor.modo_demo", "solo_administrador", "un_administrador",
   "propio_rol", "desactivarse", "correo_existe", "elija_rol", "elija_color", "color_modelo", "mas_vendidos", "max_resenas",
   "ficha", "cuotas_max", "sin_interes_max", "sin_interes_mayor", "sin_interes_vacio", "cuotas_vacias", "cripto_vacio",
-  "pasarela_otra", "pasarela_otra_vacia", "color_oficial_nombre", "color_hex_fuente", "colores_oficiales",
+  "pasarela_otra", "pasarela_otra_vacia", "envio_sin_domicilio", "envio_zonas", "envio_todo_o_zonas", "envio_costo_fijo",
+  "envio_costo_zona", "envio_gratis_ya", "envio_gratis_condicion", "envio_gratis_zonas", "envio_plazo", "color_oficial_nombre", "color_hex_fuente", "colores_oficiales",
   "colores_fuente", "color_oficial_borrar", "borrar_color_en_uso", "sin_legales_demo", "sin_legales_borrar",
   "legales_quitar", "legales_faltan", "whatsapp_pais", "correo", "metodo", "pedido_invalido", "invitacion_perfil",
   "cambiar_usuario", "accion_desconocida"

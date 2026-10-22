@@ -18,13 +18,14 @@
 // =============================================================================
 
 import { formatoBasico } from "../utils.js";
-import { PASOS, PERFILES, ENTREGAS, DOCUMENTOS, MARCAS, textoSinModulo, faltantes, generar, publicar, conVigencia, perfilDe, declaraApple, necesitaLocal, fechaDMA, hoyColombia, contexto } from "../legal/motor.js";
+import { PASOS, PERFILES, DOCUMENTOS, MARCAS, textoSinModulo, faltantes, generar, publicar, conVigencia, perfilDe, declaraApple, necesitaLocal, fechaDMA, hoyColombia, contexto } from "../legal/motor.js";
 import { PAISES, PAISES_DISPONIBLES, ESTADOS, documentosDe, modulosDe } from "../legal/paises/indice.js";
 import { HERRAMIENTAS, OPCIONALES, idValido } from "../legal/herramientas.js";
 import { independiente } from "../legal/plantillas/terminos.js";
 import { $, $$, esc, avisar, conBoton } from "./ui.js";
 import { t as tr, idiomaActual } from "../i18n/i18n.js";
 import { whatsappValido } from "../datos/paises.js";
+import { frasesEnvio } from "../datos/envios.js";
 
 const META = HERRAMIENTAS[0];
 const ESPERA_TEXTO = 700;
@@ -215,8 +216,11 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
         { valor: "whatsapp", texto: tr("panel.legales.retracto.whatsapp") }
       ], { ayuda: esc(tr("panel.legales.retracto.ayuda")) })}
       ${t.legal_retracto_canal === "whatsapp" && !whatsappValido(t.whatsapp || "", t.pais) ? `<p class="aviso-datos" role="note">${tr("panel.legales.retracto.falta_whatsapp", { enlace: enlaceTienda("panel.legales.retracto.completar") })}</p>` : ""}
-      ${opciones("legal_entrega", tr("panel.legales.entrega.leyenda"), ENTREGAS.map((e) => ({ valor: e.clave, texto: tr(`legal.entrega.${e.clave}`) })), { multiple: true })}
-      ${texto("legal_entrega_zonas", tr("panel.legales.entrega_zonas"), { max: 200, ayuda: esc(tr("panel.legales.entrega_zonas.ayuda")) })}
+      <section class="sub-bloque" aria-labelledby="t-entrega" id="l-envio" tabindex="-1">
+        <h3 id="t-entrega">${esc(tr("panel.legales.entrega.leyenda"))}</h3>
+        ${(() => { const f = frasesEnvio(t); return f.length ? `<ul class="vista-pagos">${f.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p class="aviso-datos" role="note">${esc(tr("panel.legales.entrega.sin_envios"))}</p>`; })()}
+        <p><a href="#/catalogo/envios">${esc(tr("panel.legales.entrega.editar"))}</a></p>
+      </section>
       <section class="sub-bloque" aria-labelledby="t-apple">
         <h3 id="t-apple">${esc(tr("panel.legales.apple.titulo"))}</h3>
         ${declaraApple(t)
@@ -274,7 +278,7 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
     const pub = t.legal_publicado;
     const alDia = pasoCompleto(t, 6, lista);
     $("#l-faltan").innerHTML = lista.length ? `<h3 id="t-faltan">${esc(tr("panel.legales.faltan.titulo"))}</h3>
-      <ul class="avisos" aria-labelledby="t-faltan">${lista.map((f) => `<li><span>${esc(f.texto)}</span><a href="${f.paso === 0 ? "#/tienda" : `#/legales/${f.paso}?campo=${encodeURIComponent(f.campo)}`}">${esc(tr("panel.legales.faltan.resolver"))}</a></li>`).join("")}</ul>` : "";
+      <ul class="avisos" aria-labelledby="t-faltan">${lista.map((f) => `<li><span>${esc(f.texto)}</span><a href="${f.paso === 0 ? "#/tienda" : f.campo.startsWith("envio") ? "#/catalogo/envios" : `#/legales/${f.paso}?campo=${encodeURIComponent(f.campo)}`}">${esc(tr("panel.legales.faltan.resolver"))}</a></li>`).join("")}</ul>` : "";
     for (const d of DOCUMENTOS) {
       // La vista previa es el documento: en español, con su pie de vigencia.
       $(`[data-previa="${d.clave}"]`, caja).innerHTML = docs
@@ -306,7 +310,7 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
     if (DOCUMENTOS.some((d) => d.clausula === campo)) return tr("panel.legales.error.marcas");
     const h = HERRAMIENTAS.find((x) => x.campo === campo);
     if (h && !vacio) return tr("panel.legales.error.herramienta", { id: idH(h), ejemplo: h.ejemplo });
-    if (["legal_perfil", "legal_tipo_persona", "legal_doc_tipo", "legal_garantia_usados", "legal_retracto_canal", "legal_homologados", "legal_entrega"].includes(campo)) return tr("panel.legales.error.elija");
+    if (["legal_perfil", "legal_tipo_persona", "legal_doc_tipo", "legal_garantia_usados", "legal_retracto_canal", "legal_homologados"].includes(campo)) return tr("panel.legales.error.elija");
     return tr("panel.legales.error.complete");
   }
 

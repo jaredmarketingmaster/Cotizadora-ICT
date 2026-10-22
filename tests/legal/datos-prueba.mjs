@@ -4,6 +4,9 @@
 export const TIENDA_LEGAL_PRUEBA = {
   nombre: "La 70",
   pais: "co",
+  ciudad: "Medellín",
+  direccion: "Carrera 70 # 44-20, local 3",
+  horario_texto: "Lunes a sábado de 9 a. m. a 7 p. m.",
   whatsapp: "573001234567",
   legal_perfil: "no_oficial",
   legal_tipo_persona: "natural",
@@ -25,8 +28,6 @@ export const TIENDA_LEGAL_PRUEBA = {
   legal_garantia_usados: "sin",
   legal_garantia_usados_meses: null,
   legal_retracto_canal: "correo",
-  legal_entrega: ["retiro", "transportadora"],
-  legal_entrega_zonas: "Medellín y su área metropolitana",
   legal_apple_detalle: "",
   legal_homologados: "si",
   legal_clausula_privacidad: "",
@@ -42,5 +43,9 @@ export const TIENDA_LEGAL_PRUEBA = {
   capi_solo_consentimiento: true,
   plataforma_sitio: "HighLevel (GoHighLevel)",
   pagos_medios: ["transferencia"], pagos_cuotas: false, pagos_cuotas_max: null, pagos_sin_interes: false, pagos_sin_interes_max: null,
+  // Envíos (C2): retiro y envío a domicilio con costo fijo
+  envio_retiro: true, envio_domicilio: true, envio_todo_el_pais: false, envio_zonas: ["Medellín y su área metropolitana"],
+  envio_costo: "fijo", envio_costo_fijo: 15000, envio_costos_zona: {}, envio_gratis: false, envio_gratis_zonas: [], envio_gratis_minimo: null,
+  envio_plazo_desde: null, envio_plazo_hasta: null,
   pagos_cripto: false, pagos_cripto_cuales: "", pagos_pasarelas: [], pagos_pasarela_otra: "", pagos_otras: []
 };

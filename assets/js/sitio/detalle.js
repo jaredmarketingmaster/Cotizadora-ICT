@@ -8,6 +8,7 @@ import { escaparHTML, formatearPrecio, reducirMovimiento } from "../utils.js";
 import { textoCondicion, textoAlternativo, textoMasVendido } from "./catalogo.js";
 import { htmlFoto, htmlMedio } from "./fotos.js";
 import { filasVisiblesFicha, frasesPagos, etiquetaCategoriaFicha } from "../datos/comun.js";
+import { frasesEnvio } from "../datos/envios.js";
 import { t as tr } from "../i18n/i18n.js";
 
 const ICONO_ANT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -96,6 +97,7 @@ export function crearDetalle({ api, cat, tarjeta, lista, inicial, alComprar, alC
     const garantia = usado ? tienda.texto_garantia_usados : tienda.texto_garantia_nuevos;
     // Formas de pago en frases cortas, solo con lo que marcó la tienda (0013)
     const pagos = frasesPagos(tienda);
+    const envios = frasesEnvio(tienda);
     const datosUsado = usado ? [
       q.bateria_porcentaje != null && [tr("sitio.detalle.bateria"), `${q.bateria_porcentaje}%`],
       q.estado_estetico && [tr("sitio.detalle.estado_estetico"), q.estado_estetico],
@@ -119,9 +121,9 @@ export function crearDetalle({ api, cat, tarjeta, lista, inicial, alComprar, alC
         <summary>${tr("sitio.detalle.ver_ficha")} ${ICONO_ABRIR}</summary>
         <dl>${filas.map((f) => `<div${f.clave ? ` data-clave="${f.clave}"` : ""}><dt>${escaparHTML(f.clave ? etiquetaCategoriaFicha(f.clave) : f.etiqueta)}</dt><dd>${escaparHTML(f.valor)}</dd></div>`).join("")}</dl>
       </details>` : ""}
-      ${(pagos.length || tienda.texto_entrega || garantia) ? `<div class="info-compra">
+      ${(pagos.length || envios.length || tienda.texto_entrega || garantia) ? `<div class="info-compra">
         ${pagos.length ? `<section><h3>${tr("sitio.detalle.formas_pago")}</h3><ul>${pagos.map((p) => `<li>${escaparHTML(p)}</li>`).join("")}</ul></section>` : ""}
-        ${tienda.texto_entrega ? `<section><h3>${tr("sitio.detalle.entrega")}</h3><p>${escaparHTML(tienda.texto_entrega)}</p></section>` : ""}
+        ${envios.length || tienda.texto_entrega ? `<section><h3>${tr("sitio.detalle.entrega")}</h3>${envios.length ? `<ul class="frases-envio">${envios.map((f) => `<li>${escaparHTML(f)}</li>`).join("")}</ul>` : ""}${tienda.texto_entrega ? `<p>${escaparHTML(tienda.texto_entrega)}</p>` : ""}</section>` : ""}
         ${garantia ? `<section><h3>${tr("sitio.detalle.garantia")}</h3><p>${escaparHTML(garantia)}</p></section>` : ""}
       </div>` : ""}
       <div class="detalle-cta">

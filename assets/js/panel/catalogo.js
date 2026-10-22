@@ -20,7 +20,8 @@ import { $, esc, conBoton, campoTexto, marcarError, enfocarPrimerError, avisar, 
 const PESTANAS = [
   { id: "modelos", ruta: "catalogo", cargar: async () => ({ dibujar: dibujarModelos }) },
   { id: "ficha", ruta: "catalogo/ficha", cargar: () => import("./fichas.js") },
-  { id: "pagos", ruta: "catalogo/pagos", cargar: () => import("./pagos.js") }
+  { id: "pagos", ruta: "catalogo/pagos", cargar: () => import("./pagos.js") },
+  { id: "envios", ruta: "catalogo/envios", cargar: () => import("./envios.js") }
 ];
 
 export async function dibujar(vista, ctx, resto = []) {

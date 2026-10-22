@@ -26,7 +26,7 @@ let corridos = 0;
 async function caso(nombre, fn) {
   if (SOLO && !SOLO.test(nombre)) return;
   corridos++;
-  try { await fn(); console.log(`ok   ${nombre}`); } catch (e) { fallas++; console.log(`FALLA ${nombre}\n     ${String(e.message).split("\n").slice(0, +(process.env.ICT_LINEAS || 3)).join("\n     ")}`); }
+  try { await fn(); console.log(`ok   ${nombre}`); } catch (e) { fallas++; console.log(`FALLA ${nombre}\n     ${String(process.env.ICT_PILA ? e.stack : e.message).split("\n").slice(0, +(process.env.ICT_LINEAS || 3)).join("\n     ")}`); }
 }
 
 // legales: true publica los textos legales con la tienda de prueba
@@ -62,8 +62,9 @@ async function publicarLegales(p) {
     const { publicar } = await import(`${base}/assets/js/legal/motor.js`);
     const { TIENDA_LEGAL_PRUEBA } = await import(`${base}/tests/legal/datos-prueba.mjs`);
     const e = JSON.parse(localStorage.getItem(clave));
-    const legales = Object.entries(TIENDA_LEGAL_PRUEBA).filter(([k]) => /^(legal_|meta_pixel_id|ga4_|gtm_|clarity_|tiktok_|gads_|capi_|plataforma_)/.test(k));
-    Object.assign(e.tienda, Object.fromEntries(legales));
+    const legales = Object.entries(TIENDA_LEGAL_PRUEBA).filter(([k]) => /^(legal_|meta_pixel_id|ga4_|gtm_|clarity_|tiktok_|gads_|capi_|plataforma_|envio_)/.test(k));
+    // Envíos (C2): solo el envío a domicilio, para no tocar la dirección de Mi tienda (que pide el retiro).
+    Object.assign(e.tienda, Object.fromEntries(legales), { envio_retiro: false });
     e.tienda.legal_publicado = publicar(e.tienda, null, "2026-10-21");
     localStorage.setItem(clave, JSON.stringify(e));
   }, [CLAVE_DEMO, BASE]);
@@ -1052,7 +1053,8 @@ async function llenarPopup(p) {
     assert.deepEqual(Object.fromEntries(Object.keys(LEGAL_INICIAL).map((k) => [k, e.tienda[k]])),
       { ...LEGAL_INICIAL, legal_clausula_privacidad: "Mi política propia.", legal_clausula_terminos: "Mi aviso de marca." });
     for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) assert.ok(!(k in e.tienda), k);
-    assert.equal(e.version, 18);
+    assert.equal(e.version, 19);
+    assert.ok(!("legal_entrega" in e.tienda) && !("legal_entrega_zonas" in e.tienda) && typeof e.tienda.envio_retiro === "boolean" && Array.isArray(e.tienda.envio_zonas), "0023: la entrega pasa a Envíos");
     const sinFuente = e.colores.filter((c) => c.oficial && !c.hex_de_fuente);
     assert.ok(sinFuente.length && sinFuente.every((c) => c.hex_aproximado === Boolean(c.hex)) && e.colores.every((c) => !(c.hex_de_fuente && c.hex_aproximado)),
       `0022: los oficiales sin hex de la fuente, aproximados: ${JSON.stringify(sinFuente.filter((c) => c.hex_aproximado !== Boolean(c.hex)).slice(0, 3))}`);
@@ -1341,8 +1343,8 @@ async function llenarPopup(p) {
   const datosLegales = (p, cambios = {}) => p.evaluate(async ([clave, base, cambios]) => {
     const { TIENDA_LEGAL_PRUEBA } = await import(`${base}/tests/legal/datos-prueba.mjs`);
     const e = JSON.parse(localStorage.getItem(clave));
-    const legales = Object.entries(TIENDA_LEGAL_PRUEBA).filter(([k]) => /^(legal_|meta_pixel_id|ga4_|gtm_|clarity_|tiktok_|gads_|capi_|plataforma_)/.test(k));
-    Object.assign(e.tienda, Object.fromEntries(legales), cambios);
+    const legales = Object.entries(TIENDA_LEGAL_PRUEBA).filter(([k]) => /^(legal_|meta_pixel_id|ga4_|gtm_|clarity_|tiktok_|gads_|capi_|plataforma_|envio_)/.test(k));
+    Object.assign(e.tienda, Object.fromEntries(legales), { envio_retiro: false }, cambios);
     localStorage.setItem(clave, JSON.stringify(e));
   }, [CLAVE_DEMO, BASE, cambios]);
   const tiendaDemo = (p) => p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).tienda, CLAVE_DEMO);
@@ -1541,8 +1543,9 @@ async function llenarPopup(p) {
     assert.match(await textoLegal(p, "/terminos/"), /24 meses desde la entrega[\s\S]*versión 2\./);
     // Incompleto: se guarda, pero lo publicado queda
     await p.goto(`${BASE}/admin/#/legales/4`);
-    await p.waitForSelector("#l-legal_entrega_zonas");
-    await p.fill("#l-legal_entrega_zonas", "");
+    await p.goto(`${BASE}/admin/#/legales/2`);
+    await p.waitForSelector("#l-legal_direccion");
+    await p.fill("#l-legal_direccion", "");
     await esperarGuardado(p);
     assert.equal((await tiendaDemo(p)).legal_publicado.version, 2);
     await p.goto(`${BASE}/admin/#/inicio`);
@@ -1551,11 +1554,11 @@ async function llenarPopup(p) {
     // Completo otra vez y un cambio de nombre en Mi tienda: versión 3
     const v = await p.evaluate(async (base) => {
       const a = await (await import(`${base}/assets/js/datos/api.js`)).api();
-      await a.guardarTienda({ legal_entrega_zonas: "Medellín" });
+      await a.guardarTienda({ legal_direccion: "Calle 70 # 45-12" });
       const t = await a.guardarTienda({ nombre: "La 70 Celulares" });
       return [t.legal_publicado.version, t.legal_publicado.documentos.terminos.includes("La 70 Celulares es un comercio independiente")];
     }, BASE);
-    assert.deepEqual(v, [4, true], "zonas (3) y nombre (4)");
+    assert.deepEqual(v, [4, true], "dirección (3) y nombre (4)");
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
@@ -1800,7 +1803,7 @@ async function llenarPopup(p) {
     await p.click("#form-login [type=submit]");
     await p.waitForSelector(".estadisticas");
     assert.equal(await p.textContent('[data-ruta="inventario"]'), PT["panel.nav.inventario"]);
-    for (const ruta of ["inicio", "inventario", "inventario/nuevo", "tienda", "catalogo", "catalogo/fichas", "catalogo/pagos", "legales/1", "legales/2", "legales/3", "legales/4", "legales/5", "legales/6"]) {
+    for (const ruta of ["inicio", "inventario", "inventario/nuevo", "tienda", "catalogo", "catalogo/fichas", "catalogo/pagos", "catalogo/envios", "legales/1", "legales/2", "legales/3", "legales/4", "legales/5", "legales/6"]) {
       await p.goto(`${BASE}/admin/#/${ruta}`);
       await p.waitForTimeout(400);
       await p.waitForSelector("#vista h1, #vista h2");
@@ -1836,6 +1839,78 @@ async function llenarPopup(p) {
       try { await a.guardarTienda({ titulo_sitio: "x".repeat(81) }); return "ok"; } catch (e) { return e.message; }
     }, BASE);
     assert.notEqual(r, "ok", "más de 80 caracteres no se guarda");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("C2: Envíos en Catálogo (retiro, zonas, costo, gratis con condición y plazo) con las reglas del SQL; frases en el sitio, Inicio, paso 4 y términos", async () => {
+    const p = await nueva(1280, 900);
+    await entrarPanel(p, "gestor@demo.co");
+    await editarDemo(p, (e) => Object.assign(e.tienda, { envio_domicilio: false, envio_zonas: [], envio_costo: "", envio_costo_fijo: null, envio_retiro: false }));
+    await p.reload();
+    await p.waitForSelector(".estadisticas");
+    assert.ok((await p.$$eval(".avisos li span", (xs) => xs.map((x) => x.textContent))).includes("Falta elegir cómo entrega los equipos (retiro o envío)."));
+    await p.goto(`${BASE}/admin/#/catalogo/envios`);
+    await p.waitForSelector("#form-envios");
+    assert.deepEqual(await p.$$eval(".pestanas [role=tab]", (xs) => xs.map((x) => x.textContent)), ["Modelos y colores", "Ficha técnica", "Formas de pago", "Envíos"]);
+    await p.check("#e-retiro");
+    assert.match(await p.textContent("#e-retiro-ayuda"), /^Para el retiro, complete la dirección en Mi tienda\.$/);
+    await p.check("#e-domicilio");
+    await p.fill("#zona-0", "Palermo");
+    await p.click("#e-agregar-zona");
+    await p.fill("#zona-1", "Belgrano");
+    await p.check("#e-costo-fijo");
+    await p.click("#guardar-envios");
+    assert.equal(await p.textContent("#e-fijo-error"), "Escriba el costo, solo números.");
+    await p.fill("#e-fijo", "3.500");
+    await p.check("#e-gratis");
+    await p.check("#gz-0");
+    await p.check("#gz-1");
+    await p.fill("#e-plazo-desde", "2");
+    await p.fill("#e-plazo-hasta", "4");
+    assert.deepEqual(await p.$$eval("#vista-envios li", (xs) => xs.map((x) => x.textContent)),
+      ["Retiro en el local.", "Envío a Palermo y Belgrano: $3.500.", "Envío gratis en Palermo y Belgrano.", "Entrega en 2 a 4 días hábiles."]);
+    await p.click("#guardar-envios");
+    await p.waitForSelector("text=Guardado");
+    const t = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).tienda, CLAVE_DEMO);
+    assert.deepEqual([t.envio_retiro, t.envio_domicilio, t.envio_zonas, t.envio_costo, t.envio_costo_fijo, t.envio_gratis_zonas, t.envio_plazo_desde, t.envio_plazo_hasta],
+      [true, true, ["Palermo", "Belgrano"], "fijo", 3500, ["Palermo", "Belgrano"], 2, 4]);
+    // La capa de datos repite validar_envios
+    const r = await p.evaluate(async (base) => {
+      const a = await (await import(`${base}/assets/js/datos/api.js`)).api();
+      const malos = [{ envio_gratis_zonas: ["Núñez"] }, { envio_plazo_desde: 5, envio_plazo_hasta: 2 }, { envio_costo: "zona", envio_costo_fijo: null, envio_costos_zona: { Palermo: 1 } }];
+      const res = [];
+      for (const m of malos) { try { await a.guardarTienda(m); res.push("ok"); } catch (e) { res.push(e.message); } }
+      return res;
+    }, BASE);
+    assert.deepEqual(r, ["Las zonas con envío gratis tienen que estar en la lista de zonas.",
+      "El plazo de entrega va de 1 a 60 días hábiles, y el primero no puede ser mayor que el segundo.", "Escriba el costo del envío de cada zona."]);
+    // Inicio ya no avisa; el retiro sin dirección falta para los legales (Mi tienda)
+    await p.goto(`${BASE}/admin/#/inicio`);
+    await p.waitForSelector(".estadisticas");
+    assert.ok(!(await p.$$eval(".avisos li span", (xs) => xs.map((x) => x.textContent))).includes("Falta elegir cómo entrega los equipos (retiro o envío)."));
+    await p.goto(`${BASE}/admin/#/legales/4`);
+    await p.waitForSelector("#l-envio");
+    assert.deepEqual(await p.$$eval("#l-envio li", (xs) => xs.map((x) => x.textContent)),
+      ["Retiro en el local.", "Envío a Palermo y Belgrano: $3.500.", "Envío gratis en Palermo y Belgrano.", "Entrega en 2 a 4 días hábiles."]);
+    assert.equal(await p.getAttribute("#l-envio a", "href"), "#/catalogo/envios");
+    await p.goto(`${BASE}/admin/#/legales/6`);
+    await p.waitForSelector("#l-faltan li");
+    assert.deepEqual(await p.$$eval("#l-faltan li span", (xs) => xs.map((x) => x.textContent)), ["La dirección de la tienda (Mi tienda), para el retiro en el local"]);
+    // Con la dirección: se republica y los términos traen la entrega de Envíos, con su plazo
+    const v = await p.evaluate(async (base) => {
+      const a = await (await import(`${base}/assets/js/datos/api.js`)).api();
+      const t = await a.guardarTienda({ direccion: "Av. Santa Fe 1234", ciudad: "Buenos Aires" });
+      return [t.legal_publicado.version, t.legal_publicado.documentos.terminos];
+    }, BASE);
+    assert.equal(v[0], 2);
+    for (const x of ["- **Retiro en el local:** Av. Santa Fe 1234, Buenos Aires.", "- **Envío a domicilio:** a Palermo y Belgrano.", "- **Costo del envío:** $3.500.",
+      "- **Envío gratis:** en Palermo y Belgrano.", "- **Plazo de entrega:** de 2 a 4 días hábiles."]) assert.ok(v[1].includes(x), x);
+    assert.ok(!v[1].includes("Si no acordamos otro plazo con usted"), "con plazo, sin el máximo legal");
+    // El detalle del sitio muestra las frases
+    await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb");
+    assert.deepEqual(await p.$$eval("#detalle-en-linea .frases-envio li", (xs) => xs.map((x) => x.textContent)),
+      ["Retiro en el local.", "Envío a Palermo y Belgrano: $3.500.", "Envío gratis en Palermo y Belgrano.", "Entrega en 2 a 4 días hábiles."]);
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
@@ -2506,7 +2581,15 @@ async function llenarPopup(p) {
       .replace(/(["'`])[a-z0-9_]+(?:\.[a-z0-9_]+)+\1/g, '""');
     const tuteo = sinComentarios.match(/\b(tú|vos|tienes|puedes|quieres|tu pedido|tus datos|tu nombre|tu correo|tu whatsapp)\b|(^|[>"'.!?]\s*)(Elige|Escribe|Toca|Revisa|Acepta|Ingresa|Llena)\b/i);
     assert.ok(!tuteo, `aparece tuteo o voseo: ${tuteo?.[0]}`);
-    assert.ok(!/envío gratis|garantía de 12 meses|respondemos en/i.test(t), "promesa no cargada por la tienda");
+    // Promesas: en lo que ve el cliente (el código del sitio sin comentarios y las claves del sitio).
+    // Desde C2 se excluyen las frases de Envíos (sitio.envios.*), que solo muestran lo que la tienda
+    // cargó en Catálogo → Envíos, y el panel (que nombra "envío gratis" como opción a configurar).
+    // (Sin los textos legales: los plazos de la ley sí van en ellos.)
+    const sitioSinLegal = ["index.html", "privacidad/index.html", "terminos/index.html", "cookies/index.html"]
+      .concat(fs.readdirSync(path.join(RAIZ, "assets/js/sitio")).map((f) => `assets/js/sitio/${f}`))
+      .map((f) => fs.readFileSync(path.join(RAIZ, f), "utf8")).join("\n").replace(/\/\/.*$/gm, "");
+    const sitioSinEnvios = sitioSinLegal + Object.entries(ES).filter(([k]) => /^(sitio|popup|cookies|legalpag)\./.test(k) && !k.startsWith("sitio.envios.")).map(([, v]) => v).join("\n");
+    assert.ok(!/envío gratis|garantía de 12 meses|respondemos en/i.test(sitioSinEnvios), "promesa no cargada por la tienda");
     assert.ok(!/["']Purchase["']/.test(fs.readFileSync(path.join(RAIZ, "assets/js/sitio/pixel.js"), "utf8")), "dispara Purchase");
   });
 

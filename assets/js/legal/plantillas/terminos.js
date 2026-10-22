@@ -47,8 +47,7 @@ export function secciones(ctx) {
     {
       titulo: "Entrega",
       lineas: [
-        ...v.entrega.map((e) => `- ${e}.`),
-        `- **Zonas:** ${v.zonas.replace(/\.$/, "")}.`,
+        ...lineasEntrega(v.envio, v.plazoEntrega),
         ...ctx.paises.flatMap((p) => p.terminos.entrega(ctx)).flatMap((l) => ["", l])
       ]
     },
@@ -78,4 +77,31 @@ export function secciones(ctx) {
       lineas: ["Si cambiamos estos términos, publicamos la versión nueva en esta página con su fecha de vigencia, que aparece al final. Cada compra se rige por los términos vigentes el día en que se confirma."]
     }
   ];
+}
+
+// La sección Entrega, desde Catálogo → Envíos (C2): retiro, envío a domicilio
+// con su costo, envío gratis con condición y plazo.
+const y = (l) => (l.length <= 1 ? l.join("") : `${l.slice(0, -1).join(", ")} y ${l[l.length - 1]}`);
+const sinPunto = (s) => String(s).replace(/\.$/, "");
+function lineasEntrega(envio, plazo) {
+  const l = [];
+  if (envio.retiro) {
+    l.push(`- **Retiro en el local:** ${[envio.retiro.local, envio.retiro.horario].filter(Boolean).map(sinPunto).join(", ")}.`);
+  }
+  const d = envio.domicilio;
+  if (d) {
+    l.push(`- **Envío a domicilio:** ${d.todoElPais ? "a todo el país" : `a ${y(d.zonas)}`}.`);
+    if (d.costo === "gratis") l.push("- **Costo del envío:** gratis.");
+    if (d.costo === "fijo") l.push(`- **Costo del envío:** ${d.fijo}.`);
+    if (d.costo === "al_recibir") l.push("- **Costo del envío:** lo paga usted al recibir el pedido.");
+    if (d.costo === "zona") l.push(...d.porZona.map((z) => `- **Costo del envío a ${z.zona}:** ${z.gratis ? "gratis" : z.monto}.`));
+    if (d.gratis) {
+      const partes = [d.gratis.zonas.length ? `en ${y(d.gratis.zonas)}` : "", d.gratis.minimo ? `en compras desde ${d.gratis.minimo}` : ""].filter(Boolean);
+      l.push(`- **Envío gratis:** ${partes.join(" ")}.`);
+    }
+  }
+  if (plazo) {
+    l.push(`- **Plazo de entrega:** ${plazo.desde === plazo.hasta ? `${plazo.desde} ${plazo.desde === 1 ? "día hábil" : "días hábiles"}` : `de ${plazo.desde} a ${plazo.hasta} días hábiles`}.`);
+  }
+  return l;
 }

@@ -175,6 +175,46 @@ begin
   update public.tienda set pais = 'co', whatsapp = '573001234567';
 end $$;
 
+-- 0l. Migración 0023 (Envíos): lo del asistente (antes_0023) pasó a Envíos,
+-- con el costo por elegir; las columnas viejas no están; validar_envios().
+do $$
+begin
+  assert (select envio_retiro and envio_domicilio and envio_zonas = '{Medellín y su área metropolitana}' and envio_costo = '' from public.tienda),
+    'retiro y entrega personal pasan a Envíos';
+  assert not exists (select 1 from information_schema.columns where table_name = 'tienda' and column_name in ('legal_entrega', 'legal_entrega_zonas')), 'columnas viejas fuera';
+  assert (select 'envio_costo' = any (public.legal_faltantes(t)) from public.tienda t), 'falta elegir el costo';
+  begin
+    update public.tienda set envio_costo = 'fijo';
+    raise exception 'fijo sin monto';
+  exception when check_violation then assert sqlerrm = 'Escriba el costo fijo del envío.', sqlerrm; end;
+  begin
+    update public.tienda set envio_costo = 'zona', envio_costos_zona = '{"Otra": 100}';
+    raise exception 'costos de otra zona';
+  exception when check_violation then assert sqlerrm = 'Escriba el costo del envío de cada zona.', sqlerrm; end;
+  begin
+    update public.tienda set envio_costo = 'gratis', envio_gratis = true, envio_gratis_minimo = 100;
+    raise exception 'gratis con condición';
+  exception when check_violation then assert sqlerrm = 'Si el envío ya es gratis, no hace falta una condición.', sqlerrm; end;
+  begin
+    update public.tienda set envio_costo = 'fijo', envio_costo_fijo = 9000, envio_gratis = true, envio_gratis_zonas = '{Palermo}';
+    raise exception 'gratis en una zona que no está';
+  exception when check_violation then assert sqlerrm = 'Las zonas con envío gratis tienen que estar en la lista de zonas.', sqlerrm; end;
+  begin
+    update public.tienda set envio_plazo_desde = 5, envio_plazo_hasta = 2;
+    raise exception 'plazo al revés';
+  exception when check_violation then assert sqlerrm like 'El plazo de entrega va de 1 a 60%', sqlerrm; end;
+  begin
+    update public.tienda set envio_domicilio = false;
+    raise exception 'sin domicilio con zonas';
+  exception when check_violation then assert sqlerrm = 'Sin envío a domicilio, los datos del envío quedan vacíos.', sqlerrm; end;
+  update public.tienda set envio_costo = 'zona', envio_costos_zona = '{"Medellín y su área metropolitana": 0}',
+    envio_gratis = true, envio_gratis_minimo = 500000, envio_plazo_desde = 2, envio_plazo_hasta = 4;
+  assert not (select 'envio_costo' = any (public.legal_faltantes(t)) from public.tienda t), 'completo';
+  update public.tienda set envio_domicilio = false, envio_zonas = '{}', envio_costo = '', envio_costos_zona = '{}', envio_gratis = false,
+    envio_gratis_minimo = null, envio_plazo_desde = null, envio_plazo_hasta = null, envio_retiro = false;
+  assert (select 'envio' = any (public.legal_faltantes(t)) from public.tienda t), 'sin ninguna forma de entrega';
+end $$;
+
 -- 0k. Migración 0021: título del sitio vacío por defecto, hasta 80 caracteres.
 do $$
 begin
@@ -395,8 +435,9 @@ begin
     legal_doc_tipo = 'nit', legal_doc_numero = '900123456-7', legal_direccion = 'Calle 70 # 45-10', legal_ciudad = 'Medellín',
     legal_correo = 'datos@lasetenta.co', legal_telefono = '573001234567', legal_direccion_local = 'Carrera 70 # 44-20, local 3',
     legal_rnbd = 'no', legal_paises = '{co}', legal_impuestos = '[{"nombre": "IVA", "porcentaje": 19, "incluido": true}]',
-    legal_garantia_nuevos = 12, legal_garantia_usados = 'sin', legal_retracto_canal = 'correo', legal_entrega = '{retiro,transportadora}',
-    legal_entrega_zonas = 'Medellín y su área metropolitana', legal_homologados = 'si', meta_pixel_id = '123456789012345',
+    legal_garantia_nuevos = 12, legal_garantia_usados = 'sin', legal_retracto_canal = 'correo',
+    direccion = 'Carrera 70 # 44-20, local 3', envio_retiro = true, envio_domicilio = true,
+    envio_zonas = '{Medellín y su área metropolitana}', envio_costo = 'fijo', envio_costo_fijo = 15000, legal_homologados = 'si', meta_pixel_id = '123456789012345',
     legal_clausula_terminos = 'Los equipos se entregan con su caja.';
   assert (select cardinality(public.legal_faltantes(t)) = 0 from public.tienda t), 'completa';
   begin

@@ -17,7 +17,8 @@
 // =============================================================================
 
 import { frasesPagos, PLATAFORMA_POR_DEFECTO } from "../datos/comun.js";
-import { whatsappValido, datosPais } from "../datos/paises.js";
+import { whatsappValido, datosPais, formatearPrecio } from "../datos/paises.js";
+import { tieneEnvios } from "../datos/envios.js";
 import { CODIGOS_PAISES, PAISES_DISPONIBLES, modulosDe, documentosDe } from "./paises/indice.js";
 import { activas, idValido, OPCIONALES, HERRAMIENTAS } from "./herramientas.js";
 import * as privacidad from "./plantillas/privacidad.js";
@@ -42,11 +43,6 @@ export const PERFILES = [
   { clave: "no_oficial", nombre: "Revendedor no oficial de Apple", local: true, apple: false },
   { clave: "emprendedor", nombre: "Emprendedor sin local físico", local: false, apple: false },
   { clave: "particular", nombre: "Revendedor particular", local: false, apple: false }
-];
-export const ENTREGAS = [
-  { clave: "retiro", nombre: "Retiro en el local" },
-  { clave: "transportadora", nombre: "Envío con transportadora" },
-  { clave: "personal", nombre: "Entrega personal" }
 ];
 // Los seis pasos del asistente; el nombre que se muestra es t(`legal.paso.${clave}`).
 export const PASOS = ["perfil", "identificacion", "paises", "condiciones", "herramientas", "publicar"];
@@ -129,8 +125,11 @@ export function faltantes(t) {
   if (t.legal_retracto_canal === "whatsapp") {
     if (!whatsappValido(texto(t.whatsapp), t.pais)) falta(0, "whatsapp", "legal.falta.whatsapp");
   } else if (t.legal_retracto_canal !== "correo") falta(4, "legal_retracto_canal", "legal.falta.retracto_canal");
-  if (!(t.legal_entrega || []).length) falta(4, "legal_entrega", "legal.falta.entrega");
-  if (!texto(t.legal_entrega_zonas)) falta(4, "legal_entrega_zonas", "legal.falta.entrega_zonas");
+  // Entrega: de Catálogo → Envíos (0023). Igual que legal_faltantes().
+  if (!tieneEnvios(t)) falta(4, "envio", "legal.falta.envio");
+  if (t.envio_domicilio && !t.envio_todo_el_pais && !(t.envio_zonas || []).length) falta(4, "envio_zonas", "legal.falta.envio_zonas");
+  if (t.envio_domicilio && !t.envio_costo) falta(4, "envio_costo", "legal.falta.envio_costo");
+  if (t.envio_retiro && !texto(t.direccion)) falta(0, "direccion", "legal.falta.direccion_retiro");
   if (declaraApple(t) && !texto(t.legal_apple_detalle)) falta(4, "legal_apple_detalle", "legal.falta.apple_detalle");
   if (!["si", "no"].includes(t.legal_homologados)) falta(4, "legal_homologados", "legal.falta.homologados");
   // Paso 5
@@ -145,6 +144,27 @@ export function faltantes(t) {
   // lo que la tienda había escrito).
   for (const d of DOCUMENTOS) if (MARCAS.test(texto(t[d.clausula]))) falta(6, d.clausula, "legal.falta.clausula", { documento: tr(`legal.documento.${d.clave}`) });
   return f;
+}
+
+// Lo que la plantilla de términos necesita de Envíos (limpio, montos con la
+// moneda de la tienda; en español lo arma terminos.js).
+function envioDocumento(t) {
+  const zonas = (t.envio_zonas || []).map(limpio).filter(Boolean);
+  const local = [limpio(t.direccion), limpio(t.ciudad)].filter(Boolean).join(", ");
+  return {
+    retiro: t.envio_retiro ? { local, horario: limpio(t.horario_texto) } : null,
+    domicilio: t.envio_domicilio ? {
+      todoElPais: Boolean(t.envio_todo_el_pais),
+      zonas,
+      costo: t.envio_costo,
+      fijo: Number.isInteger(t.envio_costo_fijo) ? formatearPrecio(t.envio_costo_fijo) : "",
+      porZona: t.envio_costo === "zona" ? (t.envio_zonas || []).map((z) => ({ zona: limpio(z), monto: formatearPrecio(t.envio_costos_zona?.[z] ?? 0), gratis: t.envio_costos_zona?.[z] === 0 })) : [],
+      gratis: t.envio_gratis ? {
+        zonas: (t.envio_gratis_zonas || []).map(limpio).filter(Boolean),
+        minimo: Number.isInteger(t.envio_gratis_minimo) ? formatearPrecio(t.envio_gratis_minimo) : ""
+      } : null
+    } : null
+  };
 }
 
 // --- Contexto de las plantillas ----------------------------------------------------
@@ -179,10 +199,10 @@ export function contexto(t, { rutas = {} } = {}) {
       retractoCanal: t.legal_retracto_canal === "whatsapp"
         ? `escríbanos por WhatsApp al ${formatearTelefono(`+${t.whatsapp}`)}`
         : `escríbanos a [${correo}](mailto:${correo})`,
-      entrega: ENTREGAS.filter((e) => (t.legal_entrega || []).includes(e.clave)).map((e) => e.nombre),
-      zonas: limpio(t.legal_entrega_zonas),
-      // Plazo de entrega de la pestaña Envíos (llega con C2); sin plazo, el legal.
-      plazoEntrega: null,
+      envio: envioDocumento(t),
+      // Plazo de entrega de la pestaña Envíos; sin plazo, el máximo legal del país.
+      plazoEntrega: Number.isInteger(t.envio_plazo_desde) && Number.isInteger(t.envio_plazo_hasta)
+        ? { desde: t.envio_plazo_desde, hasta: t.envio_plazo_hasta } : null,
       apple: perfil?.apple
         ? { autorizado: true, detalle: limpio(t.legal_apple_detalle) }
         : { autorizado: false },

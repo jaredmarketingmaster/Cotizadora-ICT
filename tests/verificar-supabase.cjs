@@ -126,7 +126,8 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
       const r = [];
       r.push(await intentar(() => a.borrarDatosDemo()));
       r.push(await intentar(() => a.guardarTienda({ modo_demo: false })));
-      const legales = Object.fromEntries(Object.entries(TIENDA_LEGAL_PRUEBA).filter(([k]) => /^(legal_|meta_pixel_id|ga4_|gtm_|clarity_|tiktok_|gads_|capi_|plataforma_)/.test(k)));
+      const legales = Object.fromEntries(Object.entries(TIENDA_LEGAL_PRUEBA).filter(([k]) => /^(legal_|meta_pixel_id|ga4_|gtm_|clarity_|tiktok_|gads_|capi_|plataforma_|envio_)/.test(k)));
+      legales.envio_retiro = false; // C2: solo el envío a domicilio (el retiro pide la dirección de Mi tienda)
       // La tienda local nace en Argentina (0018); la de prueba es de Colombia.
       let t = await a.guardarTienda({ ...legales, pais: "co", meta_pixel_id: "" });
       r.push(await intentar(() => a.guardarTienda({ legal_publicado: { version: 9, vigente_desde: "2020-01-01", huella: "x", documentos: generar({ ...t, meta_pixel_id: "123456789012345" }) } })));
@@ -276,7 +277,7 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     const s = await p.context().newPage();
     await s.goto(`${BASE}/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb`, { waitUntil: "networkidle" });
     await s.waitForSelector("#detalle-en-linea .info-compra");
-    assert.deepEqual(await s.$$eval("#detalle-en-linea .info-compra li", (xs) => xs.map((x) => x.textContent)), ["Tarjeta de crédito: hasta 12 cuotas, hasta 6 sin interés."]);
+    assert.deepEqual(await s.$$eval("#detalle-en-linea .info-compra section:first-of-type li", (xs) => xs.map((x) => x.textContent)), ["Tarjeta de crédito: hasta 12 cuotas, hasta 6 sin interés."]);
     const filas = await s.$$eval("#detalle-en-linea .ficha-tecnica dt", (xs) => xs.map((x) => x.textContent));
     assert.deepEqual(filas, ["Año de lanzamiento", "Procesador", "Pantalla", "Cámaras traseras", "Versiones del modelo", "Materiales", "Puertos y carga"]);
     await p.context().close();

@@ -8,6 +8,7 @@
 // No sirve para producción: cada navegador tiene su propia copia.
 // =============================================================================
 
+import { ENVIOS_INICIAL, errorEnvios } from "./envios.js";
 import { CATALOGO, COLORES, DEMO_EQUIPOS, HEX_APROXIMADOS, filasDeFuente } from "./semilla.js";
 import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, LEGAL_INICIAL, errorLegales, elegir } from "./comun.js";
 import { hexValido, sesion, esperar } from "../utils.js";
@@ -58,7 +59,7 @@ function estadoInicial() {
       correo_contacto: "", instagram_url: "", facebook_url: "", tiktok_url: "", logo: "", favicon: "",
       color_primario: "#1A73E8", color_secundario: "#0F172A", tema: "claro", texto_entrega: "",
       pagos_otras: [], ...PAGOS_VACIOS, texto_garantia_nuevos: "", texto_garantia_usados: "", etiqueta_precio: "Precio",
-      ...copia(LEGAL_INICIAL),
+      ...copia(LEGAL_INICIAL), ...copia(ENVIOS_INICIAL),
       precios_actualizados_en: t, modo_demo: true, tamano_texto: "normal", vista_equipos: "cuadricula",
       mostrar_ficha: true, ficha_ocultas: [], mostrar_resenas: false, titulo_resenas: TITULO_RESENAS, titulo_sitio: "", actualizado_en: t
     },
@@ -74,7 +75,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 18;
+const VERSION = 19;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -203,6 +204,18 @@ const MIGRACIONES = {
       c.hex_aproximado = Boolean(c.hex_aproximado);
       if (c.oficial && !c.hex && !c.hex_de_fuente && HEX_APROXIMADOS[c.nombre_es]) Object.assign(c, { hex: HEX_APROXIMADOS[c.nombre_es], hex_aproximado: true });
     }
+  },
+  // 0023_envios.sql: la entrega del asistente de legales pasa a Envíos.
+  18(e) {
+    const t = e.tienda;
+    const entrega = Array.isArray(t.legal_entrega) ? t.legal_entrega : [];
+    const domicilio = entrega.includes("transportadora") || entrega.includes("personal");
+    const zonas = String(t.legal_entrega_zonas || "").trim();
+    Object.assign(t, copia(ENVIOS_INICIAL), {
+      envio_retiro: entrega.includes("retiro"), envio_domicilio: domicilio, envio_zonas: domicilio && zonas ? [zonas] : []
+    });
+    delete t.legal_entrega;
+    delete t.legal_entrega_zonas;
   }
 };
 
@@ -375,6 +388,9 @@ function validarTienda(t) {
     throw error("formato");
   }
   // Como validar_pagos (0013)
+  // Como validar_envios (0023)
+  const envios = errorEnvios(t);
+  if (envios) throw new ErrorDatos(envios);
   const pagos = errorPagos(t);
   if (pagos) throw new ErrorDatos(pagos);
   // 0014

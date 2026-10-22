@@ -8,6 +8,7 @@ import { aplicarTema } from "../tema.js";
 import { fechaCorta, formatearMiles } from "../utils.js";
 import { whatsappValido, fijarPais } from "../datos/paises.js";
 import { frasesPagos } from "../datos/comun.js";
+import { tieneEnvios } from "../datos/envios.js";
 import { $, $$, esc, avisar, confirmar, conBoton, campoTexto, marcarError, enfocarPrimerError, interruptor } from "./ui.js";
 import { republicarAlGuardar } from "./legales.js";
 import { faltantes } from "../legal/motor.js";
@@ -232,6 +233,7 @@ async function vistaInicio(vista) {
     !tienda.logo && [t("panel.inicio.falta_logo"), "#/tienda"],
     !whatsappValido(tienda.whatsapp, tienda.pais) && [t("panel.inicio.falta_whatsapp"), "#/tienda"],
     !frasesPagos(tienda).length && [t("panel.inicio.faltan_pagos"), "#/catalogo/pagos"],
+    !tieneEnvios(tienda) && [t("panel.inicio.faltan_envios"), "#/catalogo/envios"],
     sinFoto.length && [t("panel.inicio.sin_foto"), "#/inventario?fotos=sin"],
     ocultosPorModelo.length && [tn("panel.inicio.ocultos_por_modelo", ocultosPorModelo.length, { n: formatearMiles(ocultosPorModelo.length) }), "#/catalogo"]
   ].filter(Boolean);
