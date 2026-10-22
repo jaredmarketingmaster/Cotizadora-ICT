@@ -371,6 +371,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `supabase/migrations/0002_catalogo.sql` (≈42) | Inserta los **32 modelos** del catálogo maestro, en el orden del prompt, todos inactivos (`orden` 10, 20, …, 320). Cada modelo recibe su ficha vacía por disparador. |
 | `supabase/migrations/0003_demo.sql` (≈36) | Pone el nombre "Tienda de demostración" y `modo_demo = true`, activa los 4 modelos que usa la demo (con `activo_por_demo = true`) e inserta los 6 equipos demo. |
 | `supabase/migrations/0011_vista_equipos.sql` (≈12) | `tienda.vista_equipos`: `cuadricula` (por defecto) o `carrusel`. |
+| `supabase/migrations/0021_titulo_sitio.sql` | `tienda.titulo_sitio` (hasta 80 caracteres; vacío = el título del idioma). |
 | `supabase/migrations/0020_idioma.sql` | `tienda.idioma`: `'es'` (por defecto; las tiendas que ya existían quedan en español) o `'pt'`. |
 | `supabase/migrations/0019_legal_pais_tienda.sql` (≈90) | `legal_faltantes()` igual que en `0018`, más `pais`: el país de la tienda tiene que tener su módulo legal (hoy solo Colombia). |
 | `supabase/migrations/0018_pais.sql` (≈120) | `tienda.pais` (19 países, Argentina por defecto; queda en Colombia una tienda con datos de Colombia), `whatsapp_valido(pais, numero)` y el check `tienda_whatsapp_pais` (reemplaza al de "57 y 10 dígitos"); `legal_faltantes()` con el WhatsApp según el país. |
@@ -398,7 +399,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈2386) | Suite de aceptación en **modo demo** con Playwright: **66 casos** (67 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). Publica los textos legales de prueba al abrir el sitio o el panel (`nueva(..., {legales})`) y empieza con las cookies rechazadas (`{cookies}`; `null` = sin elegir). `ICT_LINEAS` muestra más líneas de cada falla. | Ver sección 14. |
+| `tests/verificar.cjs` (≈2386) | Suite de aceptación en **modo demo** con Playwright: **67 casos** (68 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). Publica los textos legales de prueba al abrir el sitio o el panel (`nueva(..., {legales})`) y empieza con las cookies rechazadas (`{cookies}`; `null` = sin elegir). `ICT_LINEAS` muestra más líneas de cada falla. | Ver sección 14. |
 | `tests/verificar-supabase.cjs` (≈534) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **12 casos**. Reemplaza `config.js` en el navegador, puede servir un supabase-js local (`ICT_SUPABASE_JS`) y empieza con las cookies rechazadas. |
 | `tests/legal/motor.test.mjs` | Pruebas del motor legal sin navegador (`node tests/legal/motor.test.mjs`): faltantes por perfil y tipo de persona, validaciones, países, datos y plazos en los textos, sin corchetes ni marcadores vacíos, relación con Apple por perfil, herramientas activas e inactivas, versión y vigencia. |
 | `tests/paises.test.mjs` | Pruebas de `paises.js` sin navegador (`node tests/paises.test.mjs`): los 19 países son los del índice legal; precio en ARS, COP, BRL y MXN; fecha corta y fecha con zona; celular por país (prefijo, validación, agrupado, número internacional); WhatsApp de la tienda. |
@@ -631,7 +632,7 @@ Los dos adaptadores la implementan. El sitio y el panel solo usan esto.
 - **Estado:** `localStorage["cotizadora-demo:v1"]`, un JSON con `tienda`, `modelos`, `fichas`, `equipos` y `perfiles`. Se comparte entre pestañas del mismo navegador.
 - **Fotos:** IndexedDB, base `cotizadora-demo`, almacén `archivos`. Se exponen como `blob:` URLs.
 - **Usuarios de prueba:** `gestor@demo.co` y `administrador@demo.co`, clave `demo1234` (desde la versión 5 de los datos; antes `tienda@demo.co` y `agencia@demo.co`, que `migrar()` convierte). La sesión va en `sessionStorage["cotizadora-demo:sesion"]`.
-- **Versión de los datos:** el JSON lleva `version` (hoy 16; la 16 es `0020_idioma.sql`: `tienda.idioma` en español; la 15 es `0018_pais.sql`: `tienda.pais` en Colombia, porque el demo es una tienda de Colombia; la 14 es `0016_legales_asistente.sql`: los campos del asistente con `LEGAL_INICIAL`, los textos propios a las cláusulas, los textos base de `0015` descartados por su huella FNV-1a y las columnas viejas borradas; la 13 es `0015_legales.sql`: textos base donde estaban vacíos, herramientas y revisión en no; la 12 es `0014_resenas.sql`: interruptor apagado, título por defecto y lista vacía; la 10 es `0012_fichas.sql`, interruptores de la ficha y precarga de la fuente en las fichas sin filas; la 11 es `0013_formas_pago.sql`, `formas_pago` → `pagos_otras` y los campos nuevos vacíos). Si el navegador tiene una versión vieja, `migrar()` repite la migración SQL del mismo número (por ejemplo `stock` → `en_stock`) sin perder lo cargado.
+- **Versión de los datos:** el JSON lleva `version` (hoy 17; la 17 es `0021_titulo_sitio.sql`: `titulo_sitio` vacío; la 16 es `0020_idioma.sql`: `tienda.idioma` en español; la 15 es `0018_pais.sql`: `tienda.pais` en Colombia, porque el demo es una tienda de Colombia; la 14 es `0016_legales_asistente.sql`: los campos del asistente con `LEGAL_INICIAL`, los textos propios a las cláusulas, los textos base de `0015` descartados por su huella FNV-1a y las columnas viejas borradas; la 13 es `0015_legales.sql`: textos base donde estaban vacíos, herramientas y revisión en no; la 12 es `0014_resenas.sql`: interruptor apagado, título por defecto y lista vacía; la 10 es `0012_fichas.sql`, interruptores de la ficha y precarga de la fuente en las fichas sin filas; la 11 es `0013_formas_pago.sql`, `formas_pago` → `pagos_otras` y los campos nuevos vacíos). Si el navegador tiene una versión vieja, `migrar()` repite la migración SQL del mismo número (por ejemplo `stock` → `en_stock`) sin perder lo cargado.
 - **Repite las reglas del SQL:**
   - Legales: `errorLegales` (checks de `0016`), la publicación de `publicar_legales` (`publicarLegales`, que carga el motor solo al publicar: faltantes, documentos sin marcas, sin despublicar, versión y fecha) y el bloqueo de `0017` (modo demo y borrar la demo).
   - Permisos por rol.
@@ -895,6 +896,7 @@ Al publicar, todo se habilita. En el sitio, el panel y los textos no hay avisos 
 - **Qué cambia:** todo el texto del sitio público, el pop-up y el mensaje de WhatsApp, el banner y las preferencias de cookies, el marco de las páginas legales (título, "Volver a los equipos", pie, "Página en preparación.") y el panel completo, incluidos los errores de la capa de datos y del servidor (`traducirServidor()` de `comun.js` pasa al idioma en uso los mensajes que llegan del SQL en español).
 - **Qué no cambia:** los **textos legales generados** siguen en español (no hay módulo legal en portugués): la página legal en portugués lo avisa arriba ("Este documento está disponível somente em espanhol.", con el documento en `lang="es"`), y el paso 6 del asistente también. Tampoco cambian los datos: nombres de modelos y colores, fichas técnicas, descripciones, y los valores por defecto guardados en la base ("Precio", "Lo que dicen nuestros clientes"), que se muestran traducidos solo mientras sean el valor por defecto. Lo que va a GHL (por ejemplo la condición "Nuevo") sigue en español.
 - **Cómo:** `t(clave)` de `assets/js/i18n/i18n.js`. El HTML trae el español con `data-t` (sin JS se ve en español y el primer pintado no espera); con la tienda en portugués, `traducirDom()` lo cambia apenas llegan los datos. pt.js se descarga solo para tiendas en portugués.
+- **Título del sitio (B5):** `tienda.titulo_sitio` (Mi tienda → Marca, hasta 80 caracteres). Vacío = `t("sitio.titulo")`: "Elija su iPhone y cómprelo por WhatsApp." en español, "Escolha seu iPhone e compre pelo WhatsApp." en portugués. Lo pone `dibujarMarca()` en el `h1` y en el `<title>` ("Tienda · título", sin el punto final).
 - **Claves:** por zona (`sitio.`, `popup.`, `cookies.`, `legalpag.`, `panel.inicio.`, `panel.inventario.`, …, `datos.`, `legal.`, `pais.`). Una clave nueva va en los dos diccionarios; `tests/i18n.test.mjs` lo revisa.
 
 ### 9.10 País de la tienda (`tienda.pais`, ronda 3)
@@ -1151,7 +1153,7 @@ bash tests/sql/probar.sh                                   # SQL y RLS en un Pos
 python3 -m http.server 8080 &
 node tests/legal/motor.test.mjs                            # motor legal (14 casos, sin navegador)
 node tests/paises.test.mjs                                 # datos de país (sin navegador)
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 66 casos en modo demo (Playwright + Chromium)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 67 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 DENO=/ruta/deno bash tests/funciones/probar.sh             # función enviar-lead (16 casos) + tipos
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
@@ -1164,7 +1166,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 - `ICT_CAPTURAS=1`: además guarda capturas en `tests/capturas/` y corre el caso **capturas de diseño**: 360 y 1440 px × claro y oscuro × cuadrícula y carrusel × color por defecto y primario amarillo, más el detalle y el pop-up, en `tests/capturas/diseno/<etapa>-….png`. `ICT_CAPTURAS_ETAPA` pone la etapa (por ejemplo `antes` o `despues`). La carpeta no se sube al repo.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (66 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (67 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
@@ -1268,7 +1270,7 @@ bash tests/supabase-local/levantar.sh detener
 ### 15.2 Producción, una tienda
 
 1. **Proyecto de Supabase.** Conviene la región São Paulo.
-2. **Migraciones:** correr **todas** las de `supabase/migrations/`, en orden de número, de `0001` a la última (hoy `0020`): `0001` esquema, `0002` catálogo, `0003` demo, `0004` stock sí/no, `0005` tamaño del texto, `0006` catálogo y colores, `0007` roles, `0008` color oficial, `0009` video, `0010` más vendido, `0011` vista de equipos, `0012` fichas, `0013` formas de pago, `0014` reseñas, `0015` legales (textos base, reemplazados por la siguiente), `0016` asistente de legales, `0017` bloqueo hasta publicar, `0018` país de la tienda, `0019` legales según el país de la tienda y `0020` idioma. Saltarse una rompe las siguientes (con la CLI, `supabase db push` las corre en orden). Crean también los buckets (`fotos` y `marca` en `0001`, `videos` en `0009`, `resenas` en `0014`) con sus reglas. Para actualizar una tienda ya publicada se corren solo las nuevas, en orden; nunca se edita una ya corrida. (El comentario de `0001_esquema.sql` que dice "0001 → 0002 → 0003" es de cuando eran tres; no se edita porque esa migración ya corrió.)
+2. **Migraciones:** correr **todas** las de `supabase/migrations/`, en orden de número, de `0001` a la última (hoy `0021`): `0001` esquema, `0002` catálogo, `0003` demo, `0004` stock sí/no, `0005` tamaño del texto, `0006` catálogo y colores, `0007` roles, `0008` color oficial, `0009` video, `0010` más vendido, `0011` vista de equipos, `0012` fichas, `0013` formas de pago, `0014` reseñas, `0015` legales (textos base, reemplazados por la siguiente), `0016` asistente de legales, `0017` bloqueo hasta publicar, `0018` país de la tienda, `0019` legales según el país de la tienda, `0020` idioma y `0021` título del sitio. Saltarse una rompe las siguientes (con la CLI, `supabase db push` las corre en orden). Crean también los buckets (`fotos` y `marca` en `0001`, `videos` en `0009`, `resenas` en `0014`) con sus reglas. Para actualizar una tienda ya publicada se corren solo las nuevas, en orden; nunca se edita una ya corrida. (El comentario de `0001_esquema.sql` que dice "0001 → 0002 → 0003" es de cuando eran tres; no se edita porque esa migración ya corrió.)
 3. **Registro:** apagar "Allow new users to sign up".
 4. **Direcciones:** Site URL y Redirect URLs apuntando a `/admin/`.
 5. **Correo:** SMTP propio y las plantillas de `supabase/correos/`.
@@ -1423,6 +1425,13 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 22/10/2026 · Ronda 3, B5: título del sitio editable
+
+- **Pedido de Jared:** `tienda.titulo_sitio` (hasta 80 caracteres) en Mi tienda → Marca; por defecto "Elija su iPhone y cómprelo por WhatsApp." o su traducción al portugués; vacío = el del idioma.
+- **Hecho:** `0021_titulo_sitio.sql`; `demo.js` versión 17 (vacío; mismo check); `comun.js` (campo); `panel/tienda.js` (campo con el título del idioma como ejemplo); `sitio/principal.js` (`h1` y `<title>`); claves `panel.tienda.marca.titulo_sitio` y `…_ayuda`.
+- **Pruebas:** `verificar.cjs` (caso nuevo B5: literal por defecto, título propio en el sitio y en la pestaña, vacío en portugués, más de 80 rechazado; la migración del demo llega a la versión 17); `pruebas.sql` (bloque 0k). No había un caso que comparara el `h1` con el literal: el nuevo lo hace para el valor por defecto.
+- **Verificación:** `tests/sql/probar.sh` OK, `node tests/i18n.test.mjs` OK (975 claves), `tests/verificar.cjs` 67/67 y `node tests/documentacion.mjs` OK.
 
 ### 22/10/2026 · Ronda 3, B4: idioma del sitio y del panel (español o portugués)
 

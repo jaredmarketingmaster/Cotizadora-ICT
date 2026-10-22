@@ -60,7 +60,7 @@ function estadoInicial() {
       pagos_otras: [], ...PAGOS_VACIOS, texto_garantia_nuevos: "", texto_garantia_usados: "", etiqueta_precio: "Precio",
       ...copia(LEGAL_INICIAL),
       precios_actualizados_en: t, modo_demo: true, tamano_texto: "normal", vista_equipos: "cuadricula",
-      mostrar_ficha: true, ficha_ocultas: [], mostrar_resenas: false, titulo_resenas: TITULO_RESENAS, actualizado_en: t
+      mostrar_ficha: true, ficha_ocultas: [], mostrar_resenas: false, titulo_resenas: TITULO_RESENAS, titulo_sitio: "", actualizado_en: t
     },
     modelos,
     fichas: modelos.map((m) => ({ modelo_id: m.id, descripcion: "", especificaciones: filasDeFuente(m.slug), actualizado_en: t })),
@@ -74,7 +74,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 16;
+const VERSION = 17;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -193,7 +193,9 @@ const MIGRACIONES = {
     e.tienda.pais = "co";
   },
   // 0020_idioma.sql: las tiendas que ya existían quedan en español.
-  15(e) { e.tienda.idioma = "es"; }
+  15(e) { e.tienda.idioma = "es"; },
+  // 0021_titulo_sitio.sql: vacío = el título del idioma de la tienda.
+  16(e) { e.tienda.titulo_sitio = ""; }
 };
 
 // FNV-1a de 32 bits (la misma huella de motor.js).
@@ -364,6 +366,8 @@ function validarTienda(t) {
   if (typeof t.mostrar_resenas !== "boolean" || typeof t.titulo_resenas !== "string" || t.titulo_resenas.length > 80) {
     throw error("formato");
   }
+  // 0021
+  if (typeof t.titulo_sitio !== "string" || t.titulo_sitio.length > 80) throw error("formato");
   // Como los checks de 0016
   const legales = errorLegales(t);
   if (legales) throw new ErrorDatos(legales);

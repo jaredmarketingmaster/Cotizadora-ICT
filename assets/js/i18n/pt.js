@@ -781,6 +781,8 @@ export default {
   "panel.tienda.marca.sin_logo": "Sem logo: é exibido um ícone genérico.",
   "panel.tienda.marca.subir_favicon": "Enviar ícone",
   "panel.tienda.marca.subir_logo": "Enviar logo",
+  "panel.tienda.marca.titulo_sitio": "Título do site",
+  "panel.tienda.marca.titulo_sitio_ayuda": "É o título grande no topo do site. Até 80 caracteres. Se deixar vazio, será usado «{defecto}».",
   "panel.tienda.marca.titulo": "Marca",
   "panel.tienda.pais.ayuda": "Moeda: {moneda} ({simbolo}). Código do celular: +{prefijo}. Fuso horário: {zona}. Define como os preços e as datas são exibidos e como os celulares são validados.",
   "panel.tienda.pais.etiqueta": "País da loja",

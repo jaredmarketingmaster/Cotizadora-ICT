@@ -61,7 +61,11 @@ function dibujarMarca(t) {
   const logo = t.logo ? api.urlArchivo("marca", t.logo) : "";
   $("#marca-logo").innerHTML = logo ? `<img src="${escaparHTML(logo)}" alt="" width="160" height="40">` : logoGenericoSVG();
   $("#marca-nombre").textContent = t.nombre || "";
-  if (t.nombre) document.title = `${t.nombre} · ${tr("sitio.titulo_pagina")}`;
+  // Título del sitio (Mi tienda → Marca, 0021); vacío = el del idioma.
+  const titulo = String(t.titulo_sitio || "").trim();
+  $(".titulo").textContent = titulo || tr("sitio.titulo");
+  const pagina = titulo ? titulo.replace(/[.\s]+$/, "") : tr("sitio.titulo_pagina");
+  document.title = t.nombre ? `${t.nombre} · ${pagina}` : pagina;
   if (t.favicon) {
     const link = document.querySelector('link[rel="icon"]');
     link.href = api.urlArchivo("marca", t.favicon);

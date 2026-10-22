@@ -781,6 +781,8 @@ export default {
   "panel.tienda.marca.sin_logo": "Sin logo: se muestra un ícono genérico.",
   "panel.tienda.marca.subir_favicon": "Subir ícono",
   "panel.tienda.marca.subir_logo": "Subir logo",
+  "panel.tienda.marca.titulo_sitio": "Título del sitio",
+  "panel.tienda.marca.titulo_sitio_ayuda": "Es el título grande de arriba del sitio. Hasta 80 caracteres. Si lo deja vacío, se usa «{defecto}».",
   "panel.tienda.marca.titulo": "Marca",
   "panel.tienda.pais.ayuda": "Moneda: {moneda} ({simbolo}). Prefijo del celular: +{prefijo}. Zona horaria: {zona}. Define cómo se muestran los precios y las fechas, y cómo se validan los celulares.",
   "panel.tienda.pais.etiqueta": "País de la tienda",

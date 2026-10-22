@@ -65,7 +65,7 @@ export const CAMPOS_TIENDA = [
   "tamano_texto", "vista_equipos", "mostrar_ficha", "ficha_ocultas",
   "pagos_medios", "pagos_cuotas", "pagos_cuotas_max", "pagos_sin_interes", "pagos_sin_interes_max",
   "pagos_cripto", "pagos_cripto_cuales", "pagos_pasarelas", "pagos_pasarela_otra",
-  "mostrar_resenas", "titulo_resenas"
+  "mostrar_resenas", "titulo_resenas", "titulo_sitio"
 ];
 
 // Legales (0016): los datos del asistente, con sus valores iniciales (los

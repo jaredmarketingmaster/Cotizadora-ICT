@@ -1046,7 +1046,8 @@ async function llenarPopup(p) {
     assert.deepEqual(Object.fromEntries(Object.keys(LEGAL_INICIAL).map((k) => [k, e.tienda[k]])),
       { ...LEGAL_INICIAL, legal_clausula_privacidad: "Mi política propia.", legal_clausula_terminos: "Mi aviso de marca." });
     for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) assert.ok(!(k in e.tienda), k);
-    assert.equal(e.version, 16);
+    assert.equal(e.version, 17);
+    assert.equal(e.tienda.titulo_sitio, "", "0021: vacío = el título del idioma");
     assert.equal(e.tienda.pais, "co", "0018: los datos viejos del demo son de Colombia");
     assert.equal(e.tienda.idioma, "es", "0020: las tiendas que ya existían quedan en español");
     assert.deepEqual(e.equipos.map((q) => q.en_stock), [false, true, true, true, true, true]);
@@ -1796,6 +1797,36 @@ async function llenarPopup(p) {
       await p.waitForSelector("#vista h1, #vista h2");
       sinEspanol(await sinDatos(p), `panel #/${ruta}`);
     }
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("B5: el título del sitio se edita en Mi tienda → Marca; vacío, el del idioma (español o portugués)", async () => {
+    const PT = (await import(require("url").pathToFileURL(path.join(RAIZ, "assets/js/i18n/pt.js")).href)).default;
+    const p = await nueva(1280, 900);
+    await ir(p);
+    assert.equal(await p.textContent("h1"), "Elija su iPhone y cómprelo por WhatsApp.", "por defecto, el literal del prompt");
+    await entrarPanel(p, "gestor@demo.co");
+    await p.goto(`${BASE}/admin/#/tienda`);
+    await p.waitForSelector("#titulo_sitio");
+    assert.equal(await p.getAttribute("#titulo_sitio", "maxlength"), "80");
+    assert.equal(await p.getAttribute("#titulo_sitio", "placeholder"), "Elija su iPhone y cómprelo por WhatsApp.");
+    await p.fill("#titulo_sitio", "Los mejores iPhone de Palermo.");
+    await p.click("#guardar-tienda");
+    await p.waitForSelector("text=Guardado");
+    await ir(p);
+    assert.equal(await p.textContent("h1"), "Los mejores iPhone de Palermo.");
+    assert.equal(await p.title(), "Tienda de demostración · Los mejores iPhone de Palermo");
+    // Vacío y en portugués: el del idioma
+    await editarDemo(p, (e) => { e.tienda.titulo_sitio = ""; e.tienda.idioma = "pt"; });
+    await ir(p);
+    assert.equal(await p.textContent("h1"), PT["sitio.titulo"]);
+    // La capa de datos repite el check de 0021
+    const r = await p.evaluate(async (base) => {
+      const a = await (await import(`${base}/assets/js/datos/api.js`)).api();
+      try { await a.guardarTienda({ titulo_sitio: "x".repeat(81) }); return "ok"; } catch (e) { return e.message; }
+    }, BASE);
+    assert.notEqual(r, "ok", "más de 80 caracteres no se guarda");
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });

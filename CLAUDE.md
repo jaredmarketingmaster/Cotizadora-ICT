@@ -38,7 +38,7 @@ Cómo se hace cumplir:
 
 ## Textos literales del prompt (no reescribir)
 
-- "Elija su iPhone y cómprelo por WhatsApp."
+- "Elija su iPhone y cómprelo por WhatsApp." (título por defecto; la tienda lo puede cambiar en Mi tienda → Marca, `titulo_sitio`)
 - "¿Nuevo o usado?", "¿Qué modelo?", "¿Qué almacenamiento?"
 - "Antes de pasar a WhatsApp" / "Así sabemos que usted es una persona y no un bot."
 - "Su nombre", "Su correo", "Su WhatsApp", "Continuar a WhatsApp".
@@ -65,7 +65,7 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
 - Video (opcional, uno por equipo): bucket `videos`, ruta en `equipos.video`, validado en `panel/video.js` antes de subir (MP4 H.264 o WebM, 15 s, 20 MB), sin comprimir. Se borra al quitarlo o al borrar el equipo.
 - Reseñas (`0014`): bucket `resenas`; imágenes comprimidas como las fotos y videos de hasta 30 s (`validarVideo(archivo, {maxSegundos: 30})`). Nunca crear reseñas de ejemplo, tampoco en demo.
 - Legales (`0016` y `0017`): el asistente del panel llena los datos y `assets/js/legal/motor.js` genera los cuatro documentos desde las plantillas y los módulos por país (`legal/paises/`; solo Colombia disponible). Si el país de la tienda no tiene módulo, falta `pais` y no se publica (`0019`). `legal_faltantes()` del SQL = `faltantes()` del motor (`tests/sql/comparar-faltantes.mjs`); la versión y la fecha las pone el disparador `publicar_legales`. Sin publicar: el pop-up no envía, las páginas dicen "Página en preparación." y la demo no se quita. Los valores iniciales están en `LEGAL_INICIAL` (`comun.js`) y en el SQL.
-- Cambios a la base: siempre una migración nueva (la próxima es `0021_…sql`). Nunca editar una ya corrida en producción. En producción se corren todas, en orden.
+- Cambios a la base: siempre una migración nueva (la próxima es `0022_…sql`). Nunca editar una ya corrida en producción. En producción se corren todas, en orden.
 
 ## Cómo verificar antes de cada commit
 
@@ -76,7 +76,7 @@ python3 -m http.server 8080 &
 node tests/legal/motor.test.mjs                            # motor legal
 node tests/paises.test.mjs                                 # datos de país
 node tests/i18n.test.mjs                                   # diccionarios es/pt
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 66 casos, modo demo
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 67 casos, modo demo
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 ```
 

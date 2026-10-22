@@ -175,6 +175,18 @@ begin
   update public.tienda set pais = 'co', whatsapp = '573001234567';
 end $$;
 
+-- 0k. Migración 0021: título del sitio vacío por defecto, hasta 80 caracteres.
+do $$
+begin
+  assert (select titulo_sitio from public.tienda) = '', 'vacío = el del idioma';
+  update public.tienda set titulo_sitio = repeat('x', 80);
+  begin
+    update public.tienda set titulo_sitio = repeat('x', 81);
+    raise exception 'más de 80 caracteres';
+  exception when check_violation then null; end;
+  update public.tienda set titulo_sitio = '';
+end $$;
+
 -- 0j. Migración 0020: idioma español por defecto; solo es o pt.
 do $$
 begin

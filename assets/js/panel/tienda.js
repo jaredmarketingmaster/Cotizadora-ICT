@@ -74,6 +74,8 @@ export async function dibujar(vista, ctx) {
 
       <section class="bloque" aria-labelledby="t-marca">
         <h2 id="t-marca">${esc(t_("panel.tienda.marca.titulo"))}</h2>
+        ${campoTexto({ id: "titulo_sitio", etiqueta: t_("panel.tienda.marca.titulo_sitio"), valor: t.titulo_sitio || "",
+          ayuda: t_("panel.tienda.marca.titulo_sitio_ayuda", { defecto: t_("sitio.titulo") }), atributos: `maxlength="80" placeholder="${esc(t_("sitio.titulo"))}"` })}
         <div class="campo">
           <span class="etiqueta">${esc(t_("panel.tienda.marca.logo"))}</span>
           <div class="logo-actual" id="logo-actual"></div>
@@ -350,7 +352,7 @@ export async function dibujar(vista, ctx) {
     }
     if (enfocarPrimerError(form)) return;
     const cambios = {
-      nombre: v("nombre"), pais, idioma: $("#idioma").value, ciudad: v("ciudad"), direccion: v("direccion"), horario_texto: v("horario_texto"),
+      nombre: v("nombre"), titulo_sitio: v("titulo_sitio"), pais, idioma: $("#idioma").value, ciudad: v("ciudad"), direccion: v("direccion"), horario_texto: v("horario_texto"),
       whatsapp, correo_contacto: v("correo_contacto"),
       instagram_url: v("instagram_url"), facebook_url: v("facebook_url"), tiktok_url: v("tiktok_url"),
       logo, favicon, ...datosColores(),
