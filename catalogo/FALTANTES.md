@@ -2,7 +2,7 @@
 
 > Lista, modelo por modelo, de lo que la fuente del catálogo no trae. Sale de `assets/js/datos/semilla.js` (`CATALOGO`, `COLORES`, `FICHAS`, `HEX_APROXIMADOS`) y de la sección 17 de `DOCUMENTACION.md`. Nada de esto se completó de memoria: lo que falta quedó vacío (o, en los hexadecimales, con una muestra aproximada marcada como tal).
 >
-> **Cómo responder:** complete las tablas de la sección 4 con el dato y la URL de la fuente (idealmente apple.com). Con eso se arma una migración nueva (la próxima libre) y se actualiza `semilla.js`; las tiendas ya publicadas reciben el cambio al correrla.
+> **Cómo responder:** complete las tablas de la sección 4 con el dato y la URL de la fuente (idealmente apple.com/co). Con eso se arma una migración nueva (la próxima libre) y se actualiza `semilla.js`; las tiendas ya publicadas reciben el cambio al correrla.
 
 Generado el 22/10/2026 (ronda 3, H).
 

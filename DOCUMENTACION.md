@@ -51,6 +51,7 @@
   - Completo y probado en modo demo y contra un "Supabase local", con el módulo legal (`0016` y `0017`).
   - **No conectado todavía** a un Supabase real ni a GHL real.
   - Listo para verse en GitHub Pages una vez que el dueño lo active en Settings → Pages.
+- **Ronda 3 (22/10/2026): terminada.** País, moneda e idioma (es / pt-BR), título editable, envíos, pasarelas y descuentos, archivo XML de productos, carga de equipos en lote, "Ver intro" en el panel y globo de ayuda en el sitio. Lo que no se pudo verificar está en la sección 17.
 
 ---
 
@@ -275,7 +276,6 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `README.md` | Guía para personas: probar en demo, GitHub Pages, poner una tienda en producción, GHL, píxel, decisiones, pruebas y pendientes. |
 | `CLAUDE.md` | Reglas y guía para las próximas sesiones de Claude Code: cómo verificar antes de cada commit y la obligación de mantener este documento. |
 | `DOCUMENTACION.md` | Este documento. |
-| `RONDA3_PENDIENTE.md` | **Temporal.** El traspaso de lo que falta de la ronda 3 (D: carga en lote; E: "Ver intro"; F: globo de ayuda; G: `assets/videos/LEAME.md`; H: `catalogo/FALTANTES.md`; I: pruebas, Lighthouse y cierre), con el pedido exacto de Jared, cómo hacerlo con el código de hoy, las pruebas que faltan y cómo trabajar en el repo, para seguir con otro LLM. Se borra al terminar la ronda. |
 | `legal/FUENTES.md` | Fuentes de todo lo que los textos legales afirman como requisito legal (Colombia) y de las cookies de cada herramienta, con el estado de verificación de cada una y las decisiones (plazo de devolución del retracto, Argentina en la lista de la SIC). |
 | `catalogo/FALTANTES.md` | **Preguntas para Jared sobre el catálogo** (H), sacadas de `semilla.js` y de la sección 17: por modelo, los colores sin nombre en inglés o sin hexadecimal de la fuente, los modelos sin colores (17 Pro y 17 Pro Max), las categorías vacías de la ficha y las notas de la fuente (Duo, 18 Pro, 17 Pro); lo que vale para todos (batería, descripción, nombres); el conflicto de colores del 18 Pro (la fuente de Jared contra Outlook Business); la tabla de los 34 hexadecimales aproximados con los modelos donde se usa cada uno; y tablas en blanco para responder con la fuente y armar una migración. |
 | `assets/videos/LEAME.md` | **Videos opcionales** (G): `intro-panel.mp4` (botón "Ver intro" del panel, horizontal), `ayuda-celular.mp4` (vertical, 1080 × 1920) y `ayuda-computadora.mp4` (horizontal, 1920 × 1080) del globo de ayuda; MP4 H.264 de menos de 20 MB; nada se rompe hasta que existan; cómo subirlos. Los `.mp4` no van en el repositorio de la plantilla. |
@@ -416,6 +416,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | Archivo | Qué es |
 |---|---|
 | `tests/verificar.cjs` (≈3110) | Suite de aceptación en **modo demo** con Playwright: **79 casos** (80 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). Publica los textos legales de prueba al abrir el sitio o el panel (`nueva(..., {legales})`) y empieza con las cookies rechazadas (`{cookies}`; `null` = sin elegir). `ICT_LINEAS` muestra más líneas de cada falla. | Ver sección 14. |
+| `tests/lighthouse/medir.sh`, `tests/lighthouse/preparar.cjs` | **Lighthouse móvil** (ronda 3, I): abre un Chromium con puerto de depuración, `preparar.cjs` deja el demo como una tienda real (legales de prueba publicados, WhatsApp, modo demo según el argumento, sin elección de cookies) y Lighthouse corre con `--disable-storage-reset`. El informe va a `tests/capturas/`. Chromium se detiene por su PID. | Ver sección 14.1. |
 | `tests/verificar-supabase.cjs` (≈570) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **13 casos**. Reemplaza `config.js` en el navegador, puede servir un supabase-js local (`ICT_SUPABASE_JS`) y empieza con las cookies rechazadas. |
 | `tests/legal/motor.test.mjs` | Pruebas del motor legal sin navegador (`node tests/legal/motor.test.mjs`): faltantes por perfil y tipo de persona, validaciones, países, datos y plazos en los textos, sin corchetes ni marcadores vacíos, relación con Apple por perfil, herramientas activas e inactivas, versión y vigencia. |
 | `tests/feed.test.mjs` | Archivo XML sin navegador (4 casos): monedas y nombre del color iguales a los del sitio; solo los públicos con foto y el motivo de los demás; cada campo del producto; Meta, portugués y dirección. | `node tests/feed.test.mjs` |
@@ -1196,6 +1197,14 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
   La instantánea no mide rendimiento (Lighthouse muestra 0 en ese modo). La primera medición encontró un error real: el banner se mostraba antes de que se dibujaran las capacidades y tapaba los filtros; se corrigió midiendo el banner de verdad después de la fuente (`mostrarSinTapar`).
 
   (rendimiento / accesibilidad / buenas prácticas). El CLS de 0,19 lo causa solo la franja de modo demo, que aparece cuando llegan los datos. Para medir sin franja, el Chromium de la medición se abre con el modo demo apagado en `localStorage` y Lighthouse corre con `--disable-storage-reset`.
+- **Ronda 3 (cierre, 22/10/2026)** — Lighthouse 12.8 móvil con `tests/lighthouse/medir.sh` (`serve` con compresión; legales publicados, WhatsApp cargado, así que el globo de ayuda está en la página, y sin elección de cookies):
+
+  | Escenario | Corrida 1 | Corrida 2 | Corrida 3 |
+  |---|---|---|---|
+  | Sin franja de modo demo | 99 / 100 / 100 · LCP 1,6 s · CLS 0,045 | 100 / 100 / 100 · LCP 1,5 s · CLS 0,045 | 100 / 100 / 100 · LCP 1,3 s · CLS 0,045 |
+  | Con la franja de modo demo | 91 / 100 / 100 · LCP 1,4 s · CLS 0,19 | | |
+
+  Las metas (rendimiento ≥ 90, accesibilidad y buenas prácticas 100, CLS < 0,1) se cumplen sin la franja, que es lo que ve el público de una tienda real; con la franja, el CLS de 0,19 es la limitación conocida (sección 17). El globo sube con `transform` y `ayuda.js` se pide después de todo lo demás: no cambió el CLS ni el LCP.
 - **Peso del sitio público:** unos 170 KB sin comprimir y unos 56 KB con gzip (suma de cada archivo comprimido por separado, sin `demo.js` ni `semilla.js`, sin fuentes ni fotos). La fase C sumó unos 4 KB con gzip (el límite era 30 KB). La ronda 2 lo llevó a unos 198 KB sin comprimir y 65 KB con gzip (+8 KB); de eso, `resenas.js` (2 KB con gzip) solo se descarga si la tienda muestra reseñas. El módulo legal suma en el sitio unos 10 KB con gzip (`consentimiento.js` 4,8 KB, `herramientas.js` 1,4 KB, `vigencia.js` 0,4 KB y lo agregado a `popup.js`, `comun.js`, `utils.js`, `principal.js`, `pixel.js` y `sitio.css`); el motor y las plantillas solo los carga el panel.
 
 ---
@@ -1213,6 +1222,8 @@ node tests/pagos.test.mjs                                  # formas de pago (3 c
 node tests/paises.test.mjs                                 # datos de país (sin navegador)
 NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 79 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
+npx serve -l 8090 . &                                      # Lighthouse: un servidor que comprime
+NODE_PATH="$(npm root -g)" bash tests/lighthouse/medir.sh corrida1   # móvil, legales publicados, banner y globo; "nombre true" = con franja
 DENO=/ruta/deno bash tests/funciones/probar.sh             # funciones enviar-lead (16 casos) y catalogo-feed (6) + tipos
 node tests/feed.test.mjs                                   # archivo XML (4 casos, sin navegador)
 node tests/documentacion.mjs                               # este documento cubre todos los archivos
@@ -1410,6 +1421,9 @@ bash tests/supabase-local/levantar.sh detener
 | Argentina por defecto y el demo en Colombia (ronda 3, B1) | Pedido de Jared: las tiendas nuevas son de Argentina. El demo queda en Colombia porque sus precios de ejemplo están en pesos colombianos y su legal es el único verificado. La migración deja en Colombia la tienda que ya tenía datos de Colombia. |
 | Validación general del celular en 13 países | Pedido: solo se usa un formato si está verificado en una fuente. Sin fuente, prefijo + número de 8 a 15 dígitos (el máximo de E.164). |
 | Rutas relativas y `.nojekyll` | El sitio funciona en cualquier subcarpeta, como `/Cotizadora-ICT/` en GitHub Pages. |
+| "Ver intro" con un `HEAD` al dibujar Inicio (E) | Plan aprobado: liviano y sin descargar el video. Se exige tipo `video/` o ninguno, para que un hosting que responde con una página HTML para cualquier ruta no muestre el botón. |
+| El globo de ayuda se oculta con el banner de cookies (F) | En celular la caja del banner ocupa casi todo el ancho: subir el globo arriba de ella lo dejaría en medio de la pantalla. Al elegir, vuelve. |
+| El globo sube con `transform` y su módulo se pide al final (F) | Sin cambios de diseño (CLS) ni peso en la primera carga; sin WhatsApp válido no se pide. |
 | "Agregar equipo" pasa a ser el asistente de lote (D) | Pedido de Jared. Un lote de 1 hace lo mismo que el formulario por pasos de antes, así que ese modo se quitó de `inventario.js` (Editar y Duplicar no cambian). |
 | La grilla con los colores en filas y las capacidades en columnas | Hay más colores (hasta 8) que capacidades (hasta 6) y sus nombres son largos: así entra a 360 px, con scroll propio en la tabla si hace falta y sin mover la página. |
 | Una fila o columna a medias se enciende entera al tocarla | Es lo que hace cualquier casilla "a medias"; tocarla otra vez la apaga. |
@@ -1464,6 +1478,9 @@ bash tests/supabase-local/levantar.sh detener
 - [ ] **Primer pintado en portugués:** la primera vez, el sitio de una tienda en portugués se ve en español un instante (hasta que llegan los datos y se carga pt.js).
 - [ ] **Módulos legales de otros países.** Solo Colombia tiene módulo; una tienda de otro país no puede publicar sus legales (y por eso no envía pedidos) hasta que exista el de su país. Si una tienda ya publicada cambia a un país sin módulo, quedan los textos de Colombia publicados: conviene no cambiar el país después de publicar.
 - [ ] Crear en GHL los campos personalizados y el workflow con Inbound Webhook.
+- [ ] **Videos de ayuda (E y F):** grabar y subir `intro-panel.mp4`, `ayuda-celular.mp4` y `ayuda-computadora.mp4` (ver `assets/videos/LEAME.md`). Hasta entonces, "Ver intro" no aparece y el globo pasa directo al texto.
+- [ ] **Catálogo:** responder `catalogo/FALTANTES.md` (colores, nombres en inglés, fichas, conflicto del iPhone 18 Pro y los hexadecimales reales) para armar la migración que lo complete.
+- [ ] **Portugués del globo:** "cotizador" quedó "cotador"; conviene que una persona de Brasil lo revise junto con el resto de pt.js.
 
 **Pendientes por el cambio de plataforma:**
 
@@ -1503,6 +1520,13 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 22/10/2026 · Ronda 3, I: pruebas finales, Lighthouse y cierre
+
+- **Pedido de Jared:** correr todo, Lighthouse móvil (3 corridas; rendimiento ≥ 90, accesibilidad 100, buenas prácticas 100, CLS < 0,1, también con la franja), cerrar la documentación, borrar `RONDA3_PENDIENTE.md` y el reporte final.
+- **Hecho:** `tests/lighthouse/medir.sh` y `preparar.cjs` (nuevos: el script de preparación de la ronda anterior estaba en una carpeta temporal y se rehízo en el repo); sección 13 con las mediciones; secciones 1, 16 y 17 al día; `RONDA3_PENDIENTE.md` borrado (y fuera de la sección 5); `CLAUDE.md` sin "Ronda 3 en curso".
+- **Resultados:** `tests/sql/probar.sh` OK; `motor.test.mjs` 15/15, `paises.test.mjs` 5/5, `i18n.test.mjs` 5/5 (1152 claves), `envios.test.mjs` 3/3, `pagos.test.mjs` 3/3, `feed.test.mjs` 4/4; `tests/funciones/probar.sh` OK (Deno 2.9.6); `tests/verificar.cjs` 80/80 con `ICT_CAPTURAS` (la primera corrida dio 79/80: el caso 11, sin marca, encontró "apple.com" en `catalogo/FALTANTES.md` (H); se cambió por "apple.com/co", la única forma que permite la regla, y el caso pasó); `tests/verificar-supabase.cjs` 13/13 (Postgres 16, GoTrue v2.180.0, PostgREST 12.2.3, supabase-js 2.117.2 local); Lighthouse 99–100 / 100 / 100, CLS 0,045 sin franja y 91 / 100 / 100, CLS 0,19 con la franja; `node tests/documentacion.mjs` OK; revisión de tuteo sin resultados.
+- **Commits de la ronda:** A1 `7816fbb`, A2 `99eef0d`, A3 `2047ba2`, B1 `b942886`, B2 `374c4fc`, B3 `78fd40b`, B4 `5ce3d33`, B5 `eaa51be`, C1 `c12d7a6`, C2 `7e589b8`, C3 `2919a8d`, C4 `3260fab`, traspaso `30757f4`, D `06c39fb`, E `b211b96`, F `0b669e9`, G `1e5f61b`, H `f531b97` e I (este).
 
 ### 22/10/2026 · Ronda 3, H: `catalogo/FALTANTES.md`
 

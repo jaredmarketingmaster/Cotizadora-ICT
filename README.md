@@ -290,14 +290,15 @@ Variables útiles:
 - La conexión real con GHL.
 - El script de seguimiento de GHL.
 
-**Lighthouse móvil** (3 corridas con un servidor que comprime):
+**Lighthouse móvil** (cierre de la ronda 3, 3 corridas con un servidor que comprime, `tests/lighthouse/medir.sh`; legales publicados, banner de cookies y globo de ayuda):
 
-- Rendimiento: 91.
+- Rendimiento: 99–100.
 - Accesibilidad: 100.
 - Buenas prácticas: 100.
-- LCP: 1,3–1,4 s.
+- LCP: 1,3–1,6 s.
+- CLS: 0,045.
 
-El CLS es 0,19 con la franja de modo demo, porque aparece al cargar los datos. Sin modo demo, que es lo que ve el público de una tienda real, medí 0,049.
+Con la franja de modo demo el rendimiento es 91 y el CLS 0,19, porque la franja aparece al cargar los datos. Sin modo demo es lo que ve el público de una tienda real.
 
 **Peso del sitio público:** unos 153 KB sin comprimir y unos 37 KB con gzip en modo Supabase, sin contar fuentes ni fotos.
 
