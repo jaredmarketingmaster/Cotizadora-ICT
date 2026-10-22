@@ -2,6 +2,8 @@
 
 Guía para las próximas sesiones de Claude Code en este repo. Leer completa, y el README, antes de tocar nada.
 
+**Traspaso entre agentes:** el estado actual y los próximos pasos están en `AI_HANDOFF.md`. Leerlo primero.
+
 ## Documentación obligatoria: `DOCUMENTACION.md`
 
 `DOCUMENTACION.md` es la documentación completa del proyecto. Jared la usa para pasarle el proyecto a otros LLM. **Todo cambio en el repo se acompaña, en el mismo trabajo, de su actualización.**
