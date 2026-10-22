@@ -275,6 +275,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `README.md` | Guía para personas: probar en demo, GitHub Pages, poner una tienda en producción, GHL, píxel, decisiones, pruebas y pendientes. |
 | `CLAUDE.md` | Reglas y guía para las próximas sesiones de Claude Code: cómo verificar antes de cada commit y la obligación de mantener este documento. |
 | `DOCUMENTACION.md` | Este documento. |
+| `RONDA3_PENDIENTE.md` | **Temporal.** El traspaso de lo que falta de la ronda 3 (D: carga en lote; E: "Ver intro"; F: globo de ayuda; G: `assets/videos/LEAME.md`; H: `catalogo/FALTANTES.md`; I: pruebas, Lighthouse y cierre), con el pedido exacto de Jared, cómo hacerlo con el código de hoy, las pruebas que faltan y cómo trabajar en el repo, para seguir con otro LLM. Se borra al terminar la ronda. |
 | `legal/FUENTES.md` | Fuentes de todo lo que los textos legales afirman como requisito legal (Colombia) y de las cookies de cada herramienta, con el estado de verificación de cada una y las decisiones (plazo de devolución del retracto, Argentina en la lista de la SIC). |
 | `.gitignore` | Ignora `tests/capturas/`, `node_modules/`, `deno.lock`, `.env` y las carpetas temporales de la CLI de Supabase. |
 | `.nojekyll` | Archivo vacío. Le dice a GitHub Pages que publique los archivos tal cual, sin procesarlos con Jekyll (que ignora carpetas que empiezan con `_`). |
@@ -1467,6 +1468,12 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 22/10/2026 · Ronda 3: pausa después de C y traspaso de D a I
+
+- **Pedido de Jared:** al terminar la parte C, hacer una pausa y escribir un markdown con el detalle exacto de lo que falta (D y E–I) para seguir con otro LLM constructor de código.
+- **Hecho:** `RONDA3_PENDIENTE.md` (nuevo): estado de la ronda con los commits; reglas y forma de trabajar del repo; la interfaz de la capa de datos y del panel que usan D–F; el pedido exacto de D, E, F, G, H e I, con una propuesta de cómo hacerlo y las pruebas que pide cada uno; cómo correr todas las suites y Lighthouse; el reporte final. `CLAUDE.md` lo señala.
+- **Verificación:** `node tests/documentacion.mjs` OK. No cambia código.
 
 ### 22/10/2026 · Ronda 3, C4: archivo XML de productos para Google y Meta
 

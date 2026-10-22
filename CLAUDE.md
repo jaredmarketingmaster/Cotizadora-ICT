@@ -2,6 +2,10 @@
 
 Guía para las próximas sesiones de Claude Code en este repo. Leer completa, y el README, antes de tocar nada.
 
+## Ronda 3 en curso
+
+Lo que falta (D a I) está detallado en `RONDA3_PENDIENTE.md`. Leerlo antes de seguir.
+
 ## Documentación obligatoria: `DOCUMENTACION.md`
 
 `DOCUMENTACION.md` es la documentación completa del proyecto. Jared la usa para pasarle el proyecto a otros LLM. **Todo cambio en el repo se acompaña, en el mismo trabajo, de su actualización.**
