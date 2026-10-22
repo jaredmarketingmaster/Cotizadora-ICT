@@ -27,9 +27,10 @@ Un commit por punto, todos con las pruebas pasando:
 | C4 | `3260fab` | Archivo XML de productos y función `catalogo-feed` (0025). |
 | D | `06c39fb` | Carga de equipos en lote (0026): `panel/lote.js`, `crear_equipos_lote`, `archivos_en_uso`. |
 | E | `b211b96` | Botón "Ver intro" en Inicio (`prepararIntro` en `panel.js`). |
-| F | (este commit) | Globo de ayuda en el sitio (`sitio/ayuda.js`). |
+| F | `0b669e9` | Globo de ayuda en el sitio (`sitio/ayuda.js`). |
+| G | (este commit) | `assets/videos/LEAME.md`. |
 
-**Falta:** G (`assets/videos/LEAME.md`), H (`catalogo/FALTANTES.md`), I (pruebas finales, Lighthouse, documentación y reporte final).
+**Falta:** H (`catalogo/FALTANTES.md`), I (pruebas finales, Lighthouse, documentación y reporte final).
 
 Números al día de hoy:
 - Próxima migración: **`0027_…sql`**.

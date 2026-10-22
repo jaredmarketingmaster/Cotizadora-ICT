@@ -277,6 +277,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `DOCUMENTACION.md` | Este documento. |
 | `RONDA3_PENDIENTE.md` | **Temporal.** El traspaso de lo que falta de la ronda 3 (D: carga en lote; E: "Ver intro"; F: globo de ayuda; G: `assets/videos/LEAME.md`; H: `catalogo/FALTANTES.md`; I: pruebas, Lighthouse y cierre), con el pedido exacto de Jared, cómo hacerlo con el código de hoy, las pruebas que faltan y cómo trabajar en el repo, para seguir con otro LLM. Se borra al terminar la ronda. |
 | `legal/FUENTES.md` | Fuentes de todo lo que los textos legales afirman como requisito legal (Colombia) y de las cookies de cada herramienta, con el estado de verificación de cada una y las decisiones (plazo de devolución del retracto, Argentina en la lista de la SIC). |
+| `assets/videos/LEAME.md` | **Videos opcionales** (G): `intro-panel.mp4` (botón "Ver intro" del panel, horizontal), `ayuda-celular.mp4` (vertical, 1080 × 1920) y `ayuda-computadora.mp4` (horizontal, 1920 × 1080) del globo de ayuda; MP4 H.264 de menos de 20 MB; nada se rompe hasta que existan; cómo subirlos. Los `.mp4` no van en el repositorio de la plantilla. |
 | `.gitignore` | Ignora `tests/capturas/`, `node_modules/`, `deno.lock`, `.env` y las carpetas temporales de la CLI de Supabase. |
 | `.nojekyll` | Archivo vacío. Le dice a GitHub Pages que publique los archivos tal cual, sin procesarlos con Jekyll (que ignora carpetas que empiezan con `_`). |
 
@@ -1501,6 +1502,12 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 22/10/2026 · Ronda 3, G: `assets/videos/LEAME.md`
+
+- **Pedido de Jared:** un archivo que liste los videos que se pueden subir (`intro-panel.mp4`, `ayuda-celular.mp4` vertical y `ayuda-computadora.mp4` horizontal), con el formato (MP4 H.264) y el tamaño sugerido, y que aclare que nada se rompe hasta que existan.
+- **Hecho:** `assets/videos/LEAME.md` (nuevo): tabla con dónde se ve cada video y su tamaño (1920 × 1080 o 1080 × 1920), formato y peso (menos de 20 MB, sin .mov ni HEVC), cómo se cargan (`HEAD`, `preload="none"`, sin reproducción automática) y cómo subirlos o quitarlos. Los `.mp4` no se suben al repositorio.
+- **Verificación:** `node tests/documentacion.mjs` OK. No cambia código.
 
 ### 22/10/2026 · Ronda 3, F: globo de ayuda en el sitio público
 
