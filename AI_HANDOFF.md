@@ -2,10 +2,10 @@
 > LECTURA OBLIGATORIA PARA OPENAI CODEX: Lee este documento antes de ejecutar comandos o proponer código.
 
 ## 1. 🚦 ESTADO ACTUAL (METADATA)
-- **Último Agente:** Claude Code 2
-- **Timestamp:** 2026-10-22 14:48 UTC (09:48 en Bogotá, UTC-5)
-- **Rama Actual:** `claude/gallant-euler-ezco6g` (el commit de este traspaso va sobre `d198071`; árbol limpio y sincronizado con `origin` al terminar). `main` solo tiene el README inicial: **no** trabajar sobre `main` ni abrir PR sin que Jared lo pida.
-- **Estado del Build:** VERDE. No hay build ni `package.json`: es un sitio estático sin npm ni compilación, a propósito. "Verde" significa que pasan todas las suites del 22/10/2026: SQL OK, 6 suites sin navegador OK (1152 claves), funciones Deno OK, `tests/verificar.cjs` 79/79 (80/80 con `ICT_CAPTURAS=1`; en la última corrida, el caso 11 "sin marca" falló por una frase del registro de cambios de `DOCUMENTACION.md` con el dominio de la marca sin "/co": se corrigió en este commit y el caso pasa), `tests/verificar-supabase.cjs` 13/13 y `tests/documentacion.mjs` OK. Lighthouse móvil sin la franja de modo demo: 99–100 / 100 / 100, CLS 0,045.
+- **Último Agente:** Claude Code 3 (tomó la directiva de la sección 5: hizo los puntos 1 y 2; los puntos 3 y 4 quedan bloqueados por información externa, ver abajo).
+- **Timestamp:** 2026-10-22 (actualizado por Claude Code 3; el traspaso original es de las 14:48 UTC).
+- **Rama Actual:** `claude/gallant-euler-ezco6g` (punto 1 en `b08bb1f`, punto 2 en `d2d6222` y este cierre encima; árbol limpio y sincronizado con `origin` al terminar). `main` solo tiene el README inicial: **no** trabajar sobre `main` ni abrir PR sin que Jared lo pida.
+- **Estado del Build:** VERDE. No hay build ni `package.json`: es un sitio estático sin npm ni compilación, a propósito. "Verde" significa que pasan todas las suites del 22/10/2026: SQL OK, 6 suites sin navegador OK (1152 claves), funciones Deno OK, `tests/i18n.test.mjs` 6 casos, `tests/verificar.cjs` 80/80 (81 con `ICT_CAPTURAS=1`; el caso nuevo es B4b), `tests/verificar-supabase.cjs` 13/13 y `tests/documentacion.mjs` OK. Lighthouse móvil sin la franja de modo demo: 99–100 / 100 / 100, CLS 0,045; con una tienda en portugués y el idioma guardado (`ICT_LH_IDIOMA=pt`), 99 / 100 / 100, LCP 1,7–1,8 s.
 - **Comando de Verificación:**
   ```bash
   python3 -m http.server 8080 & \
@@ -83,12 +83,12 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
    - Crear `supabase/correos/pt/invitacion.html` y `supabase/correos/pt/recuperacion.html`, traducidos con "você" y las mismas variables de GoTrue que los de español.
    - Documentar en `supabase/correos/LEAME.md` cuándo cargar cada idioma (las plantillas son por proyecto de Supabase, es decir, por tienda).
    - Si `tests/supabase-local/levantar.sh` carga las plantillas, agregar el idioma por variable de entorno sin cambiar el comportamiento por defecto.
-3. **Módulo legal de Argentina, SOLO con fuentes oficiales verificadas y aprobadas por Jared.**
+3. ⛔ **BLOQUEADO (revisado por Claude Code 3, 22/10/2026): `legal/FUENTES.md` no tiene ninguna fuente argentina y Jared no aprobó ninguna. No se construyó nada.** Para destrabarlo, Jared tiene que pasar o aprobar las fuentes oficiales (texto vigente de la Ley 25.326 y su decreto reglamentario, la disposición de la AAIP que corresponda y la Ley 24.240 con el arrepentimiento y la garantía), y alguien anotarlas en `legal/FUENTES.md` antes de escribir `ar.js`. **Módulo legal de Argentina, SOLO con fuentes oficiales verificadas y aprobadas por Jared.**
    - Si no hay fuentes oficiales abiertas y anotadas, no construirlo: dejarlo en pendientes. Las fuentes serían, por ejemplo, la Ley 25.326 y la Disposición AAIP aplicable, y la Ley 24.240 de defensa del consumidor (arrepentimiento y garantía).
    - Archivos a crear o editar: `assets/js/legal/paises/ar.js` (copiar la forma de `co.js`), `assets/js/legal/paises/indice.js` (`ar` en estado `disponible`), las plantillas de `assets/js/legal/plantillas/` solo si hace falta una sección por país, y `legal/FUENTES.md` (cada dato con su fuente).
    - Base de datos: una migración nueva **`supabase/migrations/0027_legal_ar.sql`** que actualice `legal_faltantes()` (lo que hacen hoy `0016` y `0019`).
    - Pruebas: `tests/legal/motor.test.mjs`, `tests/sql/pruebas.sql` y `tests/sql/comparar-faltantes.mjs` (el SQL y el JS deben coincidir).
-4. **Completar el catálogo cuando Jared responda `catalogo/FALTANTES.md`. No antes.**
+4. ⛔ **BLOQUEADO (revisado por Claude Code 3, 22/10/2026): Jared todavía no respondió `catalogo/FALTANTES.md`. No se tocó el catálogo.** **Completar el catálogo cuando Jared responda `catalogo/FALTANTES.md`. No antes.**
    - Una migración nueva (la siguiente libre) con los colores, los nombres en inglés, los hexadecimales con fuente (que dejan de ser `hex_aproximado`) y las filas de ficha.
    - El mismo cambio en `assets/js/datos/semilla.js` (`COLORES`, `FICHAS`, `HEX_APROXIMADOS`), en la migración del demo (`demo.js`: `VERSION` 22 y `MIGRACIONES[21]`) y en `tests/sql/comparar-semilla.mjs`.
    - Nada se completa de memoria.
