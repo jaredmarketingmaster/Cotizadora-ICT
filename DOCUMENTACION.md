@@ -168,7 +168,7 @@ El prompt tiene 13 secciones:
 
 - Se probó la función `usuarios` contra el Supabase local, con un **SMTP simulado** que guarda los correos (`tests/supabase-local/smtp-simulado.mjs`).
 - **Bug real corregido:** invitar dos veces el mismo correo, antes de que la persona aceptara, hacía que GoTrue reenviara la invitación. La función fallaba con un 500 al crear un perfil duplicado. Ahora responde "Ese correo ya tiene usuario.".
-- Los correos de Supabase vienen en inglés. Se agregaron **plantillas en español** en `supabase/correos/` y se cargan en el GoTrue local para probarlas.
+- Los correos de Supabase vienen en inglés. Se agregaron **plantillas en español** en `supabase/correos/` y se cargan en el GoTrue local para probarlas. Desde el traspaso (punto 2) también están en portugués, en `supabase/correos/pt/`.
 - `flowType: "implicit"` quedó **explícito** en supabase-js, para que los enlaces del correo funcionen aunque se abran en otro navegador o celular.
 - Se agregaron tres casos de punta a punta: invitar y crear la contraseña, recuperar la contraseña, y desactivar y reactivar. Resultado: **9 de 9 en dos corridas seguidas.**
 
@@ -411,7 +411,9 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `supabase/functions/usuarios/index.ts` (≈75) | Función solo para administradores activos: invitar (con rol), desactivar y reactivar con la clave de servicio. Ver sección 11.2. |
 | `supabase/correos/invitacion.html` | Plantilla en español del correo de invitación. Usa `{{ .ConfirmationURL }}`. |
 | `supabase/correos/recuperacion.html` | Plantilla en español del correo de recuperación. Usa `{{ .ConfirmationURL }}` y `{{ .Email }}`. |
-| `supabase/correos/LEAME.md` | Dónde pegar cada plantilla y con qué asunto. |
+| `supabase/correos/pt/invitacion.html` | Plantilla en portugués de Brasil ("você") del correo de invitación. Las mismas variables que la de español: `{{ .ConfirmationURL }}`. |
+| `supabase/correos/pt/recuperacion.html` | Plantilla en portugués de Brasil del correo de recuperación. Usa `{{ .ConfirmationURL }}` y `{{ .Email }}`. |
+| `supabase/correos/LEAME.md` | Dónde pegar cada plantilla y con qué asunto, en español y en portugués, y cuándo cargar cada idioma: las plantillas son por proyecto de Supabase, o sea por tienda, y van en el idioma de la tienda (si la tienda cambia de idioma, se vuelven a pegar). |
 
 ### 5.9 Pruebas y herramientas (`tests/` y `.claude/`)
 
@@ -440,7 +442,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `tests/sql/pruebas.sql` | Asserts de catálogo y semilla, y de RLS por rol (anon, sin perfil, inactivo, gestor, administrador). También validaciones, fecha de precios, colores, modo demo, perfiles (nadie se quita a sí mismo; siempre un administrador activo, también sin sesión) y borrar demo. **Legales:** migración de `0016` (columnas viejas fuera, textos propios en las cláusulas, valores iniciales), checks, publicar incompleto o con marcas rechazado, versión y fecha que pone el disparador, sin despublicar, el administrador no edita, y el bloqueo de `0017`. |
 | `tests/sql/comparar-semilla.mjs` | Compara el JSON de la semilla del SQL con `semilla.js`: catálogo, colores, equipos demo, las fichas precargadas (filas, orden y textos) y los valores legales iniciales con `LEGAL_INICIAL` (`comun.js`). |
 | `tests/sql/comparar-paises.mjs` | Compara `whatsapp_valido()` del SQL con `whatsappValido()` de `paises.js` en 285 números de los 19 países. |
-| `tests/i18n.test.mjs` | Diccionarios (5 casos): mismas claves, ninguna vacía y las mismas variables en es.js y pt.js; toda clave escrita en el código existe; el texto de cada `data-t` del HTML es igual al español; "usted" en español y "você" en portugués; `t()` y `tn()`. | `node tests/i18n.test.mjs` |
+| `tests/i18n.test.mjs` | Diccionarios (6 casos): mismas claves, ninguna vacía y las mismas variables en es.js y pt.js; toda clave escrita en el código existe; el texto de cada `data-t` del HTML es igual al español; "usted" en español y "você" en portugués; los correos de `supabase/correos/pt/` son los mismos que en español, con las mismas variables de Supabase, un solo enlace y "você"; `t()` y `tn()`. | `node tests/i18n.test.mjs` |
 | `tests/sql/antes_0018_pais.sql` | Un WhatsApp de Colombia antes de `0018`, para probar que la tienda queda en Colombia. |
 | `tests/sql/comparar-faltantes.mjs` | Arma 32 variantes de la tienda de prueba (tres de Envíos) (dos con la tienda en Argentina y Brasil) (completa, vacía, cada regla rota) y compara `legal_faltantes()` del SQL con `faltantes()` de `motor.js`. |
 | `tests/sql/antes_0016_legales_asistente.sql` | Un aviso de marca de la tienda, para probar que `0016` lo pasa a la cláusula de los términos después de sus términos (`antes_0015`). |
@@ -448,8 +450,8 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `tests/funciones/servir.ts` | Corre una función de Supabase en un puerto fijo (`Deno.serve` no lee `PORT`). |
 | `tests/funciones/datos-simulados.mjs` | PostgREST falso para `catalogo-feed`: responde `datos_publicos` con una tienda de prueba (con o sin dirección). |
 | `tests/funciones/webhook-simulado.mjs` | Webhook de GHL falso: guarda el último cuerpo recibido y responde con el código de `ESTADO`. |
-| `tests/supabase-local/levantar.sh` | Levanta el "Supabase local" completo (ver sección 14.3) y deja `/tmp/cotizadora-supabase-local/entorno`. Con el argumento `detener`, lo apaga. |
-| `tests/supabase-local/pasarela.mjs` | Pasarela en el puerto 54321 que imita las rutas de Supabase. Tiene Storage en memoria (lee la parte del archivo de los envíos multipart de supabase-js y exige el límite y los tipos de cada bucket: 413 y 415), sirve las plantillas de correo y agrega `Authorization` desde la `apikey`. |
+| `tests/supabase-local/levantar.sh` | Levanta el "Supabase local" completo (ver sección 14.3) y deja `/tmp/cotizadora-supabase-local/entorno`. Con el argumento `detener`, lo apaga (sin necesitar `BIN`). Carga los correos en español; con `CORREOS_IDIOMA=pt`, los de portugués y sus asuntos. |
+| `tests/supabase-local/pasarela.mjs` | Pasarela en el puerto 54321 que imita las rutas de Supabase. Tiene Storage en memoria (lee la parte del archivo de los envíos multipart de supabase-js y exige el límite y los tipos de cada bucket: 413 y 415), sirve las plantillas de correo (`/plantillas/<nombre>.html` y `/plantillas/pt/<nombre>.html`; nada más) y agrega `Authorization` desde la `apikey`. |
 | `tests/videos/corto.mp4`, `tests/videos/largo.mp4`, `tests/videos/corto.webm`, `tests/videos/hevc.mp4`, `tests/videos/clip.mov` | Videos de prueba hechos con ffmpeg (patrón de prueba, sin personas ni marcas): H.264 de 3 s y de 16 s, WebM VP8 de 3 s, HEVC de 3 s y .mov de 3 s. Pesan entre 15 y 75 KB. |
 | `tests/videos/20s.mp4`, `tests/videos/31s.mp4` | Videos H.264 de 20 s y 31 s (gris liso, 64 × 64, hechos con ffmpeg) para el límite de 30 s de las reseñas. Pesan unos 4 y 6 KB. |
 | `tests/supabase-local/roles.sql` | Roles y esquema `auth` que Supabase ya trae. |
@@ -1300,6 +1302,7 @@ node tests/documentacion.mjs                               # este documento cubr
 BIN=/carpeta/con/postgrest,auth(+migrations/),deno bash tests/supabase-local/levantar.sh
 NODE_PATH="$(npm root -g)" ICT_SUPABASE_JS=/ruta/supabase-js.mjs node tests/verificar-supabase.cjs
 bash tests/supabase-local/levantar.sh detener
+CORREOS_IDIOMA=pt BIN=… bash tests/supabase-local/levantar.sh   # con los correos en portugués (la suite espera los asuntos en español)
 ```
 
 **Puertos:**
@@ -1307,7 +1310,7 @@ bash tests/supabase-local/levantar.sh detener
 | Puerto | Servicio |
 |---|---|
 | 54330 | Postgres |
-| 9999 | GoTrue v2.180.0 (con las plantillas en español y el SMTP 2525) |
+| 9999 | GoTrue v2.180.0 (con las plantillas en español, o en portugués con `CORREOS_IDIOMA=pt`, y el SMTP 2525) |
 | 9998 | PostgREST 12.2.3 |
 | 9100 | `enviar-lead` |
 | 9101 | Webhook de GHL simulado |
@@ -1455,6 +1458,7 @@ bash tests/supabase-local/levantar.sh detener
 | `archivos_en_uso` en vez de contar en el navegador | Con Supabase, el panel no tiene por qué haber cargado todos los equipos; la consulta es exacta y la RLS deja al gestor ver todos. |
 | Al quitar una foto en el asistente se borra enseguida | Todavía no la usa ningún equipo. |
 | Primer pintado en portugués: textos ocultos hasta traducirlos | El pedido es que el primer `h1` pintado ya esté en portugués; sin ocultar, el navegador pinta el español del HTML antes de que corra el JS. Solo pasa con `pt` guardado (en español no cambia nada), con `visibility` (sin CLS) y con un tope de 3 s por si el JS no llega. |
+| Correos en portugués en una carpeta aparte (`supabase/correos/pt/`) | Supabase tiene una sola plantilla por tipo y por proyecto; como cada tienda tiene su proyecto, se pega la del idioma de la tienda. Los mismos nombres de archivo que en español dejan comparar los dos idiomas en la prueba. |
 | `primer-pintado.js` aparte de `principal.js` | Con estrangulamiento real, esperar a todo el grafo de `principal.js` dejaba el LCP en portugués en 3,7 s; el módulo chico, con sus tres archivos adelantados, lo baja a 2,5 s. |
 
 ---
@@ -1496,7 +1500,7 @@ bash tests/supabase-local/levantar.sh detener
 - [ ] **Pasarelas por país sin verificar (C3):** la lista de `pasarelas.js` la dio Jared y es de conocimiento general; no se verificó con fuentes (que existan, que operen en ese país y sus nombres exactos).
 - [ ] **Envíos en tiendas que ya existían:** después de `0023`, una tienda que había elegido transportadora o entrega personal tiene que elegir el costo del envío en Catálogo → Envíos para que se vuelvan a publicar los legales.
 - [ ] **Hexadecimales aproximados (C1):** 151 colores llevan una muestra aproximada por nombre, no oficial (lista y preguntas en `catalogo/FALTANTES.md`). Conviene que Jared pase los hexadecimales reales.
-- [ ] **Portugués:** los textos legales siguen en español (falta un módulo legal en portugués); los nombres de los colores y las fichas técnicas del catálogo están en español (no hay fuente con los nombres oficiales en portugués); los correos de invitación y recuperación (`supabase/correos/`) siguen en español; las traducciones al portugués las hizo el asistente y conviene que las revise una persona de Brasil.
+- [ ] **Portugués:** los textos legales siguen en español (falta un módulo legal en portugués); los nombres de los colores y las fichas técnicas del catálogo están en español (no hay fuente con los nombres oficiales en portugués); los correos de invitación y recuperación ya tienen versión en portugués (`supabase/correos/pt/`), pero hay que pegarlos a mano en el proyecto de cada tienda en portugués; las traducciones al portugués las hizo el asistente y conviene que las revise una persona de Brasil.
 - [ ] **Módulos legales de otros países.** Solo Colombia tiene módulo; una tienda de otro país no puede publicar sus legales (y por eso no envía pedidos) hasta que exista el de su país. Si una tienda ya publicada cambia a un país sin módulo, quedan los textos de Colombia publicados: conviene no cambiar el país después de publicar.
 - [ ] Crear en GHL los campos personalizados y el workflow con Inbound Webhook.
 - [ ] **Videos de ayuda (E y F):** grabar y subir `intro-panel.mp4`, `ayuda-celular.mp4` y `ayuda-computadora.mp4` (ver `assets/videos/LEAME.md`). Hasta entonces, "Ver intro" no aparece y el globo pasa directo al texto.
@@ -1541,6 +1545,15 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 22/10/2026 · Traspaso, punto 2: correos en portugués
+
+- **Pedido (`AI_HANDOFF.md`, punto 2):** los correos de invitación y recuperación en portugués con "você" y las mismas variables de GoTrue; documentar cuándo cargar cada idioma; en el Supabase local, el idioma por variable de entorno sin cambiar el comportamiento por defecto.
+- **Hecho:** `supabase/correos/pt/invitacion.html` y `pt/recuperacion.html` (nuevos; asuntos "Seu acesso ao painel da loja" y "Nova senha para o painel da loja"); `supabase/correos/LEAME.md` reescrito con los dos idiomas y cuándo cargar cada uno; `tests/supabase-local/levantar.sh` con `CORREOS_IDIOMA=pt` (sin la variable, las plantillas y los asuntos en español de siempre); `tests/supabase-local/pasarela.mjs` sirve `/plantillas/pt/…` y solo nombres `*.html` de esas dos carpetas.
+- **Arreglo:** `levantar.sh detener` fallaba sin `BIN` (lo pedía antes de mirar el argumento); ahora `BIN` se pide solo para levantar.
+- **Pruebas:** `tests/i18n.test.mjs`, caso nuevo (6 en total): las mismas plantillas en `pt/`, con las mismas variables de Supabase, un solo enlace, "usted" en español y "você" en portugués.
+- **Documentación:** secciones 2.9, 5, 14.3, 16 y 17 (el pendiente de los correos en español pasa a "pegarlos a mano en cada tienda en portugués"); `AI_HANDOFF.md` con el punto 2 hecho.
+- **Verificación:** `node tests/i18n.test.mjs` 6/6; Supabase local (Postgres 16, GoTrue v2.180.0, PostgREST 12.2.3, Deno 2.5.6, supabase-js 2.117.2 armado con esbuild) con la configuración por defecto: `tests/verificar-supabase.cjs` 13/13 (los correos en español, como antes); con `CORREOS_IDIOMA=pt`: una recuperación y una invitación reales llegaron al SMTP simulado con los asuntos y los cuerpos en portugués y el enlace de GoTrue; `node tests/documentacion.mjs` OK.
 
 ### 22/10/2026 · Traspaso, punto 1: primer pintado en portugués
 

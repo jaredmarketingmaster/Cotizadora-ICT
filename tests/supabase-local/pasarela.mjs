@@ -5,7 +5,7 @@
 //   /functions/v1/x  → la función x de Deno en su puerto
 //   /storage/v1/*    → Storage SIMULADO en memoria (subir, leer público, borrar)
 //   /verify          → auth (el GoTrue local arma así los enlaces de los correos)
-//   /plantillas/*    → supabase/correos/*.html (plantillas de correo para auth)
+//   /plantillas/*    → supabase/correos/*.html (plantillas de correo para auth; /plantillas/pt/* → supabase/correos/pt/*)
 // Como en Supabase, si no viene Authorization se usa la apikey.
 // Solo para pruebas locales.
 // =============================================================================
@@ -55,8 +55,10 @@ createServer((req, res) => {
   if (url.pathname === "/verify") return reenviar(req, res, auth, req.url);
   if (url.pathname.startsWith("/plantillas/")) {
     try {
-      const nombre = url.pathname.split("/").pop().replace(/[^a-z0-9.-]/gi, "");
-      const html = readFileSync(new URL(`../../supabase/correos/${nombre}`, import.meta.url));
+      // /plantillas/<nombre>.html (español) o /plantillas/pt/<nombre>.html.
+      const [, idioma = "", nombre] = url.pathname.match(/^\/plantillas\/(?:(pt)\/)?([a-z0-9-]+\.html)$/i) || [];
+      if (!nombre) throw new Error("plantilla desconocida");
+      const html = readFileSync(new URL(`../../supabase/correos/${idioma && `${idioma}/`}${nombre}`, import.meta.url));
       res.writeHead(200, { "content-type": "text/html; charset=utf-8" }).end(html);
     } catch { res.writeHead(404).end(); }
     return;

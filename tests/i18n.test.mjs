@@ -4,6 +4,8 @@
 // - Toda clave escrita en el código (t("…"), tn("…"), data-t*="…") existe.
 // - El texto de cada data-t del HTML es igual al del diccionario en español.
 // - El español va con "usted"; el portugués, con "você" (sin "tu"/"teu").
+// - Los correos de supabase/correos/ y supabase/correos/pt/: las mismas
+//   plantillas, con las mismas variables de Supabase y un solo enlace.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -79,6 +81,22 @@ caso("español con usted y portugués con você", () => {
   const tu = pt.match(/\b(tu|teu|tua|teus|tuas|vosso|vossa)\b/i);
   assert.ok(!tu, `"tu" en pt.js: ${tu?.[0]}`);
   assert.ok(/\bvocê\b/i.test(pt), "pt.js trata de você");
+});
+
+caso("correos: las plantillas en portugués son las mismas que en español, con las mismas variables, y tratan de você", () => {
+  const plantillas = (dir) => fs.readdirSync(path.join(RAIZ, dir)).filter((f) => f.endsWith(".html")).sort();
+  const es = plantillas("supabase/correos");
+  assert.deepEqual(plantillas("supabase/correos/pt"), es);
+  assert.ok(es.length >= 2, "faltan las plantillas en español");
+  const variablesGo = (s) => [...s.matchAll(/\{\{\s*\.(\w+)\s*\}\}/g)].map((m) => m[1]).sort();
+  for (const f of es) {
+    const a = fs.readFileSync(path.join(RAIZ, "supabase/correos", f), "utf8");
+    const b = fs.readFileSync(path.join(RAIZ, "supabase/correos/pt", f), "utf8");
+    assert.deepEqual(variablesGo(b), variablesGo(a), `variables distintas: ${f}`);
+    assert.equal((b.match(/<a href="\{\{ \.ConfirmationURL \}\}">/g) || []).length, 1, `un enlace: pt/${f}`);
+    assert.ok(/\busted\b/i.test(a) && !/\b(tú|vos|tienes|puedes)\b/i.test(a), `usted: ${f}`);
+    assert.ok(/\bvocê(?!\p{L})/iu.test(b) && !/\b(tu|teu|tua)\b/i.test(b), `você: pt/${f}`);
+  }
 });
 
 caso("t() reemplaza variables, tn() elige uno o varios, y una clave que falta se devuelve tal cual", () => {

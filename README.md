@@ -127,7 +127,7 @@ Para probar:
    - **Redirect URLs:** `https://dominio-de-la-tienda/admin/**`
 5. **Correo:** el correo que trae Supabase tiene un límite de envíos muy bajo y es para pruebas. Para las invitaciones y la recuperación de contraseña, configurar un SMTP propio en **Authentication → Emails → SMTP Settings**.
 
-   Supabase trae las plantillas en inglés. Pegar las de `supabase/correos/` (invitación y recuperación, en español y con "usted") en **Authentication → Emails → Templates**. El `LEAME.md` de esa carpeta dice qué asunto y qué archivo va en cada una.
+   Supabase trae las plantillas en inglés. Pegar las de `supabase/correos/` (invitación y recuperación, en español y con "usted") en **Authentication → Emails → Templates**; si la tienda está en portugués, las de `supabase/correos/pt/` ("você"). El `LEAME.md` de esa carpeta dice qué asunto y qué archivo va en cada una.
 6. **Primer administrador:**
    1. En **Authentication → Users → Add user**, crearlo con contraseña y "Auto Confirm User".
    2. En el SQL Editor, correr:

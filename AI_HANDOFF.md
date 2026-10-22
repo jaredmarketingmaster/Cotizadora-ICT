@@ -66,7 +66,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
   - Solo existe el módulo legal de Colombia (`assets/js/legal/paises/co.js`).
   - Las tiendas nuevas nacen en Argentina (`PAIS_POR_DEFECTO = "ar"`): sin módulo, no pueden publicar sus legales y el pop-up no envía pedidos.
 - **Primera visita en portugués:** sin idioma guardado (la primera vez en ese navegador), una tienda en portugués se ve en español hasta que llegan los datos. Desde la segunda visita sale en portugués (punto 1 hecho); el LCP en portugués es de 1,7–1,8 s simulado y 2,5 s con estrangulamiento real (sección 13 de `DOCUMENTACION.md`).
-- **Correos en español:** los de invitación y recuperación (`supabase/correos/invitacion.html` y `recuperacion.html`) solo existen en español.
+- **Correos por tienda:** los de invitación y recuperación están en español (`supabase/correos/`) y en portugués (`supabase/correos/pt/`, punto 2 hecho); se pegan a mano en el proyecto de Supabase de cada tienda, en su idioma.
 - **CLS de 0,19 solo con la franja de modo demo** (rendimiento 91). Sin la franja, 0,045. Es una limitación aceptada: no hay que corregirla.
 - **Datos de catálogo que faltan en la fuente:** colores, nombres en inglés, hexadecimales reales y fichas, listados en `catalogo/FALTANTES.md`. Esperan respuesta de Jared y **no se completan de memoria**.
 - **Sin verificar con fuentes:** formatos de celular de 13 países, pasarelas por país, campos del archivo XML y las traducciones al portugués ("cotizador" quedó "cotador").
@@ -79,7 +79,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
    - En el sitio, antes de pedir los datos, cargar el idioma guardado: en `assets/js/sitio/principal.js` y `assets/js/sitio/legal.js`, llamar `await cargarIdioma(idiomaGuardado()); traducirDom();` al empezar, como ya hace `assets/js/panel/panel.js`. Después, si el idioma de la tienda difiere, recargar como hoy.
    - Agregar al script en línea del `<head>` de `index.html` y de las tres páginas legales que ponga `lang="pt-BR"` si el idioma guardado es `pt`.
    - Prueba nueva en `tests/verificar.cjs` (caso B4b): con el idioma guardado en `pt`, el primer `h1` pintado ya está en portugués. No romper el LCP: medir con `tests/lighthouse/medir.sh`.
-2. **Correos en portugués (sin información externa).**
+2. ✅ **HECHO (Claude Code, 22/10/2026; ver la sección 19 de `DOCUMENTACION.md`).** **Correos en portugués (sin información externa).**
    - Crear `supabase/correos/pt/invitacion.html` y `supabase/correos/pt/recuperacion.html`, traducidos con "você" y las mismas variables de GoTrue que los de español.
    - Documentar en `supabase/correos/LEAME.md` cuándo cargar cada idioma (las plantillas son por proyecto de Supabase, es decir, por tienda).
    - Si `tests/supabase-local/levantar.sh` carga las plantillas, agregar el idioma por variable de entorno sin cambiar el comportamiento por defecto.
