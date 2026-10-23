@@ -60,6 +60,15 @@ export const CODIGOS_PAIS_TIENDA = Object.keys(PAISES_TIENDA);
 export const AUTORIDAD_CONSUMIDOR = {
   co: "https://www.sic.gov.co"
 };
+
+// Página de solicitudes (/solicitudes/): los tipos que ofrece según el país de
+// la tienda (textos: "solicitudes.tipo.<tipo>"; título y enlace del pie:
+// "solicitudes.titulo.<código>"). Colombia: peticiones, quejas y reclamos con
+// radicado (legal/FUENTES.md, fuente 17). Sin tipos, la página no se ofrece.
+// Los mismos tipos acepta enviar-lead (TIPOS_SOLICITUD de lead.ts).
+export const SOLICITUDES = {
+  co: ["peticion", "queja", "reclamo"]
+};
 export const PAIS_POR_DEFECTO = "ar";
 
 // Los que no tienen formato verificado: prefijo + número, de 8 a 15 dígitos.

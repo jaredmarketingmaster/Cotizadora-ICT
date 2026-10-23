@@ -138,14 +138,15 @@ export function correoValido(correo) {
 // que 256 % 32 = 0 y el sorteo no tiene sesgo.
 const ALFABETO_CODIGO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-export function generarCodigo() {
+// prefijo: "COT" (cotización) o "SOL" (radicado de una solicitud).
+export function generarCodigo(prefijo = "COT") {
   const bytes = new Uint8Array(4);
   crypto.getRandomValues(bytes);
-  return "COT-" + Array.from(bytes, (b) => ALFABETO_CODIGO[b % ALFABETO_CODIGO.length]).join("");
+  return `${prefijo}-` + Array.from(bytes, (b) => ALFABETO_CODIGO[b % ALFABETO_CODIGO.length]).join("");
 }
 
-export function codigoValido(codigo) {
-  return /^COT-[ABCDEFGHJKLMNPQRSTUVWXYZ2-9]{4}$/.test(codigo);
+export function codigoValido(codigo, prefijo = "COT") {
+  return new RegExp(`^${prefijo}-[ABCDEFGHJKLMNPQRSTUVWXYZ2-9]{4}$`).test(codigo);
 }
 
 // --- Color y contraste (WCAG 2.x) ---------------------------------------------

@@ -8,6 +8,13 @@ export const CAMPOS_OCULTOS = [
   "tipo_consulta", "codigo_cotizacion", ...CAMPOS_ATRIBUCION
 ];
 
+// Solicitudes de la página /solicitudes/ (PQR en Colombia; arrepentimiento en
+// Argentina): van por la misma función, con código SOL-XXXX (el radicado) y el
+// texto de la solicitud en "detalle". Los datos solo van a GHL.
+export const TIPOS_SOLICITUD = ["peticion", "queja", "reclamo", "arrepentimiento"];
+
+const CODIGO = (prefijo: string) => new RegExp(`^${prefijo}-[ABCDEFGHJKLMNPQRSTUVWXYZ2-9]{4}$`);
+
 export const CAMPOS_CONSENTIMIENTO = ["consentimiento_datos", "consentimiento_promociones", "consentimiento_medicion", "consentimiento_publicidad"];
 
 type Datos = Record<string, unknown>;
@@ -28,8 +35,13 @@ export function armarLead(datos: Datos): { lead?: Datos; error?: string } {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo)) return { error: "correo" };
   // E.164: + y de 8 a 15 dígitos (el formato de cada país lo valida el pop-up).
   if (!/^\+\d{8,15}$/.test(telefono)) return { error: "telefono" };
-  if (tipo !== "compra" && tipo !== "sin stock") return { error: "tipo_consulta" };
-  if (!/^COT-[ABCDEFGHJKLMNPQRSTUVWXYZ2-9]{4}$/.test(codigo)) return { error: "codigo_cotizacion" };
+  const solicitud = TIPOS_SOLICITUD.includes(tipo);
+  if (!solicitud && tipo !== "compra" && tipo !== "sin stock") return { error: "tipo_consulta" };
+  if (!CODIGO(solicitud ? "SOL" : "COT").test(codigo)) return { error: "codigo_cotizacion" };
+  const detalle = solicitud ? texto(datos.detalle, 1000) : "";
+  if (solicitud && detalle.length < 10) return { error: "detalle" };
+  const relacionada = solicitud ? texto(datos.cotizacion_relacionada, 20).toUpperCase() : "";
+  if (relacionada && !CODIGO("COT").test(relacionada)) return { error: "cotizacion_relacionada" };
   // Consentimiento (0016): la autorización de datos es obligatoria; la versión
   // de los textos y la fecha con zona horaria, también.
   if (datos.consentimiento_datos !== true) return { error: "consentimiento_datos" };
@@ -52,7 +64,10 @@ export function armarLead(datos: Datos): { lead?: Datos; error?: string } {
     precio_cotizado: typeof precio === "number" && Number.isSafeInteger(precio) && precio > 0 ? precio : "",
     equipo_id: texto(datos.equipo_id, 40),
     tipo_consulta: tipo,
-    codigo_cotizacion: codigo
+    codigo_cotizacion: codigo,
+    // Solo en las solicitudes (vacíos en las cotizaciones).
+    detalle,
+    cotizacion_relacionada: relacionada
   };
   for (const c of CAMPOS_ATRIBUCION) lead[c] = texto(datos[c], 500);
   // Consentimiento: GHL debe revisar consentimiento_publicidad antes de la API

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title data-t="solicitudes.titulo">Solicitudes</title>
+  <meta name="theme-color" content="#0F172A">
+  <!-- Apariencia de la tienda de la visita anterior (tema, tamaño y colores), antes del primer pintado. La guarda assets/js/tema.js. Con el idioma guardado en portugués: lang="pt-BR" y los textos ocultos hasta que assets/js/i18n/primer-pintado.js los traduce (ver i18n.js). -->
+  <script>try{var a=JSON.parse(localStorage.getItem("cotizadora:apariencia")),r=document.documentElement;if(a&&a.vars){if(/^(claro|oscuro)$/.test(a.tema))r.dataset.tema=a.tema;if(/^(compacto|normal|grande)$/.test(a.tamano))r.dataset.tamano=a.tamano;for(var k in a.vars)if(/^--[a-z-]+$/.test(k)&&/^#[0-9A-Fa-f]{6}$/.test(a.vars[k]))r.style.setProperty(k,a.vars[k])}}catch(e){}try{if(localStorage.getItem("cotizadora:idioma")==="pt"){var h=document.documentElement,d="../assets/js/i18n/";h.lang="pt-BR";h.dataset.traduciendo="";["i18n","es","pt"].forEach(function(n){var l=document.createElement("link");l.rel="modulepreload";l.href=d+n+".js";document.head.appendChild(l)});var s=document.createElement("script");s.type="module";s.src=d+"primer-pintado.js";document.head.appendChild(s);setTimeout(function(){h.removeAttribute("data-traduciendo")},3000)}}catch(e){}</script>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Fuente sin bloquear el primer pintado (se ve la del sistema hasta que llega) -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/sitio.css">
+  <script type="module" src="../assets/js/sitio/solicitudes.js"></script>
+</head>
+<body>
+  <header class="encabezado encabezado--legal">
+    <div class="contenedor">
+      <div class="marca">
+        <span style="display:flex;align-items:center;gap:12px"><span class="marca-logo" id="marca-logo"></span><span class="marca-nombre" id="marca-nombre"></span></span>
+        <a class="legal-volver" href="../" data-t="legalpag.volver">Volver a los equipos</a>
+      </div>
+    </div>
+  </header>
+  <main class="contenedor legal">
+    <h1 id="solicitudes-titulo" data-t="solicitudes.titulo">Solicitudes</h1>
+    <div class="legal-texto solicitudes" id="solicitudes" aria-busy="true"></div>
+  </main>
+  <footer class="pie pie--legal">
+    <div class="contenedor pie-grilla">
+      <nav class="pie-enlaces" aria-label="Legales" data-t-aria-label="legalpag.pie.legales">
+        <a href="../privacidad/" data-t="legalpag.pie.privacidad">Política de privacidad</a>
+        <a href="../terminos/" data-t="legalpag.pie.terminos">Términos y condiciones</a>
+        <a href="../cookies/" data-t="legalpag.pie.cookies">Política de cookies</a>
+        <button type="button" class="pie-boton" data-preferencias-cookies data-t="legalpag.pie.preferencias_cookies" hidden>Preferencias de cookies</button>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

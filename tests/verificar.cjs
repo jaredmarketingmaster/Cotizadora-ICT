@@ -1572,12 +1572,70 @@ async function llenarPopup(p) {
     await ir(p);
     assert.deepEqual(await p.$$eval(".pie-enlaces a", (xs) => xs.map((x) => [x.textContent, x.getAttribute("href")])),
       [["Política de privacidad", "privacidad/"], ["Términos y condiciones", "terminos/"], ["Política de cookies", "cookies/"],
-        ["Superintendencia de Industria y Comercio (SIC)", "https://www.sic.gov.co"]]);
+        ["Peticiones, quejas y reclamos", "solicitudes/"], ["Superintendencia de Industria y Comercio (SIC)", "https://www.sic.gov.co"]]);
     assert.ok(await p.isVisible(".pie [data-preferencias-cookies]"));
     // El enlace a la SIC es solo para tiendas de Colombia (FUENTES 16).
     await editarDemo(p, (e) => { e.tienda.pais = "cl"; });
     await ir(p);
     assert.equal(await p.isVisible("#pie-consumidor"), false, "sin enlace a la SIC fuera de Colombia");
+    assert.equal(await p.isVisible("#pie-solicitudes"), false, "sin PQR fuera de Colombia");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("solicitudes (PQR de Colombia): valida, envía solo a GHL con el radicado SOL-, lo muestra; sin legales o fuera de Colombia no envía", async () => {
+    const p = await nueva(390, 844);
+    await ir(p);
+    await p.goto(`${BASE}/solicitudes/`, { waitUntil: "networkidle" });
+    await p.waitForSelector("#form-solicitud");
+    assert.equal(await p.textContent("h1"), "Peticiones, quejas y reclamos");
+    assert.deepEqual(await p.$$eval("input[name=tipo]", (xs) => xs.map((x) => x.value)), ["peticion", "queja", "reclamo"]);
+    // Vacío: dice qué falta y lleva el foco al primero.
+    await p.click("[data-enviar]");
+    assert.equal(await p.textContent("#s-tipo-error"), "Elija qué quiere presentar.");
+    assert.equal(await p.evaluate(() => document.activeElement.name), "tipo");
+    assert.equal(await p.textContent("#s-detalle-error"), "Escriba su solicitud (al menos 10 caracteres).");
+    assert.equal(await p.textContent("#s-autorizacion-error"), "Para continuar, acepte la autorización de datos.");
+    await p.check("input[value=reclamo]");
+    await p.fill("#s-nombre", "Ana Gómez");
+    await p.fill("#s-correo", "ana@correo.co");
+    await p.fill("#s-telefono", "3001234567");
+    await p.fill("#s-cotizacion", "AB2C");
+    await p.fill("#s-detalle", "El equipo no carga desde que lo recibí.");
+    await p.check("#s-autorizacion");
+    await p.click("[data-enviar]");
+    assert.equal(await p.textContent("#s-cotizacion-error"), "Revise el código: es como COT-AB2C.");
+    await p.fill("#s-cotizacion", "cot-ab2c");
+    await p.click("[data-enviar]");
+    await p.waitForSelector("#solicitud-lista");
+    assert.equal(await p.textContent("#solicitud-lista"), "Recibimos su solicitud");
+    const codigo = await p.textContent(".codigo");
+    assert.match(codigo, /^SOL-[ABCDEFGHJKLMNPQRSTUVWXYZ2-9]{4}$/);
+    const lead = await p.evaluate(() => JSON.parse(sessionStorage.getItem("cotizadora-demo:ultimo-lead")));
+    assert.equal(lead.tipo_consulta, "reclamo");
+    assert.equal(lead.codigo_cotizacion, codigo);
+    assert.equal(lead.cotizacion_relacionada, "COT-AB2C");
+    assert.equal(lead.detalle, "El equipo no carga desde que lo recibí.");
+    assert.equal(lead.telefono, "+573001234567");
+    assert.equal(lead.consentimiento_datos, true);
+    assert.equal(lead.consentimiento_promociones, false);
+    assert.equal(lead.version_politica, 1);
+    // Ningún dato del cliente queda en el navegador fuera del registro del demo.
+    assert.ok(!(await p.evaluate(() => JSON.stringify(localStorage))).includes("ana@correo.co"), "nada en localStorage");
+    assert.deepEqual(await p.evaluate(contrasteMalo), []);
+    // Los términos de Colombia enlazan la página.
+    const term = await textoLegal(p, "/terminos/");
+    assert.ok(term.includes("Al enviarlos le damos un código de radicado para hacerles seguimiento."));
+    assert.equal(await p.getAttribute('#legal-texto a[href="../solicitudes/"]', "href"), "../solicitudes/");
+    // Sin legales publicados no se envía; fuera de Colombia no se ofrece.
+    await editarDemo(p, (e) => { e.tienda.legal_publicado = null; });
+    await p.goto(`${BASE}/solicitudes/`, { waitUntil: "networkidle" });
+    await p.waitForFunction(() => !document.querySelector("#solicitudes[aria-busy]"));
+    assert.equal(await p.textContent("#solicitudes"), "Página en preparación.");
+    await editarDemo(p, (e) => { e.tienda.pais = "cl"; });
+    await p.goto(`${BASE}/solicitudes/`, { waitUntil: "networkidle" });
+    await p.waitForFunction(() => !document.querySelector("#solicitudes[aria-busy]"));
+    assert.equal(await p.textContent("#solicitudes"), "Esta página no está disponible para esta tienda.");
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
@@ -3161,6 +3219,13 @@ async function llenarPopup(p) {
       await ir(p, "/privacidad/");
       r = await revisar();
       assert.deepEqual(r.chicos, [], `legales (${tamano}): textos chicos`);
+      await ir(p, "/solicitudes/");
+      await p.waitForSelector("#form-solicitud");
+      // Medir con las animaciones de entrada terminadas (el encabezado se escala al llegar).
+      await p.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))));
+      r = await revisar();
+      assert.deepEqual(r.chicos, [], `solicitudes (${tamano}): textos chicos`);
+      assert.deepEqual(r.tactiles, [], `solicitudes (${tamano}): zonas táctiles`);
     }
     // Compacto: el cuerpo sigue en 16 px y achica títulos y precios.
     assert.equal(medidas.compacto.cuerpo, 16);

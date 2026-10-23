@@ -139,7 +139,10 @@ export const CO = {
       `- **Cómo pedirla:** ${ctx.venta.retractoCanal} y, en el mismo plazo, pídasela también a la entidad que emitió su medio de pago (su banco o la emisora de su tarjeta).`
     ],
     leyAplicable: () => [
-      `Las ventas a personas en Colombia se rigen por las leyes de Colombia, en especial ${CO.consumo.ley}. La autoridad de protección al consumidor es la ${SIC}: [${SITIO_SIC.replace("https://", "")}](${SITIO_SIC}).`
+      `Las ventas a personas en Colombia se rigen por las leyes de Colombia, en especial ${CO.consumo.ley}. La autoridad de protección al consumidor es la ${SIC}: [${SITIO_SIC.replace("https://", "")}](${SITIO_SIC}).`,
+      "",
+      // FUENTE 17: PQR con radicado (página /solicitudes/).
+      "Puede presentarnos peticiones, quejas y reclamos en la página [Peticiones, quejas y reclamos](../solicitudes/) de este sitio. Al enviarlos le damos un código de radicado para hacerles seguimiento."
     ]
   }
 };

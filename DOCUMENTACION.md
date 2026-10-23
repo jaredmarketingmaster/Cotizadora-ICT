@@ -289,6 +289,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 |---|---|
 | `admin/index.html` (≈59) | Cáscara del panel. Tiene:<ul><li>Pantalla de carga y bloque `#acceso` (login, recuperar y crear contraseña).</li><li>`#app` con barra superior (tienda, usuario, "Ver mi sitio" y "Salir"), navegación por pestañas y `#vista` (contenido de la ruta).</li><li>Aviso flotante "Guardado" y `<dialog id="confirmar">`.</li><li>`noindex`.</li></ul> |
 | `privacidad/index.html` (≈44) | Página `/privacidad/`: "Política de tratamiento de datos personales". Muestra el documento publicado (`tienda.legal_publicado.documentos.privacidad`) con su vigencia; sin publicar, "Página en preparación.". Pie con las tres políticas y "Preferencias de cookies". Script: `legal.js`. |
+| `solicitudes/index.html` | Página `/solicitudes/` (punto 5 de la investigación con Gemini): el encabezado y el pie de las páginas legales, el título y `#solicitudes`, donde `solicitudes.js` dibuja el formulario. |
 | `terminos/index.html` (≈44) | Página `/terminos/`: "Términos y condiciones". Igual que la de privacidad, con `documentos.terminos`. |
 | `cookies/index.html` (≈44) | Página `/cookies/` (nueva con `0016`): "Política de cookies". Igual que las otras, con `documentos.cookies`. |
 
@@ -351,6 +352,8 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 | `assets/js/sitio/fotos.js` (≈19) | `htmlFoto`: `<img>` con `srcset` 640w/1600w, `loading="lazy"` o `fetchpriority="high"`. `htmlMedio`: la foto principal o la ilustración. |
 | `assets/js/sitio/atribucion.js` (≈31) | `CLAVES_ATRIBUCION` (`utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`, `ad_id`, `fbclid`), `capturarAtribucion` y `leerAtribucion`. Guarda en `sessionStorage["cotizadora:atribucion"]` el **primer valor por clave** de la sesión. |
 | `assets/js/sitio/pixel.js` (≈46) | Píxel de Meta. Lo llama solo `consentimiento.js`: `iniciarPixel(id)` (con publicidad aceptada; carga y manda `PageView`, o `consent grant` si ya estaba) y `retirarPixel()` (`fbq("consent", "revoke")`; desde ahí no sale nada). `evento(nombre, parametros, eventID)` solo con el píxel activo. `parametrosEquipo(q)`: `content_name`, `content_ids`, `content_type`, `value` y `currency` (la moneda del país de la tienda). |
+| `assets/js/sitio/solicitudes.js` | **Página de solicitudes**: los tipos salen de `SOLICITUDES[tienda.pais]` (Colombia: petición, queja y reclamo). Valida como el pop-up (`campos.js`) más el tipo, el detalle (10 a 1000 caracteres) y el código de cotización opcional (`COT-XXXX`). Envía por `api.enviarLead` (solo a GHL) con `tipo_consulta` = el tipo, el radicado `SOL-XXXX` (`generarCodigo("SOL")`) en `codigo_cotizacion`, `detalle` y `cotizacion_relacionada`, y muestra el radicado. Sin legales publicados dice "Página en preparación."; sin tipos para el país, que no está disponible. No carga herramientas de medición ni dispara eventos del píxel. |
+| `assets/js/sitio/campos.js` | Validación compartida del pop-up y de la página de solicitudes: `ERRORES` (nombre, correo, celular por país, autorización; textos `popup.error.*`) y `formatearConCursor()`. Salieron de `popup.js` sin cambiar sus textos. |
 | `assets/js/sitio/legal.js` (≈26) | Script de `/privacidad/`, `/terminos/` y `/cookies/`: aplica el idioma guardado antes de pedir los datos (como el sitio), carga la tienda (y su idioma, si es otro), aplica el tema, muestra el logo y el documento publicado con `conVigencia` (sin publicar: "Página en preparación.") e inicia el consentimiento **sin cargar herramientas ni mostrar el banner** (solo el botón "Preferencias de cookies" del pie). |
 | `assets/js/sitio/consentimiento.js` (≈276) | **Consentimiento de cookies: el único módulo que decide qué se carga.** <ul><li>`iniciarConsentimiento({tienda, cargar, protegido, rutaCookies, preguntar})`, `estado()` (`{elegido, medicion, publicidad, fecha}`, lo que va en el lead), `permitido(categoria)`, `alCambiar(fn)` y `gpc()`.</li><li>Elección en `localStorage["cotizadora:cookies"]` por 6 meses (183 días); vencida, se vuelve a preguntar.</li><li>Cargadores por herramienta (IDs de la tienda): Meta (vía `pixel.js`), GA4 y Google Ads (`gtag.js` una vez), GTM, Clarity (`consentv2`) y TikTok (código base). Google con **Consent Mode v2 básico**: todo `denied` por defecto y `update` según la elección, y el script solo después de aceptar.</li><li>Al retirar una categoría: Meta `consent revoke`, Google `consent update` en `denied`, Clarity `consentv2` en `denied`, y se borran las cookies propias de esa categoría (`_ga*`, `_clck`, `_clsk` o `_fbp`, `_fbc`, `_gcl_*`, `_ttp`). Lo ya cargado en la página no se descarga; desde la próxima no se carga.</li><li>**GPC** (`navigator.globalPrivacyControl`): publicidad rechazada y su interruptor deshabilitado.</li><li>**Banner:** región con título "Cookies", texto corto con enlace a la Política de cookies, "Aceptar todas", "Rechazar todas" y "Configurar" (iguales); Configurar muestra Necesarias (siempre activas), Medición y Publicidad (solo las categorías con herramientas activas, con sus nombres) y "Guardar mi elección". Escape lo cierra si ya había elección; el foco vuelve al botón del pie.</li><li>`mostrarSinTapar`: la primera vez, el banner aparece solo si cabe debajo de los filtros; si no (360 × 800), espera a que la persona baje.</li></ul> |
 
@@ -420,7 +423,7 @@ Rutas relativas a la raíz del repo. Entre paréntesis, el número aproximado de
 
 | Archivo | Qué es |
 |---|---|
-| `tests/verificar.cjs` (≈3110) | Suite de aceptación en **modo demo** con Playwright: **80 casos** (81 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). Publica los textos legales de prueba al abrir el sitio o el panel (`nueva(..., {legales})`) y empieza con las cookies rechazadas (`{cookies}`; `null` = sin elegir). `ICT_LINEAS` muestra más líneas de cada falla. | Ver sección 14. |
+| `tests/verificar.cjs` (≈3110) | Suite de aceptación en **modo demo** con Playwright: **81 casos** (82 con `ICT_CAPTURAS`, que suma el caso de capturas de diseño). Publica los textos legales de prueba al abrir el sitio o el panel (`nueva(..., {legales})`) y empieza con las cookies rechazadas (`{cookies}`; `null` = sin elegir). `ICT_LINEAS` muestra más líneas de cada falla. | Ver sección 14. |
 | `tests/lighthouse/medir.sh`, `tests/lighthouse/preparar.cjs` | **Lighthouse móvil** (ronda 3, I): abre un Chromium con puerto de depuración, `preparar.cjs` deja el demo como una tienda real (legales de prueba publicados, WhatsApp, modo demo según el argumento, sin elección de cookies; con `ICT_LH_IDIOMA=pt`, la tienda y el idioma guardado en portugués) y Lighthouse corre con `--disable-storage-reset`. El informe va a `tests/capturas/`. Chromium se detiene por su PID. | Ver sección 14.1. |
 | `tests/verificar-supabase.cjs` (≈570) | Suite de punta a punta del **modo Supabase** contra el Supabase local: **13 casos**. Reemplaza `config.js` en el navegador, puede servir un supabase-js local (`ICT_SUPABASE_JS`) y empieza con las cookies rechazadas. |
 | `tests/legal/motor.test.mjs` | Pruebas del motor legal sin navegador (`node tests/legal/motor.test.mjs`): faltantes por perfil y tipo de persona, validaciones, países, datos y plazos en los textos, sin corchetes ni marcadores vacíos, relación con Apple por perfil, herramientas activas e inactivas, versión y vigencia. |
@@ -1099,6 +1102,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
 3. Agregar la acción **Create/Update Contact** y mapear:
    - **Campos estándar:** `name`, `email` y `phone`.
    - **Campos personalizados:** `modelo`, `condicion`, `capacidad`, `color`, `precio_cotizado`, `equipo_id`, `tipo_consulta`, `codigo_cotizacion`, `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`, `ad_id` y `fbclid`.
+   - **Solicitudes (`/solicitudes/`, punto 5):** llegan por el mismo webhook, con `tipo_consulta` = `peticion`, `queja`, `reclamo` o `arrepentimiento`, el radicado `SOL-XXXX` en `codigo_cotizacion` (y en `event_id`), y dos campos más: `detalle` (el texto del cliente) y `cotizacion_relacionada` (`COT-XXXX` o vacío). En las cotizaciones esos dos van vacíos. Conviene un workflow aparte (filtro por `tipo_consulta`) que avise a la tienda y le responda al cliente con su radicado.
    - **Campos de consentimiento (nuevos con `0016`):** `consentimiento_datos`, `consentimiento_promociones`, `consentimiento_medicion` y `consentimiento_publicidad` (sí/no), `version_politica` (número) y `fecha_consentimiento` (fecha y hora con zona).
 
 **Límite:** no se garantiza que GHL llene su reporte nativo de atribución por este camino, aunque todos los datos del anuncio quedan en campos del contacto.
@@ -1232,7 +1236,7 @@ node tests/legal/motor.test.mjs                            # motor legal (15 cas
 node tests/envios.test.mjs                                 # envíos (3 casos, sin navegador)
 node tests/pagos.test.mjs                                  # formas de pago (3 casos, sin navegador)
 node tests/paises.test.mjs                                 # datos de país (sin navegador)
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 80 casos en modo demo (Playwright + Chromium)
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 81 casos en modo demo (Playwright + Chromium)
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 npx serve -l 8090 . &                                      # Lighthouse: un servidor que comprime
 NODE_PATH="$(npm root -g)" bash tests/lighthouse/medir.sh corrida1   # móvil, legales publicados, banner y globo; "nombre true" = con franja
@@ -1248,7 +1252,7 @@ node tests/documentacion.mjs                               # este documento cubr
 - `HTTPS_PROXY`: Chromium la usa para cargar Google Fonts.
 - `ICT_CAPTURAS=1`: además guarda capturas en `tests/capturas/` y corre el caso **capturas de diseño**: 360 y 1440 px × claro y oscuro × cuadrícula y carrusel × color por defecto y primario amarillo, más el detalle y el pop-up, en `tests/capturas/diseno/<etapa>-….png`. `ICT_CAPTURAS_ETAPA` pone la etapa (por ejemplo `antes` o `despues`). La carpeta no se sube al repo.
 
-### 14.2 Qué cubre `tests/verificar.cjs` (80 casos, agrupados por tema)
+### 14.2 Qué cubre `tests/verificar.cjs` (81 casos, agrupados por tema)
 
 1. Modo demo: la franja y DEMO aparecen; al borrar los datos demo, desaparecen.
 2. Nuevo + iPhone 18 Pro Max + 256 GB: queda una tarjeta, el detalle en línea y el carrusel con exactamente Negro y Plata.
@@ -1265,6 +1269,7 @@ node tests/documentacion.mjs                               # este documento cubr
 12b. **Pestañas de Catálogo:** "Fichas técnicas" ya no está en el menú; `#/fichas` y `#/fichas/<id>` llevan a la pestaña Ficha técnica; roles ARIA (`tablist`, `tab`, `tabpanel`, `aria-controls`, `aria-selected`, `tabindex` móvil); flechas con vuelta, Inicio y Fin con el foco en la pestaña; contorno de foco de 3 px; con cambios sin guardar, pregunta antes de cambiar de pestaña.
 12c. **Ficha técnica** (2 casos): las 42 fichas del demo son iguales a la fuente y el sitio las muestra tal cual, en el orden fijo y con sus saltos de línea; apagar "Mostrar la ficha técnica en el sitio" la saca del sitio; apagar categorías las saca; el editor muestra los valores de la fuente (con la batería de `0029`), corrige una categoría, completa otra y agrega una fila propia que va al final; "Otras filas de la tienda" apagada la oculta; la capa de datos rechaza una categoría inexistente o repetida, un valor de más de 600 caracteres y una categoría oculta que no existe. La migración de datos viejos del demo precarga las fichas vacías y no toca la que cargó la tienda.
 12d. **Formas de pago:** Inicio avisa ciudad, correo y formas de pago; Mi tienda ya no tiene la lista; la pestaña esconde lo que depende de un interruptor apagado, marca "no más que el máximo" y el nombre de "Otra" con foco al primer error, muestra la vista previa y guarda; el detalle muestra exactamente las frases de lo marcado; sin cuotas se guardan vacías y la tarjeta de crédito va sola; la capa de datos repite las reglas. La migración de datos viejos pasa la lista a `pagos_otras`.
+12e. **Solicitudes** (`/solicitudes/`): la PQR de Colombia valida tipo, datos, código de cotización y detalle; envía a GHL (en el demo, el registro de la sesión) con el radicado `SOL-XXXX` y lo muestra; los términos enlazan la página; sin legales publicados no envía y fuera de Colombia no se ofrece. El caso de 16 px y 44 px también la revisa.
 12e. **Reseñas** (2 casos): el demo no trae ninguna; apagadas o sin reseñas, la sección no aparece, `resenas.js` no se carga y `cargarPublico` no las da. En el panel: aviso fijo arriba de la carga y texto exacto de la casilla; sin la casilla no se sube nada (foco en la casilla); videos de 31 s, .mov y más de 20 MB rechazados sin subir nada; una imagen (dos tamaños) y un video de 20 s se agregan; editar texto, mover, encender y cambiar el título; en el sitio, el orden de las secciones, el título, el orden, las imágenes diferidas, ningún `<video>` antes de tocar, AA; el visor con `preload="none"`, sin reproducción automática, ← y Escape, y el foco vuelve; borrar quita la reseña y sus archivos; la 13.ª se rechaza y "Agregar" queda deshabilitado; `autorizado: false` se rechaza.
 12f. **Legales** (8 casos): el **asistente** (campos según perfil y tipo de persona —emprendedor sin local, jurídica con representante y matrícula, oficial con detalle de Apple—, validaciones al salir del campo con sus mensajes, guardado automático, países con solo Colombia y Brasil "Necesita el sitio en portugués.", garantía de 12 meses con Colombia y los avisos literales, herramientas con su ID, la pregunta de la API de Conversiones con su ayuda, "Lo que falta" que lleva al campo, publicar deshabilitado hasta completar, pestañas con flechas, cláusula propia, versión 1 e Inicio sin el aviso); el **bloqueo** sin publicar (pop-up, "Página en preparación." en las tres páginas, modo demo y borrar demo en panel y capa de datos, publicar incompleto rechazado); los **documentos** (datos de la tienda, secciones, plazos, vigencia, sin corchetes ni marcas, herramientas activas sí e inactivas no, AA, pie); la **republicación** (un cambio en Legales o en Mi tienda sube la versión; incompleto, queda la publicada e Inicio avisa); el **banner** en 360 px y en 412 × 823 (espera a que bajen los filtros, nada se carga antes de aceptar ni al rechazar —medido en la red—, botones iguales de 44 px o más, AA, la elección se guarda, Preferencias desde el pie por categoría, carga solo lo permitido, borra las cookies de lo retirado, vence a los 6 meses) y en 1440 px con **GPC**; y el **pop-up** (aviso corto, las dos casillas literales sin marcar, la obligatoria bloquea y la opcional no, `data-clarity-mask`, los campos de consentimiento del lead, sin píxel ni Lead sin publicidad). La migración de datos viejos del demo pasa los textos propios a las cláusulas.
 13. Carrusel: dedo, flechas, puntos, muestras, teclado y Escape. **Video en el detalle:** miniatura con ícono; sin `<video>` en la página hasta tocarla; al tocarla, `preload="none"`, `controls`, sin `autoplay` y se reproduce; volver a la foto lo quita.
@@ -1453,6 +1458,7 @@ CORREOS_IDIOMA=pt BIN=… bash tests/supabase-local/levantar.sh   # con los corr
 | Primer pintado en portugués: textos ocultos hasta traducirlos | El pedido es que el primer `h1` pintado ya esté en portugués; sin ocultar, el navegador pinta el español del HTML antes de que corra el JS. Solo pasa con `pt` guardado (en español no cambia nada), con `visibility` (sin CLS) y con un tope de 3 s por si el JS no llega. |
 | Sin archivo XML de productos por ahora | Pedido de Jared (22/10/2026): no habilitar todavía el envío del catálogo a Google Merchant Center y Meta. Se borró todo lo del archivo (pestaña, función, columna `url_sitio` con `0027` y pruebas); queda en el historial de git (commit `3260fab`) por si se retoma. `?equipo=<id>` se mantiene porque sirve para anuncios y para compartir un equipo. |
 | `0029`: las filas nuevas se agregan solo donde falta la categoría, aun en fichas que editó la tienda | La tienda no pierde nada (no se borra ni se cambia ninguna fila suya) y gana los datos de Apple; si no los quiere, apaga la categoría o borra la fila. Van al final porque el sitio y el editor las ordenan por categoría. |
+| Solicitudes por `enviar-lead`, no por una tabla | La regla 6 no deja guardar datos de clientes en Supabase: el radicado lo genera el navegador (`SOL-XXXX`, como el código de cotización) y la solicitud vive en GHL. |
 | `0030`: el mínimo de los usados va en `legal_faltantes()` y no en un check de la tabla | Un check haría fallar cualquier guardado de una tienda que ya tenía 1 o 2 meses; así solo le falta ese dato para volver a publicar, y el panel dice el mínimo. |
 | Enlace a la autoridad del consumidor por país (`AUTORIDAD_CONSUMIDOR` en `paises.js`) | Solo el país de la tienda decide si se muestra; hoy solo Colombia (la SIC) tiene fuente. Argentina se agrega con el punto 6. |
 | `0029`: sin mAh | Apple no los publica; los que dio Gemini salen de registros de terceros (ANATEL, TENAA) y de blogs. |
@@ -1542,6 +1548,31 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 23/10/2026 · Investigación con Gemini, punto 5: página de solicitudes con radicado
+
+- **Pedido de Jared:** un formulario de PQR con radicado para Colombia (fuente 17 de `legal/FUENTES.md`, que el abogado todavía tiene que revisar) y, para Argentina, el botón de arrepentimiento. Los datos van solo a GHL.
+- **Hecho:**
+  - **Página `/solicitudes/`:** `solicitudes/index.html` y `assets/js/sitio/solicitudes.js`.
+  - **Tipos por país:** `SOLICITUDES` en `paises.js`. Colombia tiene petición, queja y reclamo. El tipo `arrepentimiento` ya lo acepta la función, pero se ofrece recién con el punto 6.
+  - **Pie del sitio:** enlace "Peticiones, quejas y reclamos" (`#pie-solicitudes`), solo si el país tiene tipos.
+  - **Términos de Colombia:** dicen dónde presentar las PQR y que se da un radicado (`co.js`).
+  - **Función `enviar-lead`:** `lead.ts` acepta `TIPOS_SOLICITUD` con código `SOL-`, `detalle` (obligatorio, 10 a 1000 caracteres) y `cotizacion_relacionada` (`COT-` o vacío).
+  - **Código del radicado:** `utils.js` (`generarCodigo(prefijo)` y `codigoValido(codigo, prefijo)`).
+  - **Validación compartida:** `campos.js`, que sale de `popup.js` sin cambiar sus textos.
+  - **Estilos:** `sitio.css`, para el grupo de opciones.
+  - **Textos:** las claves nuevas `solicitudes.*` en `es.js` y `pt.js`.
+  - **Guía de GHL:** sección 12.1.
+- **Pruebas:**
+  - **Nuevas:**
+    - `verificar.cjs`, caso "solicitudes": valida, envía con el radicado, no deja datos en `localStorage`, los términos enlazan la página, sin legales no envía y fuera de Colombia no se ofrece.
+    - `tests/funciones/probar.sh`: la solicitud válida y 5 rechazos.
+  - **Cambiado:**
+    - `verificar.cjs`, caso de los documentos publicados: el pie lleva el enlace de PQR.
+    - `verificar.cjs`, caso de 16 px y 44 px: revisa también `/solicitudes/` en los tres tamaños, esperando a que terminen las animaciones de entrada (sin eso, el enlace "Volver a los equipos" se medía a mitad del escalado).
+- **Verificación:**
+  - `tests/verificar.cjs` 81/81 en dos corridas seguidas. Una corrida anterior tuvo 1 falla que no se pudo identificar (no se repitió).
+  - `tests/verificar-supabase.cjs` OK, `tests/funciones/probar.sh` OK, `tests/sql/probar.sh` OK, las 5 suites sin navegador OK y `node tests/documentacion.mjs` OK.
 
 ### 23/10/2026 · Investigación con Gemini, punto 4: Colombia, términos y enlace a la SIC (`0030`)
 

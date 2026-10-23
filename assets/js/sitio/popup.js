@@ -22,40 +22,12 @@ import { ICONO_WA } from "./detalle.js";
 import { cerrarConTransicion, cerrarConEscape } from "./transiciones.js";
 import { estado as estadoCookies, permitido } from "./consentimiento.js";
 import { t } from "../i18n/i18n.js";
+import { ERRORES, formatearConCursor } from "./campos.js";
 
 const CERRAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 const OK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-// Funciones: el idioma se carga después de importar este módulo.
-const ERRORES = {
-  nombre: () => t("popup.error.nombre"),
-  correo: () => t("popup.error.correo"),
-  // Colombia: texto literal del prompt. Los demás países, con su prefijo.
-  telefono: () => {
-    if (paisActual() === "co") return t("popup.error.telefono.co");
-    const cel = datosPais(paisActual()).celular;
-    return cel.ejemplo
-      ? t("popup.error.telefono.ejemplo", { prefijo: cel.visible, ejemplo: cel.ejemplo })
-      : t("popup.error.telefono", { prefijo: cel.visible });
-  },
-  autorizacion: () => t("popup.error.autorizacion")
-};
-
 const OCULTOS = ["modelo", "condicion", "capacidad", "color", "precio_cotizado", "equipo_id", "tipo_consulta", "codigo_cotizacion", ...CLAVES_ATRIBUCION];
-
-// Mantiene el cursor en el mismo dígito al reformatear "300 123 4567".
-function formatearConCursor(input) {
-  const pos = input.selectionStart ?? input.value.length;
-  const digitosAntes = soloDigitos(input.value.slice(0, pos)).length;
-  input.value = agruparCelular(input.value, paisActual());
-  let n = 0;
-  let nueva = input.value.length;
-  for (let i = 0; i < input.value.length; i++) {
-    if (n === digitosAntes) { nueva = i; break; }
-    if (/\d/.test(input.value[i])) n++;
-  }
-  if (document.activeElement === input) input.setSelectionRange(nueva, nueva);
-}
 
 export function crearPopup({ dialogo, api, obtenerTienda }) {
   let contexto = null;

@@ -80,7 +80,7 @@ node tests/paises.test.mjs                                 # datos de país
 node tests/i18n.test.mjs                                   # diccionarios es/pt
 node tests/envios.test.mjs                                 # envíos
 node tests/pagos.test.mjs                                  # formas de pago
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 80 casos, modo demo
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 81 casos, modo demo
 npx serve -l 8090 . & NODE_PATH="$(npm root -g)" bash tests/lighthouse/medir.sh corrida1   # Lighthouse móvil
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 ```
