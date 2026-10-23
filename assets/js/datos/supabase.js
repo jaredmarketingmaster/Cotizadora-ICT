@@ -7,6 +7,7 @@
 import { CONFIG } from "../../../config.js";
 import { ErrorDatos, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, CAMPOS_RESENA, elegir, mensajeDeError, mensajeArchivo, traducirServidor } from "./comun.js";
 import { t as tr } from "../i18n/i18n.js";
+import { esPredeterminada, urlPredeterminada } from "./predeterminadas.js";
 
 // Mensaje para la persona, en el idioma en uso (claves datos.error.*).
 const msj = (clave) => tr(`datos.error.${clave}`);
@@ -113,6 +114,8 @@ export const supabase = {
   urlArchivo(bucket, ruta) {
     if (!ruta) return "";
     if (/^(https?:|data:|blob:)/.test(ruta)) return ruta;
+    // Imagen predeterminada del modelo y color: está en el sitio (predeterminadas.js).
+    if (bucket === "fotos" && esPredeterminada(ruta)) return urlPredeterminada(ruta);
     return `${URL_BASE}/storage/v1/object/public/${bucket}/${ruta.split("/").map(encodeURIComponent).join("/")}`;
   },
 
@@ -351,8 +354,10 @@ export const supabase = {
     return ruta;
   },
 
-  async borrarArchivos(bucket, rutas) {
-    if (!rutas?.length) return;
+  async borrarArchivos(bucket, todas) {
+    // Las imágenes predeterminadas son compartidas: nunca se borran.
+    const rutas = (todas || []).filter((r) => !esPredeterminada(r));
+    if (!rutas.length) return;
     const c = await cliente();
     await c.storage.from(bucket).remove(rutas);
   },

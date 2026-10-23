@@ -10,6 +10,7 @@
 
 import { ENVIOS_INICIAL, errorEnvios } from "./envios.js";
 import { CATALOGO, COLORES, DEMO_EQUIPOS, HEX_APROXIMADOS, filasDeFuente, filasAppleQueFaltan } from "./semilla.js";
+import { esPredeterminada, urlPredeterminada } from "./predeterminadas.js";
 import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MAX_LOTE, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, CANALES_AUTORIZACION, ALCANCES_AUTORIZACION, CAMPOS_RESENA_PUBLICOS, LEGAL_INICIAL, errorLegales, elegir } from "./comun.js";
 import { hexValido, sesion, esperar } from "../utils.js";
 import { whatsappValido, CODIGOS_PAIS_TIENDA } from "./paises.js";
@@ -616,9 +617,11 @@ export const demo = {
     });
   },
 
-  urlArchivo(_bucket, ruta) {
+  urlArchivo(bucket, ruta) {
     if (!ruta) return "";
     if (/^(https?:|data:|blob:)/.test(ruta)) return ruta;
+    // Imagen predeterminada del modelo y color: está en el sitio (predeterminadas.js).
+    if (bucket === "fotos" && esPredeterminada(ruta)) return urlPredeterminada(ruta);
     return urls.get(ruta) || "";
   },
 
@@ -959,8 +962,10 @@ export const demo = {
     return ruta;
   },
 
-  async borrarArchivos(_bucket, rutas) {
-    if (!rutas?.length) return;
+  async borrarArchivos(_bucket, todas) {
+    // Las imágenes predeterminadas son compartidas: nunca se borran.
+    const rutas = (todas || []).filter((r) => !esPredeterminada(r));
+    if (!rutas.length) return;
     try {
       await idb("readwrite", (s) => { for (const r of rutas) s.delete(r); });
     } catch { /* sin IndexedDB */ }

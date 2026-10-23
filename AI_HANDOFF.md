@@ -2,10 +2,10 @@
 > LECTURA OBLIGATORIA PARA EL AGENTE ENTRANTE (Codex, Claude u otro): Lee este documento antes de ejecutar comandos o proponer código.
 
 ## 1. 🚦 ESTADO ACTUAL (METADATA)
-- **Último Agente:** Claude Code 4. Quitó el archivo XML, preparó la investigación con Gemini y ejecutó el plan de 9 puntos de la sección 5: **los 9 puntos están hechos**. La sesión se cortó una vez al 83 % y siguió con tokens renovados. Lo que queda está en "Siguiente", al final de la sección 5.
+- **Último Agente:** Claude Code 4. Quitó el archivo XML, preparó la investigación con Gemini y ejecutó el plan de 9 puntos de la sección 5: **los 9 puntos están hechos**. La sesión se cortó una vez al 83 % y siguió con tokens renovados. Después: roles corregidos (`0035`) y, en curso, la v1.1 con las imágenes predeterminadas (punto 11 de la sección 5). Lo demás que queda está en "Siguiente".
 - **Timestamp:** 2026-10-23 (actualizado por Claude Code 4).
 - **Rama Actual:** `claude/gallant-euler-ezco6g` (último commit de esta tanda: ver `git log`; árbol limpio y sincronizado con `origin` al cerrar cada punto). `main` solo tiene el README inicial: **no** trabajar sobre `main` ni abrir PR sin que Jared lo pida.
-- **Estado del Build:** VERDE. No hay build ni `package.json`: es un sitio estático sin npm ni compilación, a propósito. "Verde" significa que pasan todas las suites del 23/10/2026 (después del punto 9): SQL OK, las 6 suites sin navegador OK (1178 claves), funciones Deno OK, `tests/verificar.cjs` 84/84 (85 con `ICT_CAPTURAS=1`), `tests/verificar-supabase.cjs` OK y `tests/documentacion.mjs` OK. Una corrida de `verificar.cjs` tuvo 1 falla intermitente que no se repitió ni se identificó: si aparece, mirar qué caso es antes de tocar nada. Lighthouse móvil del 23/10, después del plan: 100 / 100 / 100.
+- **Estado del Build:** VERDE. No hay build ni `package.json`: es un sitio estático sin npm ni compilación, a propósito. "Verde" significa que pasan todas las suites del 23/10/2026 (después del punto 9): SQL OK, las 6 suites sin navegador OK (1178 claves), funciones Deno OK, `tests/verificar.cjs` 85/85 (86 con `ICT_CAPTURAS=1`), `tests/verificar-supabase.cjs` OK y `tests/documentacion.mjs` OK. Una corrida de `verificar.cjs` tuvo 1 falla intermitente que no se repitió ni se identificó: si aparece, mirar qué caso es antes de tocar nada. Lighthouse móvil del 23/10, después del plan: 100 / 100 / 100.
 - **Comando de Verificación:**
   ```bash
   python3 -m http.server 8080 & \
@@ -22,9 +22,9 @@
 1. **Sitio estático sin build.** HTML, CSS y JavaScript con ES modules y **rutas relativas** (funciona bajo `/Cotizadora-ICT/` en GitHub Pages). No agregar npm, `package.json`, bundlers, TypeScript en el front ni frameworks. Las únicas dependencias externas son Google Fonts (sitio) y supabase-js 2.117.2 desde jsDelivr (solo el panel).
 2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0036_…sql`**. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 27) con su `MIGRACIONES[n]`.
 3. **Idioma y textos.** Español de Colombia con **"usted"** (nunca "tú" ni voseo) y portugués de Brasil con "você". **Ningún texto visible suelto en el código:** todo va en `assets/js/i18n/es.js` y `pt.js`, con las mismas claves y variables, y se usa con `t(clave)` / `tn(clave, n)`. `t()` se llama al usar el texto, nunca al cargar el módulo. Los textos literales del prompt (en `popup.js` y `catalogo.js`, ver `CLAUDE.md`) no se reescriben.
-4. **Reglas de producto que la suite hace cumplir** (la suite demo tiene hoy 84 casos):
+4. **Reglas de producto que la suite hace cumplir** (la suite demo tiene hoy 85 casos):
    - No inventar datos (especificaciones, colores, precios, plazos ni promesas): lo que la fuente no trae queda vacío.
-   - Nada de la marca Apple: sin logo, imágenes ni tipografías; solo `apple.com/co` como referencia de texto.
+   - Nada de la marca Apple: sin logo, íconos ni tipografías; solo `apple.com/co` como referencia de texto. **Excepción v1.1:** las imágenes predeterminadas de `assets/img/predeterminadas/` (solo WebP, de Jared).
    - Datos personales de clientes **solo a GHL** por `enviar-lead`: nunca en Supabase ni en el píxel. Nunca `Purchase`.
    - Ninguna herramienta de medición o publicidad sin consentimiento (`sitio/consentimiento.js`).
    - Nada se afirma como requisito legal si no está en `legal/FUENTES.md`. El proveedor tecnológico se nombra solo como "nuestro proveedor tecnológico, ubicado en Argentina".
@@ -190,7 +190,25 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
 
       **No completar de memoria.**
     - **Fuera del código:** Supabase real, GHL (campos personalizados, workflow, `consentimiento_transferencia`, `detalle`, `cotizacion_relacionada`, RNE), SMTP, GitHub Pages y los videos de ayuda.
-11. **Cierre de cada punto.**
+11. ⏳ **EN CURSO (v1.1): imágenes predeterminadas por modelo y color.** Jared las pasa en tandas de 5 PNG, sin nombre: el agente mira cada imagen y la ubica (modelo y color).
+    - **Cómo se hace una tanda:**
+      1. Identificar cada imagen.
+         - Modelo: por la cámara y la forma.
+         - Color: con la lista de `COLORES` de `assets/js/datos/semilla.js`, usando el `nombre_es` exacto.
+         - Si una imagen no se puede ubicar con certeza (por ejemplo Negro y Gris espacial, o dos tonos parecidos), **preguntar a Jared** antes de cargarla.
+      2. Convertir cada imagen: `python3 -I catalogo/convertir_imagen.py <png> <slug> <archivo>`. El archivo es el color en minúsculas, sin tildes y con guiones (ej. `negro-brillante`, `product-red`, `titanio-azul`).
+      3. Sumar la fila en `IMAGENES_PREDETERMINADAS` de `assets/js/datos/predeterminadas.js` (slug → `nombre_es` → archivo).
+      4. Correr `node tests/documentacion.mjs`. La carpeta ya está cubierta por `assets/img/predeterminadas/*`.
+      5. Correr el caso "v1.1: imágenes" y el 11 (sin marca) de `verificar.cjs`.
+      6. Actualizar en `DOCUMENTACION.md` la cuenta de la sección 17 ("Van N de 182") y la entrada de la 19.
+      7. Commit y push.
+    - **Cargadas hasta ahora (5 de 182):** iPhone 7 (Negro, Oro, Negro brillante) e iPhone 7 Plus (Negro, Oro).
+    - **Mecanismo** (ya hecho; no cambia por tanda):
+      - En `equipos.fotos` va la ruta `predeterminadas/<slug>/<archivo>.webp`.
+      - `urlArchivo()` (demo y Supabase) la sirve desde el sitio y `borrarArchivos()` no la borra.
+      - `panel/lote.js` la pone al empezar en cada color.
+      - Sin migración.
+12. **Cierre de cada punto.**
     - Actualizar `DOCUMENTACION.md`: sección 5, sección temática, 16, 17 (quitar lo resuelto), entrada nueva en la 19 y la fecha.
     - Mantener al día los conteos de `README.md`, `CLAUDE.md` y este archivo (próxima migración, `VERSION` del demo, punto ✅ con su commit).
     - Correr el comando de verificación. Si se tocó el SQL o `supabase.js`, correr también `tests/verificar-supabase.cjs`.
@@ -202,6 +220,6 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
 - `config.js`: solo lleva la conexión y el script de GHL; nunca datos de la tienda ni claves.
 - Las pruebas existentes: no se debilitan ni se borran.
 - Los colores y las fichas: no se inventan, y `COLORES` de `semilla.js` no se cambia sin fuente.
-- Lo ya cerrado y estable, salvo un bug comprobado con una prueba que falle: `assets/js/panel/lote.js`, `assets/js/panel/inventario.js`, `assets/js/sitio/ayuda.js`, `assets/js/sitio/consentimiento.js`, `assets/js/legal/paises/co.js` y `supabase/functions/` (los puntos 4 y 5 ya los tocaron; no hace falta más).
+- Lo ya cerrado y estable, salvo un bug comprobado con una prueba que falle (o un pedido de Jared, como las imágenes predeterminadas en `lote.js`): `assets/js/panel/lote.js`, `assets/js/panel/inventario.js`, `assets/js/sitio/ayuda.js`, `assets/js/sitio/consentimiento.js`, `assets/js/legal/paises/co.js` y `supabase/functions/` (los puntos 4 y 5 ya los tocaron; no hace falta más).
 - No crear `package.json` ni agregar build o dependencias npm al proyecto.
 - No abrir PR ni escribir en `main` sin pedido explícito de Jared.

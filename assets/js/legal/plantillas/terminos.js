@@ -65,7 +65,7 @@ export function secciones(ctx) {
     },
     {
       titulo: "Marcas",
-      lineas: ["Apple e iPhone son marcas de Apple Inc. Las fotos de los equipos son de la tienda."]
+      lineas: ["Apple e iPhone son marcas de Apple Inc. Las fotos de los equipos son de la tienda o imágenes de referencia del modelo y el color."]
     },
     {
       titulo: "Nuestro proveedor tecnológico",

@@ -17,6 +17,7 @@ import { rutaMiniatura, ESTADOS_ESTETICOS, nombreColor, MAX_MAS_VENDIDOS, MAX_LO
 import { etiquetaGeneracion } from "../sitio/catalogo.js";
 import { $, $$, esc, avisar, conBoton, campoTexto, interruptor, marcarError, enfocarPrimerError } from "./ui.js";
 import { comprimirFoto } from "./imagenes.js";
+import { rutaPredeterminada } from "../datos/predeterminadas.js";
 import { validarVideo } from "./video.js";
 import { nombreEstado, nombreCondicion, rutasDeFotos } from "./inventario.js";
 import { t as tr, tn } from "../i18n/i18n.js";
@@ -173,7 +174,16 @@ export async function dibujar(vista, ctx) {
   const nombreVisible = (c) => (c.color ? nombreColor(c.color, s.nombres.get(c.clave)) : (s.nombres.get(c.clave) || "").trim());
   const textoVariante = (v) => [v.c.color ? v.c.nombre : (s.nombres.get(v.c.clave) || "").trim() || v.c.nombre, v.cap].join(" · ");
   const coloresUsados = () => { const usados = new Set(variantes().map((v) => v.c.clave)); return colores().filter((c) => usados.has(c.clave)); };
-  const medios = (k) => { if (!s.medios.has(k)) s.medios.set(k, { fotos: [], video: "" }); return s.medios.get(k); };
+  // Al empezar, cada color trae su imagen predeterminada si la hay (predeterminadas.js);
+  // la tienda puede dejarla, quitarla o cambiarla.
+  const medios = (k) => {
+    if (!s.medios.has(k)) {
+      const c = colores().find((x) => x.clave === k);
+      const ruta = c?.color ? rutaPredeterminada(modelo()?.slug, c.color.nombre_es) : "";
+      s.medios.set(k, { fotos: ruta ? [ruta] : [], video: "" });
+    }
+    return s.medios.get(k);
+  };
   const precioDe = (v) => leerPrecio(s.mismoPrecio ? s.precio : s.precios.get(v.clave) ?? "");
   const stockDe = (v) => s.stock !== s.excepciones.has(v.clave);
   const muestra = (c) => `<span class="muestra-color${c.color?.hex ? "" : " muestra-color--vacia"}" ${c.color?.hex ? `style="background:${esc(c.color.hex)}"` : ""} aria-hidden="true"></span>`;

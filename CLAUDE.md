@@ -29,7 +29,7 @@ Cómo se hace cumplir:
 ## Reglas que no se rompen (del prompt)
 
 1. Español de Colombia y trato de **"usted"** en todo: sitio, panel, errores, `aria-label`. Nada de "tú" ni voseo. La tienda puede estar en portugués de Brasil (`tienda.idioma`, "você"). **Ningún texto visible suelto en el código:** todo va en `assets/js/i18n/es.js` y `pt.js` (mismas claves) y se usa con `t(clave)`; los textos legales generados siguen en español.
-2. Sin logo, imágenes, íconos ni tipografías de Apple. Los marcadores de posición son el SVG genérico de `ilustracion.js`.
+2. Sin logo, íconos ni tipografías de Apple. Los marcadores de posición son el SVG genérico de `ilustracion.js`. **Excepción (v1.1, decisión de Jared):** las imágenes predeterminadas de cada modelo y color que pasó Jared, en `assets/img/predeterminadas/` (WebP, mapa en `assets/js/datos/predeterminadas.js`); la carga en lote las pone de entrada y la tienda las puede cambiar. Ninguna otra imagen va en el repo.
 3. No inventar especificaciones, precios, colores, garantías, plazos ni promesas. Lo que no cargó la tienda no se muestra.
 4. Moneda y fechas del país de la tienda (`tienda.pais`, `assets/js/datos/paises.js`): `formatearPrecio` (`$5.299.000` en Colombia) y `fechaCorta` (D/M/AAAA en su zona horaria). No usar `Intl` para números.
 5. Nada de la tienda en el código: todo sale de la base y se edita desde el panel. `config.js` solo lleva la conexión y el script de GHL (los ID del píxel y de las demás herramientas van en Legales → Herramientas).
@@ -80,7 +80,7 @@ node tests/paises.test.mjs                                 # datos de país
 node tests/i18n.test.mjs                                   # diccionarios es/pt
 node tests/envios.test.mjs                                 # envíos
 node tests/pagos.test.mjs                                  # formas de pago
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 84 casos, modo demo
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 85 casos, modo demo
 npx serve -l 8090 . & NODE_PATH="$(npm root -g)" bash tests/lighthouse/medir.sh corrida1   # Lighthouse móvil
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 ```

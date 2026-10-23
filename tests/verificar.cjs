@@ -2423,6 +2423,49 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  await caso("v1.1: imágenes predeterminadas: el lote las pone por color, se pueden quitar, el sitio las muestra y nunca se borran", async () => {
+    const p = await nueva(1280, 900);
+    await entrarPanel(p, "gestor@demo.co");
+    await abrirLote(p, "iPhone 7 (inactivo)", "nuevo", ["128 GB"]);
+    await p.click("#siguiente");
+    await p.fill("#l-precio", "1.000.000");
+    await p.click("#siguiente");
+    const { colores } = await delModelo(p, "iphone-7");
+    const id = (nombre) => colores.find((c) => c.nombre_es === nombre).id;
+    const imagenes = (nombre) => p.$$eval(`.medios-color[data-color="${id(nombre)}"] .foto-item img`, (xs) => xs.map((x) => new URL(x.src).pathname));
+    assert.deepEqual(await imagenes("Negro"), ["/assets/img/predeterminadas/iphone-7/negro-640.webp"]);
+    assert.deepEqual(await imagenes("Negro brillante"), ["/assets/img/predeterminadas/iphone-7/negro-brillante-640.webp"]);
+    assert.deepEqual(await imagenes("Plata"), [], "sin imagen cargada para Plata");
+    // Quitar la de Oro: ese color queda sin fotos.
+    await p.click(`.medios-color[data-color="${id("Oro")}"] .foto-item [data-quitar]`);
+    assert.deepEqual(await imagenes("Oro"), []);
+    await p.click("#siguiente");
+    await p.check("#l-publicado", { force: true });
+    await p.click("#siguiente");
+    await p.click("#guardar");
+    await p.waitForURL(/#\/inventario$/);
+    const { lista } = await delModelo(p, "iphone-7");
+    const fotosDe = (nombre) => lista.find((q) => q.color_id === id(nombre)).fotos;
+    assert.deepEqual(fotosDe("Negro"), ["predeterminadas/iphone-7/negro.webp"]);
+    assert.deepEqual(fotosDe("Oro"), [], "la que se quitó no queda");
+    assert.deepEqual(fotosDe("Plata"), []);
+    // En el sitio, el Negro muestra su imagen desde el sitio (no desde Storage).
+    await ir(p, `/?equipo=${lista.find((q) => q.color_id === id("Negro")).id}`);
+    await p.waitForSelector("#hoja-detalle[open] img, #detalle-en-linea img");
+    const src = await p.$$eval("#hoja-detalle img, #detalle-en-linea img", (xs) => xs.map((x) => x.currentSrc || x.src).find((u) => /predeterminadas/.test(u)));
+    assert.match(new URL(src).pathname, /^\/assets\/img\/predeterminadas\/iphone-7\/negro(-640)?\.webp$/);
+    // Borrar el equipo no borra la imagen compartida (borrarArchivos la ignora).
+    const sigue = await p.evaluate(async (ruta) => {
+      const a = await (await import(new URL("assets/js/datos/api.js", location.href).href)).api();
+      await a.borrarArchivos("fotos", [ruta]);
+      const r = await fetch(a.urlArchivo("fotos", ruta));
+      return r.ok;
+    }, "predeterminadas/iphone-7/negro.webp");
+    assert.equal(sigue, true);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("D2: lote: precio por variante con «Copiar a toda la capacidad» y una capacidad escrita a mano", async () => {
     const p = await nueva(1280, 900);
     await entrarPanel(p, "gestor@demo.co");
@@ -3204,7 +3247,10 @@ async function llenarPopup(p) {
     };
     recorrer(RAIZ);
     for (const a of archivos) {
-      assert.ok(!/\.(png|jpe?g|gif|webp|avif|ico)$/i.test(a), `imagen en el repo: ${a}`);
+      // Cambiado (v1.1, decisión de Jared): las imágenes predeterminadas de cada
+      // modelo y color viven en assets/img/predeterminadas/ y solo en WebP.
+      const predeterminada = /[\\/]assets[\\/]img[\\/]predeterminadas[\\/][a-z0-9-]+[\\/][a-z0-9-]+\.webp$/.test(a);
+      assert.ok(predeterminada || !/\.(png|jpe?g|gif|webp|avif|ico)$/i.test(a), `imagen en el repo: ${a}`);
       if (!/\.(html|js|css|svg|sql|ts|md)$/.test(a)) continue;
       const t = fs.readFileSync(a, "utf8");
       assert.ok(!t.includes(""), `manzana en ${a}`);
