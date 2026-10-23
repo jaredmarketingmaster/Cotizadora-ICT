@@ -46,7 +46,7 @@ export const IMAGENES_PREDETERMINADAS = {
   "iphone-16-plus": { "Verde azulado": "verde-azulado", "Ultramarino": "ultramarino", "Blanco": "blanco", "Negro": "negro", "Rosa": "rosa" },
   "iphone-16-pro": { "Titanio blanco": "titanio-blanco", "Titanio negro": "titanio-negro", "Titanio del desierto": "titanio-del-desierto", "Titanio natural": "titanio-natural" },
   "iphone-16-pro-max": { "Titanio blanco": "titanio-blanco", "Titanio negro": "titanio-negro", "Titanio del desierto": "titanio-del-desierto", "Titanio natural": "titanio-natural" },
-  "iphone-16e": { "Blanco": "blanco" },
+  "iphone-16e": { "Blanco": "blanco", "Negro": "negro" },
   "iphone-17": { "Blanco": "blanco", "Lavanda": "lavanda", "Azul neblina": "azul-neblina", "Salvia": "salvia", "Negro": "negro" },
   "iphone-17e": { "Rosa pálido": "rosa-palido", "Blanco": "blanco", "Negro": "negro" },
   "iphone-air": { "Blanco nube": "blanco-nube", "Oro claro": "oro-claro", "Azul cielo": "azul-cielo", "Negro espacial": "negro-espacial" },
