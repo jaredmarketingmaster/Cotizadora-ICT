@@ -72,6 +72,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
 - **Prueba intermitente:** una corrida de `tests/verificar.cjs` (durante el punto 5) tuvo 1 falla que no mostró qué caso era y no se repitió en las corridas completas que siguieron (todas las fallas posteriores fueron pruebas que había que ajustar por un cambio, y se ajustaron). Si vuelve a aparecer, guardar la salida completa y mirar el caso antes de tocar nada.
 - **Lighthouse:** medido el 23/10/2026, después del plan: 100 / 100 / 100, LCP 1,2–1,4 s, CLS 0,045 (sección 13 de `DOCUMENTACION.md`).
 - **Fuera del código:** Supabase real, GHL real, SMTP y GitHub Pages no están conectados (los hace el equipo de Jared).
+- **GitHub Pages ya está activo (Jared, 23/10/2026), pero en modo demo** (`config.js`, `backend: "demo"`). Cada navegador guarda sus propios datos. Lo que se cambia en el panel de la computadora (por ejemplo, la vista carrusel) no se ve en el celular. No es un error del código: se resuelve conectando Supabase.
 - **Entorno:** en este contenedor el proxy bloquea jsDelivr, unpkg y esm.sh. Para la suite de Supabase local se usa un supabase-js armado con esbuild (`ICT_SUPABASE_JS`). **Nunca** usar `pkill -f` con un texto que aparezca en el mismo comando: mata la propia shell.
 
 ## 5. 🎯 DIRECTIVA EXACTA PARA EL PRÓXIMO AGENTE (NEXT ACTION)

@@ -288,7 +288,7 @@ export default {
   "panel.acceso.iniciar_sesion": "Fazer login",
   "panel.acceso.minimo_8": "Mínimo de 8 caracteres.",
   "panel.acceso.no_coinciden": "As duas senhas não coincidem.",
-  "panel.acceso.nota_demo": "Modo demo: entre com {gestor} (loja, estoque e catálogo) ou {administrador} (usuários) e a senha {clave}. As alterações ficam só neste navegador.",
+  "panel.acceso.nota_demo": "Modo demo: entre com {gestor} (loja, estoque e catálogo) ou {administrador} (o mesmo, mais usuários) e a senha {clave}. As alterações ficam só neste navegador: não aparecem em outro computador nem no celular.",
   "panel.acceso.olvido": "Esqueceu sua senha?",
   "panel.acceso.recuperar_demo": "No modo demo não são enviados e-mails. Use a senha demo1234.",
   "panel.acceso.recuperar_enviado": "Se o e-mail tiver um usuário, você receberá um link para criar uma nova senha. Confira também a caixa de spam.",

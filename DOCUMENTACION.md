@@ -1579,6 +1579,15 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
 
+### 23/10/2026 · Vista carrusel en el celular: era el modo demo
+
+- **Pedido de Jared:** que la opción de mostrar los equipos en cuadrícula o en carrusel también se aplique en el celular, porque solo la veía en la computadora.
+- **Causa:** el sitio de GitHub Pages está en modo demo (`config.js`, `backend: "demo"`). En ese modo los datos se guardan en el navegador (localStorage). Lo que se elige en el panel de la computadora no llega al celular, que sigue con los datos iniciales (cuadrícula).
+- **Código:** sin cambios en el carrusel. A 360 px, con toque, funciona igual que en escritorio. Se comprobó con Playwright, y la suite ya lo cubre (casos "carrusel" a 390 px con toque y a varios anchos).
+- **Hecho:** la nota de acceso del panel en modo demo (`panel.acceso.nota_demo`, en `es.js` y `pt.js`) ahora aclara que los cambios no se ven en otro equipo ni en el celular. También quedó al día con los roles de `0035`: el administrador hace lo mismo que el gestor, más usuarios.
+- **Para verlo en el celular:** elegir el carrusel también en el panel abierto desde el celular, o conectar Supabase (`backend: "supabase"`). Con Supabase todos ven los mismos datos.
+- **Verificación:** `node tests/i18n.test.mjs`, `node tests/documentacion.mjs` y los casos "carrusel" y "acceso" de `tests/verificar.cjs`.
+
 ### 23/10/2026 · v1.1: imagen del iPhone XS en Gris espacial (57 de 182)
 
 - **Pedido de Jared:** confirmó que la imagen 57 (tanda 11, la que estaba en pausa) es del iPhone XS.
