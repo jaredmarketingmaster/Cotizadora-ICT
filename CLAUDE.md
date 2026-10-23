@@ -67,7 +67,8 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
 - Video (opcional, uno por equipo): bucket `videos`, ruta en `equipos.video`, validado en `panel/video.js` antes de subir (MP4 H.264 o WebM, 15 s, 20 MB), sin comprimir. Se borra al quitarlo o al borrar el equipo.
 - Reseñas (`0014`): bucket `resenas`; imágenes comprimidas como las fotos y videos de hasta 30 s (`validarVideo(archivo, {maxSegundos: 30})`). Nunca crear reseñas de ejemplo, tampoco en demo. Desde `0034` cada reseña guarda cómo autorizó la persona (canal, fecha y alcance), sin datos de ella; el público no lee esas columnas.
 - Legales (`0016` y `0017`): el asistente del panel llena los datos y `assets/js/legal/motor.js` genera los cuatro documentos desde las plantillas y los módulos por país (`legal/paises/`; Colombia y, desde `0031`, Argentina). Si el país de la tienda no tiene módulo, falta `pais` y no se publica (`0019`). `legal_faltantes()` del SQL = `faltantes()` del motor (`tests/sql/comparar-faltantes.mjs`); la versión y la fecha las pone el disparador `publicar_legales`. Sin publicar: el pop-up no envía, las páginas dicen "Página en preparación." y la demo no se quita. Los valores iniciales están en `LEGAL_INICIAL` (`comun.js`) y en el SQL.
-- Cambios a la base: siempre una migración nueva (la próxima es `0036_…sql`). Nunca editar una ya corrida en producción. En producción se corren todas, en orden.
+- Restablecer de fábrica (`0036`, solo el administrador): deja todo como recién instalado menos los usuarios. El estado de fábrica está en `datos_fabrica()`, **generado**. Una migración que cambie la semilla o los valores iniciales de la tienda tiene que volver a crearla (`ICT_FABRICA=/tmp/i.json bash tests/sql/probar.sh` y `node tests/sql/fabrica.mjs sql /tmp/i.json`); `probar.sh` falla si no.
+- Cambios a la base: siempre una migración nueva (la próxima es `0037_…sql`). Nunca editar una ya corrida en producción. En producción se corren todas, en orden.
 
 ## Cómo verificar antes de cada commit
 
@@ -80,7 +81,7 @@ node tests/paises.test.mjs                                 # datos de país
 node tests/i18n.test.mjs                                   # diccionarios es/pt
 node tests/envios.test.mjs                                 # envíos
 node tests/pagos.test.mjs                                  # formas de pago
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 85 casos, modo demo
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 86 casos, modo demo
 npx serve -l 8090 . & NODE_PATH="$(npm root -g)" bash tests/lighthouse/medir.sh corrida1   # Lighthouse móvil
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 ```

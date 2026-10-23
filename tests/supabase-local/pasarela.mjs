@@ -70,7 +70,27 @@ createServer((req, res) => {
   }
   if (url.pathname.startsWith("/storage/v1/")) {
     cors(res);
-    const m = url.pathname.match(/^\/storage\/v1\/object\/(public\/)?([^/]+)\/?(.*)$/);
+    // Listar una carpeta (restablecer de fábrica, 0036): sus archivos y, con
+    // id null, sus subcarpetas, como Storage.
+    const lista = url.pathname.match(/^\/storage\/v1\/object\/list\/([^/]+)$/);
+    if (lista && req.method === "POST") {
+      let cuerpo = "";
+      req.on("data", (c) => { cuerpo += c; });
+      req.on("end", () => {
+        const { prefix = "", limit = 100, offset = 0 } = JSON.parse(cuerpo || "{}");
+        const raiz = `${lista[1]}/${prefix ? `${prefix.replace(/\/+$/, "")}/` : ""}`;
+        const entradas = new Map();
+        for (const clave of archivos.keys()) {
+          if (!clave.startsWith(raiz)) continue;
+          const [nombre, ...resto] = clave.slice(raiz.length).split("/");
+          entradas.set(nombre, { name: nombre, id: resto.length ? null : clave, metadata: resto.length ? null : {} });
+        }
+        const filas = [...entradas.values()].sort((a, b) => a.name.localeCompare(b.name)).slice(offset, offset + limit);
+        res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(filas));
+      });
+      return;
+    }
+    const m =url.pathname.match(/^\/storage\/v1\/object\/(public\/)?([^/]+)\/?(.*)$/);
     if (!m) { res.writeHead(404).end(); return; }
     const [, publico, bucket, ruta] = m;
     const clave = `${bucket}/${decodeURIComponent(ruta)}`;

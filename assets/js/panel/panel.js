@@ -301,7 +301,12 @@ async function vistaInicio(vista) {
       ${!tienda.legal_publicado ? `<p class="aviso-datos" id="demo-sin-legales">${esc(t("panel.inicio.demo_sin_legales")).replace("{enlace}", `<a href="#/legales/${pasoLegal}">${esc(t("panel.inicio.publique_legales"))}</a>`)}</p>` : ""}
       ${interruptor({ id: "i-modo-demo", etiqueta: t("panel.inicio.mostrar_franja"), marcado: tienda.modo_demo, atributos: !tienda.legal_publicado && tienda.modo_demo ? 'disabled aria-describedby="demo-sin-legales"' : "" })}
       <button type="button" class="boton boton--peligro" id="borrar-demo" ${(!demo && !tienda.modo_demo) || !tienda.legal_publicado ? "disabled" : ""} ${!tienda.legal_publicado ? 'aria-describedby="demo-sin-legales"' : ""}>${esc(t("panel.inicio.borrar_demo"))}</button>
-      ${ctx.api.tipo === "demo" ? `<button type="button" class="boton boton--secundario" id="reiniciar-demo">${esc(t("panel.inicio.reiniciar_demo"))}</button>` : ""}
+    </section>` : ""}
+    ${ctx.esAdministrador() ? `
+    <section class="bloque" aria-labelledby="t-fabrica">
+      <h2 id="t-fabrica">${esc(t("panel.inicio.fabrica"))}</h2>
+      <p class="ayuda">${esc(t("panel.inicio.fabrica_ayuda"))}</p>
+      <button type="button" class="boton boton--peligro" id="restablecer-fabrica">${esc(t("panel.inicio.fabrica_boton"))}</button>
     </section>` : ""}`;
 
   prepararIntro();
@@ -320,12 +325,23 @@ async function vistaInicio(vista) {
     await conBoton(e.currentTarget, () => ctx.api.borrarDatosDemo(), { exito: t("panel.inicio.demo_borrados") });
     await vistaInicio(vista);
   });
-  $("#reiniciar-demo")?.addEventListener("click", async () => {
-    if (!(await confirmar({ titulo: t("panel.inicio.reiniciar_titulo"), texto: t("panel.inicio.reiniciar_texto"), aceptar: t("panel.inicio.reiniciar"), peligro: true }))) return;
-    await ctx.api.reiniciarDemo();
+  // Restablecer de fábrica (0036): se recarga el panel entero (cambian la
+  // marca, el idioma y todo lo demás) y el aviso se muestra al volver.
+  $("#restablecer-fabrica")?.addEventListener("click", async (e) => {
+    const ok = await confirmar({
+      titulo: t("panel.inicio.fabrica_titulo"), texto: t("panel.inicio.fabrica_texto"),
+      aceptar: t("panel.inicio.fabrica_boton"), peligro: true, palabra: t("panel.inicio.fabrica_palabra")
+    });
+    if (!ok) return;
+    try { await conBoton(e.currentTarget, () => ctx.api.restablecerFabrica(), { exito: "" }); } catch { return; }
+    try { sessionStorage.setItem(AVISO_AL_VOLVER, t("panel.inicio.fabrica_listo")); } catch { /* sin almacenamiento */ }
     location.reload();
   });
+  let aviso = "";
+  try { aviso = sessionStorage.getItem(AVISO_AL_VOLVER) || ""; sessionStorage.removeItem(AVISO_AL_VOLVER); } catch { /* nada */ }
+  if (aviso) avisar(aviso);
 }
+const AVISO_AL_VOLVER = "cotizadora:panel-aviso";
 
 // --- Arranque ------------------------------------------------------------------
 

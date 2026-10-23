@@ -59,6 +59,21 @@ function cliente() {
   return clientePromesa;
 }
 
+// Todas las rutas de un bucket (Storage lista por carpeta: las carpetas
+// llegan con id null).
+async function listarArchivos(c, bucket, carpeta = "") {
+  const rutas = [];
+  for (let desde = 0; ; desde += 1000) {
+    const { data, error } = await c.storage.from(bucket).list(carpeta, { limit: 1000, offset: desde });
+    if (error) throw error;
+    for (const x of data) {
+      const ruta = carpeta ? `${carpeta}/${x.name}` : x.name;
+      if (x.id === null) rutas.push(...await listarArchivos(c, bucket, ruta)); else rutas.push(ruta);
+    }
+    if (data.length < 1000) return rutas;
+  }
+}
+
 function fallo(error) {
   if (!error) return;
   throw new ErrorDatos(mensajeDeError(error), error.code || "");
@@ -367,6 +382,27 @@ export const supabase = {
     const c = await cliente();
     const { error } = await c.rpc("borrar_datos_demo");
     fallo(error);
+  },
+
+  // ---------------- Restablecer de fábrica (0036) ----------------
+  // La base la restablece restablecer_fabrica() (solo el administrador).
+  // Después se vacían los buckets: Supabase no deja borrar archivos desde SQL.
+  // Si alguno no se pudo borrar, se avisa: tocar otra vez el botón termina.
+  async restablecerFabrica() {
+    const c = await cliente();
+    const { error } = await c.rpc("restablecer_fabrica");
+    fallo(error);
+    let completo = true;
+    for (const bucket of ["fotos", "videos", "marca", "resenas"]) {
+      try {
+        const rutas = await listarArchivos(c, bucket);
+        for (let i = 0; i < rutas.length; i += 100) {
+          const { error: e } = await c.storage.from(bucket).remove(rutas.slice(i, i + 100));
+          if (e) completo = false;
+        }
+      } catch { completo = false; }
+    }
+    if (!completo) throw new ErrorDatos(msj("restablecer_archivos"));
   },
 
   // ---------------- Usuarios (solo administrador) ----------------

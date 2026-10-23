@@ -344,7 +344,7 @@ export function elegir(objeto, campos) {
 // que tienen clave: el SQL los escribe en español, igual que demo.js.
 const ERRORES_SERVIDOR = [
   "formato", "permiso", "duplicado", "sesion", "solo_gestor.cambio", "solo_gestor.tienda", "solo_gestor.catalogo",
-  "solo_gestor.resenas", "solo_gestor.borrar_demo", "solo_gestor.modo_demo", "solo_administrador", "un_administrador",
+  "solo_gestor.resenas", "solo_gestor.borrar_demo", "solo_gestor.modo_demo", "solo_administrador", "solo_administrador_fabrica", "un_administrador",
   "propio_rol", "desactivarse", "correo_existe", "elija_rol", "elija_color", "color_modelo", "mas_vendidos", "max_resenas",
   "resena_autorizacion", "resena_fecha",
   "ficha", "cuotas_max", "sin_interes_max", "sin_interes_mayor", "sin_interes_vacio", "cuotas_vacias", "cripto_vacio",

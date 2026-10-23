@@ -19,11 +19,17 @@ export function avisar(texto = t("panel.comun.guardado"), tipo = "ok") {
   reloj = setTimeout(() => el.classList.remove("visible"), tipo === "error" ? 5000 : 2200);
 }
 
-export function confirmar({ titulo, texto = "", aceptar = t("panel.comun.aceptar"), peligro = false }) {
+// palabra: para lo que no se puede deshacer. El botón de aceptar se habilita
+// recién cuando la persona la escribe.
+export function confirmar({ titulo, texto = "", aceptar = t("panel.comun.aceptar"), peligro = false, palabra = "" }) {
   const d = $("#confirmar");
   d.innerHTML = `<form method="dialog" class="confirmar-contenido">
     <h2 id="confirmar-titulo">${esc(titulo)}</h2>
     ${texto ? `<p>${esc(texto)}</p>` : ""}
+    ${palabra ? `<div class="campo">
+      <label for="confirmar-palabra">${esc(t("panel.comun.escriba_palabra", { palabra }))}</label>
+      <input class="entrada" id="confirmar-palabra" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    </div>` : ""}
     <div class="confirmar-botones">
       <button class="boton boton--secundario" value="no">${esc(t("panel.comun.cancelar"))}</button>
       <button class="boton ${peligro ? "boton--peligro" : "boton--primario"}" value="si">${esc(aceptar)}</button>
@@ -31,7 +37,13 @@ export function confirmar({ titulo, texto = "", aceptar = t("panel.comun.aceptar
   </form>`;
   d.returnValue = "";
   d.showModal();
-  d.querySelector('[value="no"]').focus();
+  const entrada = d.querySelector("#confirmar-palabra");
+  if (entrada) {
+    const si = d.querySelector('[value="si"]');
+    si.disabled = true;
+    entrada.addEventListener("input", () => { si.disabled = entrada.value.trim().toUpperCase() !== palabra.toUpperCase(); });
+    entrada.focus();
+  } else d.querySelector('[value="no"]').focus();
   return new Promise((r) => d.addEventListener("close", () => r(d.returnValue === "si"), { once: true }));
 }
 

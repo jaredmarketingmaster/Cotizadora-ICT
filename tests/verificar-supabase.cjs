@@ -585,6 +585,62 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await q.context().close();
   });
 
+  // Al final: deja la base como recién instalada.
+  await caso("restablecer de fábrica (0036): el gestor no puede; el administrador deja la base como nueva, vacía los buckets y los usuarios siguen", async () => {
+    const usarApi = (p, fn, arg) => p.evaluate(async ([cuerpo, arg]) => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      try { return await new Function("a", "arg", `return (${cuerpo})(a, arg)`)(await api(), arg); } catch (e) { return `error: ${e.message}`; }
+    }, [fn.toString(), arg]);
+    const publico = (bucket, ruta) => fetch(`${ENTORNO.URL}/storage/v1/object/public/${bucket}/${ruta}`).then((r) => r.status);
+
+    const g = await pagina(1280);
+    await entrar(g, "gestor@local.co");
+    await g.waitForSelector(".estadisticas");
+    assert.equal(await g.locator("#restablecer-fabrica").count(), 0, "el gestor no ve el botón");
+    assert.equal(await usarApi(g, (a) => a.restablecerFabrica()), "error: Solo el administrador puede restablecer el cotizador de fábrica.");
+    await usarApi(g, async (a) => {
+      await a.guardarTienda({ nombre: "Tienda real", vista_equipos: "carrusel" });
+      await a.subirArchivo("fotos", "equipos/fabrica.webp", new Blob(["x"], { type: "image/webp" }));
+      await a.subirArchivo("marca", "logo-fabrica.png", new Blob(["x"], { type: "image/png" }));
+    });
+    assert.equal(await publico("fotos", "equipos/fabrica.webp"), 200);
+    await g.context().close();
+
+    const p = await pagina(1280);
+    await entrar(p, "administrador@local.co");
+    await p.waitForSelector("#restablecer-fabrica");
+    await p.click("#restablecer-fabrica");
+    await p.fill("#confirmar-palabra", "RESTABLECER");
+    await Promise.all([p.waitForEvent("load"), p.click('#confirmar [value="si"]')]);
+    await p.waitForSelector(".estadisticas", { timeout: 15000 });
+    assert.equal(await p.textContent("#aviso-flotante"), "Listo: el cotizador quedó como recién instalado.");
+    const tienda = await usarApi(p, (a) => a.leerTienda());
+    assert.deepEqual([tienda.nombre, tienda.vista_equipos, tienda.modo_demo, tienda.legal_publicado], ["Tienda de demostración", "cuadricula", true, null]);
+    for (const [bucket, ruta] of [["fotos", "equipos/fabrica.webp"], ["marca", "logo-fabrica.png"]]) {
+      assert.equal(await publico(bucket, ruta), 404, `${bucket}/${ruta} borrado`);
+    }
+    // Los cuatro buckets quedan vacíos (también lo que subieron los casos anteriores).
+    const quedan = await p.evaluate(async ([url, anon]) => {
+      const n = [];
+      for (const b of ["fotos", "videos", "marca", "resenas"]) {
+        const r = await fetch(`${url}/storage/v1/object/list/${b}`, { method: "POST", headers: { "content-type": "application/json", apikey: anon }, body: JSON.stringify({ prefix: "", limit: 100, offset: 0 }) });
+        n.push((await r.json()).length);
+      }
+      return n;
+    }, [ENTORNO.URL, ENTORNO.ANON]);
+    assert.deepEqual(quedan, [0, 0, 0, 0]);
+    // El sitio vuelve a la demo (sin legales publicados) y los usuarios siguen entrando.
+    const s = await p.context().newPage();
+    await s.goto(`${BASE}/`, { waitUntil: "networkidle" });
+    assert.equal(await s.isVisible("#franja-demo"), true);
+    assert.equal(await s.locator(".galeria > .tarjeta").count(), 5);
+    const g2 = await pagina(390);
+    await entrar(g2, "gestor@local.co");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+    await g2.context().close();
+  });
+
   await navegador.close();
   console.log(fallas ? `\n${fallas} falla(s)` : "\nOK: modo supabase de punta a punta");
   process.exit(fallas ? 1 : 0);

@@ -449,10 +449,11 @@ function exigirGestor(e, que = "cambio") {
   return p;
 }
 
-// El administrador solo gestiona usuarios (datos.error.solo_administrador).
-function exigirAdministrador(e) {
+// Lo que es solo del administrador: los usuarios (datos.error.solo_administrador)
+// y restablecer de fábrica (solo_administrador_fabrica).
+function exigirAdministrador(e, clave = "solo_administrador") {
   const p = exigirSesion(e);
-  if (p.rol !== "administrador") throw error("solo_administrador", "42501");
+  if (p.rol !== "administrador") throw error(clave, "42501");
   return p;
 }
 
@@ -984,10 +985,18 @@ export const demo = {
     escribir(e);
   },
 
-  // Solo en demo: vuelve a los datos iniciales.
-  async reiniciarDemo() {
-    try { localStorage.removeItem(CLAVE); } catch { /* nada */ }
-    try { await idb("readwrite", (s) => s.clear()); } catch { /* nada */ }
+  // ---------------- Restablecer de fábrica ----------------
+  // Como restablecer_fabrica() (0036): solo el administrador. Todo vuelve a
+  // los datos iniciales menos los usuarios, y se borran los archivos.
+  async restablecerFabrica() {
+    await red();
+    const e = leer();
+    exigirAdministrador(e, "solo_administrador_fabrica");
+    const nuevo = estadoInicial();
+    nuevo.perfiles = e.perfiles;
+    escribir(nuevo);
+    try { await idb("readwrite", (s) => s.clear()); } catch { /* sin IndexedDB */ }
+    for (const url of urls.values()) URL.revokeObjectURL(url);
     urls.clear();
   },
 

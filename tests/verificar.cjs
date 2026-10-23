@@ -1078,6 +1078,93 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  // Estado de fábrica comparable (como tests/sql/estado_fabrica.sql): sin ids
+  // de equipos ni fechas.
+  const estadoFabrica = (p) => p.evaluate((clave) => {
+    const e = JSON.parse(localStorage.getItem(clave));
+    const sin = (o, ...k) => Object.fromEntries(Object.entries(o).filter(([c]) => !k.includes(c)));
+    return {
+      tienda: sin(e.tienda, "actualizado_en", "precios_actualizados_en"),
+      modelos: e.modelos.map((m) => sin(m, "creado_en")),
+      colores: e.colores,
+      fichas: e.fichas.map((f) => sin(f, "actualizado_en")),
+      equipos: e.equipos.map((q) => sin(q, "id", "creado_en", "actualizado_en")),
+      resenas: e.resenas
+    };
+  }, CLAVE_DEMO);
+
+  await caso("restablecer de fábrica (0036): solo el administrador, pide escribir RESTABLECER y deja todo como nuevo menos los usuarios", async () => {
+    const nuevo = await nueva(1280, 900, { legales: false });
+    await nuevo.goto(BASE);
+    await nuevo.waitForFunction((clave) => localStorage.getItem(clave), CLAVE_DEMO);
+    const instalacion = await estadoFabrica(nuevo);
+    await nuevo.context().close();
+
+    const p = await nueva(390, 844);
+    await entrarPanel(p, "gestor@demo.co");
+    // Una tienda en uso: marca, legales publicados, inventario, foto, reseña, catálogo y un usuario más.
+    await editarDemo(p, (e) => {
+      Object.assign(e.tienda, { nombre: "Tienda real", color_primario: "#112233", vista_equipos: "carrusel", modo_demo: false, meta_pixel_id: "123456" });
+      e.equipos = e.equipos.filter((q) => !q.es_demo).concat([{ ...e.equipos[0], id: "propio", es_demo: false, fotos: ["equipos/propio.webp"] }]);
+      e.modelos.find((m) => m.slug === "iphone-7").activo = true;
+      e.fichas[0].descripcion = "Descripción de la tienda";
+      e.resenas.push({ id: "r1", tipo: "imagen", ruta: "resenas/una.webp", texto: "", autorizado: true, orden: 0 });
+      e.perfiles.push({ user_id: "demo-3", correo: "otro@demo.co", rol: "gestor", activo: true, clave: "demo1234", creado_en: e.tienda.actualizado_en });
+    });
+    await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      await (await api()).subirArchivo("fotos", "equipos/propio.webp", new Blob(["x"], { type: "image/webp" }));
+    });
+    // El gestor no lo ve y el back-end se lo niega.
+    await p.reload();
+    await p.waitForSelector(".estadisticas");
+    assert.equal(await p.locator("#restablecer-fabrica").count(), 0, "el gestor no ve el botón");
+    const negado = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      try { await (await api()).restablecerFabrica(); return "pasó"; } catch (e) { return e.message; }
+    });
+    assert.equal(negado, "Solo el administrador puede restablecer el cotizador de fábrica.");
+
+    await p.evaluate(() => sessionStorage.removeItem("cotizadora-demo:sesion"));
+    await entrarPanel(p, "administrador@demo.co");
+    assert.match(await p.textContent("#t-fabrica + .ayuda"), /Los usuarios y sus accesos no cambian/);
+    // Cancelar no borra nada.
+    await p.click("#restablecer-fabrica");
+    await p.click('#confirmar [value="no"]');
+    assert.equal((await estadoFabrica(p)).tienda.nombre, "Tienda real");
+    // Aceptar se habilita recién con la palabra completa (mayúsculas o minúsculas).
+    await p.click("#restablecer-fabrica");
+    assert.match(await p.textContent('label[for="confirmar-palabra"]'), /Para confirmar, escriba RESTABLECER\./);
+    assert.equal(await p.evaluate(() => document.activeElement.id), "confirmar-palabra");
+    const aceptar = p.locator('#confirmar [value="si"]');
+    assert.ok(await aceptar.isDisabled());
+    await p.fill("#confirmar-palabra", "restable");
+    assert.ok(await aceptar.isDisabled());
+    await p.fill("#confirmar-palabra", "restablecer");
+    assert.ok(await aceptar.isEnabled());
+    await Promise.all([p.waitForEvent("load"), aceptar.click()]);
+    await p.waitForSelector(".estadisticas");
+    assert.equal(await p.textContent("#aviso-flotante"), "Listo: el cotizador quedó como recién instalado.");
+    assert.equal(await p.textContent("#barra-usuario"), "administrador@demo.co · Administrador", "la sesión sigue");
+
+    const restablecida = await estadoFabrica(p);
+    const { perfiles } = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)), CLAVE_DEMO);
+    assert.deepEqual(restablecida, instalacion, "igual que recién instalado");
+    assert.ok(perfiles.some((u) => u.correo === "otro@demo.co"), "los usuarios no cambian");
+    const archivos = await p.evaluate(() => new Promise((ok) => {
+      const pedido = indexedDB.open("cotizadora-demo", 1);
+      pedido.onsuccess = () => { const r = pedido.result.transaction("archivos").objectStore("archivos").count(); r.onsuccess = () => ok(r.result); };
+    }));
+    assert.equal(archivos, 0, "sin archivos");
+    // El sitio vuelve a la demo, sin legales publicados.
+    p.legalesListos = true;
+    await ir(p);
+    assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
+    assert.equal(await p.locator(".galeria--carrusel").count(), 0, "vuelve la cuadrícula");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("demo: los datos guardados de una versión vieja se migran (stock, tamaño, catálogo, colores, roles, fichas, pagos, reseñas y legales)", async () => {
     const p = await nueva();
     await ir(p);

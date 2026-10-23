@@ -59,3 +59,19 @@ node "$RAIZ/tests/sql/comparar-faltantes.mjs" sql "$RAIZ" > "$DIR/faltantes.sql"
 node "$RAIZ/tests/sql/comparar-faltantes.mjs" comparar "$RAIZ" "$DIR/faltantes.json"
 
 "${PSQL[@]}" -f "$RAIZ/tests/sql/pruebas.sql"
+
+# Restablecer de fábrica (0036): la base con datos (los de antes_*.sql y los
+# de las pruebas) restablecida debe quedar igual a una instalación nueva, que
+# se arma aparte en la base "instalacion" (sin los antes_*.sql).
+"${PSQL[@]}" -c "create database instalacion"
+PSQL_NUEVA=(psql -h "$DIR" -p "$PUERTO" -U postgres -d instalacion -q -v ON_ERROR_STOP=1)
+# Los roles son del servidor: ya existen (se crean una sola vez).
+grep -v '^create role ' "$RAIZ/tests/sql/supabase_simulado.sql" | "${PSQL_NUEVA[@]}"
+for f in "$RAIZ"/supabase/migrations/*.sql; do "${PSQL_NUEVA[@]}" -f "$f"; done
+"${PSQL_NUEVA[@]}" -At -f "$RAIZ/tests/sql/estado_fabrica.sql" > "$DIR/instalacion.json"
+# ICT_FABRICA=/ruta/instalacion.json guarda ese estado, para volver a generar
+# datos_fabrica() en una migración nueva (ver tests/sql/fabrica.mjs).
+if [ -n "${ICT_FABRICA:-}" ]; then cp "$DIR/instalacion.json" "$ICT_FABRICA"; fi
+"${PSQL[@]}" -f "$RAIZ/tests/sql/restablecer.sql"
+"${PSQL[@]}" -At -f "$RAIZ/tests/sql/estado_fabrica.sql" > "$DIR/restablecida.json"
+node "$RAIZ/tests/sql/fabrica.mjs" comparar "$DIR/instalacion.json" "$DIR/restablecida.json"
