@@ -2,10 +2,12 @@
 // Países donde vende la tienda (paso 3 del asistente): los de habla hispana de
 // América y Brasil. Solo se pueden elegir los "disponibles" (con su módulo,
 // ej. co.js). Para sumar uno: escribir su módulo, importarlo aquí, ponerle
-// estado "disponible" y cambiar legal_faltantes() (0016) con una migración nueva.
+// estado "disponible" y cambiar legal_faltantes() con una migración nueva
+// (Colombia: 0016; Argentina: 0031).
 // =============================================================================
 
 import CO from "./co.js";
+import AR from "./ar.js";
 import { t } from "../../i18n/i18n.js";
 
 // Lo que se muestra en el paso 3 (en el idioma en uso; se traduce al leerlo).
@@ -18,7 +20,7 @@ export const ESTADOS = {
 };
 
 export const PAISES = [
-  { codigo: "ar", nombre: "Argentina", estado: "proximamente" },
+  { codigo: "ar", nombre: "Argentina", estado: "disponible", modulo: AR },
   { codigo: "bo", nombre: "Bolivia", estado: "proximamente" },
   { codigo: "br", nombre: "Brasil", estado: "portugues", get nota() { return t("legal.pais.nota.br"); } },
   { codigo: "cl", nombre: "Chile", estado: "proximamente" },

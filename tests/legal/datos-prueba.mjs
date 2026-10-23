@@ -21,7 +21,7 @@ export const TIENDA_LEGAL_PRUEBA = {
   legal_matricula_numero: "",
   legal_matricula_camara: "",
   legal_direccion_local: "Carrera 70 # 44-20, local 3",
-  legal_rnbd: "no",
+  legal_rnbd: "no", legal_rnbd_numero: "", legal_data_fiscal_url: "",
   legal_paises: ["co"],
   legal_impuestos: [{ nombre: "IVA", porcentaje: 19, incluido: true }],
   legal_garantia_nuevos: 12,

@@ -56,18 +56,22 @@ export const CODIGOS_PAIS_TIENDA = Object.keys(PAISES_TIENDA);
 // Enlace a la autoridad de protección al consumidor que el pie del sitio
 // muestra según el país de la tienda (texto: "sitio.pie.consumidor.<código>").
 // Solo los países con fuente en legal/FUENTES.md: Colombia, fuente 16 (Ley
-// 1480, art. 50, literal d).
+// 1480, art. 50, literal d); Argentina, AR11 (Resolución SCI 271/2020, con su
+// leyenda textual).
 export const AUTORIDAD_CONSUMIDOR = {
-  co: "https://www.sic.gov.co"
+  co: "https://www.sic.gov.co",
+  ar: "https://www.argentina.gob.ar/iniciar-un-reclamo-ante-defensa-de-las-y-los-consumidores"
 };
 
 // Página de solicitudes (/solicitudes/): los tipos que ofrece según el país de
 // la tienda (textos: "solicitudes.tipo.<tipo>"; título y enlace del pie:
-// "solicitudes.titulo.<código>"). Colombia: peticiones, quejas y reclamos con
-// radicado (legal/FUENTES.md, fuente 17). Sin tipos, la página no se ofrece.
+// "solicitudes.titulo.<código>" y "sitio.pie.solicitudes.<código>"). Colombia:
+// peticiones, quejas y reclamos con radicado (legal/FUENTES.md, fuente 17).
+// Argentina: el botón de arrepentimiento (AR12). Sin tipos, no se ofrece.
 // Los mismos tipos acepta enviar-lead (TIPOS_SOLICITUD de lead.ts).
 export const SOLICITUDES = {
-  co: ["peticion", "queja", "reclamo"]
+  co: ["peticion", "queja", "reclamo"],
+  ar: ["arrepentimiento"]
 };
 export const PAIS_POR_DEFECTO = "ar";
 

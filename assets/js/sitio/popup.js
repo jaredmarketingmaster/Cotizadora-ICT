@@ -22,7 +22,7 @@ import { ICONO_WA } from "./detalle.js";
 import { cerrarConTransicion, cerrarConEscape } from "./transiciones.js";
 import { estado as estadoCookies, permitido } from "./consentimiento.js";
 import { t } from "../i18n/i18n.js";
-import { ERRORES, formatearConCursor } from "./campos.js";
+import { ERRORES, formatearConCursor, pideTransferencia, htmlTransferencia } from "./campos.js";
 
 const CERRAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 const OK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -102,6 +102,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
             </label>
             <p class="error-campo" id="p-autorizacion-error"></p>
           </div>
+          ${pideTransferencia(tienda) ? htmlTransferencia("p") : ""}
           <div class="campo">
             <label class="casilla" for="p-promociones">
               <input id="p-promociones" name="promociones" type="checkbox">
@@ -120,7 +121,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
     form.querySelectorAll("#p-aviso a").forEach((a) => { a.target = "_blank"; a.rel = "noopener"; });
     const tel = form.querySelector("#p-telefono");
     tel.addEventListener("input", () => formatearConCursor(tel));
-    form.querySelectorAll(".entrada, #p-autorizacion").forEach((el) => {
+    form.querySelectorAll(".entrada, #p-autorizacion, #p-transferencia").forEach((el) => {
       el.addEventListener("blur", () => { if (el.value || el.type === "checkbox") validarCampo(el.id); });
       el.addEventListener("input", () => { if (el.getAttribute("aria-invalid") === "true") validarCampo(el.id); });
       el.addEventListener("change", () => { if (el.type === "checkbox") validarCampo(el.id); });
@@ -154,6 +155,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
     if (id === "p-correo" && !correoValido(el.value)) error = ERRORES.correo();
     if (id === "p-telefono" && !celularNacionalValido(soloDigitos(el.value), paisActual())) error = ERRORES.telefono();
     if (id === "p-autorizacion" && !el.checked) error = ERRORES.autorizacion();
+    if (id === "p-transferencia" && !el.checked) error = ERRORES.transferencia();
     el.setAttribute("aria-invalid", String(Boolean(error)));
     f.querySelector(`#${id}-error`).textContent = error;
     return !error;
@@ -161,7 +163,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
 
   function intentarEnviar() {
     const f = dialogo.querySelector("form");
-    const ids = ["p-nombre", "p-correo", "p-telefono", "p-autorizacion"];
+    const ids = ["p-nombre", "p-correo", "p-telefono", "p-autorizacion", ...(f.querySelector("#p-transferencia") ? ["p-transferencia"] : [])];
     const malos = ids.filter((id) => !validarCampo(id));
     if (malos.length) { f.querySelector(`#${malos[0]}`).focus(); return; }
     if (f.querySelector("#p-sitio").value) return; // trampa para bots
@@ -196,6 +198,8 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
       // Consentimiento (0016): la casilla obligatoria, la opcional, el banner
       // de cookies y la versión de los textos que aceptó.
       consentimiento_datos: f.querySelector("#p-autorizacion").checked,
+      // Argentina (0031): la casilla de la transferencia a Estados Unidos.
+      consentimiento_transferencia: Boolean(f.querySelector("#p-transferencia")?.checked),
       consentimiento_promociones: f.querySelector("#p-promociones").checked,
       consentimiento_medicion: cookies.medicion,
       consentimiento_publicidad: cookies.publicidad,

@@ -67,7 +67,10 @@ export function porcentaje(n) {
 export function formatearTelefono(t) {
   const d = texto(t).replace(/[^\d+]/g, "");
   const m = d.replace(/^\+/, "").match(/^57(3\d{2})(\d{3})(\d{4})$/);
-  return m ? `+57 ${m[1]} ${m[2]} ${m[3]}` : d;
+  if (m) return `+57 ${m[1]} ${m[2]} ${m[3]}`;
+  // Argentina: celular con el 9 y código de área de 2 dígitos (como paises.js).
+  const a = d.replace(/^\+/, "").match(/^549(\d{2})(\d{4})(\d{4})$/);
+  return a ? `+54 9 ${a[1]} ${a[2]} ${a[3]}` : d;
 }
 
 // "Los textos legales para Argentina todavía no están disponibles." (en el idioma en uso)
@@ -90,7 +93,10 @@ export function faltantes(t) {
   if (!texto(t.legal_nombre)) falta(2, "legal_nombre", t.legal_tipo_persona === "juridica" ? "legal.falta.razon_social" : "legal.falta.nombre_completo");
   const doc = documentosDe(t.legal_paises).find((d) => d.clave === t.legal_doc_tipo);
   if (!doc) falta(2, "legal_doc_tipo", "legal.falta.doc_tipo");
-  else if (!doc.patron.test(texto(t.legal_doc_numero))) falta(2, "legal_doc_numero", "legal.falta.doc_numero", { documento: doc.nombre.toLowerCase().replace("nit", "NIT") });
+  else if (!doc.patron.test(texto(t.legal_doc_numero)) || (doc.valido && !doc.valido(texto(t.legal_doc_numero)))) {
+    // Las siglas (NIT, DNI, CUIT) quedan en mayúsculas.
+    falta(2, "legal_doc_numero", "legal.falta.doc_numero", { documento: /^[A-Z]+$/.test(doc.nombre) ? doc.nombre : doc.nombre.toLowerCase() });
+  }
   if (!texto(t.legal_direccion)) falta(2, "legal_direccion", "legal.falta.direccion");
   if (!texto(t.legal_ciudad)) falta(2, "legal_ciudad", "legal.falta.ciudad");
   if (!CORREO.test(texto(t.legal_correo))) falta(2, "legal_correo", "legal.falta.correo");
@@ -119,6 +125,9 @@ export function faltantes(t) {
   });
   const minimo = Math.max(1, ...modulosDe(paises).map((m) => m.consumo.garantiaNuevosMinMeses));
   if (!Number.isInteger(t.legal_garantia_nuevos) || t.legal_garantia_nuevos < minimo) falta(4, "legal_garantia_nuevos", "legal.falta.garantia_nuevos", { min: minimo });
+  const modulos = modulosDe(paises);
+  // Argentina (0031): un usado no se vende sin garantía.
+  if (t.legal_garantia_usados === "sin" && modulos.some((m) => m.consumo.usadosSinGarantia === false)) falta(4, "legal_garantia_usados", "legal.falta.garantia_usados_obligatoria");
   if (t.legal_garantia_usados === "con") {
     // 0030: el mínimo del país (Colombia, 3 meses), como legal_faltantes().
     const minimoUsados = Math.max(1, ...modulosDe(paises).map((m) => m.consumo.garantiaUsadosMinMeses || 1));
@@ -129,11 +138,18 @@ export function faltantes(t) {
   } else if (t.legal_retracto_canal !== "correo") falta(4, "legal_retracto_canal", "legal.falta.retracto_canal");
   // Entrega: de Catálogo → Envíos (0023). Igual que legal_faltantes().
   if (!tieneEnvios(t)) falta(4, "envio", "legal.falta.envio");
+  // Argentina (0031): sin plazo pactado serían 24 horas; el plazo es obligatorio.
+  if (modulos.some((m) => m.consumo.plazoEntregaObligatorio) && !(Number.isInteger(t.envio_plazo_desde) && Number.isInteger(t.envio_plazo_hasta))) falta(4, "envio_plazo", "legal.falta.envio_plazo");
   if (t.envio_domicilio && !t.envio_todo_el_pais && !(t.envio_zonas || []).length) falta(4, "envio_zonas", "legal.falta.envio_zonas");
   if (t.envio_domicilio && !t.envio_costo) falta(4, "envio_costo", "legal.falta.envio_costo");
   if (t.envio_retiro && !texto(t.direccion)) falta(0, "direccion", "legal.falta.direccion_retiro");
   if (declaraApple(t) && !texto(t.legal_apple_detalle)) falta(4, "legal_apple_detalle", "legal.falta.apple_detalle");
   if (!["si", "no"].includes(t.legal_homologados)) falta(4, "legal_homologados", "legal.falta.homologados");
+  // Argentina (0031): número del Registro Nacional de Bases de Datos y enlace del Data Fiscal.
+  if (paises.includes("ar")) {
+    if (!texto(t.legal_rnbd_numero)) falta(4, "legal_rnbd_numero", "legal.falta.rnbd_numero");
+    if (!/^https:\/\/\S+$/.test(texto(t.legal_data_fiscal_url))) falta(4, "legal_data_fiscal_url", "legal.falta.data_fiscal");
+  }
   // Paso 5
   if (!idValido(HERRAMIENTAS[0], t.meta_pixel_id)) falta(5, "meta_pixel_id", "legal.falta.meta_pixel");
   for (const h of OPCIONALES) {
@@ -210,6 +226,7 @@ export function contexto(t, { rutas = {} } = {}) {
         : { autorizado: false },
       homologados: t.legal_homologados === "si",
       rnbd: t.legal_rnbd,
+      rnbdNumero: limpio(t.legal_rnbd_numero),
       // Las formas de pago van al documento: siempre en español.
       pagos: frasesPagos(t, "es")
     },

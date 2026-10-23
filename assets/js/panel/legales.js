@@ -139,7 +139,6 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
       const docs = documentosDe(t.legal_paises);
       const doc = docs.find((d) => d.clave === t.legal_doc_tipo);
       const perfil = perfilDe(t);
-      const pais = modulosDe(t.legal_paises)[0] || modulosDe(["co"])[0];
       const ayudaNumero = [
         tr("panel.legales.doc_numero.ayuda"),
         doc ? tr("panel.legales.doc_numero.ejemplo", { ejemplo: doc.ejemplo }) : "",
@@ -173,11 +172,11 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
       ${!perfil || necesitaLocal(t) ? texto("legal_direccion_local", tr("panel.legales.direccion_local"), {
         ayuda: perfil ? "" : esc(tr("panel.legales.direccion_local.ayuda", { emprendedor: tr("legal.perfil.emprendedor"), particular: tr("legal.perfil.particular") }))
       }) : ""}
-      ${opciones("legal_rnbd", tr("panel.legales.rnbd.leyenda"), [
+      ${!(t.legal_paises || []).length || (t.legal_paises || []).includes("co") ? opciones("legal_rnbd", tr("panel.legales.rnbd.leyenda"), [
         { valor: "si", texto: tr("panel.legales.rnbd.si") },
         { valor: "no", texto: tr("panel.legales.rnbd.no") },
         { valor: "", texto: tr("panel.legales.rnbd.vacio") }
-      ], { ayuda: esc(tr("panel.legales.rnbd.ayuda", { autoridad: pais.autoridad.corto, norma: pais.datos.rnbd })) })}`;
+      ], { ayuda: esc(tr("panel.legales.rnbd.ayuda", { autoridad: "SIC", norma: modulosDe(["co"])[0].datos.rnbd })) }) : ""}`;
     },
 
     3: () => `<h2 id="l-titulo">${esc(tr("panel.legales.paso3.titulo"))}</h2>
@@ -228,7 +227,12 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
           : `<p class="ayuda">${esc(tr(perfilDe(t) ? "panel.legales.apple.con_perfil" : "panel.legales.apple.sin_perfil"))}</p>
              <blockquote class="texto-fijo" lang="es">${esc(independiente(tienda))}</blockquote>`}
       </section>
-      ${siNo("legal_homologados", tr("panel.legales.homologados.leyenda"), esc(tr("panel.legales.homologados.ayuda")))}`;
+      ${siNo("legal_homologados", tr("panel.legales.homologados.leyenda"), esc(tr("panel.legales.homologados.ayuda")))}
+      ${(t.legal_paises || []).includes("ar") ? `<section class="sub-bloque" aria-labelledby="t-ar">
+        <h3 id="t-ar">${esc(tr("panel.legales.ar.titulo"))}</h3>
+        ${texto("legal_rnbd_numero", tr("panel.legales.rnbd_numero"), { max: 40, ayuda: esc(tr("panel.legales.rnbd_numero.ayuda")), atributos: 'autocomplete="off" spellcheck="false"' })}
+        ${texto("legal_data_fiscal_url", tr("panel.legales.data_fiscal"), { tipo: "url", max: 500, ayuda: esc(tr("panel.legales.data_fiscal.ayuda")), atributos: 'inputmode="url" autocomplete="off" spellcheck="false"' })}
+      </section>` : ""}`;
     },
 
     5: () => `<h2 id="l-titulo">${esc(tr("panel.legales.paso5.titulo"))}</h2>
@@ -299,14 +303,17 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
     }
     if (campo === "legal_correo" && !vacio) return tr("panel.legales.error.correo");
     if (campo === "legal_telefono" && !vacio) return tr("panel.legales.error.telefono");
+    // El mínimo lo pone el país que más pide (Colombia: 12 meses los nuevos; Argentina: 6).
+    const minimoDe = (clave) => modulosDe(t.legal_paises).reduce((a, m) => ((m.consumo[clave] || 1) > a.min ? { min: m.consumo[clave], pais: tr(`pais.${m.codigo}`) } : a), { min: 1, pais: "" });
     if (campo === "legal_garantia_nuevos" && !vacio) {
-      const min = Math.max(1, ...modulosDe(t.legal_paises).map((m) => m.consumo.garantiaNuevosMinMeses));
-      return min > 1 ? tr("panel.legales.error.garantia_minima", { min }) : tr("panel.legales.error.garantia");
+      const { min, pais } = minimoDe("garantiaNuevosMinMeses");
+      return min > 1 ? tr("panel.legales.error.garantia_minima", { min, pais }) : tr("panel.legales.error.garantia");
     }
     if (campo === "legal_garantia_usados_meses" && !vacio) {
-      const min = Math.max(1, ...modulosDe(t.legal_paises).map((m) => m.consumo.garantiaUsadosMinMeses || 1));
-      return min > 1 ? tr("panel.legales.error.garantia_usados_minima", { min }) : tr("panel.legales.error.garantia");
+      const { min, pais } = minimoDe("garantiaUsadosMinMeses");
+      return min > 1 ? tr("panel.legales.error.garantia_usados_minima", { min, pais }) : tr("panel.legales.error.garantia");
     }
+    if (campo === "legal_data_fiscal_url" && !vacio) return tr("panel.legales.error.data_fiscal");
     if (campo === "legal_paises") return tr(vacio ? "panel.legales.error.paises" : "panel.legales.error.paises_disponibles");
     if (/^legal_impuestos\.\d+\.porcentaje$/.test(campo)) return tr("panel.legales.error.porcentaje");
     if (/^legal_impuestos\.\d+\.incluido$/.test(campo)) return tr("panel.legales.error.incluido");

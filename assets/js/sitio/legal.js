@@ -10,6 +10,7 @@ import { conVigencia } from "../legal/vigencia.js";
 import { iniciarConsentimiento } from "./consentimiento.js";
 import { fijarPais } from "../datos/paises.js";
 import { cargarIdioma, idiomaGuardado, traducirDom, idiomaActual, t } from "../i18n/i18n.js";
+import { enlaceConsumidorEnPie } from "./campos.js";
 
 const caja = document.getElementById("legal-texto");
 // El idioma de la visita anterior, antes de pedir los datos (como el sitio).
@@ -36,6 +37,7 @@ try {
     aviso.textContent = t("legalpag.solo_espanol");
     caja.before(aviso);
   }
+  enlaceConsumidorEnPie(tienda);
   iniciarConsentimiento({ tienda, cargar: false, preguntar: false, rutaCookies: "../cookies/" });
 } catch {
   caja.innerHTML = `<p>${t("legalpag.error")}</p>`;

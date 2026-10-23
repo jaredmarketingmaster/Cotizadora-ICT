@@ -5,7 +5,7 @@
 // =============================================================================
 
 import { soloDigitos } from "../utils.js";
-import { datosPais, paisActual, agruparCelular } from "../datos/paises.js";
+import { datosPais, paisActual, agruparCelular, AUTORIDAD_CONSUMIDOR } from "../datos/paises.js";
 import { t } from "../i18n/i18n.js";
 
 // Funciones: el idioma se carga después de importar este módulo.
@@ -20,8 +20,24 @@ export const ERRORES = {
       ? t("popup.error.telefono.ejemplo", { prefijo: cel.visible, ejemplo: cel.ejemplo })
       : t("popup.error.telefono", { prefijo: cel.visible });
   },
-  autorizacion: () => t("popup.error.autorizacion")
+  autorizacion: () => t("popup.error.autorizacion"),
+  transferencia: () => t("popup.error.transferencia")
 };
+
+// Argentina (0031, legal/FUENTES.md AR9): si la tienda vende a Argentina, el
+// formulario pide en una casilla aparte, obligatoria y sin marcar, el
+// consentimiento expreso para enviar los datos a HighLevel (Estados Unidos).
+export const pideTransferencia = (tienda) => (tienda?.legal_paises || []).includes("ar");
+
+export function htmlTransferencia(prefijo) {
+  return `<div class="campo">
+            <label class="casilla" for="${prefijo}-transferencia">
+              <input id="${prefijo}-transferencia" name="autorizacion_transferencia" type="checkbox" required aria-describedby="${prefijo}-transferencia-error">
+              <span>${t("popup.transferencia")}</span>
+            </label>
+            <p class="error-campo" id="${prefijo}-transferencia-error"></p>
+          </div>`;
+}
 
 // Mantiene el cursor en el mismo dígito al reformatear "300 123 4567".
 export function formatearConCursor(input) {
@@ -35,4 +51,19 @@ export function formatearConCursor(input) {
     if (/\d/.test(input.value[i])) n++;
   }
   if (document.activeElement === input) input.setSelectionRange(nueva, nueva);
+}
+
+// Pie de las páginas internas (legales y solicitudes): el enlace a la
+// autoridad de protección al consumidor del país de la tienda, como en la
+// página principal (Argentina: en todas las páginas, AR11).
+export function enlaceConsumidorEnPie(tienda) {
+  const url = AUTORIDAD_CONSUMIDOR[tienda?.pais];
+  const nav = document.querySelector(".pie-enlaces");
+  if (!url || !nav) return;
+  const a = document.createElement("a");
+  a.href = url;
+  a.target = "_blank";
+  a.rel = "noopener";
+  a.textContent = t(`sitio.pie.consumidor.${tienda.pais}`);
+  nav.insertBefore(a, nav.querySelector("[data-preferencias-cookies]"));
 }

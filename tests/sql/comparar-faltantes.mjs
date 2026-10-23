@@ -48,7 +48,15 @@ const VARIANTES = [
   { envio_retiro: false, envio_domicilio: false, envio_zonas: [], envio_costo: "", envio_costo_fijo: null },
   { envio_retiro: true, direccion: " ", envio_domicilio: true, envio_zonas: [], envio_costo: "" },
   { envio_domicilio: true, envio_todo_el_pais: true, envio_zonas: [], envio_costo: "al_recibir", envio_costo_fijo: null, envio_retiro: false },
-  { legal_clausula_privacidad: "Texto con [PENDIENTE: dato].", legal_clausula_aviso: "Hola {{nombre}}." }
+  { legal_clausula_privacidad: "Texto con [PENDIENTE: dato].", legal_clausula_aviso: "Hola {{nombre}}." },
+  // Argentina (0031)
+  { pais: "ar", legal_paises: ["ar"], legal_doc_tipo: "cuit", legal_doc_numero: "20-30123456-3", legal_garantia_nuevos: 6, legal_garantia_usados: "con", legal_garantia_usados_meses: 3,
+    envio_plazo_desde: 1, envio_plazo_hasta: 3, legal_rnbd_numero: "12345678", legal_data_fiscal_url: "https://servicios1.afip.gob.ar/clavefiscal/qr/x" },
+  { pais: "ar", legal_paises: ["ar"], legal_doc_tipo: "cuit", legal_doc_numero: "20-30123456-4", legal_garantia_nuevos: 5, legal_garantia_usados: "sin" },
+  { legal_paises: ["ar"], legal_doc_tipo: "nit", legal_rnbd_numero: " ", legal_data_fiscal_url: "afip.gob.ar" },
+  { legal_paises: ["co", "ar"], legal_garantia_nuevos: 6, envio_plazo_desde: 2, envio_plazo_hasta: 5 },
+  { legal_paises: [], legal_doc_tipo: "dni", legal_doc_numero: "1234567" },
+  { legal_paises: ["co"], legal_doc_tipo: "dni", legal_doc_numero: "30123456" }
 ].map((v) => ({ ...base, ...v }));
 
 if (modo === "sql") {

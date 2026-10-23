@@ -75,7 +75,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 24;
+const VERSION = 25;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -243,7 +243,10 @@ const MIGRACIONES = {
       f.especificaciones = [...(f.especificaciones || []), ...nuevas];
       f.actualizado_en = ahora();
     }
-  }
+  },
+  // 0031_legal_ar.sql: número del Registro Nacional de Bases de Datos y enlace
+  // del Data Fiscal (Argentina), vacíos.
+  24(e) { e.tienda.legal_rnbd_numero = ""; e.tienda.legal_data_fiscal_url = ""; }
 };
 
 // Lo mismo que 0028_colores_apple.sql: renombres, la lista completa de

@@ -63,9 +63,9 @@ caso("validaciones: garantía de 12 meses o más con Colombia, IVA con porcentaj
   assert.deepEqual(claves(w), ["whatsapp"]);
 });
 
-caso("países: solo Colombia está disponible; Brasil necesita portugués", () => {
+caso("países: Colombia y Argentina están disponibles; Brasil necesita portugués", () => {
   assert.deepEqual(CODIGOS_PAISES_SQL, CODIGOS_PAISES, "la lista del check de 0016 (comun.js) es la del índice");
-  assert.deepEqual(PAISES_DISPONIBLES, ["co"]);
+  assert.deepEqual(PAISES_DISPONIBLES, ["ar", "co"]);
   assert.equal(PAISES.find((p) => p.codigo === "br").estado, "portugues");
   assert.equal(PAISES.length, 19);
   const t = base();
@@ -193,7 +193,7 @@ caso("los valores iniciales se pueden guardar y los checks de 0016 rechazan lo q
 });
 
 caso("B3: si el país de la tienda no tiene módulo legal, falta en el paso 3 y no se genera", () => {
-  for (const [pais, nombre] of [["ar", "Argentina"], ["br", "Brasil"], ["mx", "México"]]) {
+  for (const [pais, nombre] of [["cl", "Chile"], ["br", "Brasil"], ["mx", "México"]]) {
     const t = { ...base(), pais };
     const f = faltantes(t).filter((x) => x.campo === "pais");
     assert.deepEqual(f, [{ paso: 3, campo: "pais", texto: `Los textos legales para ${nombre} todavía no están disponibles.` }]);
@@ -201,6 +201,46 @@ caso("B3: si el país de la tienda no tiene módulo legal, falta en el paso 3 y 
   }
   assert.ok(!claves(base()).includes("pais"), "Colombia tiene módulo");
   assert.ok(claves({ ...base(), pais: undefined }).includes("pais"), "sin país también falta");
+});
+
+// Argentina (0031 y legal/FUENTES.md, AR1 a AR16).
+const baseAr = () => ({
+  ...base(), pais: "ar", legal_paises: ["ar"], legal_doc_tipo: "cuit", legal_doc_numero: "20-30123456-3",
+  legal_telefono: "+5491123456789", whatsapp: "5491123456789", legal_garantia_nuevos: 6, legal_garantia_usados: "con", legal_garantia_usados_meses: 3,
+  envio_plazo_desde: 1, envio_plazo_hasta: 3, legal_rnbd_numero: "12345678", legal_data_fiscal_url: "https://servicios1.afip.gob.ar/clavefiscal/qr/response.aspx?qr=prueba"
+});
+
+caso("Argentina: faltantes propios (CUIT, garantías, plazo de entrega, RNBD y Data Fiscal) y documentos con sus fuentes", () => {
+  assert.deepEqual(claves(baseAr()), []);
+  const c = baseAr(); c.legal_doc_numero = "20-30123456-4";
+  assert.deepEqual(claves(c), ["legal_doc_numero"], "CUIT con dígito verificador");
+  const d = baseAr(); d.legal_doc_tipo = "dni"; d.legal_doc_numero = "30123456";
+  assert.deepEqual(claves(d), []);
+  const g = baseAr(); g.legal_garantia_nuevos = 5; g.legal_garantia_usados = "sin";
+  assert.deepEqual(claves(g).sort(), ["legal_garantia_nuevos", "legal_garantia_usados"], "6 meses los nuevos; los usados con garantía");
+  const e = baseAr(); e.envio_plazo_desde = null; e.envio_plazo_hasta = null; e.legal_rnbd_numero = " "; e.legal_data_fiscal_url = "afip.gob.ar";
+  assert.deepEqual(claves(e).sort(), ["envio_plazo", "legal_data_fiscal_url", "legal_rnbd_numero"]);
+  const n = baseAr(); n.legal_doc_tipo = "nit";
+  assert.deepEqual(claves(n), ["legal_doc_tipo"], "solo los documentos de Argentina");
+  const docs = generar(baseAr());
+  const p = visible(docs.privacidad);
+  for (const x of ["CUIT 20-30123456-3", "+54 9 11 2345 6789", "Ley 25.326", "máximo 10 días corridos (artículo 14", "máximo 5 días hábiles (artículo 16",
+    "consentimiento expreso en una casilla aparte", "con el número 12345678",
+    "LA AGENCIA DE ACCESO A LA INFORMACIÓN PÚBLICA, en su carácter de Órgano de Control de la Ley N° 25.326, tiene la atribución de atender las denuncias y reclamos que interpongan quienes resulten afectados en sus derechos por incumplimiento de las normas vigentes en materia de protección de datos personales."
+  ]) assert.ok(p.includes(x), `privacidad: ${x}`);
+  const t = visible(docs.terminos);
+  for (const x of ["pesos argentinos", "Equipos nuevos: 6 meses desde la entrega.", "Equipos usados: 3 meses desde la entrega.",
+    "dentro de los 10 días corridos desde que recibe el equipo o desde la compra, lo que ocurra último", "artículo 34 de la Ley 24.240",
+    "botón de arrepentimiento", "los gastos de la devolución los pagamos nosotros", "RAMATEL del ENACOM",
+    "Defensa de las y los consumidores. Para reclamos ingrese aquí"]) assert.ok(t.includes(x), `términos: ${x}`);
+  assert.ok(!t.includes("Reversión del pago") && !t.includes("Superintendencia"), "nada de Colombia");
+  assert.ok(!t.includes("dentro de las 24 horas"), "con plazo de Envíos, sin texto de respaldo");
+  // Colombia y Argentina juntas: las secciones de los dos y el mínimo mayor (12 meses).
+  const ambas = { ...baseAr(), legal_paises: ["co", "ar"], legal_garantia_nuevos: 6 };
+  assert.deepEqual(claves(ambas), ["legal_garantia_nuevos"]);
+  ambas.legal_garantia_nuevos = 12;
+  const pa = visible(generar(ambas).privacidad);
+  assert.ok(pa.includes("Ley 1581 de 2012") && pa.includes("Ley 25.326"));
 });
 
 caso("C2: los términos arman la entrega desde Envíos; con plazo, sin el máximo legal; sin ninguna forma de entrega, falta", () => {

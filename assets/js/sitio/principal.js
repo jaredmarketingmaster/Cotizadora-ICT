@@ -118,12 +118,17 @@ function dibujarPie(t) {
   // Página de solicitudes (Colombia: peticiones, quejas y reclamos).
   const solicitudes = $("#pie-solicitudes");
   solicitudes.hidden = !SOLICITUDES[t.pais];
-  if (SOLICITUDES[t.pais]) solicitudes.textContent = tr(`solicitudes.titulo.${t.pais}`);
+  if (SOLICITUDES[t.pais]) solicitudes.textContent = tr(`sitio.pie.solicitudes.${t.pais}`);
   // Enlace a la autoridad de protección al consumidor del país (Colombia: la SIC).
   const autoridad = $("#pie-consumidor");
   const url = AUTORIDAD_CONSUMIDOR[t.pais];
   autoridad.hidden = !url;
   if (url) { autoridad.href = url; autoridad.textContent = tr(`sitio.pie.consumidor.${t.pais}`); }
+  // Argentina (AR13): el Data Fiscal que cargó la tienda en Legales.
+  const fiscal = $("#pie-data-fiscal");
+  const enlaceFiscal = t.pais === "ar" && /^https:\/\/\S+$/.test(t.legal_data_fiscal_url || "") ? t.legal_data_fiscal_url : "";
+  fiscal.hidden = !enlaceFiscal;
+  if (enlaceFiscal) fiscal.href = enlaceFiscal;
 }
 
 // --- Filtros y galería ---------------------------------------------------------

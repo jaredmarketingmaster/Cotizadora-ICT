@@ -15,7 +15,9 @@ export const TIPOS_SOLICITUD = ["peticion", "queja", "reclamo", "arrepentimiento
 
 const CODIGO = (prefijo: string) => new RegExp(`^${prefijo}-[ABCDEFGHJKLMNPQRSTUVWXYZ2-9]{4}$`);
 
-export const CAMPOS_CONSENTIMIENTO = ["consentimiento_datos", "consentimiento_promociones", "consentimiento_medicion", "consentimiento_publicidad"];
+// consentimiento_transferencia: Argentina (0031), la casilla de la transferencia
+// a Estados Unidos (false si la tienda no vende a Argentina).
+export const CAMPOS_CONSENTIMIENTO = ["consentimiento_datos", "consentimiento_promociones", "consentimiento_medicion", "consentimiento_publicidad", "consentimiento_transferencia"];
 
 type Datos = Record<string, unknown>;
 

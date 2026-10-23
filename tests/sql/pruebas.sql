@@ -301,9 +301,29 @@ end $$;
 do $$
 begin
   assert not (select 'pais' = any (public.legal_faltantes(t)) from public.tienda t), 'Colombia tiene módulo';
+  -- Desde 0031 Argentina tiene módulo: la prueba usa Chile (cambiado).
   update public.tienda set pais = 'ar', whatsapp = '5491123456789';
-  assert (select 'pais' = any (public.legal_faltantes(t)) from public.tienda t), 'Argentina todavía no';
+  assert not (select 'pais' = any (public.legal_faltantes(t)) from public.tienda t), 'Argentina tiene módulo (0031)';
+  update public.tienda set pais = 'cl', whatsapp = '56912345678';
+  assert (select 'pais' = any (public.legal_faltantes(t)) from public.tienda t), 'Chile todavía no';
   update public.tienda set pais = 'co', whatsapp = '573001234567';
+end $$;
+
+-- 0r. Migración 0031 (Argentina): CUIT con dígito verificador, DNI y CUIT en
+-- el check, y las columnas nuevas vacías por defecto.
+do $$
+begin
+  assert public.cuit_valido('20-30123456-3') and not public.cuit_valido('20-30123456-4') and not public.cuit_valido('21-30123456-3')
+    and not public.cuit_valido('20301234563'), 'CUIT: prefijo, guiones y dígito verificador';
+  assert (select legal_rnbd_numero = '' and legal_data_fiscal_url = '' from public.tienda), 'columnas nuevas vacías';
+  begin
+    update public.tienda set legal_doc_tipo = 'pasaporte';
+    raise exception 'un tipo de documento que no existe no se guarda';
+  exception when check_violation then null; end;
+  begin
+    update public.tienda set legal_data_fiscal_url = repeat('x', 501);
+    raise exception 'un enlace del Data Fiscal de más de 500 caracteres no se guarda';
+  exception when check_violation then null; end;
 end $$;
 
 -- 0b. Migración 0006: el modelo que agregó la agencia (antes_0006) quedó al

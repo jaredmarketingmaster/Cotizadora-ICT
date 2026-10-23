@@ -1086,7 +1086,8 @@ async function llenarPopup(p) {
     assert.deepEqual(Object.fromEntries(Object.keys(LEGAL_INICIAL).map((k) => [k, e.tienda[k]])),
       { ...LEGAL_INICIAL, legal_clausula_privacidad: "Mi política propia.", legal_clausula_terminos: "Mi aviso de marca." });
     for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) assert.ok(!(k in e.tienda), k);
-    assert.equal(e.version, 24);
+    assert.equal(e.version, 25);
+    assert.deepEqual([e.tienda.legal_rnbd_numero, e.tienda.legal_data_fiscal_url], ["", ""], "0031: campos de Argentina vacíos");
     assert.ok(!("url_sitio" in e.tienda), "0025 la agregó y 0027 la quitó (sin archivo XML)");
     assert.ok(!("pagos_pasarela_otra" in e.tienda) && Array.isArray(e.tienda.pagos_pasarelas_otras) && !e.tienda.pagos_pasarelas.includes("otra") && typeof e.tienda.pagos_descuentos === "object", "0024: otras pasarelas con nombre");
     assert.ok(!("legal_entrega" in e.tienda) && !("legal_entrega_zonas" in e.tienda) && typeof e.tienda.envio_retiro === "boolean" && Array.isArray(e.tienda.envio_zonas), "0023: la entrega pasa a Envíos");
@@ -1440,9 +1441,9 @@ async function llenarPopup(p) {
     await p.waitForSelector("#l-legal_paises");
     const paises = await p.$$eval("#l-legal_paises input", (xs) => xs.map((x) => [x.closest("label").textContent.replace(/\s+/g, " ").trim(), x.disabled]));
     assert.equal(paises.length, 19);
-    assert.deepEqual(paises.filter(([, d]) => !d).map(([n]) => n), ["Colombia"]);
+    assert.deepEqual(paises.filter(([, d]) => !d).map(([n]) => n), ["Argentina", "Colombia"]);
     assert.ok(paises.some(([n]) => n === "Brasil Necesita el sitio en portugués."));
-    assert.ok(paises.filter(([n]) => / Próximamente$/.test(n)).length === 17);
+    assert.ok(paises.filter(([n]) => / Próximamente$/.test(n)).length === 16);
     await p.check("#l-legal_paises-4");
     await esperarGuardado(p);
     // Condiciones de venta: garantía mínima con Colombia y los avisos literales
@@ -1570,7 +1571,7 @@ async function llenarPopup(p) {
     assert.ok(cook2.includes("versión 2."), "otro texto, otra versión");
     // Pie del sitio: los tres documentos y las preferencias
     await ir(p);
-    assert.deepEqual(await p.$$eval(".pie-enlaces a", (xs) => xs.map((x) => [x.textContent, x.getAttribute("href")])),
+    assert.deepEqual(await p.$$eval(".pie-enlaces a:not([hidden])", (xs) => xs.map((x) => [x.textContent, x.getAttribute("href")])),
       [["Política de privacidad", "privacidad/"], ["Términos y condiciones", "terminos/"], ["Política de cookies", "cookies/"],
         ["Peticiones, quejas y reclamos", "solicitudes/"], ["Superintendencia de Industria y Comercio (SIC)", "https://www.sic.gov.co"]]);
     assert.ok(await p.isVisible(".pie [data-preferencias-cookies]"));
@@ -1579,6 +1580,58 @@ async function llenarPopup(p) {
     await ir(p);
     assert.equal(await p.isVisible("#pie-consumidor"), false, "sin enlace a la SIC fuera de Colombia");
     assert.equal(await p.isVisible("#pie-solicitudes"), false, "sin PQR fuera de Colombia");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("Argentina (0031): pie con el botón de arrepentimiento, Defensa del Consumidor y Data Fiscal; casilla de la transferencia a EE. UU. en el pop-up y en solicitudes", async () => {
+    const p = await nueva(390, 844);
+    await ir(p);
+    const fiscal = "https://servicios1.afip.gob.ar/clavefiscal/qr/response.aspx?qr=prueba";
+    await publicarLegalesCon(p, {
+      pais: "ar", whatsapp: "5491123456789", legal_paises: ["ar"], legal_doc_tipo: "cuit", legal_doc_numero: "20-30123456-3", legal_telefono: "+5491123456789",
+      legal_garantia_nuevos: 6, legal_garantia_usados: "con", legal_garantia_usados_meses: 3, envio_plazo_desde: 1, envio_plazo_hasta: 3,
+      legal_rnbd_numero: "12345678", legal_data_fiscal_url: fiscal
+    });
+    await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=256-gb");
+    assert.deepEqual(await p.$$eval(".pie-enlaces a:not([hidden])", (xs) => xs.map((x) => [x.textContent, x.getAttribute("href")])), [
+      ["Política de privacidad", "privacidad/"], ["Términos y condiciones", "terminos/"], ["Política de cookies", "cookies/"],
+      ["BOTÓN DE ARREPENTIMIENTO", "solicitudes/"],
+      ["Defensa de las y los consumidores. Para reclamos ingrese aquí", "https://www.argentina.gob.ar/iniciar-un-reclamo-ante-defensa-de-las-y-los-consumidores"],
+      ["Data Fiscal (Formulario 960/NM)", fiscal]]);
+    // Pop-up: la casilla aparte de la transferencia, sin marcar y obligatoria.
+    await p.click("#detalle-en-linea [data-comprar]");
+    await p.waitForSelector("#p-transferencia");
+    assert.equal(await p.isChecked("#p-transferencia"), false);
+    await p.fill("#p-nombre", "Juan Pérez");
+    await p.fill("#p-correo", "juan@correo.com.ar");
+    await p.click("#p-telefono");
+    await p.keyboard.type("1123456789");
+    await p.check("#p-autorizacion");
+    await p.click("[data-enviar]");
+    assert.equal(await p.textContent("#p-transferencia-error"), "Para continuar, acepte el envío de sus datos a Estados Unidos.");
+    await p.check("#p-transferencia");
+    await p.click("[data-enviar]");
+    await p.waitForSelector("#popup-titulo:has-text('Su pedido está listo')");
+    const lead = await p.evaluate(() => JSON.parse(sessionStorage.getItem("cotizadora-demo:ultimo-lead")));
+    assert.equal(lead.consentimiento_transferencia, true);
+    assert.equal(lead.telefono, "+5491123456789");
+    // Solicitudes: el arrepentimiento ya elegido, con la misma casilla; el pie de las páginas internas lleva Defensa del Consumidor.
+    await p.goto(`${BASE}/solicitudes/`, { waitUntil: "networkidle" });
+    await p.waitForSelector("#form-solicitud");
+    assert.equal(await p.textContent("h1"), "Botón de arrepentimiento");
+    assert.equal(await p.isChecked("input[value=arrepentimiento]"), true);
+    assert.ok(await p.isVisible("#s-transferencia"));
+    assert.ok((await p.textContent(".pie-enlaces")).includes("Defensa de las y los consumidores. Para reclamos ingrese aquí"));
+    const priv = await textoLegal(p, "/privacidad/");
+    assert.ok(priv.includes("Registro Nacional de Bases de Datos de la AAIP con el número 12345678"));
+    assert.ok((await p.textContent(".pie-enlaces")).includes("Defensa de las y los consumidores"));
+    // Panel, paso 4: la sección de Argentina con el RNBD y el Data Fiscal.
+    await entrarPanel(p, "gestor@demo.co");
+    await p.goto(`${BASE}/admin/#/legales/4`);
+    await p.waitForSelector("#l-legal_rnbd_numero");
+    assert.equal(await p.inputValue("#l-legal_rnbd_numero"), "12345678");
+    assert.equal(await p.inputValue("#l-legal_data_fiscal_url"), fiscal);
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
@@ -1837,15 +1890,21 @@ async function llenarPopup(p) {
     await p.waitForSelector("text=Guardado");
     let t = await p.evaluate((c) => JSON.parse(localStorage.getItem(c)).tienda, CLAVE_DEMO);
     assert.deepEqual([t.pais, t.whatsapp], ["ar", "5491123456789"]);
-    // B3: Argentina no tiene módulo legal: lo dicen Mi tienda y el paso 3, y falta para publicar
-    assert.match(await p.textContent("#pais-ayuda"), / Los textos legales para Argentina todavía no están disponibles\.$/);
+    // B3 (cambiado con 0031): Argentina ya tiene módulo legal. Un país sin módulo
+    // (Chile): lo dicen Mi tienda y el paso 3, y falta para publicar.
+    assert.doesNotMatch(await p.textContent("#pais-ayuda"), /todavía no están disponibles/);
+    await p.selectOption("#pais", "cl");
+    await p.fill("#whatsapp", "56912345678");
+    await p.click("#guardar-tienda");
+    await p.waitForFunction((c) => JSON.parse(localStorage.getItem(c)).tienda.pais === "cl", CLAVE_DEMO);
+    assert.match(await p.textContent("#pais-ayuda"), / Los textos legales para Chile todavía no están disponibles\.$/);
     await p.goto(`${BASE}/admin/#/legales/3`);
     await p.waitForSelector("#l-pais");
-    assert.equal(await p.textContent("#l-pais p"), "Los textos legales para Argentina todavía no están disponibles.");
+    assert.equal(await p.textContent("#l-pais p"), "Los textos legales para Chile todavía no están disponibles.");
     assert.equal(await p.getAttribute("#l-pais a", "href"), "#/tienda");
     await p.goto(`${BASE}/admin/#/legales/6`);
     await p.waitForSelector("#l-faltan li");
-    assert.ok((await p.locator("#l-faltan li").allTextContents()).some((x) => x.startsWith("Los textos legales para Argentina todavía no están disponibles.")));
+    assert.ok((await p.locator("#l-faltan li").allTextContents()).some((x) => x.startsWith("Los textos legales para Chile todavía no están disponibles.")));
     await p.goto(`${BASE}/admin/#/tienda`);
     await p.waitForSelector("#pais");
     // Un país sin formato verificado: prefijo y número de 8 a 15 dígitos

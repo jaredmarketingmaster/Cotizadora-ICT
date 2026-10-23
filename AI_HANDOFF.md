@@ -2,10 +2,10 @@
 > LECTURA OBLIGATORIA PARA EL AGENTE ENTRANTE (Codex, Claude u otro): Lee este documento antes de ejecutar comandos o proponer código.
 
 ## 1. 🚦 ESTADO ACTUAL (METADATA)
-- **Último Agente:** Claude Code 4 (quitó el archivo XML, preparó la investigación con Gemini y ejecuta el plan de 9 puntos de la sección 5: puntos 1 a 5 hechos; sigue el 6).
+- **Último Agente:** Claude Code 4 (quitó el archivo XML, preparó la investigación con Gemini y ejecuta el plan de 9 puntos de la sección 5: puntos 1 a 6 hechos; sigue el 7).
 - **Timestamp:** 2026-10-23 (actualizado por Claude Code 4).
 - **Rama Actual:** `claude/gallant-euler-ezco6g` (último commit de esta tanda: ver `git log`; árbol limpio y sincronizado con `origin` al cerrar cada punto). `main` solo tiene el README inicial: **no** trabajar sobre `main` ni abrir PR sin que Jared lo pida.
-- **Estado del Build:** VERDE. No hay build ni `package.json`: es un sitio estático sin npm ni compilación, a propósito. "Verde" significa que pasan todas las suites del 23/10/2026 (después del punto 5): SQL OK, las 6 suites sin navegador OK (1139 claves), funciones Deno OK, `tests/verificar.cjs` 81/81 (82 con `ICT_CAPTURAS=1`), `tests/verificar-supabase.cjs` OK y `tests/documentacion.mjs` OK. Una corrida de `verificar.cjs` tuvo 1 falla intermitente que no se repitió ni se identificó: si aparece, mirar qué caso es antes de tocar nada. Lighthouse no se volvió a medir en esta tanda (la última medición, del 22/10: 99–100 / 100 / 100).
+- **Estado del Build:** VERDE. No hay build ni `package.json`: es un sitio estático sin npm ni compilación, a propósito. "Verde" significa que pasan todas las suites del 23/10/2026 (después del punto 6): SQL OK, las 6 suites sin navegador OK (1156 claves), funciones Deno OK, `tests/verificar.cjs` 82/82 (83 con `ICT_CAPTURAS=1`), `tests/verificar-supabase.cjs` OK y `tests/documentacion.mjs` OK. Una corrida de `verificar.cjs` tuvo 1 falla intermitente que no se repitió ni se identificó: si aparece, mirar qué caso es antes de tocar nada. Lighthouse no se volvió a medir en esta tanda (la última medición, del 22/10: 99–100 / 100 / 100).
 - **Comando de Verificación:**
   ```bash
   python3 -m http.server 8080 & \
@@ -20,9 +20,9 @@
 
 ## 2. 🧠 MEMORIA ARQUITECTÓNICA (INMUTABLE)
 1. **Sitio estático sin build.** HTML, CSS y JavaScript con ES modules y **rutas relativas** (funciona bajo `/Cotizadora-ICT/` en GitHub Pages). No agregar npm, `package.json`, bundlers, TypeScript en el front ni frameworks. Las únicas dependencias externas son Google Fonts (sitio) y supabase-js 2.117.2 desde jsDelivr (solo el panel).
-2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0031_…sql`**. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 24) con su `MIGRACIONES[n]`.
+2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0032_…sql`**. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 25) con su `MIGRACIONES[n]`.
 3. **Idioma y textos.** Español de Colombia con **"usted"** (nunca "tú" ni voseo) y portugués de Brasil con "você". **Ningún texto visible suelto en el código:** todo va en `assets/js/i18n/es.js` y `pt.js`, con las mismas claves y variables, y se usa con `t(clave)` / `tn(clave, n)`. `t()` se llama al usar el texto, nunca al cargar el módulo. Los textos literales del prompt (en `popup.js` y `catalogo.js`, ver `CLAUDE.md`) no se reescriben.
-4. **Reglas de producto que la suite hace cumplir** (la suite demo tiene hoy 81 casos):
+4. **Reglas de producto que la suite hace cumplir** (la suite demo tiene hoy 82 casos):
    - No inventar datos (especificaciones, colores, precios, plazos ni promesas): lo que la fuente no trae queda vacío.
    - Nada de la marca Apple: sin logo, imágenes ni tipografías; solo `apple.com/co` como referencia de texto.
    - Datos personales de clientes **solo a GHL** por `enviar-lead`: nunca en Supabase ni en el píxel. Nunca `Purchase`.
@@ -51,7 +51,7 @@
   - Asistente de Legales de 6 pasos que genera y publica los 4 documentos, con el módulo de Colombia.
   - Usuarios: invitar, cambiar el rol, desactivar y reactivar.
 - **Base de datos**:
-  - Migraciones `0001` a `0030` (la `0027` quita la columna del archivo XML; la `0028`, colores según Apple; la `0029`, fichas según Apple; la `0030`, mínimo de garantía de usados en Colombia), con RLS, disparadores, `datos_publicos()`, `borrar_datos_demo()`, `legal_faltantes()`, `crear_equipos_lote()` y `archivos_en_uso()`.
+  - Migraciones `0001` a `0031` (la `0027` quita la columna del archivo XML; la `0028`, colores según Apple; la `0029`, fichas según Apple; la `0030`, mínimo de garantía de usados en Colombia; la `0031`, módulo legal de Argentina), con RLS, disparadores, `datos_publicos()`, `borrar_datos_demo()`, `legal_faltantes()`, `crear_equipos_lote()` y `archivos_en_uso()`.
   - Funciones Deno: `enviar-lead` y `usuarios`.
 - **Pruebas e infraestructura de prueba:**
   - Suites SQL, unitarias, de funciones, demo (Playwright), Supabase local y Lighthouse (`tests/lighthouse/`), todas en verde.
@@ -62,9 +62,7 @@ Nada de esto requiere cambios. En particular, D a I de la ronda 3 están cerrada
 
 ## 4. 🚧 CONTEXTO DE ERRORES CONOCIDOS Y LIMITACIONES
 No hay tests fallando ni configuraciones a medias. El código actual funciona y todas las suites están en verde. Limitaciones y pendientes conocidos (detalle en la sección 17 de `DOCUMENTACION.md`):
-- **Bloqueante para tiendas fuera de Colombia** (el punto 6 lo resuelve para Argentina):
-  - Solo existe el módulo legal de Colombia (`assets/js/legal/paises/co.js`).
-  - Las tiendas nuevas nacen en Argentina (`PAIS_POR_DEFECTO = "ar"`): sin módulo, no pueden publicar sus legales y el pop-up no envía pedidos.
+- **Tiendas fuera de Colombia y Argentina:** solo existen esos dos módulos legales (`co.js` y `ar.js`). Una tienda de otro país no puede publicar sus legales y su pop-up no envía pedidos. Las tiendas nuevas nacen en Argentina (`PAIS_POR_DEFECTO = "ar"`), que ya tiene módulo.
 - **Primera visita en portugués:** sin idioma guardado (la primera vez en ese navegador), una tienda en portugués se ve en español hasta que llegan los datos. Desde la segunda visita sale en portugués (punto 1 hecho); el LCP en portugués es de 1,7–1,8 s simulado y 2,5 s con estrangulamiento real (sección 13 de `DOCUMENTACION.md`).
 - **Correos por tienda:** los de invitación y recuperación están en español (`supabase/correos/`) y en portugués (`supabase/correos/pt/`, punto 2 hecho); se pegan a mano en el proyecto de Supabase de cada tienda, en su idioma.
 - **CLS de 0,19 solo con la franja de modo demo** (rendimiento 91). Sin la franja, 0,045. Es una limitación aceptada: no hay que corregirla.
@@ -79,7 +77,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
 >
 > **Regla de cierre de Jared:** al llegar al 90 % del límite de la sesión, terminar el punto en curso, documentarlo en `DOCUMENTACION.md` y dejar este archivo al día para que el siguiente agente siga como si fuera el mismo.
 >
-> **Antes de tocar nada:** ya hecho en esta tanda: el archivo XML se quitó (`aec4c38`), punto 1 (`9ba61be`), punto 2 (`6932c64`) punto 3 (`68b3421`) punto 4 (`1247ac2`) y punto 5 (ver `git log`: "punto 5"). **Sigue el punto 6.**
+> **Antes de tocar nada:** ya hecho en esta tanda: el archivo XML se quitó (`aec4c38`), punto 1 (`9ba61be`), punto 2 (`6932c64`) punto 3 (`68b3421`) punto 4 (`1247ac2`) punto 5 (`55c3af7`) y punto 6 (ver `git log`: "punto 6"). **Sigue el punto 7.**
 
 1. ✅ **HECHO (`9ba61be`).** `legal/FUENTES.md` corregido y completado: fuentes de Colombia 14 a 18 (transporte de la devolución, reversión del pago, enlace a la SIC, PQR con radicado, RNE) y estados al día.
 2. ✅ **HECHO (`6932c64`).** Colores según Apple: `0028_colores_apple.sql`, `semilla.js` y `demo.js` (`VERSION` 23).
@@ -106,7 +104,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
    - Enlace a la SIC en el pie del sitio solo para tiendas de Colombia (art. 50 lit. d), con su texto en `i18n/es.js` y `pt.js`.
    - RNE (Ley 2300, Res. CRC 7120/2023): solo en la guía de GHL (sección 12.3 de `DOCUMENTACION.md`), no en el código.
 5. ✅ **HECHO (página `/solicitudes/`; detalle en la sección 19 de `DOCUMENTACION.md`).** Para Argentina, en el punto 6: agregar `ar: ["arrepentimiento"]` (y los que correspondan) a `SOLICITUDES` de `paises.js`, la clave `solicitudes.titulo.ar` en `es.js` y `pt.js` y, si la Disp. 954/2025 lo pide, un enlace "BOTÓN DE ARREPENTIMIENTO" visible en la portada (`index.html` / `principal.js`). La función `enviar-lead` ya acepta `arrepentimiento`. **Formulario de solicitudes con código.** PQR con radicado en Colombia (fuente 17, para que la revise el abogado) y "BOTÓN DE ARREPENTIMIENTO" en Argentina (Disp. 954/2025: en la portada, sin registrarse, da un código en 24 h). Los datos van **solo a GHL por `enviar-lead`** (nunca a Supabase). El código se arma con `generarCodigo` (ya existe) y se muestra al cliente.
-6. **Módulo legal de Argentina** (`paises/ar.js` con la forma de `co.js`, `indice.js` con `ar` disponible, migración nueva para `legal_faltantes()`, `motor.test.mjs`, `pruebas.sql`, `comparar-faltantes.mjs`, y una sección de Argentina en `legal/FUENTES.md` con cada dato y su fuente).
+6. ✅ **HECHO (`0031_legal_ar.sql`, `ar.js`; detalle en la sección 19 de `DOCUMENTACION.md`). Queda como registro. Pendientes del módulo (sección 17): revisión de un abogado argentino, la imagen del Data Fiscal, los datos de inscripción de personas jurídicas argentinas y el formato de los fijos argentinos.** **Módulo legal de Argentina** (`paises/ar.js` con la forma de `co.js`, `indice.js` con `ar` disponible, migración nueva para `legal_faltantes()`, `motor.test.mjs`, `pruebas.sql`, `comparar-faltantes.mjs`, y una sección de Argentina en `legal/FUENTES.md` con cada dato y su fuente).
    - **Arrepentimiento:** 10 días corridos desde la entrega o el contrato (lo último); la devolución la paga el proveedor (Ley 24.240 art. 34; CCyC arts. 1110 a 1116).
    - **Garantía:** 6 meses los nuevos y 3 los usados; un usado no se puede vender sin garantía.
    - **Entrega:** sin plazo pactado son 24 h (CCyC art. 1147). Pedir el plazo de la tienda.
@@ -151,7 +149,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
     - Un commit por punto en español, con push a `claude/gallant-euler-ezco6g`.
 
 **Prohibido tocar:**
-- `supabase/migrations/0001` a `0030`: son inmutables; los cambios van en migraciones nuevas.
+- `supabase/migrations/0001` a `0031`: son inmutables; los cambios van en migraciones nuevas.
 - Los textos literales del prompt en `assets/js/sitio/popup.js` y `assets/js/sitio/catalogo.js`, y el mensaje de WhatsApp.
 - `config.js`: solo lleva la conexión y el script de GHL; nunca datos de la tienda ni claves.
 - Las pruebas existentes: no se debilitan ni se borran.

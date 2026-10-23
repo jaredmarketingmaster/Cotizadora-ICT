@@ -80,6 +80,7 @@ export const LEGAL_INICIAL = {
   legal_paso: 1, legal_perfil: "", legal_tipo_persona: "", legal_nombre: "", legal_doc_tipo: "", legal_doc_numero: "",
   legal_direccion: "", legal_ciudad: "", legal_correo: "", legal_telefono: "", legal_representante: "",
   legal_matricula_numero: "", legal_matricula_camara: "", legal_direccion_local: "", legal_rnbd: "",
+  legal_rnbd_numero: "", legal_data_fiscal_url: "",
   legal_paises: [], legal_impuestos: [{ nombre: "IVA", porcentaje: null, incluido: null }],
   legal_garantia_nuevos: null, legal_garantia_usados: "", legal_garantia_usados_meses: null, legal_retracto_canal: "",
   legal_apple_detalle: "", legal_homologados: "",
@@ -98,11 +99,11 @@ const LARGOS_LEGALES = {
   legal_representante: 160, legal_matricula_numero: 40, legal_matricula_camara: 80, legal_direccion_local: 160,
   legal_apple_detalle: 400, legal_clausula_privacidad: 4000, legal_clausula_terminos: 4000,
   legal_clausula_cookies: 4000, legal_clausula_aviso: 4000, meta_pixel_id: 30, ga4_id: 30, gtm_id: 30, clarity_id: 30,
-  tiktok_id: 30, gads_id: 30, plataforma_sitio: 80
+  tiktok_id: 30, gads_id: 30, plataforma_sitio: 80, legal_rnbd_numero: 40, legal_data_fiscal_url: 500
 };
 const OPCIONES_LEGALES = {
   legal_perfil: ["", "oficial", "autorizado", "electronica", "no_oficial", "emprendedor", "particular"],
-  legal_tipo_persona: ["", "natural", "juridica"], legal_doc_tipo: ["", "cc", "nit", "ce"], legal_rnbd: ["", "si", "no"],
+  legal_tipo_persona: ["", "natural", "juridica"], legal_doc_tipo: ["", "cc", "nit", "ce", "dni", "cuit"], legal_rnbd: ["", "si", "no"],
   legal_garantia_usados: ["", "con", "sin"], legal_retracto_canal: ["", "correo", "whatsapp"], legal_homologados: ["", "si", "no"]
 };
 export const CODIGOS_PAISES_SQL = ["ar", "bo", "br", "cl", "co", "cr", "cu", "ec", "sv", "gt", "hn", "mx", "ni", "pa", "py", "pe", "do", "uy", "ve"];

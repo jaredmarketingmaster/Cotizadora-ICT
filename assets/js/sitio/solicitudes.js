@@ -17,7 +17,7 @@ import { logoGenericoSVG } from "../ilustracion.js";
 import { escaparHTML, soloDigitos, correoValido, generarCodigo, codigoValido } from "../utils.js";
 import { iniciarConsentimiento, estado as estadoCookies } from "./consentimiento.js";
 import { fijarPais, paisActual, datosPais, celularNacionalValido, celularInternacional, fechaConZona, SOLICITUDES } from "../datos/paises.js";
-import { ERRORES, formatearConCursor } from "./campos.js";
+import { ERRORES, formatearConCursor, pideTransferencia, htmlTransferencia, enlaceConsumidorEnPie } from "./campos.js";
 import { cargarIdioma, idiomaGuardado, traducirDom, idiomaActual, t } from "../i18n/i18n.js";
 
 const caja = document.getElementById("solicitudes");
@@ -43,6 +43,7 @@ try {
   if (!tipos.length) caja.innerHTML = `<p>${t("solicitudes.no_disponible")}</p>`;
   else if (!tienda.legal_publicado?.version) caja.innerHTML = `<p>${t("legalpag.en_preparacion")}</p>`;
   else dibujarFormulario(api, tienda, tipos);
+  enlaceConsumidorEnPie(tienda);
   iniciarConsentimiento({ tienda, cargar: false, preguntar: false, rutaCookies: "../cookies/" });
 } catch {
   caja.innerHTML = `<p>${t("legalpag.error")}</p>`;
@@ -56,7 +57,7 @@ function dibujarFormulario(api, tienda, tipos) {
     <form class="popup-form solicitudes-form" id="form-solicitud" name="solicitud" action="#" method="post" novalidate data-clarity-mask="true">
       <fieldset class="campo" id="s-tipo" aria-describedby="s-tipo-error">
         <legend class="etiqueta">${t("solicitudes.tipo")}</legend>
-        ${tipos.map((x) => `<label class="casilla"><input type="radio" name="tipo" value="${x}"><span>${t(`solicitudes.tipo.${x}`)}</span></label>`).join("")}
+        ${tipos.map((x) => `<label class="casilla"><input type="radio" name="tipo" value="${x}" ${tipos.length === 1 ? "checked" : ""}><span>${t(`solicitudes.tipo.${x}`)}</span></label>`).join("")}
         <p class="error-campo" id="s-tipo-error"></p>
       </fieldset>
       <div class="campo">
@@ -101,6 +102,7 @@ function dibujarFormulario(api, tienda, tipos) {
         </label>
         <p class="error-campo" id="s-autorizacion-error"></p>
       </div>
+      ${pideTransferencia(tienda) ? htmlTransferencia("s") : ""}
       <div class="popup-alerta" data-alerta role="alert" hidden></div>
       <button type="submit" class="boton boton--primario boton--grande boton--bloque" data-enviar>${t("solicitudes.enviar")}</button>
     </form>`;
@@ -120,6 +122,7 @@ function dibujarFormulario(api, tienda, tipos) {
     if (id === "s-cotizacion" && el.value.trim() && !codigoValido(el.value.trim().toUpperCase())) error = t("solicitudes.error.cotizacion");
     if (id === "s-detalle" && el.value.trim().length < 10) error = t("solicitudes.error.detalle");
     if (id === "s-autorizacion" && !el.checked) error = ERRORES.autorizacion();
+    if (id === "s-transferencia" && !el.checked) error = ERRORES.transferencia();
     if (id !== "s-tipo") el.setAttribute("aria-invalid", String(Boolean(error)));
     form.querySelector(`#${id}-error`).textContent = error;
     return !error;
@@ -127,7 +130,7 @@ function dibujarFormulario(api, tienda, tipos) {
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const ids = ["s-tipo", "s-nombre", "s-correo", "s-telefono", "s-cotizacion", "s-detalle", "s-autorizacion"];
+    const ids = ["s-tipo", "s-nombre", "s-correo", "s-telefono", "s-cotizacion", "s-detalle", "s-autorizacion", ...(form.querySelector("#s-transferencia") ? ["s-transferencia"] : [])];
     const malos = ids.filter((id) => !validar(id));
     if (malos.length) {
       const primero = form.querySelector(`#${malos[0]}`);
@@ -149,6 +152,7 @@ function dibujarFormulario(api, tienda, tipos) {
       detalle: form.querySelector("#s-detalle").value.trim(),
       cotizacion_relacionada: form.querySelector("#s-cotizacion").value.trim().toUpperCase(),
       consentimiento_datos: true,
+      consentimiento_transferencia: Boolean(form.querySelector("#s-transferencia")?.checked),
       consentimiento_promociones: false,
       consentimiento_medicion: cookies.medicion,
       consentimiento_publicidad: cookies.publicidad,
