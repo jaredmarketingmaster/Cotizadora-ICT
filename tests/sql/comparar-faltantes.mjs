@@ -33,6 +33,9 @@ const VARIANTES = [
   { gtm_activo: false, gtm_id: "malo", ga4_activo: true, ga4_id: "G-ABC123XYZ9" },
   { legal_garantia_usados: "con", legal_garantia_usados_meses: null },
   { legal_garantia_usados: "con", legal_garantia_usados_meses: 3 },
+  // 0030: con Colombia, menos de 3 meses falta; sin Colombia en los países, alcanza 1.
+  { legal_garantia_usados: "con", legal_garantia_usados_meses: 2 },
+  { legal_garantia_usados: "con", legal_garantia_usados_meses: 1, legal_paises: ["br"] },
   { legal_retracto_canal: "whatsapp", whatsapp: "" },
   { legal_retracto_canal: "whatsapp" },
   { legal_paises: ["co", "mx"] },

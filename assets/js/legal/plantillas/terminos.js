@@ -44,6 +44,10 @@ export function secciones(ctx) {
     },
     { titulo: "Garantía", lineas: ctx.paises.flatMap((p) => p.terminos.garantia(ctx)) },
     { titulo: "Derecho de retracto", lineas: ctx.paises.flatMap((p) => p.terminos.retracto(ctx)) },
+    ctx.paises.some((p) => p.terminos.reversion) && {
+      titulo: "Reversión del pago",
+      lineas: ctx.paises.flatMap((p) => (p.terminos.reversion ? p.terminos.reversion(ctx) : []))
+    },
     {
       titulo: "Entrega",
       lineas: [

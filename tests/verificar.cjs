@@ -1555,6 +1555,7 @@ async function llenarPopup(p) {
     const term = await textoLegal(p, "/terminos/");
     assert.ok(term.includes(`Tienda de demostración ${INDEPENDIENTE}`), "términos: relación con Apple");
     assert.ok(term.includes("5 días hábiles siguientes a la entrega"));
+    for (const x of ["Reversión del pago", "el transporte y los demás costos de la devolución los paga usted", "60 si le prestamos un equipo mientras tanto"]) assert.ok(term.includes(x), `términos: ${x}`);
     const cook = await textoLegal(p, "/cookies/");
     assert.ok(cook.includes("Píxel de Meta") && cook.includes("_fbp"));
     for (const x of ["Google Analytics", "Microsoft Clarity", "TikTok", "Google Ads", "Tag Manager"]) assert.ok(!cook.includes(x), `inactiva: ${x}`);
@@ -1570,8 +1571,13 @@ async function llenarPopup(p) {
     // Pie del sitio: los tres documentos y las preferencias
     await ir(p);
     assert.deepEqual(await p.$$eval(".pie-enlaces a", (xs) => xs.map((x) => [x.textContent, x.getAttribute("href")])),
-      [["Política de privacidad", "privacidad/"], ["Términos y condiciones", "terminos/"], ["Política de cookies", "cookies/"]]);
+      [["Política de privacidad", "privacidad/"], ["Términos y condiciones", "terminos/"], ["Política de cookies", "cookies/"],
+        ["Superintendencia de Industria y Comercio (SIC)", "https://www.sic.gov.co"]]);
     assert.ok(await p.isVisible(".pie [data-preferencias-cookies]"));
+    // El enlace a la SIC es solo para tiendas de Colombia (FUENTES 16).
+    await editarDemo(p, (e) => { e.tienda.pais = "cl"; });
+    await ir(p);
+    assert.equal(await p.isVisible("#pie-consumidor"), false, "sin enlace a la SIC fuera de Colombia");
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });

@@ -52,6 +52,14 @@ export const PAISES_TIENDA = {
 };
 
 export const CODIGOS_PAIS_TIENDA = Object.keys(PAISES_TIENDA);
+
+// Enlace a la autoridad de protección al consumidor que el pie del sitio
+// muestra según el país de la tienda (texto: "sitio.pie.consumidor.<código>").
+// Solo los países con fuente en legal/FUENTES.md: Colombia, fuente 16 (Ley
+// 1480, art. 50, literal d).
+export const AUTORIDAD_CONSUMIDOR = {
+  co: "https://www.sic.gov.co"
+};
 export const PAIS_POR_DEFECTO = "ar";
 
 // Los que no tienen formato verificado: prefijo + número, de 8 a 15 dígitos.

@@ -120,7 +120,9 @@ export function faltantes(t) {
   const minimo = Math.max(1, ...modulosDe(paises).map((m) => m.consumo.garantiaNuevosMinMeses));
   if (!Number.isInteger(t.legal_garantia_nuevos) || t.legal_garantia_nuevos < minimo) falta(4, "legal_garantia_nuevos", "legal.falta.garantia_nuevos", { min: minimo });
   if (t.legal_garantia_usados === "con") {
-    if (!Number.isInteger(t.legal_garantia_usados_meses) || t.legal_garantia_usados_meses < 1) falta(4, "legal_garantia_usados_meses", "legal.falta.garantia_usados_meses");
+    // 0030: el mínimo del país (Colombia, 3 meses), como legal_faltantes().
+    const minimoUsados = Math.max(1, ...modulosDe(paises).map((m) => m.consumo.garantiaUsadosMinMeses || 1));
+    if (!Number.isInteger(t.legal_garantia_usados_meses) || t.legal_garantia_usados_meses < minimoUsados) falta(4, "legal_garantia_usados_meses", "legal.falta.garantia_usados_meses", { min: minimoUsados });
   } else if (t.legal_garantia_usados !== "sin") falta(4, "legal_garantia_usados", "legal.falta.garantia_usados");
   if (t.legal_retracto_canal === "whatsapp") {
     if (!whatsappValido(texto(t.whatsapp), t.pais)) falta(0, "whatsapp", "legal.falta.whatsapp");

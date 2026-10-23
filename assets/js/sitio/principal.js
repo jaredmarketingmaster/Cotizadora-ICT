@@ -20,7 +20,7 @@ import { crearPopup } from "./popup.js";
 import { capturarAtribucion } from "./atribucion.js";
 import { abrirConTransicion, cerrarConTransicion, cerrarConEscape } from "./transiciones.js";
 import { evento, parametrosEquipo } from "./pixel.js";
-import { fijarPais, whatsappValido } from "../datos/paises.js";
+import { fijarPais, whatsappValido, AUTORIDAD_CONSUMIDOR } from "../datos/paises.js";
 // Alias tr/tn: en este archivo "t" es la tienda.
 import { cargarIdioma, idiomaGuardado, traducirDom, idiomaActual, t as tr, tn } from "../i18n/i18n.js";
 import { iniciarConsentimiento, alCambiar, permitido } from "./consentimiento.js";
@@ -115,6 +115,11 @@ function dibujarPie(t) {
   $("#pie-tienda").textContent = [t.nombre, t.ciudad].filter(Boolean).join(" · ");
   const fecha = fechaCorta(t.precios_actualizados_en);
   $("#pie-precios").textContent = fecha ? tr("sitio.pie.precios_actualizados", { fecha }) : "";
+  // Enlace a la autoridad de protección al consumidor del país (Colombia: la SIC).
+  const autoridad = $("#pie-consumidor");
+  const url = AUTORIDAD_CONSUMIDOR[t.pais];
+  autoridad.hidden = !url;
+  if (url) { autoridad.href = url; autoridad.textContent = tr(`sitio.pie.consumidor.${t.pais}`); }
 }
 
 // --- Filtros y galería ---------------------------------------------------------

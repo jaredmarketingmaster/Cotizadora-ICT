@@ -53,7 +53,18 @@ export const CO = {
     // FUENTE 13: sin plazo pactado, entrega en máximo 30 días calendario.
     entregaMaxDias: 30,
     garantiaNuevosMinMeses: 12,
-    garantiaReclamoDias: 15
+    // FUENTE 8: un usado que no se vende expresamente sin garantía tiene 3
+    // meses (Decreto 735 de 2013, art. 12). 0030 y faltantes() lo exigen.
+    garantiaUsadosMinMeses: 3,
+    // FUENTE 9: respuesta al reclamo, reparación (con o sin equipo de
+    // préstamo), cambio y devolución del dinero, en días hábiles.
+    garantiaReclamoDias: 15,
+    garantiaReparacionDias: 30,
+    garantiaReparacionPrestamoDias: 60,
+    garantiaCambioDias: 10,
+    garantiaDevolucionDias: 15,
+    // FUENTE 15: plazo para pedir la reversión del pago, en días hábiles.
+    reversionDias: 5
   },
 
   // FUENTE 6: Ley 2300 de 2023 (para la guía de GHL y las promociones).
@@ -102,13 +113,16 @@ export const CO = {
         v.garantiaUsados === "con"
           ? `- **Equipos usados:** ${v.garantiaUsadosMeses} ${v.garantiaUsadosMeses === 1 ? "mes" : "meses"} desde la entrega.`
           : "- **Equipos usados:** se venden sin garantía. Solo podemos vender sin garantía un usado cuya garantía legal ya venció; se lo informamos antes de la compra y usted debe aceptarlo por escrito.",
-        `- Si un equipo falla dentro de la garantía, escríbanos. Le respondemos el reclamo en máximo ${CO.consumo.garantiaReclamoDias} días hábiles.`
+        `- Si un equipo falla dentro de la garantía, escríbanos. Le respondemos el reclamo en máximo ${CO.consumo.garantiaReclamoDias} días hábiles, según el artículo 58 de la ${CO.consumo.leyNumero}.`,
+        `- **Reparación:** en máximo ${CO.consumo.garantiaReparacionDias} días hábiles (${CO.consumo.garantiaReparacionPrestamoDias} si le prestamos un equipo mientras tanto).`,
+        `- **Si no se puede reparar:** le cambiamos el equipo en máximo ${CO.consumo.garantiaCambioDias} días hábiles o le devolvemos el dinero en máximo ${CO.consumo.garantiaDevolucionDias} días hábiles.`
       ];
     },
     retracto: (ctx) => [
       `Como la compra se hace a distancia, usted puede retractarse dentro de los ${CO.consumo.retracto.diasHabiles} días hábiles siguientes a la entrega del equipo, según el artículo 47 de la ${CO.consumo.leyNumero}.`,
       "",
       `- **Cómo pedirlo:** ${ctx.venta.retractoCanal}.`,
+      `- **Devolución del equipo:** el transporte y los demás costos de la devolución los paga usted, según el mismo artículo 47.`,
       `- **Devolución del dinero:** sin descuentos ni retenciones, en máximo ${CO.consumo.retracto.devolucionDias} días calendario, según la Ley 2439 de 2024.`,
       "- **Medio de la devolución:** al mismo medio de pago que usted usó o por el medio que acordemos con usted. Le informamos las opciones disponibles."
     ],
@@ -117,6 +131,13 @@ export const CO = {
     entrega: (ctx) => (ctx.venta.plazoEntrega
       ? []
       : [`Si no acordamos otro plazo con usted, entregamos el pedido en máximo ${CO.consumo.entregaMaxDias} días calendario, contados desde el día siguiente a su pedido, según la Ley 2439 de 2024. Si no lo entregamos a tiempo, usted puede terminar la compra y le devolvemos el dinero sin descuentos ni retenciones en máximo ${CO.consumo.retracto.devolucionDias} días calendario.`]),
+    // FUENTE 15: reversión del pago (Ley 1480, art. 51).
+    reversion: (ctx) => [
+      `Si pagó con tarjeta de crédito o débito, PSE, un link de pago u otro medio de pago electrónico, puede pedir la reversión del pago si fue víctima de fraude, si no hizo la compra, si el equipo no le llegó o si no es el que pidió o tiene un defecto, según el artículo 51 de la ${CO.consumo.leyNumero}.`,
+      "",
+      `- **Plazo:** ${CO.consumo.reversionDias} días hábiles desde que supo del fraude o de la compra que no hizo, o desde que debió recibir el equipo.`,
+      `- **Cómo pedirla:** ${ctx.venta.retractoCanal} y, en el mismo plazo, pídasela también a la entidad que emitió su medio de pago (su banco o la emisora de su tarjeta).`
+    ],
     leyAplicable: () => [
       `Las ventas a personas en Colombia se rigen por las leyes de Colombia, en especial ${CO.consumo.ley}. La autoridad de protección al consumidor es la ${SIC}: [${SITIO_SIC.replace("https://", "")}](${SITIO_SIC}).`
     ]

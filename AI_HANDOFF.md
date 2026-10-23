@@ -2,7 +2,7 @@
 > LECTURA OBLIGATORIA PARA EL AGENTE ENTRANTE (Codex, Claude u otro): Lee este documento antes de ejecutar comandos o proponer código.
 
 ## 1. 🚦 ESTADO ACTUAL (METADATA)
-- **Último Agente:** Claude Code 4 (quitó el archivo XML, preparó la investigación con Gemini y ejecuta el plan de 9 puntos de la sección 5: puntos 1 a 3 hechos; sigue el 4).
+- **Último Agente:** Claude Code 4 (quitó el archivo XML, preparó la investigación con Gemini y ejecuta el plan de 9 puntos de la sección 5: puntos 1 a 4 hechos; sigue el 5).
 - **Timestamp:** 2026-10-23 (actualizado por Claude Code 4).
 - **Rama Actual:** `claude/gallant-euler-ezco6g` (último commit de esta tanda: ver `git log`; árbol limpio y sincronizado con `origin` al cerrar cada punto). `main` solo tiene el README inicial: **no** trabajar sobre `main` ni abrir PR sin que Jared lo pida.
 - **Estado del Build:** VERDE. No hay build ni `package.json`: es un sitio estático sin npm ni compilación, a propósito. "Verde" significa que pasan todas las suites del 22/10/2026: SQL OK, 6 suites sin navegador OK (1152 claves), funciones Deno OK, `tests/i18n.test.mjs` 6 casos, `tests/verificar.cjs` 80/80 (81 con `ICT_CAPTURAS=1`; el caso nuevo es B4b), `tests/verificar-supabase.cjs` 13/13 y `tests/documentacion.mjs` OK. Lighthouse móvil sin la franja de modo demo: 99–100 / 100 / 100, CLS 0,045; con una tienda en portugués y el idioma guardado (`ICT_LH_IDIOMA=pt`), 99 / 100 / 100, LCP 1,7–1,8 s.
@@ -20,7 +20,7 @@
 
 ## 2. 🧠 MEMORIA ARQUITECTÓNICA (INMUTABLE)
 1. **Sitio estático sin build.** HTML, CSS y JavaScript con ES modules y **rutas relativas** (funciona bajo `/Cotizadora-ICT/` en GitHub Pages). No agregar npm, `package.json`, bundlers, TypeScript en el front ni frameworks. Las únicas dependencias externas son Google Fonts (sitio) y supabase-js 2.117.2 desde jsDelivr (solo el panel).
-2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0030_…sql`**. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 24) con su `MIGRACIONES[n]`.
+2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0031_…sql`**. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 24) con su `MIGRACIONES[n]`.
 3. **Idioma y textos.** Español de Colombia con **"usted"** (nunca "tú" ni voseo) y portugués de Brasil con "você". **Ningún texto visible suelto en el código:** todo va en `assets/js/i18n/es.js` y `pt.js`, con las mismas claves y variables, y se usa con `t(clave)` / `tn(clave, n)`. `t()` se llama al usar el texto, nunca al cargar el módulo. Los textos literales del prompt (en `popup.js` y `catalogo.js`, ver `CLAUDE.md`) no se reescriben.
 4. **Reglas de producto que la suite hace cumplir:**
    - No inventar datos (especificaciones, colores, precios, plazos ni promesas): lo que la fuente no trae queda vacío.
@@ -51,7 +51,7 @@
   - Asistente de Legales de 6 pasos que genera y publica los 4 documentos, con el módulo de Colombia.
   - Usuarios: invitar, cambiar el rol, desactivar y reactivar.
 - **Base de datos**:
-  - Migraciones `0001` a `0029` (la `0027` quita la columna del archivo XML; la `0028`, colores según Apple; la `0029`, fichas según Apple), con RLS, disparadores, `datos_publicos()`, `borrar_datos_demo()`, `legal_faltantes()`, `crear_equipos_lote()` y `archivos_en_uso()`.
+  - Migraciones `0001` a `0030` (la `0027` quita la columna del archivo XML; la `0028`, colores según Apple; la `0029`, fichas según Apple; la `0030`, mínimo de garantía de usados en Colombia), con RLS, disparadores, `datos_publicos()`, `borrar_datos_demo()`, `legal_faltantes()`, `crear_equipos_lote()` y `archivos_en_uso()`.
   - Funciones Deno: `enviar-lead` y `usuarios`.
 - **Pruebas e infraestructura de prueba:**
   - Suites SQL, unitarias, de funciones, demo (Playwright), Supabase local y Lighthouse (`tests/lighthouse/`), todas en verde.
@@ -79,7 +79,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
 >
 > **Regla de cierre de Jared:** al llegar al 90 % del límite de la sesión, terminar el punto en curso, documentarlo en `DOCUMENTACION.md` y dejar este archivo al día para que el siguiente agente siga como si fuera el mismo.
 >
-> **Antes de tocar nada:** ya hecho en esta tanda: el archivo XML se quitó (`aec4c38`), punto 1 (`9ba61be`), punto 2 (`6932c64`) y punto 3 (ver `git log`: "punto 3"). **Sigue el punto 4.**
+> **Antes de tocar nada:** ya hecho en esta tanda: el archivo XML se quitó (`aec4c38`), punto 1 (`9ba61be`), punto 2 (`6932c64`) punto 3 (`68b3421`) y punto 4 (ver `git log`: "punto 4"). **Sigue el punto 5.**
 
 1. ✅ **HECHO (`9ba61be`).** `legal/FUENTES.md` corregido y completado: fuentes de Colombia 14 a 18 (transporte de la devolución, reversión del pago, enlace a la SIC, PQR con radicado, RNE) y estados al día.
 2. ✅ **HECHO (`6932c64`).** Colores según Apple: `0028_colores_apple.sql`, `semilla.js` y `demo.js` (`VERSION` 23).
@@ -100,7 +100,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
    - **Cámaras traseras del Duo:** Fusion principal de 48 MP (teleobjetivo 2x de calidad óptica) y Fusion ultra gran angular de 48 MP. La fila de la tienda "Sistema de cámaras" ya existe: no se borra.
    - **Dimensiones:** 17 Pro 150.0 × 71.9 × 8.75 mm, 206 g. 17 Pro Max 163.4 × 78.0 × 8.75 mm, 231 g. 18 Pro 150.0 × 71.9 × 8.75 mm, 211 g. 18 Pro Max 163.4 × 78.0 × 8.75 mm, 249 g. Duo abierto 117.8 × 164.6 × 5.2 mm, cerrado 117.8 × 84.1 × 11.3 mm, 254 g.
    - Al terminar: regenerar `catalogo/FALTANTES.md` (quedan la descripción de los modelos y los hexadecimales oficiales).
-4. **Colombia: términos y enlace a la SIC** (fuentes 8, 9, 14, 15 y 16 de `legal/FUENTES.md`).
+4. ✅ **HECHO (`0030_garantia_usados_co.sql`; detalle en la sección 19 de `DOCUMENTACION.md`). Queda como registro.** **Colombia: términos y enlace a la SIC** (fuentes 8, 9, 14, 15 y 16 de `legal/FUENTES.md`). El enlace va por `AUTORIDAD_CONSUMIDOR` de `paises.js` (en el punto 6, agregar `ar`), y la reversión del pago, por `terminos.reversion` del módulo del país.
    - Plantillas de términos (`assets/js/legal/plantillas/` y `paises/co.js`): el transporte de la devolución por retracto lo paga el consumidor (Ley 1480 art. 47); plazos de la garantía como en la fuente 9 (respuesta 15 días hábiles; reparación 30, o 60 con equipo de préstamo; cambio 10; devolución del dinero 15); cláusula de reversión del pago (art. 51; 5 días hábiles para pedirla; se debe informar).
    - Usados vendidos "con garantía": mínimo 3 meses (Decreto 735 art. 12). Validarlo en el SQL (migración nueva) y en `demo.js`.
    - Enlace a la SIC en el pie del sitio solo para tiendas de Colombia (art. 50 lit. d), con su texto en `i18n/es.js` y `pt.js`.
@@ -151,7 +151,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
     - Un commit por punto en español, con push a `claude/gallant-euler-ezco6g`.
 
 **Prohibido tocar:**
-- `supabase/migrations/0001` a `0029`: son inmutables; los cambios van en migraciones nuevas.
+- `supabase/migrations/0001` a `0030`: son inmutables; los cambios van en migraciones nuevas.
 - Los textos literales del prompt en `assets/js/sitio/popup.js` y `assets/js/sitio/catalogo.js`, y el mensaje de WhatsApp.
 - `config.js`: solo lleva la conexión y el script de GHL; nunca datos de la tienda ni claves.
 - Las pruebas existentes: no se debilitan ni se borran.

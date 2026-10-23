@@ -102,6 +102,24 @@ caso("A1: la devolución del retracto dice su plazo, su ley y el medio de pago",
   assert.ok(t.includes("al mismo medio de pago que usted usó o por el medio que acordemos con usted. Le informamos las opciones disponibles."), "medio de la devolución");
 });
 
+caso("Colombia (0030 y FUENTES 8, 9, 14 y 15): usados con garantía de 3 meses o más; plazos de la garantía, transporte de la devolución y reversión del pago", () => {
+  const u = base();
+  u.legal_garantia_usados = "con";
+  u.legal_garantia_usados_meses = 2;
+  assert.deepEqual(claves(u), ["legal_garantia_usados_meses"], "con Colombia, 2 meses no alcanza");
+  u.legal_garantia_usados_meses = 3;
+  assert.deepEqual(claves(u), [], "3 meses sí");
+  const t = visible(generar(u).terminos);
+  for (const x of ["Equipos usados: 3 meses desde la entrega.",
+    "Le respondemos el reclamo en máximo 15 días hábiles, según el artículo 58 de la Ley 1480 de 2011.",
+    "Reparación: en máximo 30 días hábiles (60 si le prestamos un equipo mientras tanto).",
+    "le cambiamos el equipo en máximo 10 días hábiles o le devolvemos el dinero en máximo 15 días hábiles.",
+    "Devolución del equipo: el transporte y los demás costos de la devolución los paga usted, según el mismo artículo 47.",
+    "Reversión del pago Si pagó con tarjeta de crédito o débito, PSE, un link de pago", "según el artículo 51 de la Ley 1480 de 2011",
+    "Plazo: 5 días hábiles desde que supo del fraude o de la compra que no hizo, o desde que debió recibir el equipo.",
+    "y, en el mismo plazo, pídasela también a la entidad que emitió su medio de pago"]) assert.ok(t.includes(x), `términos: ${x}`);
+});
+
 caso("A2: sin plazo de entrega, los términos dicen el máximo legal de 30 días calendario", () => {
   const t = visible(generar(base()).terminos);
   assert.ok(t.includes("Si no acordamos otro plazo con usted, entregamos el pedido en máximo 30 días calendario, contados desde el día siguiente a su pedido, según la Ley 2439 de 2024."));

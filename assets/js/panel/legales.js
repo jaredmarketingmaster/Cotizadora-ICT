@@ -303,6 +303,10 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
       const min = Math.max(1, ...modulosDe(t.legal_paises).map((m) => m.consumo.garantiaNuevosMinMeses));
       return min > 1 ? tr("panel.legales.error.garantia_minima", { min }) : tr("panel.legales.error.garantia");
     }
+    if (campo === "legal_garantia_usados_meses" && !vacio) {
+      const min = Math.max(1, ...modulosDe(t.legal_paises).map((m) => m.consumo.garantiaUsadosMinMeses || 1));
+      return min > 1 ? tr("panel.legales.error.garantia_usados_minima", { min }) : tr("panel.legales.error.garantia");
+    }
     if (campo === "legal_paises") return tr(vacio ? "panel.legales.error.paises" : "panel.legales.error.paises_disponibles");
     if (/^legal_impuestos\.\d+\.porcentaje$/.test(campo)) return tr("panel.legales.error.porcentaje");
     if (/^legal_impuestos\.\d+\.incluido$/.test(campo)) return tr("panel.legales.error.incluido");
