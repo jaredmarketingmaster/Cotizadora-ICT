@@ -2435,7 +2435,10 @@ async function llenarPopup(p) {
     const imagenes = (nombre) => p.$$eval(`.medios-color[data-color="${id(nombre)}"] .foto-item img`, (xs) => xs.map((x) => new URL(x.src).pathname));
     assert.deepEqual(await imagenes("Negro"), ["/assets/img/predeterminadas/iphone-7/negro-640.webp"]);
     assert.deepEqual(await imagenes("Negro brillante"), ["/assets/img/predeterminadas/iphone-7/negro-brillante-640.webp"]);
-    assert.deepEqual(await imagenes("Plata"), [], "sin imagen cargada para Plata");
+    // Un color sin imagen cargada queda vacío (se calcula con el mapa: crece con cada tanda).
+    const mapa = await p.evaluate(async () => (await import(new URL("../assets/js/datos/predeterminadas.js", location.href).href)).IMAGENES_PREDETERMINADAS["iphone-7"]);
+    const sinImagen = colores.map((c) => c.nombre_es).find((n) => !mapa[n]);
+    if (sinImagen) assert.deepEqual(await imagenes(sinImagen), [], `sin imagen cargada para ${sinImagen}`);
     // Quitar la de Oro: ese color queda sin fotos.
     await p.click(`.medios-color[data-color="${id("Oro")}"] .foto-item [data-quitar]`);
     assert.deepEqual(await imagenes("Oro"), []);
@@ -2448,12 +2451,12 @@ async function llenarPopup(p) {
     const fotosDe = (nombre) => lista.find((q) => q.color_id === id(nombre)).fotos;
     assert.deepEqual(fotosDe("Negro"), ["predeterminadas/iphone-7/negro.webp"]);
     assert.deepEqual(fotosDe("Oro"), [], "la que se quitó no queda");
-    assert.deepEqual(fotosDe("Plata"), []);
+    if (sinImagen) assert.deepEqual(fotosDe(sinImagen), []);
     // En el sitio, el Negro muestra su imagen desde el sitio (no desde Storage).
     await ir(p, `/?equipo=${lista.find((q) => q.color_id === id("Negro")).id}`);
     await p.waitForSelector("#hoja-detalle[open] img, #detalle-en-linea img");
-    const src = await p.$$eval("#hoja-detalle img, #detalle-en-linea img", (xs) => xs.map((x) => x.currentSrc || x.src).find((u) => /predeterminadas/.test(u)));
-    assert.match(new URL(src).pathname, /^\/assets\/img\/predeterminadas\/iphone-7\/negro(-640)?\.webp$/);
+    const srcs = await p.$$eval("#hoja-detalle img, #detalle-en-linea img", (xs) => xs.map((x) => new URL(x.currentSrc || x.src).pathname));
+    assert.ok(srcs.some((u) => /^\/assets\/img\/predeterminadas\/iphone-7\/negro(-640)?\.webp$/.test(u)), JSON.stringify(srcs));
     // Borrar el equipo no borra la imagen compartida (borrarArchivos la ignora).
     const sigue = await p.evaluate(async (ruta) => {
       const a = await (await import(new URL("assets/js/datos/api.js", location.href).href)).api();

@@ -202,7 +202,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
       5. Correr el caso "v1.1: imágenes" y el 11 (sin marca) de `verificar.cjs`.
       6. Actualizar en `DOCUMENTACION.md` la cuenta de la sección 17 ("Van N de 182") y la entrada de la 19.
       7. Commit y push.
-    - **Cargadas hasta ahora (5 de 182):** iPhone 7 (Negro, Oro, Negro brillante) e iPhone 7 Plus (Negro, Oro).
+    - **Cargadas hasta ahora (10 de 182):** iPhone 7 (Negro, Oro, Negro brillante, (PRODUCT)RED; faltan Plata y Oro rosa) e iPhone 7 Plus (los 6 colores).
     - **Mecanismo** (ya hecho; no cambia por tanda):
       - En `equipos.fotos` va la ruta `predeterminadas/<slug>/<archivo>.webp`.
       - `urlArchivo()` (demo y Supabase) la sirve desde el sitio y `borrarArchivos()` no la borra.

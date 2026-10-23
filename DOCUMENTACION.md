@@ -1514,7 +1514,7 @@ CORREOS_IDIOMA=pt BIN=… bash tests/supabase-local/levantar.sh   # con los corr
 - [ ] **Fuentes legales que no se pudieron abrir** desde el entorno: se verificaron con el buscador y, desde el 22/10/2026, con los informes de Gemini Deep Research que pasó Jared (citas revisadas por coherencia, no contra el original). Ver `legal/FUENTES.md`. Queda para el abogado: la Ley 2300 (franjas, con fuentes secundarias) y si el radicado de PQR con respuesta por WhatsApp o correo cumple con el "seguimiento" (fuente 17).
 - [ ] **Cookies del script de seguimiento externo de GHL:** no se verificaron; si se activa, agregarlo a la Política de cookies.
 - [ ] Probar en GHL los campos de consentimiento y la guía de la sección 12.3.
-- [ ] **Imágenes predeterminadas (v1.1):** Jared las pasa de a 5. Van 5 de 182 combinaciones de modelo y color: iPhone 7 (Negro, Oro, Negro brillante) e iPhone 7 Plus (Negro, Oro). La lista exacta está en `IMAGENES_PREDETERMINADAS` (`assets/js/datos/predeterminadas.js`). El proceso para cada tanda está en la sección 5 de `AI_HANDOFF.md`.
+- [ ] **Imágenes predeterminadas (v1.1):** Jared las pasa de a 5. Van 10 de 182 combinaciones de modelo y color: iPhone 7 (Negro, Oro, Negro brillante, (PRODUCT)RED) e iPhone 7 Plus (los 6 colores). La lista exacta está en `IMAGENES_PREDETERMINADAS` (`assets/js/datos/predeterminadas.js`). El proceso para cada tanda está en la sección 5 de `AI_HANDOFF.md`.
 - [ ] Que el abogado confirme si publicar capturas de clientes (aun tapadas) necesita autorización por escrito, y si alcanza con lo que guarda el panel desde `0034` (canal, fecha y alcance de la autorización, sin datos de la persona; el mensaje o el documento lo guarda la tienda por fuera).
 - [ ] **Reseñas de antes de `0034`:** quedan "sin registrar" hasta que la tienda complete la autorización en su fila. Se siguen mostrando en el sitio mientras tanto.
 - [x] ~~Confirmar los nombres del catálogo~~: confirmados con las fichas de soporte de Apple en español (informes de Gemini, 22/10/2026). Apple anunció el 17e, 18 Pro, 18 Pro Max y Duo.
@@ -1578,6 +1578,23 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 23/10/2026 · v1.1: imágenes predeterminadas, segunda tanda (10 de 182)
+
+- **Pedido de Jared:** 5 imágenes más, sin nombre. Se ubicaron por la cámara (simple = 7; doble = 7 Plus) y por el color.
+- **Hecho:** `assets/img/predeterminadas/*` y `IMAGENES_PREDETERMINADAS` (`assets/js/datos/predeterminadas.js`):
+
+  | Imagen de Jared | Modelo | Color |
+  |---|---|---|
+  | 9 | iPhone 7 Plus | (PRODUCT)RED |
+  | 10 | iPhone 7 Plus | Oro rosa |
+  | 11 | iPhone 7 Plus | Plata |
+  | 12 | iPhone 7 | (PRODUCT)RED |
+  | 13 | iPhone 7 Plus | Negro brillante |
+
+  Con esto el iPhone 7 Plus tiene sus 6 colores. Al iPhone 7 le faltan Plata y Oro rosa.
+- **Prueba cambiada:** el caso "v1.1: imágenes" de `verificar.cjs` daba por hecho que el iPhone 7 Plata no tenía imagen y tomaba la primera imagen del detalle. Ahora toma de `IMAGENES_PREDETERMINADAS` un color sin imagen, si queda alguno, y busca la del Negro entre todas las del detalle. Así sigue valiendo con cada tanda.
+- **Verificación:** `node tests/documentacion.mjs` OK, todos los archivos del mapa existen, y en `tests/verificar.cjs` pasan el caso "v1.1: imágenes" y el 11 (sin marca).
 
 ### 23/10/2026 · v1.1: imágenes predeterminadas por modelo y color (primera tanda)
 

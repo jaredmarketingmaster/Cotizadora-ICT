@@ -17,8 +17,8 @@
 export const PREFIJO_PREDETERMINADA = "predeterminadas/";
 
 export const IMAGENES_PREDETERMINADAS = {
-  "iphone-7": { "Negro": "negro", "Oro": "oro", "Negro brillante": "negro-brillante" },
-  "iphone-7-plus": { "Negro": "negro", "Oro": "oro" }
+  "iphone-7": { "Negro": "negro", "Oro": "oro", "Negro brillante": "negro-brillante", "(PRODUCT)RED": "product-red" },
+  "iphone-7-plus": { "Negro": "negro", "Oro": "oro", "(PRODUCT)RED": "product-red", "Oro rosa": "oro-rosa", "Plata": "plata", "Negro brillante": "negro-brillante" }
 };
 
 export const esPredeterminada = (ruta) => String(ruta || "").startsWith(PREFIJO_PREDETERMINADA);
