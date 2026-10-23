@@ -211,16 +211,17 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     assert.equal(await p.locator("[data-renombrar]").count(), 42);
     // Colores: completa la muestra que falta en el panel; el servidor rechaza
     // cambiar un hexadecimal de la fuente y agregar colores (rol tienda).
-    const fila = p.locator('.modelo-fila:has(input[value="iPhone 18 Pro"])');
+    // (Desde 0028 el 18 Pro ya no tiene muestras aproximadas: se usa el Titanio azul del 15 Pro.)
+    const fila = p.locator('.modelo-fila:has(input[value="iPhone 15 Pro"])');
     await fila.locator(".colores-modelo > summary").click();
-    await fila.locator('li:has-text("Visón") input[data-hex]').fill("#8B7765");
-    await fila.locator('li:has-text("Visón") input[data-hex]').press("Enter");
+    await fila.locator('li:has-text("Titanio azul") input[data-hex]').fill("#8B7765");
+    await fila.locator('li:has-text("Titanio azul") input[data-hex]').press("Enter");
     await p.waitForSelector("#aviso-flotante.visible");
     const r = await p.evaluate(async () => {
       const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
       const a = await api();
       const colores = await a.listarColores();
-      const vison = colores.find((c) => c.nombre_es === "Visón");
+      const vison = colores.find((c) => c.nombre_es === "Titanio azul" && c.hex === "#8B7765");
       const burgundy = colores.find((c) => c.nombre_en === "Burgundy");
       const salida = { vison: vison.hex };
       try { await a.guardarColor(burgundy.id, { hex: "#000000" }); salida.fuente = "cambió"; } catch (e) { salida.fuente = e.message; }
@@ -353,8 +354,12 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.click("#siguiente");
     await p.check('input[name="l-condicion"][value="nuevo"]', { force: true }); await p.click("#siguiente");
     await p.check('[data-cap="1 TB"]', { force: true }); await p.click("#siguiente");
-    // El 17 Pro no tiene colores en la fuente: una fila "Sin color" y un nombre a mostrar.
-    assert.match(await p.textContent('[data-cuerpo="grilla"]'), /no tiene colores cargados/);
+    // Desde 0028 el 17 Pro tiene sus 3 colores oficiales: queda solo Plata, con un nombre a mostrar.
+    assert.deepEqual(await p.locator(".grilla-lote tbody th .opcion-color-nombres > span:first-child").allTextContents(), ["Silver", "Cosmic Orange", "Deep Blue"]);
+    for (const fila of ["1", "2"]) {
+      await p.$eval(`[data-fila="${fila}"]`, (el) => el.scrollIntoView({ block: "center", behavior: "instant" }));
+      await p.uncheck(`[data-fila="${fila}"]`, { force: true });
+    }
     await p.fill("#l-nombre-0", "Prueba"); await p.click("#siguiente");
     await p.fill("#l-precio", "9000000"); await p.click("#siguiente");
     const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
@@ -414,7 +419,9 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
       const a = await api();
       const antes = (await a.listarEquipos()).length;
       const m = (await a.listarModelos()).find((x) => x.slug === "iphone-17-pro").id;
-      const q = (capacidad, extra = {}) => ({ modelo_id: m, condicion: "nuevo", capacidad, precio: 100, fotos: ["equipos/compartida.webp"], ...extra });
+      // Desde 0028 el 17 Pro tiene colores: cada equipo lleva el suyo (Plata).
+      const color = (await a.listarColores()).find((c) => c.modelo_id === m && c.nombre_es === "Plata").id;
+      const q = (capacidad, extra = {}) => ({ modelo_id: m, condicion: "nuevo", capacidad, precio: 100, color_id: color, fotos: ["equipos/compartida.webp"], ...extra });
       const fallo = await a.crearEquiposLote([q("128 GB"), q("256 GB"), q("512 GB", { precio: 0 })]).then(() => "", (e) => e.message);
       const despuesFallo = (await a.listarEquipos()).length;
       const creados = await a.crearEquiposLote([q("128 GB"), q("256 GB")]);

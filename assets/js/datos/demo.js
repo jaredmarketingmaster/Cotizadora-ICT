@@ -75,7 +75,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 22;
+const VERSION = 23;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -229,8 +229,55 @@ const MIGRACIONES = {
   // 0025_url_sitio.sql: la dirección del sitio, vacía.
   20(e) { e.tienda.url_sitio = ""; },
   // 0027_quitar_url_sitio.sql: sin archivo XML, la dirección del sitio se borra.
-  21(e) { delete e.tienda.url_sitio; }
+  21(e) { delete e.tienda.url_sitio; },
+  // 0028_colores_apple.sql: nombres de Apple, colores nuevos y los que salen.
+  22(e) { coloresApple(e); }
 };
+
+// Lo mismo que 0028_colores_apple.sql: renombres, la lista completa de
+// oficiales por modelo (COLORES) y los que salen del catálogo (de la tienda si
+// un equipo los usa; si no, se borran).
+const RENOMBRES_0028 = {
+  "iphone-12-mini": { "Púrpura": "Morado" }, "iphone-12": { "Púrpura": "Morado" },
+  "iphone-14": { "Púrpura": "Morado" }, "iphone-14-plus": { "Púrpura": "Morado" },
+  "iphone-16": { "Azul ultramar": "Ultramarino" }, "iphone-16-plus": { "Azul ultramar": "Ultramarino" },
+  "iphone-17": { "Verde salvia": "Salvia", "Azul niebla": "Azul neblina" },
+  "iphone-air": { "Dorado claro": "Oro claro", "Blanco de nube": "Blanco nube" }
+};
+function coloresApple(e) {
+  const slugDe = new Map(e.modelos.map((m) => [m.id, m.slug]));
+  for (const c of e.colores) {
+    const nuevo = c.oficial && RENOMBRES_0028[slugDe.get(c.modelo_id)]?.[c.nombre_es];
+    if (nuevo) c.nombre_es = nuevo;
+  }
+  let id = Math.max(0, ...e.colores.map((c) => c.id));
+  for (const m of e.modelos) {
+    const objetivo = COLORES[m.slug];
+    if (!objetivo) continue;
+    objetivo.forEach(([nombre_es, nombre_en, hex, aprox], i) => {
+      const o = hexOficial(nombre_es, hex, aprox);
+      const c = e.colores.find((x) => x.modelo_id === m.id && x.nombre_es === nombre_es);
+      if (!c) {
+        e.colores.push({ id: ++id, modelo_id: m.id, nombre_es, nombre_en, orden: i + 1, oficial: true, ...o });
+        return;
+      }
+      // El cliente no ve un cambio: sin nombre en inglés, el sitio mostraba el español.
+      if (c.oficial && !c.nombre_en && nombre_en) {
+        for (const q of e.equipos) if (q.color_id === c.id && !q.color_nombre_mostrar) q.color_nombre_mostrar = c.nombre_es;
+      }
+      Object.assign(c, { oficial: true, nombre_en, orden: i + 1, hex_de_fuente: Boolean(hex) });
+      if (hex || c.hex_aproximado || !c.hex) Object.assign(c, { hex: o.hex, hex_aproximado: o.hex_aproximado });
+      else c.hex_aproximado = false;
+    });
+    const nombres = new Set(objetivo.map(([n]) => n));
+    e.colores = e.colores.filter((c) => {
+      if (c.modelo_id !== m.id || !c.oficial || nombres.has(c.nombre_es)) return true;
+      if (!e.equipos.some((q) => q.color_id === c.id)) return false;
+      Object.assign(c, { oficial: false, hex_aproximado: false, hex_de_fuente: false });
+      return true;
+    });
+  }
+}
 
 // FNV-1a de 32 bits (la misma huella de motor.js).
 function huellaTexto(s) {
@@ -249,18 +296,19 @@ const PAGOS_VACIOS = {
   pagos_cripto: false, pagos_cripto_cuales: "", pagos_pasarelas: [], pagos_pasarelas_otras: [], pagos_descuentos: {}
 };
 
-// El hexadecimal de la fuente o, si no trae, el aproximado por nombre (0022).
-function hexOficial(nombre, hex) {
+// El hexadecimal de la fuente o, si no trae, el aproximado del modelo (0028)
+// o el aproximado por nombre (0022).
+function hexOficial(nombre, hex, aproxModelo = "") {
   if (hex) return { hex, hex_de_fuente: true, hex_aproximado: false };
-  const aprox = HEX_APROXIMADOS[nombre] || "";
+  const aprox = aproxModelo || HEX_APROXIMADOS[nombre] || "";
   return { hex: aprox, hex_de_fuente: false, hex_aproximado: Boolean(aprox) };
 }
 
 function coloresOficiales(modelos) {
   const lista = [];
   for (const m of [...modelos].sort((a, b) => a.orden - b.orden)) {
-    (COLORES[m.slug] || []).forEach(([nombre_es, nombre_en, hex], i) => lista.push({
-      id: lista.length + 1, modelo_id: m.id, nombre_es, nombre_en, orden: i + 1, oficial: true, ...hexOficial(nombre_es, hex)
+    (COLORES[m.slug] || []).forEach(([nombre_es, nombre_en, hex, aprox], i) => lista.push({
+      id: lista.length + 1, modelo_id: m.id, nombre_es, nombre_en, orden: i + 1, oficial: true, ...hexOficial(nombre_es, hex, aprox)
     }));
   }
   return lista;

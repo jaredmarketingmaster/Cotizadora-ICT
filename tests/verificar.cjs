@@ -104,6 +104,17 @@ async function editarDemo(p, fn, arg = null) {
   }, [CLAVE_DEMO, `(${fn.toString()})(e, arg)`, arg]);
 }
 
+// Un modelo sin colores oficiales. Desde 0028 todos los del catálogo los
+// tienen: lo agrega el gestor, como en Catálogo → "Agregar un modelo".
+async function modeloSinColores(p) {
+  return p.evaluate(async (base) => {
+    const a = await (await import(`${base}/assets/js/datos/api.js`)).api();
+    const ya = (await a.listarModelos()).find((m) => m.slug === "iphone-de-prueba");
+    if (ya) return ya.id;
+    return (await a.agregarModelo({ nombre: "iPhone de prueba", slug: "iphone-de-prueba", generacion: "Prueba", orden: 999, activo: false })).id;
+  }, BASE);
+}
+
 async function captura(p, nombre) {
   if (!CAPTURAS) return;
   fs.mkdirSync(CAPTURAS, { recursive: true });
@@ -434,20 +445,23 @@ async function llenarPopup(p) {
     assert.equal((await burdeos.locator(".color-hex").textContent()).trim(), "#632432");
     assert.equal(await burdeos.locator("input").count(), 0);
     // C1 (0022): el que no trae hexadecimal tiene uno aproximado, marcado, que se puede cambiar.
-    // (Antes este caso esperaba la muestra vacía; ahora espera la aproximada.)
-    const oliva = fila.locator('li:has-text("Oliva")');
+    // (Antes este caso esperaba la muestra vacía; ahora espera la aproximada. Desde
+    // 0028 se prueba con el Titanio azul del 15 Pro: el 18 Pro ya no tiene aproximados.)
+    const quince = p.locator('.modelo-fila:has(input[value="iPhone 15 Pro"])');
+    await quince.locator(".colores-modelo > summary").click();
+    const oliva = quince.locator('li:has-text("Titanio azul")');
     assert.equal(await oliva.locator(".muestra-color--vacia").count(), 0);
-    assert.equal(await oliva.locator("input[data-hex]").inputValue(), "#6B6E4E");
+    assert.equal(await oliva.locator("input[data-hex]").inputValue(), "#3F4A58");
     assert.ok((await oliva.textContent()).includes("Muestra aproximada"));
     assert.match(await p.textContent("#nota-hex"), /^El hexadecimal solo pinta la muestra del color en el sitio/);
-    assert.equal(await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).colores.filter((c) => c.hex_aproximado).length, CLAVE_DEMO), 151);
+    assert.equal(await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).colores.filter((c) => c.hex_aproximado).length, CLAVE_DEMO), 150);
     await oliva.locator("input[data-hex]").fill("5a5d3c");
     await oliva.locator("input[data-hex]").press("Enter");
     assert.match(await oliva.locator(".error-campo").textContent(), /#RRGGBB/);
     await oliva.locator("input[data-hex]").fill("#5a5d3c");
     await oliva.locator("input[data-hex]").press("Enter");
-    await p.waitForFunction((clave) => JSON.parse(localStorage.getItem(clave)).colores.find((c) => c.nombre_es === "Oliva").hex === "#5A5D3C", CLAVE_DEMO);
-    assert.deepEqual(await p.evaluate((clave) => { const c = JSON.parse(localStorage.getItem(clave)).colores.find((x) => x.nombre_es === "Oliva"); return [c.hex, c.hex_aproximado]; }, CLAVE_DEMO), ["#5A5D3C", false], "cambiado por el gestor, ya no es aproximado");
+    await p.waitForFunction((clave) => JSON.parse(localStorage.getItem(clave)).colores.find((c) => c.nombre_es === "Titanio azul").hex === "#5A5D3C", CLAVE_DEMO);
+    assert.deepEqual(await p.evaluate((clave) => { const c = JSON.parse(localStorage.getItem(clave)).colores.find((x) => x.nombre_es === "Titanio azul"); return [c.hex, c.hex_aproximado]; }, CLAVE_DEMO), ["#5A5D3C", false], "cambiado por el gestor, ya no es aproximado");
     // En un modelo con colores oficiales no se agregan otros, y la capa de
     // datos tampoco deja cambiar un hex de la fuente.
     assert.equal(await fila.locator("[data-agregar-color]").count(), 0);
@@ -459,9 +473,14 @@ async function llenarPopup(p) {
     });
     assert.match(error, /viene de la fuente/);
 
-    // Colores de la tienda: solo en modelos sin colores oficiales (17 Pro)
+    // Colores de la tienda: solo en modelos sin colores oficiales. Desde 0028
+    // todos los del catálogo los tienen: se prueba con un modelo que agrega el gestor.
     const q = p;
-    const pro = q.locator('.modelo-fila:has(.nombre:text-is("iPhone 17 Pro")), .modelo-fila:has(input[value="iPhone 17 Pro"])');
+    await modeloSinColores(q);
+    await q.reload();
+    await q.waitForSelector(".modelo-fila");
+    assert.match(await q.locator('.modelo-fila:has(input[value="iPhone 17 Pro"]) .colores-modelo > summary').textContent(), /\(3\)/);
+    const pro = q.locator('.modelo-fila:has(.nombre:text-is("iPhone de prueba")), .modelo-fila:has(input[value="iPhone de prueba"])');
     assert.match(await pro.locator(".colores-modelo > summary").textContent(), /no tiene colores oficiales/);
     await pro.locator(".colores-modelo > summary").click();
     await pro.locator("[data-nombre-color]").fill("Naranja");
@@ -487,7 +506,7 @@ async function llenarPopup(p) {
     // No hay forma de crear colores ni de escribir un hexadecimal desde el lote:
     // las filas son los 5 colores oficiales del iPhone 17, cada uno con su nombre a mostrar.
     const filas = () => p.locator(".grilla-lote tbody th .opcion-color-nombres > span:first-child").allTextContents();
-    assert.deepEqual(await filas(), ["Lavender", "Sage Green", "Mist Blue", "Blanco", "Negro"]);
+    assert.deepEqual(await filas(), ["Lavender", "Sage", "Mist Blue", "White", "Black"]);
     assert.equal(await p.locator('[data-paso="grilla"] input[type=color]').count(), 0);
     assert.equal(await p.locator('[data-paso="grilla"] input[type=text], [data-paso="grilla"] input:not([type])').count(), 5);
     await p.fill("#l-nombre-0", "Lila");
@@ -1037,11 +1056,13 @@ async function llenarPopup(p) {
     // sin coincidencia, sin color y con el nombre conservado.
     const nombreDe = (q) => e.colores.find((c) => c.id === q.color_id)?.nombre_es ?? null;
     assert.deepEqual(e.equipos.map((q) => [nombreDe(q), q.color_nombre_mostrar]), [
-      ["Negro", ""], ["Plata", ""], [null, "Color que no existe"], ["Glaciar", "Glacier"], ["Titanio natural", "Titanio natural"], ["Medianoche", "Medianoche"]
+      // (cambiado en 0028: Negro y Plata del 18 Pro tienen nombre en inglés, así que se
+      // conserva el español que veía el cliente; Glaciar es "Glacier" en inglés y ya no hace falta.)
+      ["Negro", "Negro"], ["Plata", "Plata"], [null, "Color que no existe"], ["Glaciar", ""], ["Titanio natural", "Titanio natural"], ["Medianoche", "Medianoche"]
     ]);
     assert.ok(e.equipos.every((q) => !("color_hex" in q) && !("color_nombre" in q)));
     assert.equal(e.modelos.length, 42);
-    assert.equal(e.colores.length, 183);
+    assert.equal(e.colores.length, 182);
     assert.equal(e.tienda.tamano_texto, "normal");
     // 0012: fichas de la fuente donde estaban vacías; la de la tienda no se toca
     const fichaDe = (slug) => e.fichas.find((f) => f.modelo_id === e.modelos.find((m) => m.slug === slug).id);
@@ -1062,7 +1083,7 @@ async function llenarPopup(p) {
     assert.deepEqual(Object.fromEntries(Object.keys(LEGAL_INICIAL).map((k) => [k, e.tienda[k]])),
       { ...LEGAL_INICIAL, legal_clausula_privacidad: "Mi política propia.", legal_clausula_terminos: "Mi aviso de marca." });
     for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) assert.ok(!(k in e.tienda), k);
-    assert.equal(e.version, 22);
+    assert.equal(e.version, 23);
     assert.ok(!("url_sitio" in e.tienda), "0025 la agregó y 0027 la quitó (sin archivo XML)");
     assert.ok(!("pagos_pasarela_otra" in e.tienda) && Array.isArray(e.tienda.pagos_pasarelas_otras) && !e.tienda.pagos_pasarelas.includes("otra") && typeof e.tienda.pagos_descuentos === "object", "0024: otras pasarelas con nombre");
     assert.ok(!("legal_entrega" in e.tienda) && !("legal_entrega_zonas" in e.tienda) && typeof e.tienda.envio_retiro === "boolean" && Array.isArray(e.tienda.envio_zonas), "0023: la entrega pasa a Envíos");
@@ -2121,7 +2142,9 @@ async function llenarPopup(p) {
     assert.equal(await p.textContent("#lote-contador"), "Se crearán 10 equipos.");
     assert.equal(await p.getAttribute("#lote-contador", "role"), "status");
     assert.equal(await p.locator("[data-celda]:checked").count(), 10, "todos encendidos al empezar");
-    // Fila entera (Negro) y columna entera (512 GB)
+    // Fila entera (Negro) y columna entera (512 GB). (Desde 0028 los nombres van en dos
+    // líneas, "Black" y "Negro": se centra la fila para que la barra fija no la tape.)
+    await p.$eval('[data-fila="4"]', (el) => el.scrollIntoView({ block: "center", behavior: "instant" }));
     await p.uncheck('[data-fila="4"]', { force: true });
     assert.equal(await p.textContent("#lote-contador"), "Se crearán 8 equipos.");
     // Una columna a medias se enciende entera al tocarla; tocarla otra vez la apaga.
@@ -2261,22 +2284,25 @@ async function llenarPopup(p) {
   await caso("D4: lote todo o nada: si una variante falla no se crea ninguno, el error dice cuál y se borran los archivos subidos", async () => {
     const p = await nueva(390, 844);
     await entrarPanel(p, "gestor@demo.co");
+    // (Un modelo sin colores: desde 0028 el 17 Pro tiene los suyos.)
+    const sinColores = await modeloSinColores(p);
+    await p.reload();
+    await p.waitForSelector(".estadisticas");
     const antes = (await estadoDemo(p)).equipos.length;
     // La capa de datos: precio 0 en la variante 2, y un cuarto «más vendido» en la 4
-    const errores = await p.evaluate(async (base) => {
+    const errores = await p.evaluate(async ([base, m]) => {
       const a = await (await import(`${base}/assets/js/datos/api.js`)).api();
-      const m = (await a.listarModelos()).find((x) => x.slug === "iphone-17-pro").id;
       const q = (cap, extra = {}) => ({ modelo_id: m, condicion: "nuevo", capacidad: cap, precio: 100, ...extra });
       const r = [];
       for (const lote of [[q("256 GB"), q("512 GB", { precio: 0 })], [1, 2, 3, 4].map((i) => q(`${i} TB`, { mas_vendido: true }))]) {
         try { await a.crearEquiposLote(lote); r.push(""); } catch (e) { r.push(e.message); }
       }
       return r;
-    }, BASE);
+    }, [BASE, sinColores]);
     assert.deepEqual(errores, ["Variante 2: El precio debe ser un número entero mayor que 0.", "Variante 4: Ya tiene 3 equipos marcados como más vendidos. Desmarque uno para marcar este."]);
     assert.equal((await estadoDemo(p)).equipos.length, antes, "no se creó ninguno");
     // En el panel: un modelo sin colores (un equipo por capacidad), con foto; mientras se carga, otro usuario marca 3 más vendidos.
-    await abrirLote(p, "iPhone 17 Pro (inactivo)", "nuevo", ["1 TB"]);
+    await abrirLote(p, "iPhone de prueba (inactivo)", "nuevo", ["1 TB"]);
     assert.match(await p.textContent('[data-cuerpo="grilla"]'), /no tiene colores cargados: se crea un equipo por capacidad/);
     assert.deepEqual(await p.locator(".grilla-lote tbody th .opcion-color-nombres > span:first-child").allTextContents(), ["Sin color"]);
     await p.click("#siguiente");
@@ -2307,11 +2333,13 @@ async function llenarPopup(p) {
       const blob = await (await fetch("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")).blob();
       await a.subirArchivo("fotos", "equipos/compartida.png", blob);
       await a.subirArchivo("fotos", "equipos/compartida-640.png", blob);
-      const m = (await a.listarModelos()).find((x) => x.slug === "iphone-17-pro").id;
+      // (Un modelo sin colores: desde 0028 el 17 Pro tiene los suyos.)
+      const ya = (await a.listarModelos()).find((x) => x.slug === "iphone-de-prueba");
+      const m = ya ? ya.id : (await a.agregarModelo({ nombre: "iPhone de prueba", slug: "iphone-de-prueba", generacion: "Prueba", orden: 999, activo: false })).id;
       await a.crearEquiposLote(["256 GB", "512 GB"].map((capacidad) => ({ modelo_id: m, condicion: "nuevo", capacidad, precio: 100, fotos: ["equipos/compartida.png"] })));
     }, BASE);
     await p.goto(`${BASE}/admin/#/inventario`);
-    const fila = (cap) => p.locator(".fila-equipo").filter({ has: p.locator(".fila-nombre", { hasText: /^iPhone 17 Pro$/ }) }).filter({ hasText: cap });
+    const fila = (cap) => p.locator(".fila-equipo").filter({ has: p.locator(".fila-nombre", { hasText: /^iPhone de prueba$/ }) }).filter({ hasText: cap });
     await fila("256 GB").locator("[data-borrar]").click();
     await p.click('#confirmar [value="si"]');
     await p.waitForSelector("text=Equipo borrado");

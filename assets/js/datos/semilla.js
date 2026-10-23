@@ -64,52 +64,58 @@ export const CATALOGO = [
   { nombre: "iPhone Duo", slug: "iphone-duo", generacion: "Plegable", orden: 420 }
 ];
 
-// Colores oficiales por modelo, en el orden de la fuente: [nombre_es, nombre_en, hex].
-// Sin colores en la fuente: iPhone 17 Pro y 17 Pro Max (la tienda puede
-// agregar los suyos desde el Catálogo).
+// Colores oficiales por modelo, en el orden de la fuente: [nombre_es, nombre_en,
+// hex de la fuente, hex aproximado?]. El cuarto valor, si está, es el
+// hexadecimal aproximado de ese modelo (de sitios de terceros: informe de Gemini
+// del 22/10/2026, ver catalogo/FALTANTES.md); si no está, vale el aproximado por
+// nombre (HEX_APROXIMADOS). 0028_colores_apple.sql aplicó los nombres de Apple
+// en español de Latinoamérica ("Morado", "Salvia", "Azul neblina", "Oro claro",
+// "Blanco nube", "Ultramarino"), los nombres en inglés que faltaban, los colores
+// del iPhone 17 Pro, 17 Pro Max y Duo, y dejó el 18 Pro y 18 Pro Max con sus 4
+// colores (Jared eligió "Borgoña").
 export const COLORES = {
-  "iphone-7": [["Negro brillante", "Jet Black", ""], ["Negro", "Black", ""], ["Plata", "Silver", ""], ["Oro", "Gold", ""], ["Oro rosa", "Rose Gold", ""], ["(PRODUCT)RED", "(PRODUCT)RED", ""]],
-  "iphone-7-plus": [["Negro brillante", "Jet Black", ""], ["Negro", "Black", ""], ["Plata", "Silver", ""], ["Oro", "Gold", ""], ["Oro rosa", "Rose Gold", ""], ["(PRODUCT)RED", "(PRODUCT)RED", ""]],
-  "iphone-8": [["Plata", "Silver", ""], ["Gris espacial", "Space Gray", ""], ["Oro", "Gold", ""], ["(PRODUCT)RED", "(PRODUCT)RED", ""]],
-  "iphone-8-plus": [["Plata", "Silver", ""], ["Gris espacial", "Space Gray", ""], ["Oro", "Gold", ""], ["(PRODUCT)RED", "(PRODUCT)RED", ""]],
-  "iphone-x": [["Gris espacial", "Space Gray", ""], ["Plata", "Silver", ""]],
-  "iphone-xs": [["Oro", "Gold", ""], ["Gris espacial", "Space Gray", ""], ["Plata", "Silver", ""]],
-  "iphone-xs-max": [["Oro", "Gold", ""], ["Gris espacial", "Space Gray", ""], ["Plata", "Silver", ""]],
-  "iphone-xr": [["Negro", "Black", ""], ["Blanco", "White", ""], ["Azul", "Blue", ""], ["Amarillo", "Yellow", ""], ["Coral", "Coral", ""], ["(PRODUCT)RED", "(PRODUCT)RED", ""]],
-  "iphone-11": [["Negro", "Black", ""], ["Verde", "Green", ""], ["Amarillo", "Yellow", ""], ["Morado", "Purple", ""], ["(PRODUCT)RED", "(PRODUCT)RED", ""], ["Blanco", "White", ""]],
-  "iphone-11-pro": [["Gris espacial", "Space Gray", ""], ["Plata", "Silver", ""], ["Verde noche", "Midnight Green", ""], ["Oro", "Gold", ""]],
-  "iphone-11-pro-max": [["Gris espacial", "Space Gray", ""], ["Plata", "Silver", ""], ["Verde noche", "Midnight Green", ""], ["Oro", "Gold", ""]],
-  "iphone-se-2": [["Blanco", "White", ""], ["Negro", "Black", ""], ["(PRODUCT)RED", "(PRODUCT)RED", ""]],
-  "iphone-12-mini": [["Negro", "Black", ""], ["Blanco", "White", ""], ["(PRODUCT)RED", "(PRODUCT)RED", ""], ["Verde", "Green", ""], ["Azul", "Blue", ""], ["Púrpura", "Purple", ""]],
-  "iphone-12": [["Negro", "Black", ""], ["Blanco", "White", ""], ["(PRODUCT)RED", "(PRODUCT)RED", ""], ["Verde", "Green", ""], ["Azul", "Blue", ""], ["Púrpura", "Purple", ""]],
-  "iphone-12-pro": [["Grafito", "Graphite", ""], ["Plata", "Silver", ""], ["Oro", "Gold", ""], ["Azul pacífico", "Pacific Blue", ""]],
-  "iphone-12-pro-max": [["Grafito", "Graphite", ""], ["Plata", "Silver", ""], ["Oro", "Gold", ""], ["Azul pacífico", "Pacific Blue", ""]],
-  "iphone-13-mini": [["Blanco estelar", "Starlight", ""], ["Medianoche", "Midnight", ""], ["Azul", "Blue", ""], ["Rosa", "Pink", ""], ["(PRODUCT)RED", "(PRODUCT)RED", ""], ["Verde", "Green", ""]],
-  "iphone-13": [["Blanco estelar", "Starlight", ""], ["Medianoche", "Midnight", ""], ["Azul", "Blue", ""], ["Rosa", "Pink", ""], ["(PRODUCT)RED", "(PRODUCT)RED", ""], ["Verde", "Green", ""]],
-  "iphone-13-pro": [["Grafito", "Graphite", ""], ["Oro", "Gold", ""], ["Plata", "Silver", ""], ["Azul sierra", "Sierra Blue", ""], ["Verde alpino", "Alpine Green", ""]],
-  "iphone-13-pro-max": [["Grafito", "Graphite", ""], ["Oro", "Gold", ""], ["Plata", "Silver", ""], ["Azul sierra", "Sierra Blue", ""], ["Verde alpino", "Alpine Green", ""]],
-  "iphone-se-3": [["Medianoche", "Midnight", ""], ["Blanco estelar", "Starlight", ""], ["(PRODUCT)RED", "(PRODUCT)RED", ""]],
-  "iphone-14": [["Medianoche", "Midnight", ""], ["Blanco estelar", "Starlight", ""], ["Azul", "Blue", ""], ["Púrpura", "Purple", ""], ["(PRODUCT)RED", "(PRODUCT)RED", ""], ["Amarillo", "Yellow", ""]],
-  "iphone-14-plus": [["Medianoche", "Midnight", ""], ["Blanco estelar", "Starlight", ""], ["Azul", "Blue", ""], ["Púrpura", "Purple", ""], ["(PRODUCT)RED", "(PRODUCT)RED", ""], ["Amarillo", "Yellow", ""]],
+  "iphone-7": [["Negro brillante", "Jet Black", "", "#0A0A0A"], ["Negro", "Black", "", "#1F2020"], ["Plata", "Silver", "", "#EBEBE3"], ["Oro", "Gold", "", "#E6BE86"], ["Oro rosa", "Rose Gold", "", "#E6C7C2"], ["(PRODUCT)RED", "(PRODUCT)RED", "", "#BA0C2E"]],
+  "iphone-7-plus": [["Negro brillante", "Jet Black", "", "#0A0A0A"], ["Negro", "Black", "", "#1F2020"], ["Plata", "Silver", "", "#EBEBE3"], ["Oro", "Gold", "", "#E6BE86"], ["Oro rosa", "Rose Gold", "", "#E6C7C2"], ["(PRODUCT)RED", "(PRODUCT)RED", "", "#BA0C2E"]],
+  "iphone-8": [["Plata", "Silver", "", "#EBEBE3"], ["Gris espacial", "Space Gray", "", "#535150"], ["Oro", "Gold", "", "#FEEDD8"], ["(PRODUCT)RED", "(PRODUCT)RED", "", "#BA0C2E"]],
+  "iphone-8-plus": [["Plata", "Silver", "", "#EBEBE3"], ["Gris espacial", "Space Gray", "", "#535150"], ["Oro", "Gold", "", "#FEEDD8"], ["(PRODUCT)RED", "(PRODUCT)RED", "", "#BA0C2E"]],
+  "iphone-x": [["Gris espacial", "Space Gray", "", "#535150"], ["Plata", "Silver", "", "#EBEBE3"]],
+  "iphone-xs": [["Oro", "Gold", "", "#FEEDD8"], ["Gris espacial", "Space Gray", "", "#535150"], ["Plata", "Silver", "", "#EBEBE3"]],
+  "iphone-xs-max": [["Oro", "Gold", "", "#FEEDD8"], ["Gris espacial", "Space Gray", "", "#535150"], ["Plata", "Silver", "", "#EBEBE3"]],
+  "iphone-xr": [["Negro", "Black", "", "#1F2020"], ["Blanco", "White", "", "#F9F6EF"], ["Azul", "Blue", "", "#5EB0E5"], ["Amarillo", "Yellow", "", "#FFE681"], ["Coral", "Coral", "", "#EE7762"], ["(PRODUCT)RED", "(PRODUCT)RED", "", "#BA0C2E"]],
+  "iphone-11": [["Negro", "Black", "", "#1F2020"], ["Verde", "Green", "", "#AEE1CD"], ["Amarillo", "Yellow", "", "#FFE681"], ["Morado", "Purple", "", "#B8AFE6"], ["(PRODUCT)RED", "(PRODUCT)RED", "", "#BA0C2E"], ["Blanco", "White", "", "#F9F6EF"]],
+  "iphone-11-pro": [["Gris espacial", "Space Gray", "", "#535150"], ["Plata", "Silver", "", "#EBEBE3"], ["Verde noche", "Midnight Green", "", "#4E5851"], ["Oro", "Gold", "", "#FAD7BD"]],
+  "iphone-11-pro-max": [["Gris espacial", "Space Gray", "", "#535150"], ["Plata", "Silver", "", "#EBEBE3"], ["Verde noche", "Midnight Green", "", "#4E5851"], ["Oro", "Gold", "", "#FAD7BD"]],
+  "iphone-se-2": [["Blanco", "White", "", "#F9F6EF"], ["Negro", "Black", "", "#1F2020"], ["(PRODUCT)RED", "(PRODUCT)RED", "", "#BA0C2E"]],
+  "iphone-12-mini": [["Negro", "Black", "", "#201D24"], ["Blanco", "White", "", "#FBF7F4"], ["(PRODUCT)RED", "(PRODUCT)RED", "", "#E23636"], ["Verde", "Green", "", "#E1F8DC"], ["Azul", "Blue", "", "#043458"], ["Morado", "Purple", "", "#B8AFE6"]],
+  "iphone-12": [["Negro", "Black", "", "#201D24"], ["Blanco", "White", "", "#FBF7F4"], ["(PRODUCT)RED", "(PRODUCT)RED", "", "#E23636"], ["Verde", "Green", "", "#E1F8DC"], ["Azul", "Blue", "", "#043458"], ["Morado", "Purple", "", "#B8AFE6"]],
+  "iphone-12-pro": [["Grafito", "Graphite", "", "#4C4A46"], ["Plata", "Silver", "", "#F1F2ED"], ["Oro", "Gold", "", "#FEEDD8"], ["Azul pacífico", "Pacific Blue", "", "#2E4755"]],
+  "iphone-12-pro-max": [["Grafito", "Graphite", "", "#4C4A46"], ["Plata", "Silver", "", "#F1F2ED"], ["Oro", "Gold", "", "#FEEDD8"], ["Azul pacífico", "Pacific Blue", "", "#2E4755"]],
+  "iphone-13-mini": [["Blanco estelar", "Starlight", "", "#F9F3EE"], ["Medianoche", "Midnight", "", "#171E27"], ["Azul", "Blue", "", "#215E7C"], ["Rosa", "Pink", "", "#FAE0D8"], ["(PRODUCT)RED", "(PRODUCT)RED", "", "#A50011"], ["Verde", "Green", "", "#364935"]],
+  "iphone-13": [["Blanco estelar", "Starlight", "", "#F9F3EE"], ["Medianoche", "Midnight", "", "#171E27"], ["Azul", "Blue", "", "#215E7C"], ["Rosa", "Pink", "", "#FAE0D8"], ["(PRODUCT)RED", "(PRODUCT)RED", "", "#A50011"], ["Verde", "Green", "", "#364935"]],
+  "iphone-13-pro": [["Grafito", "Graphite", "", "#5C5B57"], ["Oro", "Gold", "", "#F9E5C9"], ["Plata", "Silver", "", "#F5F5F0"], ["Azul sierra", "Sierra Blue", "", "#9BB5CE"], ["Verde alpino", "Alpine Green", "", "#505F4E"]],
+  "iphone-13-pro-max": [["Grafito", "Graphite", "", "#5C5B57"], ["Oro", "Gold", "", "#F9E5C9"], ["Plata", "Silver", "", "#F5F5F0"], ["Azul sierra", "Sierra Blue", "", "#9BB5CE"], ["Verde alpino", "Alpine Green", "", "#505F4E"]],
+  "iphone-se-3": [["Medianoche", "Midnight", "", "#171E27"], ["Blanco estelar", "Starlight", "", "#F9F3EE"], ["(PRODUCT)RED", "(PRODUCT)RED", "", "#A50011"]],
+  "iphone-14": [["Medianoche", "Midnight", ""], ["Blanco estelar", "Starlight", ""], ["Azul", "Blue", ""], ["Morado", "Purple", "", "#B7A6D6"], ["(PRODUCT)RED", "(PRODUCT)RED", ""], ["Amarillo", "Yellow", ""]],
+  "iphone-14-plus": [["Medianoche", "Midnight", ""], ["Blanco estelar", "Starlight", ""], ["Azul", "Blue", ""], ["Morado", "Purple", "", "#B7A6D6"], ["(PRODUCT)RED", "(PRODUCT)RED", ""], ["Amarillo", "Yellow", ""]],
   "iphone-14-pro": [["Negro espacial", "Space Black", ""], ["Plata", "Silver", ""], ["Oro", "Gold", ""], ["Morado oscuro", "Deep Purple", ""]],
   "iphone-14-pro-max": [["Negro espacial", "Space Black", ""], ["Plata", "Silver", ""], ["Oro", "Gold", ""], ["Morado oscuro", "Deep Purple", ""]],
   "iphone-15": [["Negro", "Black", ""], ["Azul", "Blue", ""], ["Verde", "Green", ""], ["Amarillo", "Yellow", ""], ["Rosa", "Pink", ""]],
   "iphone-15-plus": [["Negro", "Black", ""], ["Azul", "Blue", ""], ["Verde", "Green", ""], ["Amarillo", "Yellow", ""], ["Rosa", "Pink", ""]],
   "iphone-15-pro": [["Titanio negro", "Black Titanium", ""], ["Titanio blanco", "White Titanium", ""], ["Titanio azul", "Blue Titanium", ""], ["Titanio natural", "Natural Titanium", ""]],
   "iphone-15-pro-max": [["Titanio negro", "Black Titanium", ""], ["Titanio blanco", "White Titanium", ""], ["Titanio azul", "Blue Titanium", ""], ["Titanio natural", "Natural Titanium", ""]],
-  "iphone-16": [["Negro", "Black", "#2C2D30"], ["Blanco", "White", "#F5F6F8"], ["Rosa", "Pink", "#EEA7B7"], ["Verde azulado", "Teal", "#87B4A8"], ["Azul ultramar", "Ultramarine", "#546CA3"]],
-  "iphone-16-plus": [["Negro", "Black", "#2C2D30"], ["Blanco", "White", "#F5F6F8"], ["Rosa", "Pink", "#EEA7B7"], ["Verde azulado", "Teal", "#87B4A8"], ["Azul ultramar", "Ultramarine", "#546CA3"]],
+  "iphone-16": [["Negro", "Black", "#2C2D30"], ["Blanco", "White", "#F5F6F8"], ["Rosa", "Pink", "#EEA7B7"], ["Verde azulado", "Teal", "#87B4A8"], ["Ultramarino", "Ultramarine", "#546CA3"]],
+  "iphone-16-plus": [["Negro", "Black", "#2C2D30"], ["Blanco", "White", "#F5F6F8"], ["Rosa", "Pink", "#EEA7B7"], ["Verde azulado", "Teal", "#87B4A8"], ["Ultramarino", "Ultramarine", "#546CA3"]],
   "iphone-16-pro": [["Titanio negro", "Black Titanium", ""], ["Titanio blanco", "White Titanium", ""], ["Titanio natural", "Natural Titanium", ""], ["Titanio del desierto", "Desert Titanium", ""]],
   "iphone-16-pro-max": [["Titanio negro", "Black Titanium", ""], ["Titanio blanco", "White Titanium", ""], ["Titanio natural", "Natural Titanium", ""], ["Titanio del desierto", "Desert Titanium", ""]],
   "iphone-16e": [["Negro", "Black", "#2C2D30"], ["Blanco", "White", "#F5F6F8"]],
-  "iphone-17": [["Lavanda", "Lavender", "#C6BFE6"], ["Verde salvia", "Sage Green", "#9BADA1"], ["Azul niebla", "Mist Blue", "#90A5BB"], ["Blanco", "", "#F5F6F8"], ["Negro", "", "#2C2D30"]],
-  "iphone-air": [["Azul cielo", "Sky Blue", "#A1C6DB"], ["Dorado claro", "Light Gold", "#EBD5A9"], ["Blanco de nube", "Cloud White", "#F4F5F0"], ["Negro espacial", "Space Black", "#333333"]],
-  "iphone-17-pro": [],
-  "iphone-17-pro-max": [],
-  "iphone-17e": [["Negro", "", "#2C2D30"], ["Blanco", "", "#F5F6F8"], ["Rosa pálido", "Soft Pink", "#EBCBD2"]],
-  "iphone-18-pro": [["Negro", "", "#1C1C1E"], ["Visón", "", ""], ["Oliva", "", ""], ["Azul nítido", "", ""], ["Magenta", "", ""], ["Borgoña", "Burgundy", "#632432"], ["Glaciar", "Glacier Blue", "#B9C6D2"], ["Plata", "", "#E3E4E6"]],
-  "iphone-18-pro-max": [["Negro", "", "#1C1C1E"], ["Visón", "", ""], ["Oliva", "", ""], ["Azul nítido", "", ""], ["Magenta", "", ""], ["Borgoña", "Burgundy", "#632432"], ["Glaciar", "Glacier Blue", "#B9C6D2"], ["Plata", "", "#E3E4E6"]],
-  "iphone-duo": [["Titanio", "", ""]]
+  "iphone-17": [["Lavanda", "Lavender", "#C6BFE6"], ["Salvia", "Sage", "#9BADA1"], ["Azul neblina", "Mist Blue", "#90A5BB"], ["Blanco", "White", "#F5F6F8"], ["Negro", "Black", "#2C2D30"]],
+  "iphone-air": [["Azul cielo", "Sky Blue", "#A1C6DB"], ["Oro claro", "Light Gold", "#EBD5A9"], ["Blanco nube", "Cloud White", "#F4F5F0"], ["Negro espacial", "Space Black", "#333333"]],
+  "iphone-17-pro": [["Plata", "Silver", ""], ["Naranja cósmico", "Cosmic Orange", ""], ["Azul profundo", "Deep Blue", ""]],
+  "iphone-17-pro-max": [["Plata", "Silver", ""], ["Naranja cósmico", "Cosmic Orange", ""], ["Azul profundo", "Deep Blue", ""]],
+  "iphone-17e": [["Negro", "Black", "#2C2D30"], ["Blanco", "White", "#F5F6F8"], ["Rosa pálido", "Soft Pink", "#EBCBD2"]],
+  "iphone-18-pro": [["Negro", "Black", "#1C1C1E"], ["Borgoña", "Burgundy", "#632432"], ["Glaciar", "Glacier", "#B9C6D2"], ["Plata", "Silver", "#E3E4E6"]],
+  "iphone-18-pro-max": [["Negro", "Black", "#1C1C1E"], ["Borgoña", "Burgundy", "#632432"], ["Glaciar", "Glacier", "#B9C6D2"], ["Plata", "Silver", "#E3E4E6"]],
+  "iphone-duo": [["Cielo nocturno", "Night Sky", ""], ["Blanco estrella", "Star White", ""]]
 };
 
 // Hexadecimales APROXIMADOS (ronda 3, C1) para los colores que la fuente trae
@@ -152,7 +158,12 @@ export const HEX_APROXIMADOS = {
   "Oliva": "#6B6E4E",
   "Azul nítido": "#3A6FD8",
   "Magenta": "#B0306A",
-  "Titanio": "#BAB4A9"
+  "Titanio": "#BAB4A9",
+  // 0028: colores nuevos sin hexadecimal en ninguna fuente.
+  "Naranja cósmico": "#E2722F",
+  "Azul profundo": "#2F3B55",
+  "Cielo nocturno": "#2B3240",
+  "Blanco estrella": "#F2F0EB"
 };
 
 // Fichas técnicas de la fuente (archivos de Jared: el HTML del inventario para
@@ -625,9 +636,12 @@ export function filasDeFuente(slug) {
 // color: nombre_es del color oficial del modelo (0008_color_oficial.sql lo
 // resuelve desde el nombre viejo de 0003_demo.sql y guarda en
 // color_nombre_mostrar el nombre que ya veía el cliente).
+// Negro y Plata del 18 Pro Max muestran el nombre en español: así los veía el
+// cliente antes de que 0028 les pusiera nombre en inglés (como hace 0028 con
+// los equipos que ya existían).
 export const DEMO_EQUIPOS = [
-  { slug: "iphone-18-pro-max", condicion: "nuevo", capacidad: "256 GB", color: "Negro", color_nombre_mostrar: "", precio: 6000000, en_stock: true, destacado: true },
-  { slug: "iphone-18-pro-max", condicion: "nuevo", capacidad: "256 GB", color: "Plata", color_nombre_mostrar: "", precio: 6200000, en_stock: true, destacado: true },
+  { slug: "iphone-18-pro-max", condicion: "nuevo", capacidad: "256 GB", color: "Negro", color_nombre_mostrar: "Negro", precio: 6000000, en_stock: true, destacado: true },
+  { slug: "iphone-18-pro-max", condicion: "nuevo", capacidad: "256 GB", color: "Plata", color_nombre_mostrar: "Plata", precio: 6200000, en_stock: true, destacado: true },
   { slug: "iphone-18-pro-max", condicion: "nuevo", capacidad: "512 GB", color: "Borgoña", color_nombre_mostrar: "", precio: 7000000, en_stock: true, destacado: false },
   { slug: "iphone-18-pro", condicion: "nuevo", capacidad: "256 GB", color: "Glaciar", color_nombre_mostrar: "Glacier", precio: 5500000, en_stock: true, destacado: false },
   { slug: "iphone-15-pro", condicion: "usado", capacidad: "128 GB", color: "Titanio natural", color_nombre_mostrar: "Titanio natural", precio: 3000000, en_stock: true, destacado: false,

@@ -20,7 +20,7 @@
 
 ## 2. 🧠 MEMORIA ARQUITECTÓNICA (INMUTABLE)
 1. **Sitio estático sin build.** HTML, CSS y JavaScript con ES modules y **rutas relativas** (funciona bajo `/Cotizadora-ICT/` en GitHub Pages). No agregar npm, `package.json`, bundlers, TypeScript en el front ni frameworks. Las únicas dependencias externas son Google Fonts (sitio) y supabase-js 2.117.2 desde jsDelivr (solo el panel).
-2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0028_…sql`**. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 22) con su `MIGRACIONES[n]`.
+2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0029_…sql`**. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 23) con su `MIGRACIONES[n]`.
 3. **Idioma y textos.** Español de Colombia con **"usted"** (nunca "tú" ni voseo) y portugués de Brasil con "você". **Ningún texto visible suelto en el código:** todo va en `assets/js/i18n/es.js` y `pt.js`, con las mismas claves y variables, y se usa con `t(clave)` / `tn(clave, n)`. `t()` se llama al usar el texto, nunca al cargar el módulo. Los textos literales del prompt (en `popup.js` y `catalogo.js`, ver `CLAUDE.md`) no se reescriben.
 4. **Reglas de producto que la suite hace cumplir:**
    - No inventar datos (especificaciones, colores, precios, plazos ni promesas): lo que la fuente no trae queda vacío.
@@ -51,7 +51,7 @@
   - Asistente de Legales de 6 pasos que genera y publica los 4 documentos, con el módulo de Colombia.
   - Usuarios: invitar, cambiar el rol, desactivar y reactivar.
 - **Base de datos**:
-  - Migraciones `0001` a `0027` (la `0027` quita la columna del archivo XML), con RLS, disparadores, `datos_publicos()`, `borrar_datos_demo()`, `legal_faltantes()`, `crear_equipos_lote()` y `archivos_en_uso()`.
+  - Migraciones `0001` a `0028` (la `0027` quita la columna del archivo XML; la `0028`, colores según Apple), con RLS, disparadores, `datos_publicos()`, `borrar_datos_demo()`, `legal_faltantes()`, `crear_equipos_lote()` y `archivos_en_uso()`.
   - Funciones Deno: `enviar-lead` y `usuarios`.
 - **Pruebas e infraestructura de prueba:**
   - Suites SQL, unitarias, de funciones, demo (Playwright), Supabase local y Lighthouse (`tests/lighthouse/`), todas en verde.
@@ -86,11 +86,11 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
 3. ⛔ **BLOQUEADO (revisado por Claude Code 3, 22/10/2026): `legal/FUENTES.md` no tiene ninguna fuente argentina y Jared no aprobó ninguna. No se construyó nada.** Para destrabarlo, Jared tiene que pasar o aprobar las fuentes oficiales (texto vigente de la Ley 25.326 y su decreto reglamentario, la disposición de la AAIP que corresponda y la Ley 24.240 con el arrepentimiento y la garantía), y alguien anotarlas en `legal/FUENTES.md` antes de escribir `ar.js`. **Módulo legal de Argentina, SOLO con fuentes oficiales verificadas y aprobadas por Jared.**
    - Si no hay fuentes oficiales abiertas y anotadas, no construirlo: dejarlo en pendientes. Las fuentes serían, por ejemplo, la Ley 25.326 y la Disposición AAIP aplicable, y la Ley 24.240 de defensa del consumidor (arrepentimiento y garantía).
    - Archivos a crear o editar: `assets/js/legal/paises/ar.js` (copiar la forma de `co.js`), `assets/js/legal/paises/indice.js` (`ar` en estado `disponible`), las plantillas de `assets/js/legal/plantillas/` solo si hace falta una sección por país, y `legal/FUENTES.md` (cada dato con su fuente).
-   - Base de datos: una migración nueva **`supabase/migrations/0028_legal_ar.sql`** (la `0027` ya se usó para quitar el archivo XML) que actualice `legal_faltantes()` (lo que hacen hoy `0016` y `0019`).
+   - Base de datos: una migración nueva **una migración nueva (la próxima libre)** (la `0027` quitó el archivo XML y la `0028` actualizó los colores) que actualice `legal_faltantes()` (lo que hacen hoy `0016` y `0019`).
    - Pruebas: `tests/legal/motor.test.mjs`, `tests/sql/pruebas.sql` y `tests/sql/comparar-faltantes.mjs` (el SQL y el JS deben coincidir).
 4. ⛔ **BLOQUEADO (revisado por Claude Code 3, 22/10/2026): Jared todavía no respondió `catalogo/FALTANTES.md`. No se tocó el catálogo.** **Completar el catálogo cuando Jared responda `catalogo/FALTANTES.md`. No antes.**
    - Una migración nueva (la siguiente libre) con los colores, los nombres en inglés, los hexadecimales con fuente (que dejan de ser `hex_aproximado`) y las filas de ficha.
-   - El mismo cambio en `assets/js/datos/semilla.js` (`COLORES`, `FICHAS`, `HEX_APROXIMADOS`), en la migración del demo (`demo.js`: `VERSION` 23 y `MIGRACIONES[22]`) y en `tests/sql/comparar-semilla.mjs`.
+   - El mismo cambio en `assets/js/datos/semilla.js` (`COLORES`, `FICHAS`, `HEX_APROXIMADOS`), en la migración del demo (`demo.js`: la `VERSION` siguiente y su `MIGRACIONES[n]`) y en `tests/sql/comparar-semilla.mjs`.
    - Nada se completa de memoria.
 5. **Cierre de cada punto.**
    - Actualizar `DOCUMENTACION.md`: sección 5, sección temática, 16, 17 (quitar lo resuelto), entrada nueva en la 19 y la fecha.
@@ -99,7 +99,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
    - Un commit por punto en español, con push a `claude/gallant-euler-ezco6g`.
 
 **Prohibido tocar:**
-- `supabase/migrations/0001` a `0027`: son inmutables; los cambios van en migraciones nuevas.
+- `supabase/migrations/0001` a `0028`: son inmutables; los cambios van en migraciones nuevas.
 - Los textos literales del prompt en `assets/js/sitio/popup.js` y `assets/js/sitio/catalogo.js`, y el mensaje de WhatsApp.
 - `config.js`: solo lleva la conexión y el script de GHL; nunca datos de la tienda ni claves.
 - Las pruebas existentes: no se debilitan ni se borran.

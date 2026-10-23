@@ -29,12 +29,13 @@ begin
 end $$;
 
 -- 0d. Migración 0008: los equipos demo quedaron con su color oficial; el
--- nombre que veía el cliente se conserva si no es el oficial.
+-- nombre que veía el cliente se conserva si no es el oficial. 0028 hizo lo
+-- mismo con Negro y Plata del 18 Pro Max, que recibieron nombre en inglés.
 do $$
 begin
   assert (select string_agg(m.slug || ':' || c.nombre_es || ':' || e.color_nombre_mostrar, '|' order by m.orden desc, e.precio)
           from public.equipos e join public.modelos m on m.id = e.modelo_id join public.colores c on c.id = e.color_id where e.es_demo)
-    = 'iphone-18-pro-max:Negro:|iphone-18-pro-max:Plata:|iphone-18-pro-max:Borgoña:|iphone-18-pro:Glaciar:Glacier|iphone-15-pro:Titanio natural:Titanio natural|iphone-13:Medianoche:Medianoche',
+    = 'iphone-18-pro-max:Negro:Negro|iphone-18-pro-max:Plata:Plata|iphone-18-pro-max:Borgoña:|iphone-18-pro:Glaciar:Glacier|iphone-15-pro:Titanio natural:Titanio natural|iphone-13:Medianoche:Medianoche',
     'colores de los equipos demo';
   assert not exists (select 1 from information_schema.columns where table_name = 'equipos' and column_name in ('color_nombre', 'color_hex')), 'sin color propio en equipos';
 end $$;
@@ -78,6 +79,29 @@ do $$ begin
     where modelo_id = (select id from public.modelos where slug = 'iphone-16');
   update public.tienda set ficha_ocultas = '{pantalla,otras}', mostrar_ficha = false;
   update public.tienda set ficha_ocultas = '{}', mostrar_ficha = true;
+end $$;
+
+-- 0q. Migración 0028 (colores según Apple).
+do $$
+begin
+  assert (select string_agg(c.nombre_es, '|' order by c.orden) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-12' and c.oficial)
+    = 'Negro|Blanco|(PRODUCT)RED|Verde|Azul|Morado', '"Morado" como Apple (antes "Púrpura")';
+  assert (select hex from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-14' and c.nombre_es = 'Morado') = '#B7A6D6', 'el 14 conserva su muestra al cambiar de nombre';
+  assert (select string_agg(nombre_es || '/' || nombre_en, '|' order by c.orden) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-17' and c.oficial)
+    = 'Lavanda/Lavender|Salvia/Sage|Azul neblina/Mist Blue|Blanco/White|Negro/Black', 'iPhone 17 con los nombres de Apple';
+  assert (select string_agg(nombre_es || '/' || nombre_en || '/' || hex, '|' order by c.orden) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-18-pro-max')
+    = 'Negro/Black/#1C1C1E|Borgoña/Burgundy/#632432|Glaciar/Glacier/#B9C6D2|Plata/Silver/#E3E4E6', '18 Pro Max: los 4 colores de Apple';
+  assert (select string_agg(nombre_es || '/' || nombre_en, '|' order by c.orden) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-duo')
+    = 'Cielo nocturno/Night Sky|Blanco estrella/Star White', 'Duo sin "Titanio"';
+  -- Visón tenía un equipo (antes_0028): queda como color de la tienda, con el equipo. Oliva no tenía: se borró.
+  assert (select not c.oficial and c.hex = '#8B7B6E' from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-18-pro' and c.nombre_es = 'Visón'), 'Visón, de la tienda';
+  assert exists (select 1 from public.equipos e join public.colores c on c.id = e.color_id where e.capacidad = 'ANTES0028' and c.nombre_es = 'Visón'), 'el equipo conserva su color';
+  assert not exists (select 1 from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-18-pro' and c.nombre_es = 'Oliva'), 'Oliva se borró';
+  -- 17 Pro: el "Plata" de la tienda pasó a ser el oficial; "Rojo" sigue siendo de la tienda.
+  assert (select c.oficial and c.nombre_en = 'Silver' and c.hex_aproximado and c.orden = 1 from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-17-pro' and c.nombre_es = 'Plata'), 'Plata, oficial';
+  assert (select not c.oficial and c.hex = '#C0392B' from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-17-pro' and c.nombre_es = 'Rojo'), 'Rojo, de la tienda';
+  -- El equipo de prueba se va: las cuentas de equipos de más abajo no lo esperan.
+  delete from public.equipos where capacidad = 'ANTES0028';
 end $$;
 
 -- 0n. Migración 0025 agregó la dirección del sitio (para el archivo XML) y
@@ -157,9 +181,9 @@ end $$;
 
 -- Un equipo no publicado, uno sin stock y uno de un modelo inactivo.
 insert into public.equipos (modelo_id, condicion, capacidad, color_id, color_nombre_mostrar, precio, en_stock, publicado)
-select m.id, 'nuevo', '128 GB', c.id, 'Borrador', 1000000, true, false from public.modelos m join public.colores c on c.modelo_id = m.id and c.nombre_es = 'Visón' where m.slug = 'iphone-18-pro';
+select m.id, 'nuevo', '128 GB', c.id, 'Borrador', 1000000, true, false from public.modelos m join public.colores c on c.modelo_id = m.id and c.nombre_es = 'Borgoña' where m.slug = 'iphone-18-pro';
 insert into public.equipos (modelo_id, condicion, capacidad, color_id, color_nombre_mostrar, precio, en_stock, publicado)
-select m.id, 'nuevo', '128 GB', c.id, 'Agotado', 1000000, false, true from public.modelos m join public.colores c on c.modelo_id = m.id and c.nombre_es = 'Oliva' where m.slug = 'iphone-18-pro';
+select m.id, 'nuevo', '128 GB', c.id, 'Agotado', 1000000, false, true from public.modelos m join public.colores c on c.modelo_id = m.id and c.nombre_es = 'Plata' where m.slug = 'iphone-18-pro';
 insert into public.equipos (modelo_id, condicion, capacidad, color_id, color_nombre_mostrar, precio, en_stock, publicado)
 select m.id, 'nuevo', '128 GB', c.id, 'Inactivo', 1000000, true, true from public.modelos m join public.colores c on c.modelo_id = m.id and c.nombre_es = 'Rosa' where m.slug = 'iphone-16';
 
@@ -291,18 +315,21 @@ begin
   assert (select count(*) from public.modelos where slug in ('iphone-7','iphone-se-2','iphone-se-3') and not activo) = 3, 'los nuevos, inactivos';
   assert (select generacion from public.modelos where slug = 'iphone-se-2') = '11', 'SE 2 en la generación de su lanzamiento';
   assert (select count(distinct orden) from public.modelos) = 42, 'orden sin repetir';
-  -- Colores: 183 oficiales; solo 32 con hexadecimal de la fuente. Desde 0022
-  -- los otros 151 llevan uno aproximado (por nombre), marcado como tal.
-  assert (select count(*) from public.colores) = 183, '183 colores oficiales';
+  -- Colores: desde 0028, 182 oficiales; solo 32 con hexadecimal de la fuente.
+  -- Los otros 150 llevan uno aproximado (por modelo o por nombre), marcado como
+  -- tal. (Hay además 2 colores de la tienda que dejó antes_0028: ver 0q.)
+  assert (select count(*) from public.colores where oficial) = 182, '182 colores oficiales';
   assert (select count(*) from public.colores where hex_de_fuente) = 32, '32 con hexadecimal de la fuente';
   assert (select count(*) from public.colores where hex = '') = 0, '0022: ninguno sin muestra';
-  assert (select count(*) from public.colores where hex_aproximado) = 151 and not exists (select 1 from public.colores where hex_aproximado and hex_de_fuente),
-    '0022: los 151 sin hexadecimal de la fuente, aproximados; ninguno de la fuente';
+  assert (select count(*) from public.colores where hex_aproximado) = 150 and not exists (select 1 from public.colores where hex_aproximado and hex_de_fuente),
+    '0022 y 0028: los 150 sin hexadecimal de la fuente, aproximados; ninguno de la fuente';
   assert (select hex from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-18-pro' and c.nombre_es = 'Negro') = '#1C1C1E', 'la fuente no cambia';
-  assert (select hex from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-7' and c.nombre_es = 'Negro') = '#2C2D30', 'aproximado: el de la fuente para el mismo nombre';
-  assert (select count(*) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug in ('iphone-17-pro', 'iphone-17-pro-max')) = 0, '17 Pro sin colores en la fuente';
+  assert (select hex from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-7' and c.nombre_es = 'Negro') = '#1F2020', '0028: aproximado del modelo (terceros)';
+  assert (select hex from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-15' and c.nombre_es = 'Negro') = '#2C2D30', 'aproximado por nombre: el de la fuente para el mismo nombre';
+  assert (select string_agg(nombre_es || '/' || nombre_en, '|' order by c.orden) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-17-pro-max')
+    = 'Plata/Silver|Naranja cósmico/Cosmic Orange|Azul profundo/Deep Blue', '0028: colores del 17 Pro Max';
   assert (select string_agg(nombre_es || '/' || nombre_en || '/' || hex, '|' order by c.orden) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-17e')
-    = 'Negro//#2C2D30|Blanco//#F5F6F8|Rosa pálido/Soft Pink/#EBCBD2', 'colores del 17e tal como la fuente';
+    = 'Negro/Black/#2C2D30|Blanco/White/#F5F6F8|Rosa pálido/Soft Pink/#EBCBD2', 'colores del 17e: la fuente y los nombres en inglés de 0028';
   -- Antes de 0012 las fichas nacían vacías; ahora llevan lo que trae la fuente
   -- (ver 0e). La fuente no trae descripciones: la única es la de antes_0012.
   assert (select count(*) from public.fichas where descripcion <> '') = 1, 'sin descripciones de la fuente';
@@ -327,9 +354,10 @@ begin
   assert (select count(*) from public.fichas) = 4, 'anon ve solo fichas de modelos activos';
   assert jsonb_array_length(public.datos_publicos() -> 'equipos') = 6, 'datos_publicos equipos';
   assert jsonb_array_length(public.datos_publicos() -> 'modelos') = 4, 'datos_publicos modelos';
-  -- Colores solo de los 4 modelos activos: 18 Pro Max (8), 18 Pro (8), 15 Pro (4) y 13 (6)
-  assert (select count(*) from public.colores) = 26, 'anon ve solo colores de modelos activos';
-  assert jsonb_array_length(public.datos_publicos() -> 'colores') = 26, 'datos_publicos colores';
+  -- Colores solo de los 4 modelos activos: 18 Pro Max (4), 18 Pro (4 y el
+  -- Visón de la tienda que dejó antes_0028), 15 Pro (4) y 13 (6)
+  assert (select count(*) from public.colores) = 19, 'anon ve solo colores de modelos activos';
+  assert jsonb_array_length(public.datos_publicos() -> 'colores') = 19, 'datos_publicos colores';
 end $$;
 do $$ begin
   update public.colores set hex = '#000000' where hex = '';
@@ -392,7 +420,7 @@ declare antes timestamptz; despues timestamptz;
 begin
   assert (select count(*) from public.equipos) = 9, 'gestor ve todo el inventario';
   assert (select count(*) from public.modelos) = 42, 'gestor ve todo el catálogo';
-  assert (select count(*) from public.colores) = 183, 'gestor ve todos los colores';
+  assert (select count(*) from public.colores) = 184, 'gestor ve todos los colores (182 oficiales y los 2 de la tienda de antes_0028)';
   assert (select count(*) from public.perfiles) = 1, 'gestor ve solo su perfil';
 
   update public.tienda set nombre = 'Mi tienda', whatsapp = '573001234567';
@@ -529,7 +557,7 @@ exception when check_violation then
   assert sqlerrm = 'Ya tiene 3 equipos marcados como más vendidos. Desmarque uno para marcar este.', sqlerrm;
 end $$;
 do $$ begin
-  insert into public.equipos (modelo_id, condicion, capacidad, precio, mas_vendido) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'nuevo', '1 TB', 5, true);
+  insert into public.equipos (modelo_id, condicion, capacidad, precio, mas_vendido) values ((select id from public.modelos where slug = 'iphone-19'), 'nuevo', '1 TB', 5, true);
   raise exception 'un equipo nuevo marcado como cuarto más vendido no vale';
 exception when check_violation then null; end $$;
 do $$ begin
@@ -565,8 +593,8 @@ do $$ begin
   raise exception 'al cambiar el modelo, el color viejo no vale';
 exception when check_violation then null; end $$;
 do $$ begin
-  -- Un modelo sin colores (17 Pro) acepta un equipo sin color, y el nombre a mostrar se recorta
-  insert into public.equipos (modelo_id, condicion, capacidad, precio, color_nombre_mostrar) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'nuevo', '256 GB', 100, '  Naranja  ');
+  -- Un modelo sin colores (el iPhone 19 que agregó el gestor; desde 0028 el 17 Pro tiene colores) acepta un equipo sin color, y el nombre a mostrar se recorta
+  insert into public.equipos (modelo_id, condicion, capacidad, precio, color_nombre_mostrar) values ((select id from public.modelos where slug = 'iphone-19'), 'nuevo', '256 GB', 100, '  Naranja  ');
   assert (select color_nombre_mostrar from public.equipos where capacidad = '256 GB' and precio = 100) = 'Naranja', 'nombre a mostrar sin espacios';
   delete from public.equipos where capacidad = '256 GB' and precio = 100;
 end $$;
@@ -574,19 +602,19 @@ do $$ begin
   update public.equipos set color_nombre_mostrar = repeat('x', 41) where color_nombre_mostrar = 'Borrador';
   raise exception 'nombre a mostrar de más de 40 no vale';
 exception when check_violation then null; end $$;
--- (en el 17 Pro, que no tiene colores, para probar solo cada regla)
+-- (en el iPhone 19 del gestor, que no tiene colores, para probar solo cada regla)
 do $$ begin
   insert into public.equipos (modelo_id, condicion, capacidad, precio, en_stock)
-  values ((select id from public.modelos where slug = 'iphone-17-pro'), 'usado', '64 GB', 100, null);
+  values ((select id from public.modelos where slug = 'iphone-19'), 'usado', '64 GB', 100, null);
   raise exception 'el stock no puede quedar vacío';
 exception when not_null_violation then null; end $$;
 do $$ begin
   insert into public.equipos (modelo_id, condicion, capacidad, precio, bateria_porcentaje)
-  values ((select id from public.modelos where slug = 'iphone-17-pro'), 'usado', '64 GB', 100, 101);
+  values ((select id from public.modelos where slug = 'iphone-19'), 'usado', '64 GB', 100, 101);
   raise exception 'batería 101 no vale';
 exception when check_violation then null; end $$;
 do $$ begin
-  insert into public.equipos (modelo_id, condicion, capacidad, precio) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'nuevo', '64 GB', 0);
+  insert into public.equipos (modelo_id, condicion, capacidad, precio) values ((select id from public.modelos where slug = 'iphone-19'), 'nuevo', '64 GB', 0);
   raise exception 'precio 0 no vale';
 exception when check_violation then null; end $$;
 do $$ begin
@@ -632,8 +660,8 @@ declare antes bigint := (select count(*) from public.equipos);
 begin
   -- Todo o nada: la variante 2 tiene precio 0 → no se crea ninguna
   perform public.crear_equipos_lote(jsonb_build_array(
-    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-17-pro'), 'condicion', 'nuevo', 'capacidad', '256 GB', 'precio', 100),
-    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-17-pro'), 'condicion', 'nuevo', 'capacidad', '512 GB', 'precio', 0)));
+    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-19'), 'condicion', 'nuevo', 'capacidad', '256 GB', 'precio', 100),
+    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-19'), 'condicion', 'nuevo', 'capacidad', '512 GB', 'precio', 0)));
   raise exception 'un lote con precio 0 no vale';
 exception when check_violation then
   assert sqlerrm = 'Variante 2: El precio debe ser un número entero mayor que 0.', sqlerrm;
@@ -641,7 +669,7 @@ exception when check_violation then
 end $$;
 do $$ begin
   perform public.crear_equipos_lote(jsonb_build_array(
-    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-17-pro'), 'condicion', 'nuevo', 'capacidad', '256 GB', 'precio', 1.5)));
+    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-19'), 'condicion', 'nuevo', 'capacidad', '256 GB', 'precio', 1.5)));
   raise exception 'un precio con decimales no vale';
 exception when check_violation then
   assert sqlerrm = 'Variante 1: El precio debe ser un número entero mayor que 0.', sqlerrm;
@@ -651,9 +679,9 @@ declare antes bigint := (select count(*) from public.equipos);
 begin
   -- La variante 3 trae un color de otro modelo
   perform public.crear_equipos_lote(jsonb_build_array(
-    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-17-pro'), 'condicion', 'nuevo', 'capacidad', '256 GB', 'precio', 100),
-    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-17-pro'), 'condicion', 'nuevo', 'capacidad', '512 GB', 'precio', 100),
-    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-17-pro'), 'condicion', 'nuevo', 'capacidad', '1 TB', 'precio', 100,
+    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-19'), 'condicion', 'nuevo', 'capacidad', '256 GB', 'precio', 100),
+    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-19'), 'condicion', 'nuevo', 'capacidad', '512 GB', 'precio', 100),
+    jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-19'), 'condicion', 'nuevo', 'capacidad', '1 TB', 'precio', 100,
                        'color_id', (select c.id from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-14' and c.nombre_es = 'Azul'))));
   raise exception 'un color de otro modelo en el lote no vale';
 exception when check_violation then
@@ -664,7 +692,7 @@ do $$
 declare antes bigint := (select count(*) from public.equipos);
 begin
   -- Un cuarto "más vendido" dentro del mismo lote
-  perform public.crear_equipos_lote((select jsonb_agg(jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-17-pro'), 'condicion', 'usado', 'capacidad', '256 GB', 'precio', 100, 'mas_vendido', true, 'bateria_porcentaje', 90, 'estado_estetico', 'Excelente'))
+  perform public.crear_equipos_lote((select jsonb_agg(jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-19'), 'condicion', 'usado', 'capacidad', '256 GB', 'precio', 100, 'mas_vendido', true, 'bateria_porcentaje', 90, 'estado_estetico', 'Excelente'))
     from generate_series(1, 4)));
   raise exception 'un lote con 4 más vendidos no vale';
 exception when check_violation then
@@ -685,7 +713,7 @@ exception when invalid_parameter_value then
   assert sqlerrm = 'Un lote puede tener hasta 200 equipos.', sqlerrm;
 end $$;
 do $$ begin
-  perform public.crear_equipos_lote(jsonb_build_array(jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-17-pro'), 'condicion', 'usado', 'capacidad', '256 GB', 'precio', 100, 'bateria_porcentaje', 101)));
+  perform public.crear_equipos_lote(jsonb_build_array(jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-19'), 'condicion', 'usado', 'capacidad', '256 GB', 'precio', 100, 'bateria_porcentaje', 101)));
   raise exception 'batería 101 en el lote no vale';
 exception when check_violation then
   assert sqlerrm like 'Variante 1: %', sqlerrm;
@@ -693,28 +721,28 @@ end $$;
 -- Colores con el gestor: completa el hexadecimal que falta; no toca lo que vino
 -- de la fuente; agrega y borra colores de la tienda solo donde no hay oficiales.
 do $$ begin
-  update public.colores set hex = '#5A5D3C' where nombre_es = 'Oliva' and modelo_id = (select id from public.modelos where slug = 'iphone-18-pro');
-  assert (select hex from public.colores where nombre_es = 'Oliva' and modelo_id = (select id from public.modelos where slug = 'iphone-18-pro')) = '#5A5D3C', 'gestor completa el hex que falta';
-  insert into public.colores (modelo_id, nombre_es, hex) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'Naranja', '#E8772E');
-  assert (select count(*) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-17-pro' and not c.oficial) = 1, 'gestor agrega un color al 17 Pro';
-  update public.colores set hex = '#E87730', nombre_es = 'Naranja cósmico' where nombre_es = 'Naranja';
+  update public.colores set hex = '#5A5D3C' where nombre_es = 'Titanio azul' and modelo_id = (select id from public.modelos where slug = 'iphone-15-pro');
+  assert (select hex from public.colores where nombre_es = 'Titanio azul' and modelo_id = (select id from public.modelos where slug = 'iphone-15-pro')) = '#5A5D3C', 'gestor cambia un hex que no es de la fuente';
+  insert into public.colores (modelo_id, nombre_es, hex) values ((select id from public.modelos where slug = 'iphone-19'), 'Naranja', '#E8772E');
+  assert (select count(*) from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-19' and not c.oficial) = 1, 'gestor agrega un color al iPhone 19';
+  update public.colores set hex = '#E87730', nombre_es = 'Naranja intenso' where nombre_es = 'Naranja';
   -- Un color en uso no se borra
   insert into public.equipos (modelo_id, condicion, capacidad, precio, color_id)
-  values ((select id from public.modelos where slug = 'iphone-17-pro'), 'nuevo', '2 TB', 100, (select id from public.colores where nombre_es = 'Naranja cósmico'));
+  values ((select id from public.modelos where slug = 'iphone-19'), 'nuevo', '2 TB', 100, (select id from public.colores where nombre_es = 'Naranja intenso'));
   begin
-    delete from public.colores where nombre_es = 'Naranja cósmico';
+    delete from public.colores where nombre_es = 'Naranja intenso';
     raise exception 'un color en uso no se borra';
   exception when foreign_key_violation then null; end;
   delete from public.equipos where capacidad = '2 TB';
-  delete from public.colores where nombre_es = 'Naranja cósmico';
-  assert (select count(*) from public.colores where nombre_es like 'Naranja%') = 0, 'gestor borra un color de la tienda';
+  delete from public.colores where nombre_es = 'Naranja intenso';
+  assert (select count(*) from public.colores where nombre_es like 'Naranja%' and not oficial) = 0, 'gestor borra un color de la tienda';
 end $$;
 do $$ begin
   update public.colores set hex = '#000000' where nombre_en = 'Burgundy' and modelo_id = (select id from public.modelos where slug = 'iphone-18-pro');
   raise exception 'el hex de la fuente no se cambia';
 exception when insufficient_privilege then null; end $$;
 do $$ begin
-  update public.colores set nombre_en = 'Olive' where nombre_es = 'Oliva';
+  update public.colores set nombre_en = 'Blue' where nombre_es = 'Titanio azul';
   raise exception 'el nombre de un color oficial no se cambia';
 exception when insufficient_privilege then null; end $$;
 do $$ begin
@@ -722,11 +750,11 @@ do $$ begin
   raise exception 'no se agregan colores a un modelo con colores oficiales';
 exception when insufficient_privilege then null; end $$;
 do $$ begin
-  insert into public.colores (modelo_id, nombre_es, oficial) values ((select id from public.modelos where slug = 'iphone-17-pro'), 'Falso', true);
+  insert into public.colores (modelo_id, nombre_es, oficial) values ((select id from public.modelos where slug = 'iphone-19'), 'Falso', true);
   raise exception 'no se crean colores oficiales desde el panel';
 exception when insufficient_privilege then null; end $$;
 do $$ begin
-  delete from public.colores where nombre_es = 'Visón';
+  delete from public.colores where nombre_es = 'Titanio azul';
   raise exception 'un color oficial no se borra';
 exception when insufficient_privilege then null; end $$;
 do $$ begin

@@ -9,10 +9,10 @@ const sql = JSON.parse(readFileSync(archivo, "utf8"));
 const { CATALOGO, COLORES, DEMO_EQUIPOS, HEX_APROXIMADOS, filasDeFuente } = await import(pathToFileURL(`${raiz}/assets/js/datos/semilla.js`));
 
 assert.deepEqual(sql.modelos, CATALOGO, "el catálogo del SQL y el de semilla.js no coinciden");
-// Con el hexadecimal aproximado de 0022 donde la fuente no lo trae.
-const colores = CATALOGO.flatMap((m) => (COLORES[m.slug] || []).map(([nombre_es, nombre_en, hex], i) => ({
-  slug: m.slug, nombre_es, nombre_en, hex: hex || HEX_APROXIMADOS[nombre_es] || "", orden: i + 1, oficial: true, hex_de_fuente: hex !== "",
-  hex_aproximado: !hex && Boolean(HEX_APROXIMADOS[nombre_es])
+// Con el aproximado del modelo (0028) o por nombre (0022) donde la fuente no lo trae.
+const colores = CATALOGO.flatMap((m) => (COLORES[m.slug] || []).map(([nombre_es, nombre_en, hex, aprox], i) => ({
+  slug: m.slug, nombre_es, nombre_en, hex: hex || aprox || HEX_APROXIMADOS[nombre_es] || "", orden: i + 1, oficial: true, hex_de_fuente: hex !== "",
+  hex_aproximado: !hex && Boolean(aprox || HEX_APROXIMADOS[nombre_es])
 })));
 assert.deepEqual(sql.colores, colores, "los colores del SQL y los de semilla.js no coinciden");
 const normal = (e) => ({
