@@ -1564,7 +1564,7 @@ CORREOS_IDIOMA=pt BIN=… bash tests/supabase-local/levantar.sh   # con los corr
 - [ ] **Fuentes legales que no se pudieron abrir** desde el entorno: se verificaron con el buscador y, desde el 22/10/2026, con los informes de Gemini Deep Research que pasó Jared (citas revisadas por coherencia, no contra el original). Ver `legal/FUENTES.md`. Queda para el abogado: la Ley 2300 (franjas, con fuentes secundarias) y si el radicado de PQR con respuesta por WhatsApp o correo cumple con el "seguimiento" (fuente 17).
 - [ ] **Cookies del script de seguimiento externo de GHL:** no se verificaron; si se activa, agregarlo a la Política de cookies.
 - [ ] Probar en GHL los campos de consentimiento y la guía de la sección 12.3.
-- [ ] **Imágenes predeterminadas (v1.1):** Jared las pasa de a 5. Van 63 de 182 combinaciones de modelo y color. Completos: iPhone 7, 7 Plus, 8, 8 Plus, X, XS, XS Max, XR, 11, 11 Pro, 11 Pro Max, SE (2.ª generación), 12 y 12 mini. XS y XS Max: Gris espacial (cada uno con su imagen), Oro y Plata (la misma en los dos). Plata lleva la marca de agua de otra empresa: Jared decidió dejarla así. 12 y 12 mini: cada uno con su juego de imágenes (Jared pasó dos), salvo (PRODUCT)RED del 12 mini, que todavía usa la del 12. La lista exacta está en `IMAGENES_PREDETERMINADAS` (`assets/js/datos/predeterminadas.js`). El proceso para cada tanda está en la sección 5 de `AI_HANDOFF.md`.
+- [ ] **Imágenes predeterminadas (v1.1):** Jared las pasa de a 5. Van 63 de 182 combinaciones de modelo y color. Completos: iPhone 7, 7 Plus, 8, 8 Plus, X, XS, XS Max, XR, 11, 11 Pro, 11 Pro Max, SE (2.ª generación), 12 y 12 mini. XS y XS Max: Gris espacial (cada uno con su imagen), Oro y Plata (la misma en los dos). Plata lleva la marca de agua de otra empresa: Jared decidió dejarla así. 12 y 12 mini: cada uno con su juego de imágenes (Jared pasó uno para cada uno). La lista exacta está en `IMAGENES_PREDETERMINADAS` (`assets/js/datos/predeterminadas.js`). El proceso para cada tanda está en la sección 5 de `AI_HANDOFF.md`.
 - [ ] Que el abogado confirme si publicar capturas de clientes (aun tapadas) necesita autorización por escrito, y si alcanza con lo que guarda el panel desde `0034` (canal, fecha y alcance de la autorización, sin datos de la persona; el mensaje o el documento lo guarda la tienda por fuera).
 - [ ] **Reseñas de antes de `0034`:** quedan "sin registrar" hasta que la tienda complete la autorización en su fila. Se siguen mostrando en el sitio mientras tanto.
 - [x] ~~Confirmar los nombres del catálogo~~: confirmados con las fichas de soporte de Apple en español (informes de Gemini, 22/10/2026). Apple anunció el 17e, 18 Pro, 18 Pro Max y Duo.
@@ -1632,6 +1632,12 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 23/10/2026 · v1.1: iPhone 12 mini cerrado (63 de 182)
+
+- **Pedido de Jared:** 2 imágenes "para cerrar las de iPhone 12 mini" (69 y 70).
+- **Hecho:** 69 es el (PRODUCT)RED del 12 mini (antes usaba la del 12) y 70 el Blanco (reemplaza la 67). El 12 mini queda con sus 6 imágenes propias. La cuenta no cambia: son reemplazos.
+- **Verificación:** `node tests/documentacion.mjs` OK, todos los archivos del mapa existen, y en `tests/verificar.cjs` pasan el caso "v1.1: imágenes" y el 11 (sin marca).
 
 ### 23/10/2026 · v1.1: imágenes propias del iPhone 12 mini (63 de 182)
 
