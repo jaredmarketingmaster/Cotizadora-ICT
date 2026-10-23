@@ -822,6 +822,7 @@ export default {
   "panel.pagos.otras.titulo": "Otras formas de pago",
   "panel.pagos.pasarelas": "Pasarelas de pago",
   "panel.pagos.pasarelas.agregar": "Agregar otra pasarela",
+  "panel.pagos.pasarelas.nota.cuenta_dni": "Cuenta DNI solo funciona en la Ciudad y la provincia de Buenos Aires.",
   "panel.pagos.pasarelas.otra": "Otra pasarela {n}",
   "panel.pagos.pasarelas.otras": "Otras que ya había elegido:",
   "panel.pagos.pasarelas.otras_ayuda": "Otras pasarelas, con su nombre (hasta {max}):",

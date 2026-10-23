@@ -123,6 +123,22 @@ begin
     where table_schema = 'public' and table_name = 'tienda' and column_name = 'url_sitio'), '0027: sin url_sitio';
 end $$;
 
+-- 0s. Migración 0032 (pasarelas): dLocal sale; la que la tenía la conserva
+-- como otra pasarela con su descuento (antes_0032). Después se deja como estaba.
+do $$
+begin
+  assert (select not ('dlocal' = any (pagos_pasarelas)) and 'dLocal' = any (pagos_pasarelas_otras)
+            and pagos_descuentos -> 'otra:dLocal' = '5'::jsonb and not pagos_descuentos ? 'pasarela:dlocal' from public.tienda), 'dLocal pasa a otra pasarela';
+  begin
+    update public.tienda set pagos_pasarelas = array['dlocal'];
+    raise exception 'dLocal ya no está en el check';
+  exception when check_violation then null; end;
+  update public.tienda set pagos_pasarelas = array['yappy', 'transfer365', 'redpagos_abitab'];
+  -- Como lo dejó 0024 (lo revisa 0m).
+  update public.tienda set pagos_pasarelas = '{pse}', pagos_pasarelas_otras = array_remove(pagos_pasarelas_otras, 'dLocal'),
+    pagos_descuentos = pagos_descuentos - 'otra:dLocal';
+end $$;
+
 -- 0m. Migración 0024: la "otra" pasarela de antes_0024 pasó a la lista con su
 -- nombre, sin la clave 'otra'; la columna vieja no está; descuentos vacíos.
 do $$

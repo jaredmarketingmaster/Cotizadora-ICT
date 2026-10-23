@@ -822,6 +822,7 @@ export default {
   "panel.pagos.otras.titulo": "Outras formas de pagamento",
   "panel.pagos.pasarelas": "Plataformas de pagamento",
   "panel.pagos.pasarelas.agregar": "Adicionar outro meio",
+  "panel.pagos.pasarelas.nota.cuenta_dni": "A Cuenta DNI só funciona na Cidade e na província de Buenos Aires.",
   "panel.pagos.pasarelas.otra": "Outro meio {n}",
   "panel.pagos.pasarelas.otras": "Outras que você já tinha escolhido:",
   "panel.pagos.pasarelas.otras_ayuda": "Outros meios de pagamento on-line, com o nome (até {max}):",

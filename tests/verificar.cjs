@@ -1086,7 +1086,7 @@ async function llenarPopup(p) {
     assert.deepEqual(Object.fromEntries(Object.keys(LEGAL_INICIAL).map((k) => [k, e.tienda[k]])),
       { ...LEGAL_INICIAL, legal_clausula_privacidad: "Mi política propia.", legal_clausula_terminos: "Mi aviso de marca." });
     for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) assert.ok(!(k in e.tienda), k);
-    assert.equal(e.version, 25);
+    assert.equal(e.version, 26);
     assert.deepEqual([e.tienda.legal_rnbd_numero, e.tienda.legal_data_fiscal_url], ["", ""], "0031: campos de Argentina vacíos");
     assert.ok(!("url_sitio" in e.tienda), "0025 la agregó y 0027 la quitó (sin archivo XML)");
     assert.ok(!("pagos_pasarela_otra" in e.tienda) && Array.isArray(e.tienda.pagos_pasarelas_otras) && !e.tienda.pagos_pasarelas.includes("otra") && typeof e.tienda.pagos_descuentos === "object", "0024: otras pasarelas con nombre");
@@ -1324,7 +1324,7 @@ async function llenarPopup(p) {
     // C3: el demo es de Colombia, sus pasarelas van primero y después las regionales.
     assert.deepEqual(await p.$$eval("#form-pagos [id^='grupo-']", (xs) => xs.map((x) => x.textContent)), ["De Colombia:", "Regionales:"]);
     assert.deepEqual(await p.$$eval('input[name="pasarela"]', (xs) => xs.map((x) => x.value)),
-      ["pse", "nequi", "daviplata", "wompi", "bold", "epayco", "payu", "paypal", "dlocal", "stripe"]);
+      ["pse", "nequi", "daviplata", "wompi", "bold", "epayco", "payu", "paypal"]); // cambiado con 0032: sin dLocal; Stripe solo BR y MX
     for (const v of ["pse", "nequi"]) await p.check(`input[name="pasarela"][value="${v}"]`);
     // "Otra" (antes una clave con un nombre) ahora es la lista de otras pasarelas con nombre.
     await p.click("#agregar-pasarela");
@@ -2174,7 +2174,7 @@ async function llenarPopup(p) {
     await p.waitForSelector("#form-pagos");
     assert.deepEqual(await p.$$eval("#form-pagos [id^='grupo-']", (xs) => xs.map((x) => x.textContent)), ["De Argentina:", "Regionales:"]);
     assert.deepEqual(await p.$$eval('input[name="pasarela"] + span', (xs) => xs.map((x) => x.textContent)),
-      ["Mercado Pago", "MODO", "Cuenta DNI", "Ualá", "Naranja X", "PayPal", "PayU", "dLocal", "Stripe"]);
+      ["Mercado Pago", "MODO", "Cuenta DNI", "Ualá", "Naranja X", "PayPal", "PayU"]); // cambiado con 0032
     await p.check('input[name="medio"][value="transferencia"]');
     await p.check('input[name="pasarela"][value="mercado_pago"]');
     await p.click("#agregar-pasarela");

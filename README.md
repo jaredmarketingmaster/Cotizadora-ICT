@@ -61,6 +61,7 @@ supabase/
   migrations/0029_fichas_apple.sql       Fichas según Apple: batería, cámaras y medidas que faltaban
   migrations/0030_garantia_usados_co.sql Colombia: usados "con garantía" de 3 meses o más
   migrations/0031_legal_ar.sql           Módulo legal de Argentina (RNBD, Data Fiscal, DNI y CUIT)
+  migrations/0032_pasarelas_pais.sql     Pasarelas por país (19 listas, regionales donde operan, sin dLocal)
   functions/enviar-lead/        Reenvía el pedido a GHL (la URL va en los secretos)
   functions/usuarios/           Invitar, desactivar y reactivar (solo administrador)
 tests/                     Pruebas (no se usan en producción)
@@ -118,7 +119,7 @@ Para probar:
 ### 1. Supabase (un proyecto por tienda)
 
 1. Crear el proyecto en <https://supabase.com/dashboard>. Conviene la región São Paulo, la más cercana a Colombia.
-2. En **SQL Editor**, correr **todas** las migraciones de `supabase/migrations/`, una por una y en orden de número, desde `0001_esquema.sql` hasta la última (hoy `0031_legal_ar.sql`):
+2. En **SQL Editor**, correr **todas** las migraciones de `supabase/migrations/`, una por una y en orden de número, desde `0001_esquema.sql` hasta la última (hoy `0032_pasarelas_pais.sql`):
    `0001` esquema → `0002` catálogo → `0003` demo → `0004` stock sí/no → `0005` tamaño del texto → `0006` catálogo y colores → `0007` roles → `0008` color oficial → `0009` video → `0010` más vendido → `0011` vista de equipos → `0012` fichas → `0013` formas de pago → `0014` reseñas → `0015` legales → `0016` asistente de legales → `0017` bloqueo hasta publicar → `0018` país de la tienda → `0019` legales según el país de la tienda → `0020` idioma → `0021` título del sitio → `0022` hexadecimal aproximado → `0023` envíos → `0024` pasarelas y descuentos → `0025` dirección del sitio → `0026` carga en lote.
 
    Saltarse una rompe las siguientes. Con la CLI, `supabase db push` las corre en orden. Las migraciones crean también los buckets de Storage (`fotos` y `marca` en `0001`, `videos` en `0009`, `resenas` en `0014`) y sus reglas: no hay que crearlos a mano.

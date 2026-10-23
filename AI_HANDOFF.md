@@ -2,10 +2,10 @@
 > LECTURA OBLIGATORIA PARA EL AGENTE ENTRANTE (Codex, Claude u otro): Lee este documento antes de ejecutar comandos o proponer código.
 
 ## 1. 🚦 ESTADO ACTUAL (METADATA)
-- **Último Agente:** Claude Code 4 (quitó el archivo XML, preparó la investigación con Gemini y ejecuta el plan de 9 puntos de la sección 5: puntos 1 a 6 hechos; sigue el 7).
+- **Último Agente:** Claude Code 4. Quitó el archivo XML, preparó la investigación con Gemini y ejecutó el plan de 9 puntos de la sección 5: **puntos 1 a 7 hechos; quedan el 8 y el 9**. Cerró al 83 % del límite de la sesión, por la regla de Jared.
 - **Timestamp:** 2026-10-23 (actualizado por Claude Code 4).
 - **Rama Actual:** `claude/gallant-euler-ezco6g` (último commit de esta tanda: ver `git log`; árbol limpio y sincronizado con `origin` al cerrar cada punto). `main` solo tiene el README inicial: **no** trabajar sobre `main` ni abrir PR sin que Jared lo pida.
-- **Estado del Build:** VERDE. No hay build ni `package.json`: es un sitio estático sin npm ni compilación, a propósito. "Verde" significa que pasan todas las suites del 23/10/2026 (después del punto 6): SQL OK, las 6 suites sin navegador OK (1156 claves), funciones Deno OK, `tests/verificar.cjs` 82/82 (83 con `ICT_CAPTURAS=1`), `tests/verificar-supabase.cjs` OK y `tests/documentacion.mjs` OK. Una corrida de `verificar.cjs` tuvo 1 falla intermitente que no se repitió ni se identificó: si aparece, mirar qué caso es antes de tocar nada. Lighthouse no se volvió a medir en esta tanda (la última medición, del 22/10: 99–100 / 100 / 100).
+- **Estado del Build:** VERDE. No hay build ni `package.json`: es un sitio estático sin npm ni compilación, a propósito. "Verde" significa que pasan todas las suites del 23/10/2026 (después del punto 7): SQL OK, las 6 suites sin navegador OK (1157 claves), funciones Deno OK, `tests/verificar.cjs` 82/82 (83 con `ICT_CAPTURAS=1`), `tests/verificar-supabase.cjs` OK y `tests/documentacion.mjs` OK. Una corrida de `verificar.cjs` tuvo 1 falla intermitente que no se repitió ni se identificó: si aparece, mirar qué caso es antes de tocar nada. Lighthouse no se volvió a medir en esta tanda (la última medición, del 22/10: 99–100 / 100 / 100).
 - **Comando de Verificación:**
   ```bash
   python3 -m http.server 8080 & \
@@ -20,7 +20,7 @@
 
 ## 2. 🧠 MEMORIA ARQUITECTÓNICA (INMUTABLE)
 1. **Sitio estático sin build.** HTML, CSS y JavaScript con ES modules y **rutas relativas** (funciona bajo `/Cotizadora-ICT/` en GitHub Pages). No agregar npm, `package.json`, bundlers, TypeScript en el front ni frameworks. Las únicas dependencias externas son Google Fonts (sitio) y supabase-js 2.117.2 desde jsDelivr (solo el panel).
-2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0032_…sql`**. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 25) con su `MIGRACIONES[n]`.
+2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0033_…sql`**. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 26) con su `MIGRACIONES[n]`.
 3. **Idioma y textos.** Español de Colombia con **"usted"** (nunca "tú" ni voseo) y portugués de Brasil con "você". **Ningún texto visible suelto en el código:** todo va en `assets/js/i18n/es.js` y `pt.js`, con las mismas claves y variables, y se usa con `t(clave)` / `tn(clave, n)`. `t()` se llama al usar el texto, nunca al cargar el módulo. Los textos literales del prompt (en `popup.js` y `catalogo.js`, ver `CLAUDE.md`) no se reescriben.
 4. **Reglas de producto que la suite hace cumplir** (la suite demo tiene hoy 82 casos):
    - No inventar datos (especificaciones, colores, precios, plazos ni promesas): lo que la fuente no trae queda vacío.
@@ -48,10 +48,11 @@
   - Inventario con edición rápida, Editar y Duplicar, y **"Agregar equipo" como asistente de carga en lote** (`lote.js`, todo o nada, archivos compartidos).
   - Mi tienda (marca, logo, colores, título, país e idioma, reseñas).
   - Catálogo con cuatro pestañas: modelos y colores, ficha técnica, formas de pago y envíos. (El archivo XML de productos se quitó el 22/10/2026 a pedido de Jared: no se habilita por ahora.)
-  - Asistente de Legales de 6 pasos que genera y publica los 4 documentos, con el módulo de Colombia.
+  - Asistente de Legales de 6 pasos que genera y publica los 4 documentos, con los módulos de Colombia y Argentina.
+  - Página `/solicitudes/` (PQR con radicado en Colombia; botón de arrepentimiento en Argentina).
   - Usuarios: invitar, cambiar el rol, desactivar y reactivar.
 - **Base de datos**:
-  - Migraciones `0001` a `0031` (la `0027` quita la columna del archivo XML; la `0028`, colores según Apple; la `0029`, fichas según Apple; la `0030`, mínimo de garantía de usados en Colombia; la `0031`, módulo legal de Argentina), con RLS, disparadores, `datos_publicos()`, `borrar_datos_demo()`, `legal_faltantes()`, `crear_equipos_lote()` y `archivos_en_uso()`.
+  - Migraciones `0001` a `0031` (la `0027` quita la columna del archivo XML; la `0028`, colores según Apple; la `0029`, fichas según Apple; la `0030`, mínimo de garantía de usados en Colombia; la `0031`, módulo legal de Argentina; la `0032`, pasarelas por país), con RLS, disparadores, `datos_publicos()`, `borrar_datos_demo()`, `legal_faltantes()`, `crear_equipos_lote()` y `archivos_en_uso()`.
   - Funciones Deno: `enviar-lead` y `usuarios`.
 - **Pruebas e infraestructura de prueba:**
   - Suites SQL, unitarias, de funciones, demo (Playwright), Supabase local y Lighthouse (`tests/lighthouse/`), todas en verde.
@@ -67,7 +68,9 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
 - **Correos por tienda:** los de invitación y recuperación están en español (`supabase/correos/`) y en portugués (`supabase/correos/pt/`, punto 2 hecho); se pegan a mano en el proyecto de Supabase de cada tienda, en su idioma.
 - **CLS de 0,19 solo con la franja de modo demo** (rendimiento 91). Sin la franja, 0,045. Es una limitación aceptada: no hay que corregirla.
 - **Datos de catálogo que faltan:** la descripción de los modelos y los hexadecimales oficiales, que Apple no publica (`catalogo/FALTANTES.md`). **No se completan de memoria**.
-- **Sin verificar con fuentes:** los formatos de celular y las pasarelas por país se corrigen en los puntos 7 y 8. Siguen sin verificar las traducciones al portugués ("cotizador" quedó "cotador").
+- **Sin verificar contra el original:** todo lo que vino de los informes de Gemini (fuentes legales de Colombia y Argentina, fichas, colores y pasarelas) se revisó por coherencia, no contra las páginas oficiales: el proxy del entorno bloquea infoleg, el Boletín Oficial, apple.com y las páginas de las pasarelas. Tampoco están verificados los formatos de celular de 13 países (los resuelve en parte el punto 8) ni las traducciones al portugués ("cotizador" quedó "cotador").
+- **Prueba intermitente:** una corrida de `tests/verificar.cjs` (durante el punto 5) tuvo 1 falla que no mostró qué caso era y no se repitió en las corridas completas que siguieron (todas las fallas posteriores fueron pruebas que había que ajustar por un cambio, y se ajustaron). Si vuelve a aparecer, guardar la salida completa y mirar el caso antes de tocar nada.
+- **Lighthouse:** no se volvió a medir después de los puntos 4 a 7, que agregaron enlaces al pie y la página `/solicitudes/`. La última medición es la del 22/10. Conviene medir de nuevo (`tests/lighthouse/medir.sh`).
 - **Fuera del código:** Supabase real, GHL real, SMTP y GitHub Pages no están conectados (los hace el equipo de Jared).
 - **Entorno:** en este contenedor el proxy bloquea jsDelivr, unpkg y esm.sh. Para la suite de Supabase local se usa un supabase-js armado con esbuild (`ICT_SUPABASE_JS`). **Nunca** usar `pkill -f` con un texto que aparezca en el mismo comando: mata la propia shell.
 
@@ -75,9 +78,9 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
 
 > **Origen (23/10/2026):** Jared investigó con Gemini Deep Research (prompts en el artefacto «Investigación con Gemini», dos rondas, 13 informes). Claude Code 4 revisó los informes con criterio, descartó lo incoherente y propuso un plan de 9 puntos. Jared respondió **"1. sí 2. borgoña 3. no lo sé"**: aprobó los 9 puntos, eligió "Borgoña" para el 18 Pro y no sabe si hay cláusulas de transferencia de la AAIP firmadas con HighLevel. Por eso, en Argentina el pop-up pide **consentimiento expreso para la transferencia a EE. UU.** (sirve haya o no cláusulas). **Los datos aceptados están copiados abajo, en cada punto.** Los informes no están en el repo. Lo que no está acá no se acepta: no completar de memoria.
 >
-> **Regla de cierre de Jared:** al llegar al 90 % del límite de la sesión, terminar el punto en curso, documentarlo en `DOCUMENTACION.md` y dejar este archivo al día para que el siguiente agente siga como si fuera el mismo.
+> **Regla de cierre de Jared:** al llegar al 90 % del límite de la sesión (Claude Code 4 cerró al 83 %, cuando Jared avisó), terminar el punto en curso, documentarlo en `DOCUMENTACION.md` y dejar este archivo al día para que el siguiente agente siga como si fuera el mismo.
 >
-> **Antes de tocar nada:** ya hecho en esta tanda: el archivo XML se quitó (`aec4c38`), punto 1 (`9ba61be`), punto 2 (`6932c64`) punto 3 (`68b3421`) punto 4 (`1247ac2`) punto 5 (`55c3af7`) y punto 6 (ver `git log`: "punto 6"). **Sigue el punto 7.**
+> **Antes de tocar nada:** ya hecho en esta tanda: el archivo XML se quitó (`aec4c38`), punto 1 (`9ba61be`), punto 2 (`6932c64`) punto 3 (`68b3421`) punto 4 (`1247ac2`) punto 5 (`55c3af7`), punto 6 (`f18ab69`) y punto 7 (ver `git log`: "punto 7"). **Siguen el punto 8 y el 9, en ese orden.** Antes de empezar, correr el comando de verificación para confirmar que todo sigue en verde.
 
 1. ✅ **HECHO (`9ba61be`).** `legal/FUENTES.md` corregido y completado: fuentes de Colombia 14 a 18 (transporte de la devolución, reversión del pago, enlace a la SIC, PQR con radicado, RNE) y estados al día.
 2. ✅ **HECHO (`6932c64`).** Colores según Apple: `0028_colores_apple.sql`, `semilla.js` y `demo.js` (`VERSION` 23).
@@ -119,7 +122,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
    - **Precios:** finales con IVA. No hace falta cambiar nada.
    - **Equipos:** homologación ENACOM (RAMATEL) e IMEI fuera de la Base Negativa (Res. ENACOM 2459/2016). Va como texto en los términos.
    - **Documentos:** DNI de 7 u 8 dígitos. CUIT/CUIL de 11 dígitos, con prefijos 20, 23, 24, 27, 30, 33 o 34 y dígito verificador módulo 11 con pesos [5,4,3,2,7,6,5,4,3,2].
-7. **Pagos por país** (migración nueva para el check de `pagos_pasarelas` y `assets/js/datos/pagos.js` o donde estén las listas; `tests/pagos.test.mjs`).
+7. ✅ **HECHO (`0032_pasarelas_pais.sql`, `assets/js/datos/pasarelas.js`, demo `VERSION` 26; detalle en la sección 19 de `DOCUMENTACION.md`). Queda como registro.** **Pagos por país.**
    - **Pasarelas:** quitar dLocal. Stripe solo en BR y MX. PayU solo en AR, BR, CL, CO, MX, PA y PE. PayPal en todos menos Cuba.
    - **Métodos que se mantienen o se anotan:** PSE y OXXO Pay se mantienen. Agregar la nota de Cuenta DNI (solo CABA y PBA).
    - **Listas por país** (sin genéricos):
@@ -136,12 +139,36 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
      - DO: tPago, Azul, CardNET.
      - UY: Prex, MiDinero, Paganza, Mercado Pago, Redpagos/Abitab.
      - VE: Pago Móvil, Zinli, Binance Pay, BiopagoBDV.
-8. **WhatsApp** (SQL `whatsapp_valido` en una migración nueva + `assets/js/datos/paises.js`; `tests/paises.test.mjs` y `comparar-paises` deben coincidir).
-   - México: en el enlace `wa.me` va "1" después de 52 (`enlaceWhatsApp` en `sitio/catalogo.js`). El número guardado sigue siendo 52 + 10 dígitos.
-   - Formatos verificados: SV `^[67]\d{7}$`, BO `^[67]\d{7}$`, CR `^[5-8]\d{7}$`, EC `^9\d{8}$`.
-   - EC, PY, UY y VE: quitar el 0 inicial (prefijo troncal).
-   - El WhatsApp de la tienda acepta fijos (WhatsApp Business); el del cliente no cambia.
-9. **Reseñas: registrar la autorización** (opción a). Por reseña, la fecha, el canal y el alcance de la autorización del cliente, sin datos del cliente. Va en una migración nueva, `demo.js` y el panel (`assets/js/panel/`), con textos en `i18n`.
+8. ⏳ **PENDIENTE. WhatsApp: México, formatos verificados, 0 inicial y fijos de la tienda.** Datos aceptados de los informes (ronda 2, celulares): solo estos; el resto del informe se descartó por decir "CONFIRMADO" sin fuente.
+   - **Dónde está hoy:**
+     - En `assets/js/datos/paises.js`: `PAISES_TIENDA[c].celular` (`internacional`, `visible`, `nacional`, `grupos`, `ejemplo`, `verificado`), `celularNacionalValido()`, `celularInternacional()`, `agruparCelular()` y `whatsappValido(numero, pais)`. `whatsappValido` valida el WhatsApp **de la tienda** (Mi tienda) y el del cliente pasa por `celularNacionalValido`.
+     - En el SQL, `whatsapp_valido()` está en `supabase/migrations/0018_pais.sql`.
+     - `tests/sql/comparar-paises.mjs` (lo corre `probar.sh`) compara JS y SQL con 285 casos.
+     - `enlaceWhatsApp(numero, mensaje)` está en `assets/js/sitio/catalogo.js` (línea ~180). Ese archivo tiene textos literales del prompt: tocar **solo** el armado del enlace.
+   - **Qué hacer:**
+     1. **México:** en el enlace `wa.me` va un "1" después del 52 (`https://wa.me/521XXXXXXXXXX`). El número guardado sigue siendo 52 + 10 dígitos, y la validación no cambia. Hacerlo en `enlaceWhatsApp` (recibe el número internacional guardado): si empieza por `52` y tiene 12 dígitos, insertar el `1`.
+     2. **Formatos verificados** (nacional, sin prefijo; marcar `verificado: true` con su `ejemplo` y sus `grupos`): El Salvador `^[67]\d{7}$` (prefijo 503), Bolivia `^[67]\d{7}$` (591), Costa Rica `^[5-8]\d{7}$` (506) y Ecuador `^9\d{8}$` (593).
+     3. **0 inicial (prefijo troncal):** en Ecuador, Paraguay, Uruguay y Venezuela, si la persona escribe el número con un 0 adelante, quitarlo antes de validar y de armar el internacional (en `celularNacionalValido` / `celularInternacional`, y lo mismo en el SQL).
+     4. **Fijos en el WhatsApp de la tienda** (WhatsApp Business admite fijos): el informe **no** da el formato de los fijos de cada país. No inventarlo. Lo prudente es que el WhatsApp de la tienda acepte, además del celular, el prefijo del país + un número de 8 a 15 dígitos en total (la regla general que ya usan los países sin verificar). El del cliente no cambia. Si se hace, es una función o un parámetro aparte (por ejemplo `whatsappTiendaValido`) y su par en el SQL, y el disparador de `tienda` que hoy llama a `whatsapp_valido()` pasa a usar la nueva.
+   - **Base de datos:** una migración nueva (`0033_…sql`) que redefina `whatsapp_valido()` y, si corresponde, la de la tienda. Una tienda ya guardada con un número que antes valía tiene que seguir valiendo: probarlo con un `tests/sql/antes_0033_….sql`.
+   - **Pruebas:** casos nuevos en `tests/paises.test.mjs`. Revisar `comparar-paises.mjs` (que sume los casos de los 4 países y del 0 inicial), `pruebas.sql` y el caso B1 de `verificar.cjs` si cambian las ayudas de Mi tienda. Un caso del enlace de México en `verificar.cjs`: crear la tienda con `pais: "mx"` y revisar el `href` de "Abrir WhatsApp".
+   - **Documentar:** la sección 9.10 de `DOCUMENTACION.md` (formatos de celular), la 17 (quitar lo resuelto) y la 19.
+9. ⏳ **PENDIENTE. Reseñas: registrar la autorización** (opción "a" que aprobó Jared). Por reseña se guarda **cómo** el cliente autorizó su publicación, **sin ningún dato del cliente** (nada de nombre ni teléfono: regla 6).
+   - **Dónde está hoy:**
+     - La tabla `public.resenas` se crea en `supabase/migrations/0014_resenas.sql`. Tiene `autorizado boolean not null check (autorizado)`: la casilla "tengo la autorización" es obligatoria, pero no se guarda nada más.
+     - Campos en el JS: `CAMPOS_RESENA` en `assets/js/datos/comun.js`.
+     - Panel: Mi tienda → Reseñas (buscar `resena` en `assets/js/panel/`).
+     - Demo: `assets/js/datos/demo.js`. Las reglas tienen que ser las mismas que en el SQL.
+   - **Propuesta (confirmar los valores con Jared si hay duda; no inventar textos legales):**
+     - Columnas `autorizacion_fecha date not null` (no futura).
+     - `autorizacion_canal text not null check (in ('whatsapp', 'correo', 'presencial', 'otro'))`.
+     - `autorizacion_alcance text not null check (in ('sitio', 'sitio_y_redes'))`.
+     - Las reseñas ya cargadas: migración nueva (`0034_…sql`, o la que siga) con valores que el panel marque como "a completar". Por ejemplo, las columnas aceptan `null` solo en las viejas y el panel pide completarlas, o una fecha por defecto igual a `creado_en` y canal `otro`. Elegir una opción y documentarla en la sección 16.
+     - Con los mismos campos: el formulario del panel (con sus textos en `es.js` y `pt.js`), `CAMPOS_RESENA`, `demo.js` (`VERSION` siguiente) y `datos_publicos()`.
+     - **Ojo con `datos_publicos()`:** hoy arma las reseñas con una lista explícita de campos. Las columnas nuevas **no** se publican: son del panel.
+   - **Pruebas:** `pruebas.sql` (checks y que el público no vea las columnas), `verificar.cjs` (el panel pide los tres datos y la capa de datos los valida) y `verificar-supabase.cjs`, que tiene un caso de reseñas.
+   - **Nunca** crear reseñas de ejemplo, tampoco en el demo.
+   - **Al terminar:** quitar de la sección 17 de `DOCUMENTACION.md` el pendiente "el panel pide la casilla en cada reseña, pero no guarda la autorización". Que el abogado confirme si alcanza.
 10. **Cierre de cada punto.**
     - Actualizar `DOCUMENTACION.md`: sección 5, sección temática, 16, 17 (quitar lo resuelto), entrada nueva en la 19 y la fecha.
     - Mantener al día los conteos de `README.md`, `CLAUDE.md` y este archivo (próxima migración, `VERSION` del demo, punto ✅ con su commit).
@@ -149,7 +176,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
     - Un commit por punto en español, con push a `claude/gallant-euler-ezco6g`.
 
 **Prohibido tocar:**
-- `supabase/migrations/0001` a `0031`: son inmutables; los cambios van en migraciones nuevas.
+- `supabase/migrations/0001` a `0032`: son inmutables; los cambios van en migraciones nuevas.
 - Los textos literales del prompt en `assets/js/sitio/popup.js` y `assets/js/sitio/catalogo.js`, y el mensaje de WhatsApp.
 - `config.js`: solo lleva la conexión y el script de GHL; nunca datos de la tienda ni claves.
 - Las pruebas existentes: no se debilitan ni se borran.

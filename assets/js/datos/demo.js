@@ -75,7 +75,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 25;
+const VERSION = 26;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -246,7 +246,23 @@ const MIGRACIONES = {
   },
   // 0031_legal_ar.sql: número del Registro Nacional de Bases de Datos y enlace
   // del Data Fiscal (Argentina), vacíos.
-  24(e) { e.tienda.legal_rnbd_numero = ""; e.tienda.legal_data_fiscal_url = ""; }
+  24(e) { e.tienda.legal_rnbd_numero = ""; e.tienda.legal_data_fiscal_url = ""; },
+  // 0032_pasarelas_pais.sql: dLocal sale de la lista; si estaba elegida, queda
+  // como otra pasarela "dLocal" (con su descuento), como en el SQL.
+  25(e) {
+    const t = e.tienda;
+    if (!(t.pagos_pasarelas || []).includes("dlocal")) return;
+    const otras = t.pagos_pasarelas_otras || [];
+    const descuentos = { ...(t.pagos_descuentos || {}) };
+    const pasa = !otras.some((x) => x.toLowerCase() === "dlocal") && otras.length < 10;
+    if (pasa) {
+      t.pagos_pasarelas_otras = [...otras, "dLocal"];
+      if ("pasarela:dlocal" in descuentos) descuentos["otra:dLocal"] = descuentos["pasarela:dlocal"];
+    }
+    delete descuentos["pasarela:dlocal"];
+    t.pagos_descuentos = descuentos;
+    t.pagos_pasarelas = t.pagos_pasarelas.filter((c) => c !== "dlocal");
+  }
 };
 
 // Lo mismo que 0028_colores_apple.sql: renombres, la lista completa de

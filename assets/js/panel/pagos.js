@@ -7,7 +7,7 @@
 // =============================================================================
 
 import { MEDIOS_PAGO, MIN_CUOTAS, MAX_CUOTAS, MAX_PASARELAS_OTRAS, MAX_DESCUENTO, errorPagos, frasesPagos, nombreMedioPago, nombrePasarela, clavesDescuento } from "../datos/comun.js";
-import { gruposPasarelas } from "../datos/pasarelas.js";
+import { gruposPasarelas, NOTAS_PASARELAS } from "../datos/pasarelas.js";
 import { datosPais } from "../datos/paises.js";
 import { t as tr } from "../i18n/i18n.js";
 import { $, $$, esc, conBoton, campoTexto, interruptor, marcarError, enfocarPrimerError } from "./ui.js";
@@ -54,7 +54,8 @@ export async function dibujar(vista, ctx) {
       <fieldset class="bloque bloque--grupo">
         <legend>${esc(tr("panel.pagos.pasarelas"))}</legend>
         ${gruposPasarelas(t.pais, t.pagos_pasarelas || []).map((g) => `<p class="ayuda" id="grupo-${g.grupo}">${esc(tr(`panel.pagos.pasarelas.${g.grupo}`, { pais: datosPais(t.pais).nombre }))}</p>
-          ${chips("pasarela", g.claves.map((clave) => ({ clave })), t.pagos_pasarelas || [], nombrePasarela)}`).join("")}
+          ${chips("pasarela", g.claves.map((clave) => ({ clave })), t.pagos_pasarelas || [], nombrePasarela)}
+          ${g.claves.filter((c) => NOTAS_PASARELAS.includes(c)).map((c) => `<p class="ayuda" data-nota-pasarela="${c}">${esc(tr(`panel.pagos.pasarelas.nota.${c}`))}</p>`).join("")}`).join("")}
         <p class="ayuda" id="t-pasarelas-otras">${esc(tr("panel.pagos.pasarelas.otras_ayuda", { max: MAX_PASARELAS_OTRAS }))}</p>
         <ul class="lista-editable" id="pasarelas-otras" aria-labelledby="t-pasarelas-otras"></ul>
         <button type="button" class="boton boton--secundario" id="agregar-pasarela">${esc(tr("panel.pagos.pasarelas.agregar"))}</button>

@@ -11,24 +11,39 @@ const VACIO = { pagos_medios: [], pagos_cuotas: false, pagos_cuotas_max: null, p
   pagos_cripto: false, pagos_cripto_cuales: "", pagos_pasarelas: [], pagos_pasarelas_otras: [], pagos_descuentos: {}, pagos_otras: [] };
 const con = (c) => ({ ...structuredClone(VACIO), ...c });
 
-caso("las claves de las pasarelas son las del check de 0024 y las de antes no cambian", () => {
-  const sql = fs.readFileSync(new URL("../supabase/migrations/0024_pagos.sql", import.meta.url), "utf8");
-  const check = sql.match(/check \(pagos_pasarelas <@ array\[([^\]]+)\]\)/)[1].match(/'([a-z_]+)'/g).map((x) => x.slice(1, -1));
+caso("las claves de las pasarelas son las del check de 0032 (cambiado: antes 0024) y las de antes no cambian", () => {
+  const sql = fs.readFileSync(new URL("../supabase/migrations/0032_pasarelas_pais.sql", import.meta.url), "utf8");
+  const check = sql.match(/check \(pagos_pasarelas <@ array\[([^\]]+)\]\)/)[1].match(/'([a-z0-9_]+)'/g).map((x) => x.slice(1, -1));
   assert.deepEqual(check, CLAVES_PASARELAS);
   for (const c of ["mercado_pago", "pse", "nequi", "daviplata", "wompi", "bold"]) assert.ok(PASARELAS[c], c);
   for (const lista of [...Object.values(PASARELAS_POR_PAIS), PASARELAS_REGIONALES]) for (const c of lista) assert.ok(PASARELAS[c], c);
+  assert.ok(!PASARELAS.dlocal, "dLocal salió (0032)");
+});
+
+caso("0032: los 19 países tienen lista propia; las regionales solo donde operan", () => {
+  assert.equal(Object.keys(PASARELAS_POR_PAIS).length, 19);
+  const nombres = (p) => gruposPasarelas(p).map((g) => g.claves.map((c) => PASARELAS[c]));
+  assert.deepEqual(nombres("bo"), [["QR Simple", "Tigo Money", "Libélula"], ["PayPal"]]);
+  assert.deepEqual(nombres("cu"), [["Transfermóvil", "EnZona", "Tropipay"]], "en Cuba, sin regionales");
+  assert.deepEqual(nombres("pa"), [["Yappy", "ACH Xpress", "Nequi Panamá", "Cuanto", "Compra-Click"], ["PayPal", "PayU"]]);
+  assert.deepEqual(nombres("mx"), [["Mercado Pago", "SPEI", "OXXO Pay", "Clip"], ["PayPal", "PayU", "Stripe"]]);
+  assert.deepEqual(nombres("uy"), [["Prex", "MiDinero", "Paganza", "Mercado Pago", "Redpagos/Abitab"], ["PayPal"]]);
+  assert.deepEqual(nombres("ve"), [["Pago Móvil", "Zinli", "Binance Pay", "BiopagoBDV"], ["PayPal"]]);
+  for (const [p, regionales] of Object.entries({ ar: ["PayPal", "PayU"], br: ["PayPal", "PayU", "Stripe"], cl: ["PayPal", "PayU"], pe: ["PayPal", "PayU"], gt: ["PayPal"] })) {
+    assert.deepEqual(nombres(p)[1], regionales, p);
+  }
 });
 
 caso("por país: primero las del país, después las regionales (sin repetir) y las elegidas que no están", () => {
+  // Cambiado con 0032: sin dLocal y las regionales según el país.
   assert.deepEqual(gruposPasarelas("ar"), [
     { grupo: "pais", claves: ["mercado_pago", "modo", "cuenta_dni", "uala", "naranja_x"] },
-    { grupo: "regionales", claves: ["paypal", "payu", "dlocal", "stripe"] }]);
+    { grupo: "regionales", claves: ["paypal", "payu"] }]);
   assert.deepEqual(gruposPasarelas("br")[0].claves.map((c) => PASARELAS[c]), ["Pix", "Mercado Pago", "PagBank", "PicPay"]);
   assert.deepEqual(gruposPasarelas("mx")[0].claves.map((c) => PASARELAS[c]), ["Mercado Pago", "SPEI", "OXXO Pay", "Clip"]);
   assert.deepEqual(gruposPasarelas("cl")[0].claves.map((c) => PASARELAS[c]), ["Webpay", "Khipu", "Mercado Pago"]);
   assert.deepEqual(gruposPasarelas("pe")[0].claves.map((c) => PASARELAS[c]), ["Yape", "Plin", "Niubiz", "Izipay"]);
-  assert.deepEqual(gruposPasarelas("co").map((g) => g.claves), [["pse", "nequi", "daviplata", "wompi", "bold", "epayco", "payu"], ["paypal", "dlocal", "stripe"]]);
-  assert.deepEqual(gruposPasarelas("gt"), [{ grupo: "regionales", claves: ["paypal", "payu", "dlocal", "stripe"] }], "sin lista propia: las regionales");
+  assert.deepEqual(gruposPasarelas("co").map((g) => g.claves), [["pse", "nequi", "daviplata", "wompi", "bold", "epayco", "payu"], ["paypal"]]);
   assert.deepEqual(gruposPasarelas("ar", ["pse"]).at(-1), { grupo: "otras", claves: ["pse"] }, "una elegida de otro país se sigue viendo");
 });
 
