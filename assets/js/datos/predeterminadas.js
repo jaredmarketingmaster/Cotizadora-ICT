@@ -41,6 +41,7 @@ export const IMAGENES_PREDETERMINADAS = {
   // 17 Pro y 17 Pro Max: las mismas imágenes hasta que Jared pase un juego para cada uno.
   "iphone-17-pro": { "Naranja cósmico": "naranja-cosmico", "Azul profundo": "azul-profundo", "Plata": "plata" },
   "iphone-17-pro-max": { "Naranja cósmico": "naranja-cosmico", "Azul profundo": "azul-profundo", "Plata": "plata" },
+  "iphone-air": { "Blanco nube": "blanco-nube", "Oro claro": "oro-claro", "Azul cielo": "azul-cielo", "Negro espacial": "negro-espacial" },
   "iphone-duo": { "Cielo nocturno": "cielo-nocturno", "Blanco estrella": "blanco-estrella" },
   "iphone-se-2": { "Negro": "negro", "(PRODUCT)RED": "product-red", "Blanco": "blanco" },
   "iphone-8": { "Oro": "oro", "Gris espacial": "gris-espacial", "(PRODUCT)RED": "product-red", "Plata": "plata" },
