@@ -29,10 +29,11 @@ const ctx = {
   tienda: null,
   sucio: false,
   alSalir: null,
-  // El administrador solo gestiona accesos (Usuarios); el gestor, todo lo demás.
+  // 0035: el administrador hace todo lo del gestor y, además, Usuarios.
+  // esGestor() = "puede gestionar la tienda" (gestor o administrador).
   esAdministrador() { return this.usuario?.rol === "administrador"; },
-  esGestor() { return this.usuario?.rol === "gestor"; },
-  inicio() { return this.esAdministrador() ? "usuarios" : "inicio"; },
+  esGestor() { return ["gestor", "administrador"].includes(this.usuario?.rol); },
+  inicio() { return "inicio"; },
   async recargarTienda() {
     this.tienda = await this.api.leerTienda();
     fijarPais(this.tienda.pais);
@@ -167,7 +168,8 @@ async function entrar() {
   $("#cargando-panel").hidden = true;
   $("#app").hidden = false;
   $("#barra-usuario").textContent = `${ctx.usuario.correo} · ${t(ctx.esAdministrador() ? "panel.comun.rol.administrador" : "panel.comun.rol.gestor")}`;
-  $$("[data-rol]").forEach((el) => { el.hidden = el.dataset.rol !== ctx.usuario.rol; });
+  // data-rol="gestor": gestor y administrador; data-rol="administrador": solo el administrador (0035).
+  $$("[data-rol]").forEach((el) => { el.hidden = el.dataset.rol === "administrador" ? !ctx.esAdministrador() : !ctx.esGestor(); });
   if (!location.hash.startsWith("#/")) history.replaceState(null, "", `#/${ctx.inicio()}`);
   await enrutar();
 }

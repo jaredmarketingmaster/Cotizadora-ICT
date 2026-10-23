@@ -64,6 +64,7 @@ supabase/
   migrations/0032_pasarelas_pais.sql     Pasarelas por país (19 listas, regionales donde operan, sin dLocal)
   migrations/0033_whatsapp.sql           WhatsApp de la tienda: 4 celulares verificados y fijos
   migrations/0034_resenas_autorizacion.sql Reseñas: canal, fecha y alcance de la autorización
+  migrations/0035_roles_admin.sql        El administrador también gestiona la tienda
   functions/enviar-lead/        Reenvía el pedido a GHL (la URL va en los secretos)
   functions/usuarios/           Invitar, desactivar y reactivar (solo administrador)
 tests/                     Pruebas (no se usan en producción)
@@ -86,7 +87,7 @@ python3 -m http.server 8080
 - Sitio: <http://localhost:8080/?utm_source=meta&utm_campaign=test&ad_id=123&fbclid=prueba>
 - Panel: <http://localhost:8080/admin/>
   - Gestor (tienda, inventario, catálogo, modo demo): `gestor@demo.co`, clave `demo1234`.
-  - Administrador (solo Usuarios): `administrador@demo.co`, clave `demo1234`.
+  - Administrador (todo lo del gestor y, además, Usuarios): `administrador@demo.co`, clave `demo1234`.
 
 ### Roles
 
@@ -121,7 +122,7 @@ Para probar:
 ### 1. Supabase (un proyecto por tienda)
 
 1. Crear el proyecto en <https://supabase.com/dashboard>. Conviene la región São Paulo, la más cercana a Colombia.
-2. En **SQL Editor**, correr **todas** las migraciones de `supabase/migrations/`, una por una y en orden de número, desde `0001_esquema.sql` hasta la última (hoy `0034_resenas_autorizacion.sql`):
+2. En **SQL Editor**, correr **todas** las migraciones de `supabase/migrations/`, una por una y en orden de número, desde `0001_esquema.sql` hasta la última (hoy `0035_roles_admin.sql`):
    `0001` esquema → `0002` catálogo → `0003` demo → `0004` stock sí/no → `0005` tamaño del texto → `0006` catálogo y colores → `0007` roles → `0008` color oficial → `0009` video → `0010` más vendido → `0011` vista de equipos → `0012` fichas → `0013` formas de pago → `0014` reseñas → `0015` legales → `0016` asistente de legales → `0017` bloqueo hasta publicar → `0018` país de la tienda → `0019` legales según el país de la tienda → `0020` idioma → `0021` título del sitio → `0022` hexadecimal aproximado → `0023` envíos → `0024` pasarelas y descuentos → `0025` dirección del sitio → `0026` carga en lote.
 
    Saltarse una rompe las siguientes. Con la CLI, `supabase db push` las corre en orden. Las migraciones crean también los buckets de Storage (`fotos` y `marca` en `0001`, `videos` en `0009`, `resenas` en `0014`) y sus reglas: no hay que crearlos a mano.
@@ -175,7 +176,7 @@ Las rutas `/privacidad/`, `/terminos/`, `/cookies/` y `/admin/` son carpetas, as
 
 ### 4. Antes de abrir al público
 
-Todo con el usuario **gestor** (el administrador solo ve Usuarios):
+Con el usuario **gestor** o el **administrador** (desde `0035`, el administrador también gestiona la tienda):
 
 1. **Mi tienda:** nombre, ciudad, dirección, correo, WhatsApp y logo.
 2. **Catálogo:** activar los modelos que vende; revisar la **Ficha técnica** (viene precargada; completar lo que falta, como la batería) y cargar las **Formas de pago**.

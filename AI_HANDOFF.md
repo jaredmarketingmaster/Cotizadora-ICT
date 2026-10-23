@@ -20,7 +20,7 @@
 
 ## 2. 🧠 MEMORIA ARQUITECTÓNICA (INMUTABLE)
 1. **Sitio estático sin build.** HTML, CSS y JavaScript con ES modules y **rutas relativas** (funciona bajo `/Cotizadora-ICT/` en GitHub Pages). No agregar npm, `package.json`, bundlers, TypeScript en el front ni frameworks. Las únicas dependencias externas son Google Fonts (sitio) y supabase-js 2.117.2 desde jsDelivr (solo el panel).
-2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0035_…sql`**. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 27) con su `MIGRACIONES[n]`.
+2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0036_…sql`**. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 27) con su `MIGRACIONES[n]`.
 3. **Idioma y textos.** Español de Colombia con **"usted"** (nunca "tú" ni voseo) y portugués de Brasil con "você". **Ningún texto visible suelto en el código:** todo va en `assets/js/i18n/es.js` y `pt.js`, con las mismas claves y variables, y se usa con `t(clave)` / `tn(clave, n)`. `t()` se llama al usar el texto, nunca al cargar el módulo. Los textos literales del prompt (en `popup.js` y `catalogo.js`, ver `CLAUDE.md`) no se reescriben.
 4. **Reglas de producto que la suite hace cumplir** (la suite demo tiene hoy 84 casos):
    - No inventar datos (especificaciones, colores, precios, plazos ni promesas): lo que la fuente no trae queda vacío.
@@ -43,7 +43,7 @@
   - Globo de ayuda (`ayuda.js`).
   - País, moneda e idioma (es / pt-BR) según la tienda, y `?equipo=<id>`.
 - **Panel `/admin`** (`assets/js/panel/`):
-  - Roles: administrador (solo Usuarios) y gestor (todo lo demás).
+  - Roles (desde `0035`): el administrador hace todo lo del gestor y, además, Usuarios; el gestor no ve Usuarios.
   - Inicio con "Lo que falta" y "Ver intro".
   - Inventario con edición rápida, Editar y Duplicar, y **"Agregar equipo" como asistente de carga en lote** (`lote.js`, todo o nada, archivos compartidos).
   - Mi tienda (marca, logo, colores, título, país e idioma, reseñas).
@@ -52,7 +52,7 @@
   - Página `/solicitudes/` (PQR con radicado en Colombia; botón de arrepentimiento en Argentina).
   - Usuarios: invitar, cambiar el rol, desactivar y reactivar.
 - **Base de datos**:
-  - Migraciones `0001` a `0031` (la `0027` quita la columna del archivo XML; la `0028`, colores según Apple; la `0029`, fichas según Apple; la `0030`, mínimo de garantía de usados en Colombia; la `0031`, módulo legal de Argentina; la `0032`, pasarelas por país; la `0033`, WhatsApp de la tienda; la `0034`, autorización de las reseñas), con RLS, disparadores, `datos_publicos()`, `borrar_datos_demo()`, `legal_faltantes()`, `crear_equipos_lote()` y `archivos_en_uso()`.
+  - Migraciones `0001` a `0031` (la `0027` quita la columna del archivo XML; la `0028`, colores según Apple; la `0029`, fichas según Apple; la `0030`, mínimo de garantía de usados en Colombia; la `0031`, módulo legal de Argentina; la `0032`, pasarelas por país; la `0033`, WhatsApp de la tienda; la `0034`, autorización de las reseñas; la `0035`, el administrador también gestiona la tienda), con RLS, disparadores, `datos_publicos()`, `borrar_datos_demo()`, `legal_faltantes()`, `crear_equipos_lote()` y `archivos_en_uso()`.
   - Funciones Deno: `enviar-lead` y `usuarios`.
 - **Pruebas e infraestructura de prueba:**
   - Suites SQL, unitarias, de funciones, demo (Playwright), Supabase local y Lighthouse (`tests/lighthouse/`), todas en verde.
@@ -197,7 +197,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
     - Un commit por punto en español, con push a `claude/gallant-euler-ezco6g`.
 
 **Prohibido tocar:**
-- `supabase/migrations/0001` a `0034`: son inmutables; los cambios van en migraciones nuevas.
+- `supabase/migrations/0001` a `0035`: son inmutables; los cambios van en migraciones nuevas.
 - Los textos literales del prompt en `assets/js/sitio/popup.js` y `assets/js/sitio/catalogo.js`, y el mensaje de WhatsApp.
 - `config.js`: solo lleva la conexión y el script de GHL; nunca datos de la tienda ni claves.
 - Las pruebas existentes: no se debilitan ni se borran.

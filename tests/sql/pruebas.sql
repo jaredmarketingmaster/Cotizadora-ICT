@@ -854,22 +854,24 @@ do $$ begin
   raise exception 'color no hex no vale';
 exception when check_violation then null; end $$;
 
--- 5. Rol administrador: solo los accesos
+-- 5. Rol administrador (cambiado con 0035): todo lo del gestor y, además,
+-- los accesos. Antes (0007) solo gestionaba accesos y estas pruebas exigían
+-- que no pudiera tocar la tienda; ahora exigen que sí pueda.
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 do $$ begin
   assert (select count(*) from public.perfiles) = 3, 'administrador ve todos los perfiles';
-  -- Ve lo mismo que el público
-  assert (select count(*) from public.modelos) = 5, 'administrador ve el catálogo como el público';
-  assert (select count(*) from public.equipos where not publicado) = 0, 'administrador no ve borradores';
-  -- No edita nada fuera de los accesos (las políticas filtran: 0 filas)
-  update public.tienda set nombre = 'x';
-  assert (select nombre from public.tienda) = 'Mi tienda', 'administrador no edita la tienda';
-  update public.tienda set legal_perfil = 'oficial', meta_pixel_id = '999999';
-  assert (select legal_perfil = 'no_oficial' and meta_pixel_id = '123456789012345' from public.tienda), 'administrador no edita los datos legales';
-  update public.equipos set precio = 1;
-  assert (select count(*) from public.equipos where precio = 1) = 0, 'administrador no edita equipos';
+  assert public.es_gestor() and public.es_administrador(), 'el administrador también gestiona la tienda (0035)';
+  assert exists (select 1 from public.modelos where not activo), 'administrador ve el catálogo completo, como el gestor';
+  update public.tienda set nombre = 'Hecho por el administrador';
+  assert (select nombre from public.tienda) = 'Hecho por el administrador', 'administrador edita la tienda';
+  update public.tienda set nombre = 'Mi tienda';
   update public.modelos set activo = false where slug = 'iphone-16';
-  assert (select activo from public.modelos where slug = 'iphone-16'), 'administrador no toca el catálogo';
+  assert not (select activo from public.modelos where slug = 'iphone-16'), 'administrador toca el catálogo';
+  update public.modelos set activo = true where slug = 'iphone-16';
+  insert into public.colores (modelo_id, nombre_es) values ((select id from public.modelos where slug = 'iphone-19'), 'Del administrador');
+  delete from public.colores where nombre_es = 'Del administrador';
+  insert into storage.objects (bucket_id, name) values ('fotos', 'equipo/admin.webp');
+  delete from storage.objects where bucket_id = 'fotos' and name = 'equipo/admin.webp';
   -- Asigna roles, desactiva y reactiva
   update public.perfiles set rol = 'administrador' where correo = 'gestor@prueba.co';
   assert (select rol from public.perfiles where correo = 'gestor@prueba.co') = 'administrador', 'administrador asigna roles';
@@ -877,34 +879,6 @@ do $$ begin
   update public.perfiles set activo = false where correo = 'gestor@prueba.co';
   assert not (select activo from public.perfiles where correo = 'gestor@prueba.co'), 'administrador desactiva';
   update public.perfiles set activo = true where correo = 'gestor@prueba.co';
-end $$;
-do $$ begin
-  insert into public.modelos (nombre, slug, generacion, orden) values ('iPhone 20', 'iphone-20', '20', 1999);
-  raise exception 'administrador no debería agregar modelos';
-exception when insufficient_privilege then null; end $$;
-do $$ begin
-  insert into public.colores (modelo_id, nombre_es) values ((select id from public.modelos where slug = 'iphone-16'), 'Prueba');
-  raise exception 'administrador no debería agregar colores';
-exception when insufficient_privilege then null; end $$;
-do $$ begin
-  insert into storage.objects (bucket_id, name) values ('fotos', 'equipo/2.webp');
-  raise exception 'administrador no debería subir fotos';
-exception when insufficient_privilege then null; end $$;
-do $$ begin
-  insert into storage.objects (bucket_id, name) values ('videos', 'equipos/v2.mp4');
-  raise exception 'administrador no debería subir videos';
-exception when insufficient_privilege then null; end $$;
-do $$ begin
-  perform public.borrar_datos_demo();
-  raise exception 'administrador no debería borrar demo';
-exception when insufficient_privilege then null; end $$;
-do $$ begin
-  -- 0026: la RLS vale dentro del lote (solo el gestor agrega equipos)
-  perform public.crear_equipos_lote(jsonb_build_array(jsonb_build_object('modelo_id', (select id from public.modelos where slug = 'iphone-16'), 'condicion', 'nuevo', 'capacidad', '128 GB', 'precio', 100,
-    'color_id', (select c.id from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-16' limit 1))));
-  raise exception 'administrador no debería crear lotes';
-exception when insufficient_privilege then
-  assert sqlerrm like 'Variante 1: %', sqlerrm;
 end $$;
 do $$ begin
   update public.perfiles set activo = false where correo = 'admin@prueba.co';
@@ -970,14 +944,13 @@ end $$;
 -- (antes de llegar a 12: si no, el límite respondería primero)
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+-- Cambiado con 0035: el administrador también agrega reseñas y sube al bucket.
 do $$ begin
   insert into public.resenas (tipo, ruta, autorizado, autorizacion_canal) values ('imagen', 'resenas/admin.webp', true, 'datos_tapados');
-  raise exception 'el administrador no debería agregar reseñas';
-exception when insufficient_privilege then null; end $$;
-do $$ begin
   insert into storage.objects (bucket_id, name) values ('resenas', 'resenas/admin.webp');
-  raise exception 'el administrador no debería subir al bucket resenas';
-exception when insufficient_privilege then null; end $$;
+  delete from public.resenas where ruta = 'resenas/admin.webp';
+  delete from storage.objects where bucket_id = 'resenas' and name = 'resenas/admin.webp';
+end $$;
 reset role;
 set role anon;
 set request.jwt.claim.sub = '';

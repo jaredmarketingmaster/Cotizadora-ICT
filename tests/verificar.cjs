@@ -121,14 +121,14 @@ async function captura(p, nombre) {
   await p.screenshot({ path: path.join(CAPTURAS, `${nombre}.png`), fullPage: true });
 }
 
-// El gestor entra a Inicio; el administrador, a Usuarios.
+// Los dos entran a Inicio (desde 0035 el administrador también gestiona la tienda).
 async function entrarPanel(p, correo) {
   await p.goto(`${BASE}/admin/`);
   await asegurarLegales(p);
   await p.fill("#l-correo", correo);
   await p.fill("#l-clave", "demo1234");
   await p.click("#form-login [type=submit]");
-  await p.waitForSelector(correo.startsWith("administrador") ? "#form-invitar" : ".estadisticas");
+  await p.waitForSelector(".estadisticas");
 }
 
 async function llenarPopup(p) {
@@ -1042,30 +1042,38 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
-  await caso("roles: el administrador solo ve Usuarios; la capa de datos le impide lo demás", async () => {
+  // Cambiado con 0035 (corrección de Jared): el administrador hace todo lo del
+  // gestor y, además, Usuarios; el gestor no ve Usuarios.
+  await caso("roles: el administrador ve todo (también Usuarios) y puede lo mismo que el gestor; el gestor no ve Usuarios", async () => {
     const p = await nueva(390, 844);
     await entrarPanel(p, "administrador@demo.co");
     assert.equal(await p.textContent("#barra-usuario"), "administrador@demo.co · Administrador");
+    assert.equal(new URL(p.url()).hash, "#/inicio", "entra a Inicio");
     const visibles = await p.locator(".navegacion a:visible").allTextContents();
-    assert.deepEqual(visibles, ["Usuarios"]);
-    for (const r of ["inicio", "inventario", "tienda", "catalogo", "fichas", "legales"]) {
+    assert.deepEqual(visibles, ["Inicio", "Inventario", "Mi tienda", "Catálogo", "Legales", "Usuarios"]);
+    for (const [r, sel] of [["inventario", ".fila-equipo"], ["tienda", "#form-tienda"], ["catalogo", "#pestana-modelos"], ["legales", "#l-titulo"], ["usuarios", "#form-invitar"]]) {
       await p.goto(`${BASE}/admin/#/${r}`);
-      await p.waitForSelector("#form-invitar");
-      assert.equal(new URL(p.url()).hash, "#/usuarios", r);
+      await p.waitForSelector(sel);
+      assert.equal(new URL(p.url()).hash.split("/")[1], r, r);
     }
-    const errores = await p.evaluate(async () => {
+    const resultado = await p.evaluate(async () => {
       const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
       const a = await api();
-      const r = [];
-      for (const f of [() => a.guardarModelo(1, { nombre: "x" }), () => a.guardarTienda({ nombre: "x" }), () => a.borrarDatosDemo(), () => a.agregarColor({ modelo_id: 1, nombre_es: "x" })]) {
-        try { await f(); r.push(""); } catch (e) { r.push(e.message); }
-      }
-      r.push((await a.listarEquipos()).length, (await a.listarModelos()).length);
-      return r;
+      const antes = (await a.leerTienda()).nombre;
+      await a.guardarTienda({ nombre: "Tienda del administrador" });
+      const despues = (await a.leerTienda()).nombre;
+      await a.guardarTienda({ nombre: antes });
+      return [despues, (await a.listarModelos()).some((m) => !m.activo)];
     });
-    assert.deepEqual(errores.slice(0, 4).map((m) => /^Solo el gestor puede/.test(m)), [true, true, true, true], JSON.stringify(errores));
-    // Ve inventario y catálogo como el público: solo lo publicado y lo activo.
-    assert.deepEqual(errores.slice(4), [6, 4]);
+    // Edita la tienda y ve el catálogo completo, también los modelos inactivos (el público no).
+    assert.deepEqual(resultado, ["Tienda del administrador", true]);
+    // El gestor sigue sin Usuarios.
+    await p.evaluate(() => sessionStorage.removeItem("cotizadora-demo:sesion"));
+    await entrarPanel(p, "gestor@demo.co");
+    assert.ok(!(await p.locator(".navegacion a:visible").allTextContents()).includes("Usuarios"));
+    await p.goto(`${BASE}/admin/#/usuarios`);
+    await p.waitForSelector(".estadisticas");
+    assert.equal(new URL(p.url()).hash, "#/inicio", "al gestor, Usuarios lo devuelve a Inicio");
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
@@ -1165,6 +1173,8 @@ async function llenarPopup(p) {
   await caso("panel: el administrador invita con rol, asigna roles, desactiva y no puede quitarse a sí mismo", async () => {
     const p = await nueva();
     await entrarPanel(p, "administrador@demo.co");
+    await p.goto(`${BASE}/admin/#/usuarios`); // cambiado con 0035: el administrador entra a Inicio
+    await p.waitForSelector("#form-invitar");
     await p.fill("#u-correo", "nuevo@tienda.co");
     assert.equal(await p.inputValue("#u-rol"), "gestor");
     await p.click("#form-invitar [type=submit]");
@@ -2867,7 +2877,7 @@ async function llenarPopup(p) {
       await p.waitForTimeout(500);
       await captura(p, `10-detalle-${ancho}`);
       await p.click("#cerrar-detalle");
-      for (const [correo, rutas] of [["gestor@demo.co", ["inicio", "inventario", "inventario/nuevo", "tienda", "catalogo", "catalogo/ficha", "catalogo/ficha/1", "catalogo/pagos", "legales"]], ["administrador@demo.co", ["usuarios"]]]) {
+      for (const [correo, rutas] of [["gestor@demo.co", ["inicio", "inventario", "inventario/nuevo", "tienda", "catalogo", "catalogo/ficha", "catalogo/ficha/1", "catalogo/pagos", "legales"]], ["administrador@demo.co", ["inicio", "usuarios"]]]) {
         await p.evaluate(() => sessionStorage.removeItem("cotizadora-demo:sesion"));
         await entrarPanel(p, correo);
         for (const r of rutas) {

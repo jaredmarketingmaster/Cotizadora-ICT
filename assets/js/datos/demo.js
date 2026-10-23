@@ -443,7 +443,8 @@ function exigirSesion(e) {
 // que: la acción, como clave (datos.error.solo_gestor.<que>).
 function exigirGestor(e, que = "cambio") {
   const p = exigirSesion(e);
-  if (p.rol !== "gestor") throw error(`solo_gestor.${que}`, "42501");
+  // Como es_gestor() desde 0035: el gestor o el administrador.
+  if (!["gestor", "administrador"].includes(p.rol)) throw error(`solo_gestor.${que}`, "42501");
   return p;
 }
 
@@ -454,7 +455,8 @@ function exigirAdministrador(e) {
   return p;
 }
 
-function esGestor(e) { return perfilActual(e)?.rol === "gestor"; }
+// Como es_gestor() desde 0035: gestiona la tienda el gestor o el administrador.
+function esGestor(e) { return ["gestor", "administrador"].includes(perfilActual(e)?.rol); }
 
 // Como perfiles_proteger: siempre queda al menos un administrador activo.
 function cambiarPerfil(e, userId, cambios) {
@@ -682,7 +684,7 @@ export const demo = {
     const e = leer();
     const p = exigirGestor(e, "tienda");
     const datos = elegir(cambios, CAMPOS_TIENDA);
-    if ("modo_demo" in datos && datos.modo_demo !== e.tienda.modo_demo && p.rol !== "gestor") {
+    if ("modo_demo" in datos && datos.modo_demo !== e.tienda.modo_demo && !["gestor", "administrador"].includes(p.rol)) {
       throw error("solo_gestor.modo_demo", "42501");
     }
     const nueva = copia({ ...e.tienda, ...datos, actualizado_en: ahora() });

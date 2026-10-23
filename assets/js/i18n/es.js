@@ -984,7 +984,7 @@ export default {
   "panel.usuarios.desactivado_ok": "Usuario desactivado",
   "panel.usuarios.desactivar": "Desactivar",
   "panel.usuarios.enviar_invitacion": "Enviar invitación",
-  "panel.usuarios.intro": "«Administrador» gestiona los accesos: invita, asigna roles, desactiva y reactiva. «Gestor» maneja todo lo demás: Mi tienda, Inventario, Fichas, Catálogo, Legales y el modo demo. Siempre debe quedar al menos un administrador activo.",
+  "panel.usuarios.intro": "«Gestor» maneja la tienda: Mi tienda, Inventario, Catálogo, Legales y el modo demo. «Administrador» hace todo lo del gestor y, además, gestiona los accesos: invita, asigna roles, desactiva y reactiva. Siempre debe quedar al menos un administrador activo.",
   "panel.usuarios.invitacion_enviada": "Invitación enviada",
   "panel.usuarios.invitar": "Invitar",
   "panel.usuarios.reactivado": "Usuario reactivado",

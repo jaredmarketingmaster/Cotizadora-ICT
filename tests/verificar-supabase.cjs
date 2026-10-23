@@ -470,14 +470,19 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
   await caso("invitación: el administrador invita, el enlace del correo pide crear la contraseña y entra", async () => {
     const p = await pagina(390);
     await entrar(p, "administrador@local.co");
-    // El administrador solo ve Usuarios, y el servidor le niega lo demás.
-    assert.deepEqual(await p.locator(".navegacion a:visible").allTextContents(), ["Usuarios"]);
-    const negado = await p.evaluate(async () => {
+    // Cambiado con 0035: el administrador ve todo (también Usuarios) y el servidor
+    // lo deja gestionar la tienda.
+    assert.deepEqual(await p.locator(".navegacion a:visible").allTextContents(), ["Inicio", "Inventario", "Mi tienda", "Catálogo", "Legales", "Usuarios"]);
+    const guardado = await p.evaluate(async () => {
       const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
       const a = await api();
-      try { await a.guardarTienda({ nombre: "x" }); return "guardó"; } catch (e) { return e.message; }
+      const antes = (await a.leerTienda()).nombre;
+      try { await a.guardarTienda({ nombre: "Hecho por el administrador" }); } catch (e) { return e.message; }
+      const despues = (await a.leerTienda()).nombre;
+      await a.guardarTienda({ nombre: antes });
+      return despues;
     });
-    assert.notEqual(negado, "guardó");
+    assert.equal(guardado, "Hecho por el administrador");
     await p.goto(`${BASE}/admin/#/usuarios`);
     await p.waitForSelector("#form-invitar");
     const antes = contarCorreos();
@@ -552,7 +557,9 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     const p = await pagina(1280);
     await entrar(p, "administrador@local.co");
     await p.goto(`${BASE}/admin/#/usuarios`);
+    await p.waitForSelector("#form-invitar");
     const fila = '.usuario-fila:has-text("invitado@local.co")';
+    await p.waitForSelector(fila, { timeout: 15000 });
     // Asignar rol: a administrador y de vuelta a gestor (directo en perfiles).
     await p.locator(`${fila} [data-rol]`).selectOption("administrador");
     await p.waitForFunction(() => [...document.querySelectorAll(".usuario-fila")].some((f) => f.textContent.includes("invitado@local.co") && f.querySelector(".rol").textContent.trim() === "Administrador"), null, { timeout: 15000 });
