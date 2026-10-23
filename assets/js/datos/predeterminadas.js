@@ -29,6 +29,9 @@ export const IMAGENES_PREDETERMINADAS = {
   // 12 Pro y 12 Pro Max: cada uno con sus imágenes (las del Pro Max se ven más grandes).
   "iphone-12-pro": { "Grafito": "grafito", "Azul pacífico": "azul-pacifico", "Oro": "oro", "Plata": "plata" },
   "iphone-12-pro-max": { "Grafito": "grafito", "Azul pacífico": "azul-pacifico", "Oro": "oro", "Plata": "plata" },
+  // 13 y 13 mini: las mismas imágenes hasta que Jared pase un juego para cada uno.
+  "iphone-13": { "Blanco estelar": "blanco-estelar", "Medianoche": "medianoche", "Azul": "azul", "Rosa": "rosa", "Verde": "verde" },
+  "iphone-13-mini": { "Blanco estelar": "blanco-estelar", "Medianoche": "medianoche", "Azul": "azul", "Rosa": "rosa", "Verde": "verde" },
   "iphone-se-2": { "Negro": "negro", "(PRODUCT)RED": "product-red", "Blanco": "blanco" },
   "iphone-8": { "Oro": "oro", "Gris espacial": "gris-espacial", "(PRODUCT)RED": "product-red", "Plata": "plata" },
   "iphone-8-plus": { "(PRODUCT)RED": "product-red", "Plata": "plata", "Gris espacial": "gris-espacial", "Oro": "oro" },
