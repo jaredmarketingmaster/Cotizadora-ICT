@@ -41,9 +41,12 @@ export const IMAGENES_PREDETERMINADAS = {
   // 17 Pro y 17 Pro Max: las mismas imágenes hasta que Jared pase un juego para cada uno.
   "iphone-17-pro": { "Naranja cósmico": "naranja-cosmico", "Azul profundo": "azul-profundo", "Plata": "plata" },
   "iphone-17-pro-max": { "Naranja cósmico": "naranja-cosmico", "Azul profundo": "azul-profundo", "Plata": "plata" },
+  // 14 Pro y 14 Pro Max: las mismas imágenes hasta que Jared pase un juego para cada uno.
+  "iphone-14-pro": { "Negro espacial": "negro-espacial" },
+  "iphone-14-pro-max": { "Negro espacial": "negro-espacial" },
   // 15 y 15 Plus, 15 Pro y 15 Pro Max: cada par con las mismas imágenes hasta que Jared pase un juego para cada uno.
-  "iphone-15": { "Amarillo": "amarillo" },
-  "iphone-15-plus": { "Amarillo": "amarillo" },
+  "iphone-15": { "Amarillo": "amarillo", "Negro": "negro", "Azul": "azul", "Verde": "verde", "Rosa": "rosa" },
+  "iphone-15-plus": { "Amarillo": "amarillo", "Negro": "negro", "Azul": "azul", "Verde": "verde", "Rosa": "rosa" },
   "iphone-15-pro": { "Titanio negro": "titanio-negro", "Titanio azul": "titanio-azul", "Titanio natural": "titanio-natural", "Titanio blanco": "titanio-blanco" },
   "iphone-15-pro-max": { "Titanio negro": "titanio-negro", "Titanio azul": "titanio-azul", "Titanio natural": "titanio-natural", "Titanio blanco": "titanio-blanco" },
   // 16 y 16 Plus, 16 Pro y 16 Pro Max: cada par con las mismas imágenes hasta que Jared pase un juego para cada uno.
