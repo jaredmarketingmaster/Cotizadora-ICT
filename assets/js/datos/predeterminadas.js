@@ -29,7 +29,7 @@ export const IMAGENES_PREDETERMINADAS = {
   "iphone-8": { "Oro": "oro", "Gris espacial": "gris-espacial", "(PRODUCT)RED": "product-red", "Plata": "plata" },
   "iphone-8-plus": { "(PRODUCT)RED": "product-red", "Plata": "plata", "Gris espacial": "gris-espacial", "Oro": "oro" },
   "iphone-x": { "Plata": "plata", "Gris espacial": "gris-espacial" },
-  // XS y XS Max: Gris espacial con la misma imagen (se ven iguales; cambia el tamaño).
+  // XS y XS Max: Oro con la misma imagen (se ven iguales; cambia el tamaño). Gris espacial: cada uno la suya.
   "iphone-xs": { "Gris espacial": "gris-espacial", "Oro": "oro" },
   "iphone-xs-max": { "Gris espacial": "gris-espacial", "Oro": "oro" },
   "iphone-xr": { "Negro": "negro", "Azul": "azul", "Coral": "coral", "Amarillo": "amarillo", "(PRODUCT)RED": "product-red", "Blanco": "blanco" }
