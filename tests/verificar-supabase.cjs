@@ -280,7 +280,8 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await s.waitForSelector("#detalle-en-linea .info-compra");
     assert.deepEqual(await s.$$eval("#detalle-en-linea .info-compra section:first-of-type li", (xs) => xs.map((x) => x.textContent)), ["Tarjeta de crédito: hasta 12 cuotas, hasta 6 sin interés."]);
     const filas = await s.$$eval("#detalle-en-linea .ficha-tecnica dt", (xs) => xs.map((x) => x.textContent));
-    assert.deepEqual(filas, ["Año de lanzamiento", "Procesador", "Pantalla", "Cámaras traseras", "Versiones del modelo", "Materiales", "Puertos y carga"]);
+    // Con las filas de 0029 (cámara frontal, batería y dimensiones), en el orden fijo.
+    assert.deepEqual(filas, ["Año de lanzamiento", "Procesador", "Pantalla", "Cámaras traseras", "Cámara frontal", "Batería", "Versiones del modelo", "Materiales", "Puertos y carga", "Dimensiones y peso"]);
     await p.context().close();
   });
 

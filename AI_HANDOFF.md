@@ -2,7 +2,7 @@
 > LECTURA OBLIGATORIA PARA EL AGENTE ENTRANTE (Codex, Claude u otro): Lee este documento antes de ejecutar comandos o proponer código.
 
 ## 1. 🚦 ESTADO ACTUAL (METADATA)
-- **Último Agente:** Claude Code 4 (quitó el archivo XML, preparó la investigación con Gemini y ejecuta el plan de 9 puntos de la sección 5: puntos 1 y 2 hechos, punto 3 en curso).
+- **Último Agente:** Claude Code 4 (quitó el archivo XML, preparó la investigación con Gemini y ejecuta el plan de 9 puntos de la sección 5: puntos 1 a 3 hechos; sigue el 4).
 - **Timestamp:** 2026-10-23 (actualizado por Claude Code 4).
 - **Rama Actual:** `claude/gallant-euler-ezco6g` (último commit de esta tanda: ver `git log`; árbol limpio y sincronizado con `origin` al cerrar cada punto). `main` solo tiene el README inicial: **no** trabajar sobre `main` ni abrir PR sin que Jared lo pida.
 - **Estado del Build:** VERDE. No hay build ni `package.json`: es un sitio estático sin npm ni compilación, a propósito. "Verde" significa que pasan todas las suites del 22/10/2026: SQL OK, 6 suites sin navegador OK (1152 claves), funciones Deno OK, `tests/i18n.test.mjs` 6 casos, `tests/verificar.cjs` 80/80 (81 con `ICT_CAPTURAS=1`; el caso nuevo es B4b), `tests/verificar-supabase.cjs` 13/13 y `tests/documentacion.mjs` OK. Lighthouse móvil sin la franja de modo demo: 99–100 / 100 / 100, CLS 0,045; con una tienda en portugués y el idioma guardado (`ICT_LH_IDIOMA=pt`), 99 / 100 / 100, LCP 1,7–1,8 s.
@@ -20,7 +20,7 @@
 
 ## 2. 🧠 MEMORIA ARQUITECTÓNICA (INMUTABLE)
 1. **Sitio estático sin build.** HTML, CSS y JavaScript con ES modules y **rutas relativas** (funciona bajo `/Cotizadora-ICT/` en GitHub Pages). No agregar npm, `package.json`, bundlers, TypeScript en el front ni frameworks. Las únicas dependencias externas son Google Fonts (sitio) y supabase-js 2.117.2 desde jsDelivr (solo el panel).
-2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0029_…sql`**. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 23) con su `MIGRACIONES[n]`.
+2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0030_…sql`**. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 24) con su `MIGRACIONES[n]`.
 3. **Idioma y textos.** Español de Colombia con **"usted"** (nunca "tú" ni voseo) y portugués de Brasil con "você". **Ningún texto visible suelto en el código:** todo va en `assets/js/i18n/es.js` y `pt.js`, con las mismas claves y variables, y se usa con `t(clave)` / `tn(clave, n)`. `t()` se llama al usar el texto, nunca al cargar el módulo. Los textos literales del prompt (en `popup.js` y `catalogo.js`, ver `CLAUDE.md`) no se reescriben.
 4. **Reglas de producto que la suite hace cumplir:**
    - No inventar datos (especificaciones, colores, precios, plazos ni promesas): lo que la fuente no trae queda vacío.
@@ -51,7 +51,7 @@
   - Asistente de Legales de 6 pasos que genera y publica los 4 documentos, con el módulo de Colombia.
   - Usuarios: invitar, cambiar el rol, desactivar y reactivar.
 - **Base de datos**:
-  - Migraciones `0001` a `0028` (la `0027` quita la columna del archivo XML; la `0028`, colores según Apple), con RLS, disparadores, `datos_publicos()`, `borrar_datos_demo()`, `legal_faltantes()`, `crear_equipos_lote()` y `archivos_en_uso()`.
+  - Migraciones `0001` a `0029` (la `0027` quita la columna del archivo XML; la `0028`, colores según Apple; la `0029`, fichas según Apple), con RLS, disparadores, `datos_publicos()`, `borrar_datos_demo()`, `legal_faltantes()`, `crear_equipos_lote()` y `archivos_en_uso()`.
   - Funciones Deno: `enviar-lead` y `usuarios`.
 - **Pruebas e infraestructura de prueba:**
   - Suites SQL, unitarias, de funciones, demo (Playwright), Supabase local y Lighthouse (`tests/lighthouse/`), todas en verde.
@@ -68,7 +68,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
 - **Primera visita en portugués:** sin idioma guardado (la primera vez en ese navegador), una tienda en portugués se ve en español hasta que llegan los datos. Desde la segunda visita sale en portugués (punto 1 hecho); el LCP en portugués es de 1,7–1,8 s simulado y 2,5 s con estrangulamiento real (sección 13 de `DOCUMENTACION.md`).
 - **Correos por tienda:** los de invitación y recuperación están en español (`supabase/correos/`) y en portugués (`supabase/correos/pt/`, punto 2 hecho); se pegan a mano en el proyecto de Supabase de cada tienda, en su idioma.
 - **CLS de 0,19 solo con la franja de modo demo** (rendimiento 91). Sin la franja, 0,045. Es una limitación aceptada: no hay que corregirla.
-- **Datos de catálogo que faltan:** se completan con el punto 3 de la sección 5. Después quedan la descripción de los modelos y los hexadecimales oficiales, que Apple no publica (`catalogo/FALTANTES.md`). **No se completan de memoria**.
+- **Datos de catálogo que faltan:** la descripción de los modelos y los hexadecimales oficiales, que Apple no publica (`catalogo/FALTANTES.md`). **No se completan de memoria**.
 - **Sin verificar con fuentes:** los formatos de celular y las pasarelas por país se corrigen en los puntos 7 y 8. Siguen sin verificar las traducciones al portugués ("cotizador" quedó "cotador").
 - **Fuera del código:** Supabase real, GHL real, SMTP y GitHub Pages no están conectados (los hace el equipo de Jared).
 - **Entorno:** en este contenedor el proxy bloquea jsDelivr, unpkg y esm.sh. Para la suite de Supabase local se usa un supabase-js armado con esbuild (`ICT_SUPABASE_JS`). **Nunca** usar `pkill -f` con un texto que aparezca en el mismo comando: mata la propia shell.
@@ -79,12 +79,12 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
 >
 > **Regla de cierre de Jared:** al llegar al 90 % del límite de la sesión, terminar el punto en curso, documentarlo en `DOCUMENTACION.md` y dejar este archivo al día para que el siguiente agente siga como si fuera el mismo.
 >
-> **Antes de tocar nada:** ya hecho en esta tanda: el archivo XML se quitó (`aec4c38`), punto 1 (`9ba61be`) y punto 2 (`6932c64`).
+> **Antes de tocar nada:** ya hecho en esta tanda: el archivo XML se quitó (`aec4c38`), punto 1 (`9ba61be`), punto 2 (`6932c64`) y punto 3 (ver `git log`: "punto 3"). **Sigue el punto 4.**
 
 1. ✅ **HECHO (`9ba61be`).** `legal/FUENTES.md` corregido y completado: fuentes de Colombia 14 a 18 (transporte de la devolución, reversión del pago, enlace a la SIC, PQR con radicado, RNE) y estados al día.
 2. ✅ **HECHO (`6932c64`).** Colores según Apple: `0028_colores_apple.sql`, `semilla.js` y `demo.js` (`VERSION` 23).
-3. ⏳ **EN CURSO. Fichas: batería, cámaras y medidas.**
-   - Una migración nueva (la próxima libre, `0029_fichas_apple.sql`) que **agregue la fila de una categoría solo si la ficha del modelo no tiene esa clave**: lo que cargó la tienda no se toca.
+3. ✅ **HECHO (`0029_fichas_apple.sql`, `FICHAS_APPLE` en `semilla.js`, demo `VERSION` 24).** Lo que sigue es el registro de lo que se cargó. **Fichas: batería, cámaras y medidas.**
+   - Una migración nueva (`0029_fichas_apple.sql`) que **agregue la fila de una categoría solo si la ficha del modelo no tiene esa clave**: lo que cargó la tienda no se toca.
    - Lo mismo en `FICHAS` de `semilla.js` (filas en el orden de `CATEGORIAS_FICHA`) y en `demo.js` (`VERSION` 24 y `MIGRACIONES[23]`, misma regla). `tests/sql/comparar-semilla.mjs` compara SQL y JS; agregar una prueba en `pruebas.sql` de que una ficha con la clave ya cargada no cambia.
    - **No cargar los mAh** (Apple no los publica; los de Gemini son de terceros).
    - Fuente: fichas de soporte de Apple (número de artículo entre paréntesis). Valores aceptados (video / video en streaming / audio, en horas; "carga" = 50 % con el adaptador indicado):
@@ -151,7 +151,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
     - Un commit por punto en español, con push a `claude/gallant-euler-ezco6g`.
 
 **Prohibido tocar:**
-- `supabase/migrations/0001` a `0028`: son inmutables; los cambios van en migraciones nuevas.
+- `supabase/migrations/0001` a `0029`: son inmutables; los cambios van en migraciones nuevas.
 - Los textos literales del prompt en `assets/js/sitio/popup.js` y `assets/js/sitio/catalogo.js`, y el mensaje de WhatsApp.
 - `config.js`: solo lleva la conexión y el script de GHL; nunca datos de la tienda ni claves.
 - Las pruebas existentes: no se debilitan ni se borran.

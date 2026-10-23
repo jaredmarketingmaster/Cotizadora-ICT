@@ -46,11 +46,22 @@ end $$;
 do $$
 begin
   assert (select descripcion || '|' || especificaciones::text from public.fichas f join public.modelos m on m.id = f.modelo_id where m.slug = 'iphone-13')
-    = 'Descripción de la tienda|[{"valor": "Dato de la tienda", "etiqueta": "Pantalla"}]', 'la ficha de la tienda no se toca';
+    = 'Descripción de la tienda|[{"valor": "Dato de la tienda", "etiqueta": "Pantalla"}, {"clave": "bateria", "valor": "Dato de batería de la tienda", "etiqueta": "Batería"}]', 'la ficha de la tienda no se toca (0012 ni 0029)';
   assert (select count(*) from public.fichas f join public.modelos m on m.id = f.modelo_id
           where m.slug <> 'iphone-13' and m.slug <> 'iphone-prueba' and jsonb_array_length(f.especificaciones) > 0) = 41, '41 fichas precargadas';
   assert (select f.especificaciones -> 0 ->> 'valor' from public.fichas f join public.modelos m on m.id = f.modelo_id where m.slug = 'iphone-7') = 'Septiembre 2016', 'iPhone 7: lanzamiento';
-  assert not exists (select 1 from public.fichas, jsonb_array_elements(especificaciones) x where x ->> 'clave' = 'bateria'), 'la fuente no trae batería';
+  -- 0029: batería en los 42 (en el iPhone 13, la de la tienda), cámaras y medidas al final.
+  assert (select count(*) from public.fichas, jsonb_array_elements(especificaciones) x where x ->> 'clave' = 'bateria') = 42, '0029: batería en los 42 modelos';
+  assert (select count(*) from public.fichas f, jsonb_array_elements(f.especificaciones) x where x ->> 'clave' = 'bateria'
+          and f.modelo_id = (select id from public.modelos where slug = 'iphone-13')) = 1, '0029: no duplica la batería de la tienda';
+  assert not exists (select 1 from public.fichas, jsonb_array_elements(especificaciones) x where x ->> 'valor' ~* 'mAh'), '0029: sin mAh';
+  assert (select x ->> 'valor' from public.fichas f join public.modelos m on m.id = f.modelo_id, jsonb_array_elements(f.especificaciones) x
+          where m.slug = 'iphone-7' and x ->> 'clave' = 'bateria') = E'Video: hasta 13 h\nAudio: hasta 40 h', '0029: batería del iPhone 7';
+  assert (select x ->> 'valor' from public.fichas f join public.modelos m on m.id = f.modelo_id, jsonb_array_elements(f.especificaciones) x
+          where m.slug = 'iphone-18-pro-max' and x ->> 'clave' = 'dimensiones') = E'163.4 × 78.0 × 8.75 mm\n249 g', '0029: medidas del 18 Pro Max';
+  assert (select string_agg(coalesce(x ->> 'clave', x ->> 'etiqueta'), ',' order by o) from public.fichas f join public.modelos m on m.id = f.modelo_id,
+          jsonb_array_elements(f.especificaciones) with ordinality e(x, o) where m.slug = 'iphone-duo')
+    = 'lanzamiento,procesador,pantalla,versiones,materiales,puertos,Sistema de cámaras,camaras_traseras,camara_frontal,bateria,dimensiones', '0029: el Duo conserva su fila y suma las nuevas al final';
   assert (select mostrar_ficha and ficha_ocultas = '{}' from public.tienda), 'ficha visible y sin categorías ocultas por defecto';
 end $$;
 do $$ begin

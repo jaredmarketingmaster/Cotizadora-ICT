@@ -7,8 +7,8 @@
 // y sus archivos complementarios. Nada se completó de memoria: lo que la
 // fuente no da (nombre en inglés o hexadecimal) queda vacío ("").
 //
-// Fichas técnicas (FICHAS): las mismas de 0012_fichas.sql, también solo de la
-// fuente.
+// Fichas técnicas: FICHAS, las mismas de 0012_fichas.sql (solo de la fuente),
+// y FICHAS_APPLE, las de 0029_fichas_apple.sql (fichas de soporte de Apple).
 // =============================================================================
 
 import { CATEGORIAS_FICHA } from "./comun.js";
@@ -169,8 +169,8 @@ export const HEX_APROXIMADOS = {
 // Fichas técnicas de la fuente (archivos de Jared: el HTML del inventario para
 // el iPhone 7 al 16 Pro Max e info_complementaria.md para el resto). Cada fila es
 // [clave, valor] de una categoría fija (CATEGORIAS_FICHA) o [null, valor, etiqueta].
-// Lo que la fuente no trae no está: la batería en todos, y lo que se anota en
-// la sección 17 de DOCUMENTACION.md. 0012_fichas.sql tiene lo mismo.
+// Lo que la fuente no traía (batería, algunas cámaras y medidas) lo agrega
+// FICHAS_APPLE (0029). 0012_fichas.sql tiene lo mismo que FICHAS.
 export const FICHAS = {
   "iphone-7": [
     ["lanzamiento", "Septiembre 2016"],
@@ -625,11 +625,168 @@ export const FICHAS = {
   ]
 };
 
-// Filas de la ficha de un modelo, como quedan en la base ({clave, etiqueta, valor}).
+// Fichas técnicas según Apple (FICHAS_APPLE, 0029_fichas_apple.sql): lo que la
+// fuente no traía, de las fichas de soporte de Apple (investigación de Jared
+// con Gemini, 22/10/2026): batería de todos, cámara frontal del 17 en adelante,
+// cámaras traseras del Duo y dimensiones del 17 Pro en adelante. Sin mAh
+// (Apple no los publica). Se agrega una fila solo si la ficha no tiene esa
+// categoría, al final.
+export const FICHAS_APPLE = {
+  "iphone-7": [
+    ["bateria", "Video: hasta 13 h\nAudio: hasta 40 h"]
+  ],
+  "iphone-7-plus": [
+    ["bateria", "Video: hasta 14 h\nAudio: hasta 60 h"]
+  ],
+  "iphone-8": [
+    ["bateria", "Video: hasta 13 h\nAudio: hasta 40 h\nCarga rápida: 50% en 30 min"]
+  ],
+  "iphone-8-plus": [
+    ["bateria", "Video: hasta 14 h\nAudio: hasta 60 h\nCarga rápida: 50% en 30 min (adaptador de 18 W o más)"]
+  ],
+  "iphone-x": [
+    ["bateria", "Video: hasta 13 h\nAudio: hasta 60 h\nCarga rápida: 50% en 30 min"]
+  ],
+  "iphone-xs": [
+    ["bateria", "Video: hasta 14 h\nAudio: hasta 60 h\nCarga rápida: 50% en 30 min (adaptador de 18 W o más)"]
+  ],
+  "iphone-xs-max": [
+    ["bateria", "Video: hasta 15 h\nAudio: hasta 65 h\nCarga rápida: 50% en 30 min (adaptador de 18 W o más)"]
+  ],
+  "iphone-xr": [
+    ["bateria", "Video: hasta 16 h\nAudio: hasta 65 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-11": [
+    ["bateria", "Video: hasta 17 h\nVideo en streaming: hasta 10 h\nAudio: hasta 65 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-11-pro": [
+    ["bateria", "Video: hasta 18 h\nVideo en streaming: hasta 11 h\nAudio: hasta 65 h\nCarga rápida: 50% en 30 min (adaptador de 18 W o más)"]
+  ],
+  "iphone-11-pro-max": [
+    ["bateria", "Video: hasta 20 h\nVideo en streaming: hasta 12 h\nAudio: hasta 80 h\nCarga rápida: 50% en 30 min (adaptador de 18 W o más)"]
+  ],
+  "iphone-se-2": [
+    ["bateria", "Video: hasta 13 h\nVideo en streaming: hasta 8 h\nAudio: hasta 40 h\nCarga rápida: 50% en 30 min (adaptador de 18 W o más)"]
+  ],
+  "iphone-12-mini": [
+    ["bateria", "Video: hasta 15 h\nVideo en streaming: hasta 10 h\nAudio: hasta 50 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-12": [
+    ["bateria", "Video: hasta 17 h\nVideo en streaming: hasta 11 h\nAudio: hasta 65 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-12-pro": [
+    ["bateria", "Video: hasta 17 h\nVideo en streaming: hasta 11 h\nAudio: hasta 65 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-12-pro-max": [
+    ["bateria", "Video: hasta 20 h\nVideo en streaming: hasta 12 h\nAudio: hasta 80 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-13-mini": [
+    ["bateria", "Video: hasta 17 h\nVideo en streaming: hasta 13 h\nAudio: hasta 55 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-13": [
+    ["bateria", "Video: hasta 19 h\nVideo en streaming: hasta 15 h\nAudio: hasta 75 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-13-pro": [
+    ["bateria", "Video: hasta 22 h\nVideo en streaming: hasta 20 h\nAudio: hasta 75 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-13-pro-max": [
+    ["bateria", "Video: hasta 28 h\nVideo en streaming: hasta 25 h\nAudio: hasta 95 h\nCarga rápida: 50% en 35 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-se-3": [
+    ["bateria", "Video: hasta 15 h\nVideo en streaming: hasta 10 h\nAudio: hasta 50 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-14": [
+    ["bateria", "Video: hasta 20 h\nVideo en streaming: hasta 16 h\nAudio: hasta 80 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-14-plus": [
+    ["bateria", "Video: hasta 26 h\nVideo en streaming: hasta 20 h\nAudio: hasta 100 h\nCarga rápida: 50% en 35 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-14-pro": [
+    ["bateria", "Video: hasta 23 h\nVideo en streaming: hasta 20 h\nAudio: hasta 75 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-14-pro-max": [
+    ["bateria", "Video: hasta 29 h\nVideo en streaming: hasta 25 h\nAudio: hasta 95 h\nCarga rápida: 50% en 35 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-15": [
+    ["bateria", "Video: hasta 20 h\nVideo en streaming: hasta 16 h\nAudio: hasta 80 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-15-plus": [
+    ["bateria", "Video: hasta 26 h\nVideo en streaming: hasta 20 h\nAudio: hasta 100 h\nCarga rápida: 50% en 35 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-15-pro": [
+    ["bateria", "Video: hasta 23 h\nVideo en streaming: hasta 20 h\nAudio: hasta 75 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-15-pro-max": [
+    ["bateria", "Video: hasta 29 h\nVideo en streaming: hasta 25 h\nAudio: hasta 95 h\nCarga rápida: 50% en 35 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-16": [
+    ["bateria", "Video: hasta 22 h\nVideo en streaming: hasta 18 h\nAudio: hasta 80 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-16-plus": [
+    ["bateria", "Video: hasta 27 h\nVideo en streaming: hasta 24 h\nAudio: hasta 100 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-16-pro": [
+    ["bateria", "Video: hasta 27 h\nVideo en streaming: hasta 22 h\nAudio: hasta 85 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-16-pro-max": [
+    ["bateria", "Video: hasta 33 h\nVideo en streaming: hasta 29 h\nAudio: hasta 105 h\nCarga rápida: 50% en 35 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-16e": [
+    ["bateria", "Video: hasta 26 h\nVideo en streaming: hasta 21 h\nAudio: hasta 90 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-17": [
+    ["camara_frontal", "Cámara Center Stage de 18 MP (sensor cuadrado)"],
+    ["bateria", "Video: hasta 30 h\nVideo en streaming: hasta 27 h\nCarga rápida: 50% en 20 min (adaptador de 40 W o más)"]
+  ],
+  "iphone-air": [
+    ["bateria", "Video: hasta 27 h (40 h con la batería MagSafe del iPhone Air)\nVideo en streaming: hasta 22 h (35 h con esa batería)\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-17-pro": [
+    ["camara_frontal", "Cámara Center Stage de 18 MP\nƒ/1.9\nAutoenfoque con Focus Pixels"],
+    ["bateria", "Video en streaming: hasta 28 h\nCarga rápida: 50% en 20 min (adaptador de 40 W o más)"],
+    ["dimensiones", "150.0 × 71.9 × 8.75 mm\n206 g"]
+  ],
+  "iphone-17-pro-max": [
+    ["camara_frontal", "Cámara Center Stage de 18 MP\nƒ/1.9\nAutoenfoque con Focus Pixels"],
+    ["bateria", "Video en streaming: hasta 35 h\nCarga rápida: 50% en 20 min (adaptador de 40 W o más)"],
+    ["dimensiones", "163.4 × 78.0 × 8.75 mm\n231 g"]
+  ],
+  "iphone-17e": [
+    ["bateria", "Video: hasta 26 h\nVideo en streaming: hasta 21 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)"]
+  ],
+  "iphone-18-pro": [
+    ["camara_frontal", "Cámara Center Stage de 18 MP\nƒ/1.9\nAutoenfoque con Focus Pixels"],
+    ["bateria", "Video en streaming: hasta 33 h\nCarga rápida: 50% en unos 15 min (adaptador de 60 W o más)"],
+    ["dimensiones", "150.0 × 71.9 × 8.75 mm\n211 g"]
+  ],
+  "iphone-18-pro-max": [
+    ["camara_frontal", "Cámara Center Stage de 18 MP\nƒ/1.9\nAutoenfoque con Focus Pixels"],
+    ["bateria", "Video en streaming: hasta 40 h\nCarga rápida: 50% en unos 15 min (adaptador de 60 W o más)"],
+    ["dimensiones", "163.4 × 78.0 × 8.75 mm\n249 g"]
+  ],
+  "iphone-duo": [
+    ["camaras_traseras", "Trasera doble:\n• Fusion principal: 48 MP (teleobjetivo 2x de calidad óptica)\n• Fusion ultra gran angular: 48 MP"],
+    ["camara_frontal", "Cámara Center Stage de 18 MP (pantalla exterior)\nCámara FaceTime bajo la pantalla interior"],
+    ["bateria", "Uso típico: hasta 24 h\nVideo: hasta 44 h (pantalla exterior) o 31 h (interior)\nVideo en streaming: hasta 37 h (exterior) o 26 h (interior)\nDoble batería\nCarga rápida: 50% en 20 min (adaptador de 60 W o más)"],
+    ["dimensiones", "Abierto: 117.8 × 164.6 × 5.2 mm\nCerrado: 117.8 × 84.1 × 11.3 mm\n254 g"]
+  ]
+};
+
+const fila = ([clave, valor, etiqueta]) => (clave
+  ? { clave, etiqueta: CATEGORIAS_FICHA.find((c) => c.clave === clave).etiqueta, valor }
+  : { etiqueta, valor });
+
+// Las filas de FICHAS_APPLE de un modelo que faltan en una ficha (0029).
+export function filasAppleQueFaltan(slug, especificaciones) {
+  const tiene = new Set((especificaciones || []).map((f) => f.clave).filter(Boolean));
+  return (FICHAS_APPLE[slug] || []).filter(([clave]) => !tiene.has(clave)).map(fila);
+}
+
+// Filas de la ficha de un modelo, como quedan en la base ({clave, etiqueta, valor}):
+// las de 0012 y, al final, las de 0029.
 export function filasDeFuente(slug) {
-  return (FICHAS[slug] || []).map(([clave, valor, etiqueta]) => (clave
-    ? { clave, etiqueta: CATEGORIAS_FICHA.find((c) => c.clave === clave).etiqueta, valor }
-    : { etiqueta, valor }));
+  const base = (FICHAS[slug] || []).map(fila);
+  return [...base, ...filasAppleQueFaltan(slug, base)];
 }
 
 // Precios redondos de ejemplo: NO son precios reales.

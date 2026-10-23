@@ -1064,9 +1064,12 @@ async function llenarPopup(p) {
     assert.equal(e.modelos.length, 42);
     assert.equal(e.colores.length, 182);
     assert.equal(e.tienda.tamano_texto, "normal");
-    // 0012: fichas de la fuente donde estaban vacías; la de la tienda no se toca
+    // 0012: fichas de la fuente donde estaban vacías; la de la tienda no se toca.
+    // 0029: a la de la tienda solo se le suma al final la batería, que no tenía.
     const fichaDe = (slug) => e.fichas.find((f) => f.modelo_id === e.modelos.find((m) => m.slug === slug).id);
-    assert.deepEqual(fichaDe("iphone-13").especificaciones, [{ etiqueta: "Pantalla", valor: "Dato de la tienda" }]);
+    assert.deepEqual(fichaDe("iphone-13").especificaciones, [{ etiqueta: "Pantalla", valor: "Dato de la tienda" },
+      { clave: "bateria", etiqueta: "Batería", valor: "Video: hasta 19 h\nVideo en streaming: hasta 15 h\nAudio: hasta 75 h\nCarga rápida: 50% en 30 min (adaptador de 20 W o más)" }]);
+    assert.equal(fichaDe("iphone-duo").especificaciones.at(-1).valor, "Abierto: 117.8 × 164.6 × 5.2 mm\nCerrado: 117.8 × 84.1 × 11.3 mm\n254 g");
     assert.equal(fichaDe("iphone-7").especificaciones[0].valor, "Septiembre 2016");
     assert.equal(e.fichas.filter((f) => f.especificaciones.length).length, 42);
     assert.equal(e.tienda.mostrar_ficha, true);
@@ -1083,7 +1086,7 @@ async function llenarPopup(p) {
     assert.deepEqual(Object.fromEntries(Object.keys(LEGAL_INICIAL).map((k) => [k, e.tienda[k]])),
       { ...LEGAL_INICIAL, legal_clausula_privacidad: "Mi política propia.", legal_clausula_terminos: "Mi aviso de marca." });
     for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) assert.ok(!(k in e.tienda), k);
-    assert.equal(e.version, 23);
+    assert.equal(e.version, 24);
     assert.ok(!("url_sitio" in e.tienda), "0025 la agregó y 0027 la quitó (sin archivo XML)");
     assert.ok(!("pagos_pasarela_otra" in e.tienda) && Array.isArray(e.tienda.pagos_pasarelas_otras) && !e.tienda.pagos_pasarelas.includes("otra") && typeof e.tienda.pagos_descuentos === "object", "0024: otras pasarelas con nombre");
     assert.ok(!("legal_entrega" in e.tienda) && !("legal_entrega_zonas" in e.tienda) && typeof e.tienda.envio_retiro === "boolean" && Array.isArray(e.tienda.envio_zonas), "0023: la entrega pasa a Envíos");
@@ -1215,9 +1218,12 @@ async function llenarPopup(p) {
     await abrirFicha(p);
     await p.click("#hoja-detalle .ficha-tecnica summary");
     assert.equal((await p.textContent("#hoja-detalle .ficha-tecnica summary")).trim(), "Ver ficha técnica");
-    assert.deepEqual(await filasSitio(p), fuente.map((f) => [f.clave, f.etiqueta, f.valor]), "las filas de la fuente, sin cambios");
-    assert.deepEqual(fuente.map((f) => f.clave), ["lanzamiento", "procesador", "pantalla", "camaras_traseras", "versiones", "materiales", "puertos"],
-      "18 Pro Max: sin cámara frontal, batería ni dimensiones en la fuente");
+    // El sitio las ordena por categoría (las de 0029 van al final en la base).
+    const ordenFijo = ["lanzamiento", "procesador", "pantalla", "camaras_traseras", "camara_frontal", "bateria", "versiones", "materiales", "puertos", "dimensiones"];
+    const enOrden = [...fuente].sort((a, b) => ordenFijo.indexOf(a.clave) - ordenFijo.indexOf(b.clave));
+    assert.deepEqual(await filasSitio(p), enOrden.map((f) => [f.clave, f.etiqueta, f.valor]), "las filas de la fuente, sin cambios");
+    assert.deepEqual(fuente.map((f) => f.clave), ["lanzamiento", "procesador", "pantalla", "camaras_traseras", "versiones", "materiales", "puertos", "camara_frontal", "bateria", "dimensiones"],
+      "18 Pro Max: cámara frontal, batería y dimensiones de 0029, al final");
     assert.equal(await p.locator("#hoja-detalle .ficha-tecnica dd").first().evaluate((el) => getComputedStyle(el).whiteSpace), "pre-line");
     // Todas las fichas del demo coinciden con la fuente
     const iguales = await p.evaluate(async (clave) => {
@@ -1244,7 +1250,7 @@ async function llenarPopup(p) {
     await p.click('label[for="i-cat-lanzamiento"]');
     await p.waitForFunction((clave) => JSON.parse(localStorage.getItem(clave)).tienda.ficha_ocultas.join() === "lanzamiento,pantalla", CLAVE_DEMO);
     await abrirFicha(p);
-    assert.deepEqual((await filasSitio(p)).map((f) => f[0]), ["procesador", "camaras_traseras", "versiones", "materiales", "puertos"]);
+    assert.deepEqual((await filasSitio(p)).map((f) => f[0]), ["procesador", "camaras_traseras", "camara_frontal", "bateria", "versiones", "materiales", "puertos", "dimensiones"]);
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
@@ -1257,9 +1263,9 @@ async function llenarPopup(p) {
     await p.waitForSelector("#form-ficha");
     const fuente = await p.evaluate(async () => (await import(new URL("../assets/js/datos/semilla.js", location.href).href)).filasDeFuente("iphone-18-pro-max"));
     for (const f of fuente) assert.equal(await p.inputValue(`#fc-${f.clave}`), f.valor, f.clave);
-    assert.equal(await p.inputValue("#fc-bateria"), "", "batería vacía: la fuente no la trae");
+    assert.equal(await p.inputValue("#fc-bateria"), "Video en streaming: hasta 40 h\nCarga rápida: 50% en unos 15 min (adaptador de 60 W o más)", "batería de 0029");
     await p.fill("#fc-procesador", "Procesador corregido por la tienda");
-    await p.fill("#fc-camara_frontal", "Dato que agregó la tienda");
+    await p.fill("#fc-camara_frontal", "Dato que corrigió la tienda");
     await p.click("#agregar-fila");
     await p.fill("#fe-0", "Desbloqueo");
     await p.fill("#fv-0", "Face ID");
@@ -1267,7 +1273,7 @@ async function llenarPopup(p) {
     await p.waitForSelector("text=Guardado");
     await abrirFicha(p);
     const filas = await filasSitio(p);
-    assert.deepEqual(filas.map((f) => f[0]), ["lanzamiento", "procesador", "pantalla", "camaras_traseras", "camara_frontal", "versiones", "materiales", "puertos", ""]);
+    assert.deepEqual(filas.map((f) => f[0]), ["lanzamiento", "procesador", "pantalla", "camaras_traseras", "camara_frontal", "bateria", "versiones", "materiales", "puertos", "dimensiones", ""]);
     assert.deepEqual(filas[1].slice(1), ["Procesador", "Procesador corregido por la tienda"]);
     assert.deepEqual(filas.at(-1).slice(1), ["Desbloqueo", "Face ID"], "las filas de la tienda van al final");
     // "Otras filas de la tienda" apagada: la fila propia no se ve.

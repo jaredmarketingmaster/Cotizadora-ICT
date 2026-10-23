@@ -9,7 +9,7 @@
 // =============================================================================
 
 import { ENVIOS_INICIAL, errorEnvios } from "./envios.js";
-import { CATALOGO, COLORES, DEMO_EQUIPOS, HEX_APROXIMADOS, filasDeFuente } from "./semilla.js";
+import { CATALOGO, COLORES, DEMO_EQUIPOS, HEX_APROXIMADOS, filasDeFuente, filasAppleQueFaltan } from "./semilla.js";
 import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MAX_LOTE, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, LEGAL_INICIAL, errorLegales, elegir } from "./comun.js";
 import { hexValido, sesion, esperar } from "../utils.js";
 import { whatsappValido, CODIGOS_PAIS_TIENDA } from "./paises.js";
@@ -75,7 +75,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 23;
+const VERSION = 24;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -231,7 +231,19 @@ const MIGRACIONES = {
   // 0027_quitar_url_sitio.sql: sin archivo XML, la dirección del sitio se borra.
   21(e) { delete e.tienda.url_sitio; },
   // 0028_colores_apple.sql: nombres de Apple, colores nuevos y los que salen.
-  22(e) { coloresApple(e); }
+  22(e) { coloresApple(e); },
+  // 0029_fichas_apple.sql: las filas de FICHAS_APPLE que le faltan a cada
+  // ficha, al final (lo que cargó la tienda no se toca).
+  23(e) {
+    for (const m of e.modelos) {
+      const f = e.fichas.find((x) => x.modelo_id === m.id);
+      if (!f) continue;
+      const nuevas = filasAppleQueFaltan(m.slug, f.especificaciones);
+      if (!nuevas.length) continue;
+      f.especificaciones = [...(f.especificaciones || []), ...nuevas];
+      f.actualizado_en = ahora();
+    }
+  }
 };
 
 // Lo mismo que 0028_colores_apple.sql: renombres, la lista completa de

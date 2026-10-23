@@ -2,9 +2,9 @@
 
 > Lista, modelo por modelo, de lo que la fuente del catálogo no trae. Sale de `assets/js/datos/semilla.js` (`CATALOGO`, `COLORES`, `FICHAS`, `HEX_APROXIMADOS`) y de la sección 17 de `DOCUMENTACION.md`. Nada de esto se completó de memoria: lo que falta quedó vacío (o, en los hexadecimales, con una muestra aproximada marcada como tal).
 >
-> **Cómo responder:** complete las tablas de la sección 4 con el dato y la URL de la fuente (idealmente apple.com). Con eso se arma una migración nueva (la próxima libre) y se actualiza `semilla.js`; las tiendas ya publicadas reciben el cambio al correrla.
+> **Cómo responder:** complete las tablas de la sección 4 con el dato y la URL de la fuente (idealmente la ficha de soporte de Apple con su número de artículo). Con eso se arma una migración nueva (la próxima libre) y se actualiza `semilla.js`; las tiendas ya publicadas reciben el cambio al correrla.
 
-Generado el 23/10/2026, después de `0028_colores_apple.sql`.
+Generado el 23/10/2026, después de `0029_fichas_apple.sql`.
 
 ## 1. Resuelto con la investigación de Jared (Gemini, 22/10/2026)
 
@@ -18,11 +18,15 @@ Aplicado en `0028_colores_apple.sql` con las fichas de soporte de Apple en espa�
 - **Duo:** Cielo nocturno y Blanco estrella (en lugar de "Titanio").
 - **Hexadecimales de terceros por modelo** del iPhone 7 al SE (3.ª generación). Los que dio Gemini para el 14 en adelante eran incoherentes y no se cargaron.
 
+Aplicado en `0029_fichas_apple.sql` con las fichas de soporte de Apple:
+
+- **Batería** de los 42 modelos (horas de video, video en streaming y audio, y la carga rápida). Sin mAh: Apple no los publica.
+- **Cámara frontal** del 17, 17 Pro, 17 Pro Max, 18 Pro, 18 Pro Max y Duo; **cámaras traseras** del Duo; **dimensiones y peso** del 17 Pro, 17 Pro Max, 18 Pro, 18 Pro Max y Duo.
+
 ## 2. Por modelo
 
 Valen para **todos** los modelos y no se repiten abajo:
 
-- **Batería:** ninguna ficha la trae (la fuente no tiene esa columna). Se completa con el punto 3 de la investigación (horas de video según Apple).
 - **Descripción del modelo:** vacía en los 42 (la fuente no trae). ¿Quiere un texto corto por modelo? Si lo pasa, va en la ficha de cada uno.
 - **Hexadecimales oficiales:** Apple no los publica; las muestras aproximadas de la sección 3 solo se pueden cambiar por otras medidas o elegidas por la tienda.
 
@@ -150,34 +154,18 @@ Valen para **todos** los modelos y no se repiten abajo:
 
 - **Colores sin hexadecimal de la fuente** (4 de 4; llevan la muestra aproximada de la sección 3): Titanio negro, Titanio blanco, Titanio natural, Titanio del desierto.
 
-### iPhone 17 (`iphone-17`)
-
-- **Ficha técnica, categorías vacías:** Cámara frontal.
-
 ### iPhone 17 Pro (`iphone-17-pro`)
 
 - **Colores sin hexadecimal de la fuente** (3 de 3; llevan la muestra aproximada de la sección 3): Plata, Naranja cósmico, Azul profundo.
-- **Ficha técnica, categorías vacías:** Cámara frontal, Dimensiones y peso.
 
 ### iPhone 17 Pro Max (`iphone-17-pro-max`)
 
 - **Colores sin hexadecimal de la fuente** (3 de 3; llevan la muestra aproximada de la sección 3): Plata, Naranja cósmico, Azul profundo.
-- **Ficha técnica, categorías vacías:** Cámara frontal, Dimensiones y peso.
-
-### iPhone 18 Pro (`iphone-18-pro`)
-
-- **Ficha técnica, categorías vacías:** Cámara frontal, Dimensiones y peso.
-
-### iPhone 18 Pro Max (`iphone-18-pro-max`)
-
-- **Ficha técnica, categorías vacías:** Cámara frontal, Dimensiones y peso.
 
 ### iPhone Duo (`iphone-duo`)
 
 - **Colores sin hexadecimal de la fuente** (2 de 2; llevan la muestra aproximada de la sección 3): Cielo nocturno, Blanco estrella.
-- **Ficha técnica, categorías vacías:** Cámaras traseras, Cámara frontal, Dimensiones y peso.
-- Cámaras traseras: la fuente da "Sist. Multi-cámara: Incluye cámara frontal oculta bajo la pantalla interior. Funciones Smart Take y Kid Cue.", que quedó como fila propia "Sistema de cámaras".
-- Batería: la fuente solo dice "Sistema de doble batería" (dentro de Puertos y carga).
+- La fuente da "Sist. Multi-cámara: Incluye cámara frontal oculta bajo la pantalla interior. Funciones Smart Take y Kid Cue.", que quedó como fila propia "Sistema de cámaras" (las cámaras ya están en sus categorías desde 0029: la tienda puede borrar esa fila).
 
 Además, en la fuente el hexadecimal de **Borgoña** y **Glaciar** viene marcado como "aproximado".
 

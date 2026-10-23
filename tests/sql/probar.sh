@@ -33,7 +33,7 @@ for f in "$RAIZ"/supabase/migrations/*.sql; do
 done
 # La semilla del SQL y la del adaptador demo deben coincidir (antes de que las
 # pruebas cambien los datos; "iphone-prueba" es un dato de antes_0006 y la
-# ficha del iPhone 13 la cargó la tienda en antes_0012; los términos y el aviso
+# ficha del iPhone 13 la cargó la tienda en antes_0012 y antes_0029; los términos y el aviso
 # de marca, en antes_0015 y antes_0016; los colores de la tienda, en antes_0028:
 # por eso se comparan solo los oficiales).
 "${PSQL[@]}" -At -c "
