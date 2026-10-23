@@ -22,6 +22,9 @@ export const IMAGENES_PREDETERMINADAS = {
   "iphone-11": { "Morado": "morado", "(PRODUCT)RED": "product-red", "Blanco": "blanco", "Negro": "negro", "Verde": "verde", "Amarillo": "amarillo" },
   "iphone-11-pro": { "Verde noche": "verde-noche", "Plata": "plata", "Gris espacial": "gris-espacial", "Oro": "oro" },
   "iphone-11-pro-max": { "Verde noche": "verde-noche", "Plata": "plata", "Gris espacial": "gris-espacial", "Oro": "oro" },
+  // 12 y 12 mini: las mismas imágenes (se ven iguales; cambia el tamaño).
+  "iphone-12": { "Blanco": "blanco", "Negro": "negro", "Morado": "morado", "(PRODUCT)RED": "product-red" },
+  "iphone-12-mini": { "Blanco": "blanco", "Negro": "negro", "Morado": "morado", "(PRODUCT)RED": "product-red" },
   "iphone-se-2": { "Negro": "negro", "(PRODUCT)RED": "product-red", "Blanco": "blanco" },
   "iphone-8": { "Oro": "oro", "Gris espacial": "gris-espacial", "(PRODUCT)RED": "product-red", "Plata": "plata" },
   "iphone-8-plus": { "(PRODUCT)RED": "product-red", "Plata": "plata", "Gris espacial": "gris-espacial", "Oro": "oro" },
