@@ -863,11 +863,14 @@ async function llenarPopup(p) {
     assert.equal(await p.textContent("#form-resena .aviso-datos"), aviso);
     assert.ok(await p.evaluate(() => document.querySelector("#form-resena .aviso-datos").compareDocumentPosition(document.querySelector("#r-archivo")) & Node.DOCUMENT_POSITION_FOLLOWING));
     assert.equal((await p.textContent('label[for="r-autorizado"]')).trim(), "Tengo autorización de esta persona o tapé su nombre, foto y número.");
-    const agregar = async (archivo, { casilla = true, texto = "", origen = "" } = {}) => {
+    // Cambiado con 0034: cada reseña nueva lleva cómo autorizó la persona.
+    const agregar = async (archivo, { casilla = true, texto = "", origen = "", canal = "whatsapp", fecha = "2026-10-01", alcance = "sitio" } = {}) => {
       await p.setInputFiles("#r-archivo", archivo);
       if (texto) await p.fill("#r-texto", texto);
       if (origen) await p.selectOption("#r-origen", origen);
       if (casilla) await p.check("#r-autorizado"); else await p.uncheck("#r-autorizado");
+      await p.selectOption("#r-canal", canal);
+      if (canal && canal !== "datos_tapados") { await p.fill("#r-fecha", fecha); await p.selectOption("#r-alcance", alcance); }
       await p.click("#r-agregar");
       await p.waitForFunction(() => document.querySelector("#r-subiendo").hidden);
       await p.waitForTimeout(150);
@@ -884,9 +887,22 @@ async function llenarPopup(p) {
     assert.equal((await agregar(path.join(videos, "clip.mov")))[0], "Este formato puede no verse en todos los celulares. Súbalo en MP4.");
     assert.equal((await agregar({ name: "pesado.mp4", mimeType: "video/mp4", buffer: Buffer.alloc(20 * 1024 * 1024 + 1) }))[0], "El video pesa más de 20 MB.");
     assert.deepEqual(await archivosResenas(p), [], "nada de eso se subió");
+    // 0034: sin decir cómo autorizó, o con canal y sin fecha ni alcance, no se sube.
+    await agregar(imagen, { canal: "" });
+    assert.equal(await p.textContent("#r-canal-error"), "Elija cómo la autorizó.");
+    assert.equal(await p.evaluate(() => document.activeElement.id), "r-canal");
+    assert.equal(await p.isHidden("#r-fecha"), true, "sin canal no se pide la fecha");
+    await agregar(imagen, { fecha: "", alcance: "" });
+    assert.equal(await p.textContent("#r-fecha-error"), "Escriba la fecha de la autorización (no puede ser futura).");
+    assert.equal(await p.textContent("#r-alcance-error"), "Elija para qué la autorizó.");
+    await p.selectOption("#r-canal", "datos_tapados");
+    assert.equal(await p.isHidden("#r-fecha"), true, "con los datos tapados no se pide la fecha");
+    assert.deepEqual(await archivosResenas(p), [], "tampoco se subió nada");
     assert.deepEqual(await agregar(imagen, { texto: "Me atendieron muy bien.", origen: "whatsapp" }), ["", ""]);
     assert.deepEqual(await agregar(path.join(videos, "20s.mp4"), { texto: "Video de la entrega", origen: "instagram" }), ["", ""]);
     assert.equal(await p.textContent("#r-cuenta"), "(2 de 12)");
+    const autorizaciones = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)).resenas.map((x) => [x.autorizacion_canal, x.autorizacion_fecha, x.autorizacion_alcance]), CLAVE_DEMO);
+    assert.deepEqual(autorizaciones, [["whatsapp", "2026-10-01", "sitio"], ["whatsapp", "2026-10-01", "sitio"]]);
     const guardadas = await archivosResenas(p);
     assert.equal(guardadas.length, 3, "imagen en dos tamaños y el video");
     assert.ok(guardadas.some((x) => /-640\.(webp|jpg|png)$/.test(x)));
@@ -937,18 +953,57 @@ async function llenarPopup(p) {
     const r = await p.evaluate(async () => {
       const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
       const a = await api();
-      for (let i = 0; i < 11; i++) await a.agregarResena({ tipo: "imagen", ruta: `resenas/x${i}.webp`, autorizado: true, orden: 10 + i });
       const errores = [];
-      try { await a.agregarResena({ tipo: "imagen", ruta: "resenas/x99.webp", autorizado: true, orden: 99 }); } catch (e) { errores.push(e.message); }
+      // 0034: sin canal, con fecha futura o volviendo a "sin registrar", la capa de datos no deja.
+      try { await a.agregarResena({ tipo: "imagen", ruta: "resenas/sin.webp", autorizado: true, orden: 5 }); } catch (e) { errores.push(e.message); }
+      try { await a.agregarResena({ tipo: "imagen", ruta: "resenas/fut.webp", autorizado: true, orden: 5, autorizacion_canal: "correo", autorizacion_fecha: "2099-01-01", autorizacion_alcance: "sitio" }); } catch (e) { errores.push(e.message); }
+      try { await a.guardarResena((await a.listarResenas())[0].id, { autorizacion_canal: "sin_registrar", autorizacion_fecha: null, autorizacion_alcance: "" }); } catch (e) { errores.push(e.message); }
+      for (let i = 0; i < 11; i++) await a.agregarResena({ tipo: "imagen", ruta: `resenas/x${i}.webp`, autorizado: true, orden: 10 + i, autorizacion_canal: "datos_tapados" });
+      try { await a.agregarResena({ tipo: "imagen", ruta: "resenas/x99.webp", autorizado: true, orden: 99, autorizacion_canal: "datos_tapados" }); } catch (e) { errores.push(e.message); }
       try { await a.guardarResena((await a.listarResenas())[0].id, { autorizado: false }); } catch (e) { errores.push(e.message); }
       return errores;
     });
-    assert.deepEqual(r, ["Ya tiene 12 reseñas. Borre una para agregar otra.", "Algún dato no tiene el formato correcto. Revise los campos."]);
+    assert.deepEqual(r, ["Diga cómo autorizó esta persona la publicación.", "La fecha de la autorización no puede ser futura.", "Diga cómo autorizó esta persona la publicación.",
+      "Ya tiene 12 reseñas. Borre una para agregar otra.", "Algún dato no tiene el formato correcto. Revise los campos."]);
     await p.goto(`${BASE}/admin/#/inicio`);
     await p.goto(`${BASE}/admin/#/tienda`);
     await p.waitForSelector(".resena-fila");
     assert.equal(await p.isDisabled("#r-agregar"), true);
     assert.equal(await p.textContent("#r-cuenta"), "(12 de 12)");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("reseñas (0034): una reseña de antes queda «sin registrar», el panel pide completarla en su fila y el público no ve la autorización", async () => {
+    const p = await nueva(1280, 900);
+    await entrarPanel(p, "gestor@demo.co");
+    await editarDemo(p, (e) => {
+      e.tienda.mostrar_resenas = true;
+      e.resenas = [{ id: "vieja", tipo: "imagen", ruta: "resenas/vieja.webp", texto: "De antes", origen: "", origen_otro: "", autorizado: true, orden: 0,
+        creado_en: "2026-01-01T00:00:00Z", autorizacion_canal: "sin_registrar", autorizacion_fecha: null, autorizacion_alcance: "" }];
+    });
+    await p.goto(`${BASE}/admin/#/inicio`);
+    await p.goto(`${BASE}/admin/#/tienda`);
+    await p.waitForSelector('.resena-fila[data-id="vieja"]');
+    const fila = '.resena-fila[data-id="vieja"]';
+    assert.equal(await p.textContent(`${fila} .aviso-datos`), "Falta registrar cómo autorizó esta persona la publicación.");
+    await p.click(`${fila} [data-auth-guardar]`);
+    assert.equal(await p.textContent("#ra-vieja-canal-error"), "Elija cómo la autorizó.");
+    await p.selectOption("#ra-vieja-canal", "presencial");
+    await p.fill("#ra-vieja-fecha", "2026-09-30");
+    await p.selectOption("#ra-vieja-alcance", "sitio_y_redes");
+    await p.click(`${fila} [data-auth-guardar]`);
+    await p.waitForFunction((c) => JSON.parse(localStorage.getItem(c)).resenas[0].autorizacion_canal === "presencial", CLAVE_DEMO);
+    const r = await p.evaluate((c) => JSON.parse(localStorage.getItem(c)).resenas[0], CLAVE_DEMO);
+    assert.deepEqual([r.autorizacion_canal, r.autorizacion_fecha, r.autorizacion_alcance, r.texto], ["presencial", "2026-09-30", "sitio_y_redes", "De antes"]);
+    await p.waitForFunction((f) => !document.querySelector(`${f} .aviso-datos`), fila);
+    // El público: ni la lista ni los datos públicos traen la autorización.
+    const publico = await p.evaluate(async () => {
+      const a = await (await import(new URL("../assets/js/datos/api.js", location.href).href)).api();
+      await a.cerrarSesion();
+      return [Object.keys((await a.listarResenas())[0]), Object.keys((await a.cargarPublico()).resenas[0])];
+    });
+    for (const claves of publico) assert.ok(!claves.some((k) => k.startsWith("autorizacion")), JSON.stringify(claves));
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
@@ -1086,7 +1141,7 @@ async function llenarPopup(p) {
     assert.deepEqual(Object.fromEntries(Object.keys(LEGAL_INICIAL).map((k) => [k, e.tienda[k]])),
       { ...LEGAL_INICIAL, legal_clausula_privacidad: "Mi política propia.", legal_clausula_terminos: "Mi aviso de marca." });
     for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) assert.ok(!(k in e.tienda), k);
-    assert.equal(e.version, 26);
+    assert.equal(e.version, 27);
     assert.deepEqual([e.tienda.legal_rnbd_numero, e.tienda.legal_data_fiscal_url], ["", ""], "0031: campos de Argentina vacíos");
     assert.ok(!("url_sitio" in e.tienda), "0025 la agregó y 0027 la quitó (sin archivo XML)");
     assert.ok(!("pagos_pasarela_otra" in e.tienda) && Array.isArray(e.tienda.pagos_pasarelas_otras) && !e.tienda.pagos_pasarelas.includes("otra") && typeof e.tienda.pagos_descuentos === "object", "0024: otras pasarelas con nombre");

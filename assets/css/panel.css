@@ -427,6 +427,10 @@ select.entrada { appearance: none; -webkit-appearance: none; padding-right: 40px
 .resena-medio img { width: 100%; height: 100%; object-fit: cover; }
 .resena-video { font-size: 1.5rem; color: var(--texto-suave); }
 .resena-campos { display: grid; gap: 10px; min-width: 0; }
+/* Autorización de la persona (0034): canal, fecha y alcance */
+.bloque-autorizacion { display: grid; gap: 10px; }
+.bloque-autorizacion legend { font-weight: 700; margin-bottom: 6px; }
+.bloque-autorizacion [data-auth-guardar] { justify-self: start; }
 .resena-tipo { font-weight: 700; }
 .resena-botones { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; }
 @media (min-width: 720px) { .resena-fila { grid-template-columns: 96px minmax(0, 1fr) auto; } .resena-medio { width: 96px; height: 96px; } .resena-botones { grid-column: auto; flex-direction: column; justify-content: flex-start; } }

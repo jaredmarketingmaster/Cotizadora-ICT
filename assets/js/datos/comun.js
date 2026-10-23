@@ -122,7 +122,13 @@ export function errorLegales(tienda) {
 }
 
 // Reseñas (0014): hasta 12; imagen o video de hasta 30 segundos.
-export const CAMPOS_RESENA = ["tipo", "ruta", "texto", "origen", "origen_otro", "autorizado", "orden"];
+export const CAMPOS_RESENA = ["tipo", "ruta", "texto", "origen", "origen_otro", "autorizado", "orden",
+  "autorizacion_canal", "autorizacion_fecha", "autorizacion_alcance"];
+// 0034: cómo autorizó la persona (sin datos de ella). "sin_registrar" es solo
+// de las reseñas de antes; datos_tapados no lleva fecha ni alcance.
+export const CANALES_AUTORIZACION = ["whatsapp", "correo", "presencial", "otro", "datos_tapados"];
+export const ALCANCES_AUTORIZACION = ["sitio", "sitio_y_redes"];
+export const CAMPOS_RESENA_PUBLICOS = ["id", "tipo", "ruta", "texto", "origen", "origen_otro", "autorizado", "orden", "creado_en"];
 export const MAX_RESENAS = 12;
 // Se traduce al usarlo como texto (t("datos.error.max_resenas")).
 export const MENSAJE_MAX_RESENAS = traducible("datos.error.max_resenas");
@@ -340,6 +346,7 @@ const ERRORES_SERVIDOR = [
   "formato", "permiso", "duplicado", "sesion", "solo_gestor.cambio", "solo_gestor.tienda", "solo_gestor.catalogo",
   "solo_gestor.resenas", "solo_gestor.borrar_demo", "solo_gestor.modo_demo", "solo_administrador", "un_administrador",
   "propio_rol", "desactivarse", "correo_existe", "elija_rol", "elija_color", "color_modelo", "mas_vendidos", "max_resenas",
+  "resena_autorizacion", "resena_fecha",
   "ficha", "cuotas_max", "sin_interes_max", "sin_interes_mayor", "sin_interes_vacio", "cuotas_vacias", "cripto_vacio",
   "pasarelas_otras", "descuentos", "envio_sin_domicilio", "envio_zonas", "envio_todo_o_zonas", "envio_costo_fijo",
   "envio_costo_zona", "envio_gratis_ya", "envio_gratis_condicion", "envio_gratis_zonas", "envio_plazo", "color_oficial_nombre", "color_hex_fuente", "colores_oficiales",

@@ -5,10 +5,12 @@
 // - Hasta 12. Cada una: imagen (comprimida como las fotos) o video (MP4 o
 //   WebM, hasta 30 segundos y 20 MB, validado con video.js), texto y origen
 //   opcionales, y la casilla de autorización obligatoria.
+// - Cómo autorizó la persona (0034): canal, fecha y alcance, sin datos de
+//   ella. Las reseñas de antes quedan "sin registrar" y se completan en su fila.
 // - Aviso fijo sobre los datos personales de las capturas, arriba de la carga.
 // =============================================================================
 
-import { rutaMiniatura, MAX_RESENAS, MAX_SEGUNDOS_RESENA, ORIGENES_RESENA, TITULO_RESENAS, nombreOrigenResena } from "../datos/comun.js";
+import { rutaMiniatura, MAX_RESENAS, MAX_SEGUNDOS_RESENA, ORIGENES_RESENA, TITULO_RESENAS, nombreOrigenResena, CANALES_AUTORIZACION, ALCANCES_AUTORIZACION } from "../datos/comun.js";
 import { $, esc, conBoton, confirmar, campoTexto, interruptor, marcarError, enfocarPrimerError } from "./ui.js";
 import { comprimirFoto } from "./imagenes.js";
 import { validarVideo } from "./video.js";
@@ -19,6 +21,58 @@ const opcionesOrigen = (elegido) => `<option value="">${esc(t("panel.resenas.sin
 // El título por defecto se guarda en español (TITULO_RESENAS); en pantalla se
 // muestra traducido y, si se deja igual, se vuelve a guardar el de la base.
 const tituloMostrado = (titulo) => (!titulo || titulo === TITULO_RESENAS ? t("panel.resenas.titulo_defecto") : titulo);
+
+// --- Autorización (0034) ---
+const pideFecha = (canal) => ["whatsapp", "correo", "presencial", "otro"].includes(canal);
+const hoy = () => new Date().toISOString().slice(0, 10);
+// Los campos de la autorización: los del formulario nuevo (p = "r") y los de cada fila (p = "ra-<id>").
+function htmlAutorizacion(p, r = {}) {
+  const canal = r.autorizacion_canal && r.autorizacion_canal !== "sin_registrar" ? r.autorizacion_canal : "";
+  const con = pideFecha(canal);
+  return `<div class="grilla-2">
+      <div class="campo">
+        <label for="${p}-canal">${esc(t("panel.resenas.autorizacion.canal"))}</label>
+        <select class="entrada" id="${p}-canal" data-auth-canal aria-describedby="${p}-canal-error">
+          <option value="">${esc(t("panel.resenas.autorizacion.elija"))}</option>
+          ${CANALES_AUTORIZACION.map((c) => `<option value="${c}" ${c === canal ? "selected" : ""}>${esc(t(`panel.resenas.autorizacion.canal.${c}`))}</option>`).join("")}
+        </select>
+        <p class="error-campo" id="${p}-canal-error"></p>
+      </div>
+      <div class="campo" data-auth-con-fecha ${con ? "" : "hidden"}>
+        <label for="${p}-fecha">${esc(t("panel.resenas.autorizacion.fecha"))}</label>
+        <input class="entrada cifras" type="date" id="${p}-fecha" data-auth-fecha max="${hoy()}" value="${esc(r.autorizacion_fecha || "")}" aria-describedby="${p}-fecha-error">
+        <p class="error-campo" id="${p}-fecha-error"></p>
+      </div>
+    </div>
+    <div class="campo" data-auth-con-fecha ${con ? "" : "hidden"}>
+      <label for="${p}-alcance">${esc(t("panel.resenas.autorizacion.alcance"))}</label>
+      <select class="entrada" id="${p}-alcance" data-auth-alcance aria-describedby="${p}-alcance-error">
+        <option value="">${esc(t("panel.resenas.autorizacion.elija"))}</option>
+        ${ALCANCES_AUTORIZACION.map((a) => `<option value="${a}" ${a === r.autorizacion_alcance ? "selected" : ""}>${esc(t(`panel.resenas.autorizacion.alcance.${a}`))}</option>`).join("")}
+      </select>
+      <p class="error-campo" id="${p}-alcance-error"></p>
+    </div>`;
+}
+
+// Valida los campos de la autorización de un bloque; devuelve los datos o null.
+function leerAutorizacion(raiz, p) {
+  const canal = $(`#${p}-canal`, raiz).value;
+  const fecha = $(`#${p}-fecha`, raiz).value;
+  const alcance = $(`#${p}-alcance`, raiz).value;
+  const con = pideFecha(canal);
+  let bien = marcarError(raiz, `${p}-canal`, canal ? "" : t("panel.resenas.error.canal"));
+  bien = marcarError(raiz, `${p}-fecha`, !con || (fecha && fecha <= hoy()) ? "" : t("panel.resenas.error.fecha")) && bien;
+  bien = marcarError(raiz, `${p}-alcance`, !con || alcance ? "" : t("panel.resenas.error.alcance")) && bien;
+  return bien ? { autorizacion_canal: canal, autorizacion_fecha: con ? fecha : null, autorizacion_alcance: con ? alcance : "" } : null;
+}
+
+// Muestra la fecha y el alcance solo con un canal de autorización.
+function alCambiarCanal(e) {
+  const sel = e.target.closest("[data-auth-canal]");
+  if (!sel) return;
+  const bloque = sel.closest("[data-auth-bloque]");
+  bloque.querySelectorAll("[data-auth-con-fecha]").forEach((x) => { x.hidden = !pideFecha(sel.value); });
+}
 
 export async function dibujar(caja, ctx, tienda) {
   const { api } = ctx;
@@ -56,6 +110,11 @@ export async function dibujar(caja, ctx, tienda) {
           <label class="casilla" for="r-autorizado"><input type="checkbox" id="r-autorizado" aria-describedby="r-autorizado-error"><span>${esc(t("panel.resenas.autorizacion"))}</span></label>
           <p class="error-campo" id="r-autorizado-error"></p>
         </div>
+        <fieldset class="bloque-autorizacion" data-auth-bloque aria-describedby="r-autorizacion-ayuda">
+          <legend>${esc(t("panel.resenas.autorizacion.titulo"))}</legend>
+          <p class="ayuda" id="r-autorizacion-ayuda">${esc(t("panel.resenas.autorizacion.ayuda"))}</p>
+          ${htmlAutorizacion("r")}
+        </fieldset>
         <p class="subiendo" id="r-subiendo" hidden></p>
         <button type="submit" class="boton boton--primario" id="r-agregar">${esc(t("panel.resenas.nueva.agregar"))}</button>
       </form>
@@ -78,6 +137,12 @@ export async function dibujar(caja, ctx, tienda) {
           <div class="campo"><label for="ro-${r.id}">${esc(t("panel.resenas.fila.origen"))}</label><select class="entrada" id="ro-${r.id}" data-origen>${opcionesOrigen(r.origen)}</select></div>
           ${r.origen === "otro" ? campoTexto({ id: `rx-${r.id}`, etiqueta: t("panel.resenas.origen_cual"), valor: r.origen_otro, atributos: 'maxlength="40" data-origen-otro' }) : ""}
         </div>
+        <fieldset class="bloque-autorizacion" data-auth-bloque>
+          <legend>${esc(t("panel.resenas.autorizacion.titulo"))}</legend>
+          ${r.autorizacion_canal === "sin_registrar" ? `<p class="aviso-datos" role="note">${esc(t("panel.resenas.autorizacion.falta"))}</p>` : ""}
+          ${htmlAutorizacion(`ra-${r.id}`, r)}
+          <button type="button" class="boton boton--secundario" data-auth-guardar>${esc(t("panel.resenas.autorizacion.guardar"))}</button>
+        </fieldset>
       </div>
       <div class="resena-botones">
         <button type="button" class="boton-icono" data-mover="-1" aria-label="${esc(t("panel.resenas.fila.subir", { n: i + 1 }))}" ${i === 0 ? "disabled" : ""}>↑</button>
@@ -107,6 +172,7 @@ export async function dibujar(caja, ctx, tienda) {
   lista.addEventListener("change", async (e) => {
     const fila = e.target.closest(".resena-fila");
     if (!fila) return;
+    if (e.target.closest("[data-auth-bloque]")) { alCambiarCanal(e); return; } // se guarda con su botón
     const r = resenas.find((x) => x.id === fila.dataset.id);
     let cambios = null;
     if (e.target.dataset.texto !== undefined) cambios = { texto: e.target.value.trim() };
@@ -123,6 +189,16 @@ export async function dibujar(caja, ctx, tienda) {
     if (!fila) return;
     const i = resenas.findIndex((x) => x.id === fila.dataset.id);
     const r = resenas[i];
+    if (e.target.closest("[data-auth-guardar]")) {
+      const datos = leerAutorizacion(fila, `ra-${r.id}`);
+      if (!datos) { enfocarPrimerError(fila); return; }
+      try {
+        Object.assign(r, await conBoton(null, () => api.guardarResena(r.id, datos), { exito: t("panel.resenas.autorizacion.guardada") }));
+        pintar();
+        lista.querySelector(`.resena-fila[data-id="${r.id}"] [data-auth-guardar]`)?.focus();
+      } catch { /* aviso mostrado */ }
+      return;
+    }
     if (e.target.closest("[data-borrar]")) {
       if (!(await confirmar({ titulo: t("panel.resenas.borrar.titulo"), texto: t("panel.resenas.borrar.texto"), aceptar: t("panel.resenas.fila.borrar"), peligro: true }))) return;
       try {
@@ -151,12 +227,14 @@ export async function dibujar(caja, ctx, tienda) {
 
   // --- Agregar ---
   $("#r-origen", caja).addEventListener("change", (e) => { $("#r-origen-otro-caja", caja).hidden = e.target.value !== "otro"; });
+  form.addEventListener("change", alCambiarCanal);
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const archivo = $("#r-archivo", caja).files[0];
     const esVideo = Boolean(archivo && (/^video\//.test(archivo.type) || /\.(mp4|webm|mov)$/i.test(archivo.name)));
     marcarError(form, "r-archivo", archivo ? "" : t("panel.resenas.error.archivo"));
     marcarError(form, "r-autorizado", $("#r-autorizado", caja).checked ? "" : t("panel.resenas.error.autorizado"));
+    const autorizacion = leerAutorizacion(form, "r");
     if (enfocarPrimerError(form)) return;
     const estado = $("#r-subiendo", caja);
     const boton = $("#r-agregar", caja);
@@ -186,11 +264,13 @@ export async function dibujar(caja, ctx, tienda) {
       const nueva = await conBoton(null, () => api.agregarResena({
         tipo: esVideo ? "video" : "imagen", ruta, texto: $("#r-texto", caja).value.trim(),
         origen, origen_otro: origen === "otro" ? $("#r-origen-otro", caja).value.trim() : "",
-        autorizado: true, orden: resenas.length ? Math.max(...resenas.map((x) => x.orden)) + 1 : 0
+        autorizado: true, orden: resenas.length ? Math.max(...resenas.map((x) => x.orden)) + 1 : 0,
+        ...autorizacion
       }), { exito: t("panel.resenas.agregada") });
       resenas.push(nueva);
       form.reset();
       $("#r-origen-otro-caja", caja).hidden = true;
+      form.querySelectorAll("[data-auth-con-fecha]").forEach((x) => { x.hidden = true; });
       pintar();
     } catch (err) {
       // Si algo falló después de subir, no quedan archivos sueltos.

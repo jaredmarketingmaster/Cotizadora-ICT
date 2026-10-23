@@ -263,6 +263,19 @@ begin
   update public.tienda set whatsapp = '573001234567';
 end $$;
 
+-- 0u. Migración 0034: la reseña de antes (antes_0034) queda "sin registrar",
+-- se puede editar y no se publica nada de la autorización. Después se borra
+-- (no se dejan reseñas de ejemplo).
+do $$
+begin
+  assert (select autorizacion_canal = 'sin_registrar' and autorizacion_fecha is null and autorizacion_alcance = ''
+          from public.resenas where ruta = 'resenas/antes0034.webp'), 'la vieja queda sin registrar';
+  update public.resenas set texto = 'Vieja editada' where ruta = 'resenas/antes0034.webp';
+  update public.resenas set autorizacion_canal = 'presencial', autorizacion_fecha = date '2026-09-30', autorizacion_alcance = 'sitio_y_redes'
+  where ruta = 'resenas/antes0034.webp';
+  delete from public.resenas where ruta = 'resenas/antes0034.webp';
+end $$;
+
 -- 0l. Migración 0023 (Envíos): lo del asistente (antes_0023) pasó a Envíos,
 -- con el costo por elegir; las columnas viejas no están; validar_envios().
 do $$
@@ -958,7 +971,7 @@ end $$;
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 do $$ begin
-  insert into public.resenas (tipo, ruta, autorizado) values ('imagen', 'resenas/admin.webp', true);
+  insert into public.resenas (tipo, ruta, autorizado, autorizacion_canal) values ('imagen', 'resenas/admin.webp', true, 'datos_tapados');
   raise exception 'el administrador no debería agregar reseñas';
 exception when insufficient_privilege then null; end $$;
 do $$ begin
@@ -979,32 +992,56 @@ do $$
 declare i int;
 begin
   for i in 1 .. 12 loop
-    insert into public.resenas (tipo, ruta, texto, autorizado, orden)
+    insert into public.resenas (tipo, ruta, texto, autorizado, orden, autorizacion_canal, autorizacion_fecha, autorizacion_alcance)
     values (case when i % 2 = 0 then 'video' else 'imagen' end,
-            'resenas/r' || i || case when i % 2 = 0 then '.mp4' else '.webp' end, 'Texto ' || i, true, i);
+            'resenas/r' || i || case when i % 2 = 0 then '.mp4' else '.webp' end, 'Texto ' || i, true, i,
+            'whatsapp', date '2026-10-01', 'sitio');
   end loop;
   begin
-    insert into public.resenas (tipo, ruta, autorizado) values ('imagen', 'resenas/r13.webp', true);
+    insert into public.resenas (tipo, ruta, autorizado, autorizacion_canal) values ('imagen', 'resenas/r13.webp', true, 'datos_tapados');
     raise exception 'la 13 debió fallar';
   exception when check_violation then
     assert sqlerrm = 'Ya tiene 12 reseñas. Borre una para agregar otra.', sqlerrm;
   end;
   -- Borrando una, se puede agregar otra
   delete from public.resenas where ruta = 'resenas/r12.mp4';
-  insert into public.resenas (tipo, ruta, texto, autorizado, orden, origen, origen_otro) values ('video', 'resenas/r12.webm', 'Texto 12', true, 12, 'otro', 'Facebook');
+  insert into public.resenas (tipo, ruta, texto, autorizado, orden, origen, origen_otro, autorizacion_canal) values ('video', 'resenas/r12.webm', 'Texto 12', true, 12, 'otro', 'Facebook', 'datos_tapados');
 end $$;
 do $$ begin
-  insert into public.resenas (tipo, ruta, autorizado) values ('imagen', 'resenas/sin.webp', false);
+  insert into public.resenas (tipo, ruta, autorizado, autorizacion_canal) values ('imagen', 'resenas/sin.webp', false, 'datos_tapados');
   raise exception 'sin la casilla debió fallar';
 exception when check_violation then null; end $$;
 do $$ begin
-  insert into public.resenas (tipo, ruta, autorizado) values ('video', 'resenas/x.webp', true);
+  insert into public.resenas (tipo, ruta, autorizado, autorizacion_canal) values ('video', 'resenas/x.webp', true, 'datos_tapados');
   raise exception 'un video con ruta de imagen debió fallar';
 exception when check_violation then null; end $$;
 do $$ begin
-  insert into public.resenas (tipo, ruta, autorizado, origen, origen_otro) values ('imagen', 'resenas/y.webp', true, 'instagram', 'Algo');
+  insert into public.resenas (tipo, ruta, autorizado, origen, origen_otro, autorizacion_canal) values ('imagen', 'resenas/y.webp', true, 'instagram', 'Algo', 'datos_tapados');
   raise exception 'origen_otro sin "otro" debió fallar';
 exception when check_violation then null; end $$;
+-- 0034: la autorización (canal, fecha y alcance) es obligatoria y coherente.
+do $$ begin
+  begin
+    insert into public.resenas (tipo, ruta, autorizado) values ('imagen', 'resenas/z.webp', true);
+    raise exception 'sin canal debió fallar';
+  exception when check_violation then assert sqlerrm = 'Diga cómo autorizó esta persona la publicación.', sqlerrm; end;
+  -- Otro canal, con la misma fecha y alcance: vale.
+  update public.resenas set autorizacion_canal = 'correo' where ruta = 'resenas/r1.webp';
+  assert (select autorizacion_canal = 'correo' from public.resenas where ruta = 'resenas/r1.webp'), 'cambia el canal';
+  begin
+    update public.resenas set autorizacion_alcance = '' where ruta = 'resenas/r1.webp';
+    raise exception 'sin alcance debió fallar';
+  exception when check_violation then null; end;
+  begin
+    update public.resenas set autorizacion_fecha = current_date + 5 where ruta = 'resenas/r1.webp';
+    raise exception 'una fecha futura debió fallar';
+  exception when check_violation then assert sqlerrm = 'La fecha de la autorización no puede ser futura.', sqlerrm; end;
+  begin
+    update public.resenas set autorizacion_canal = 'sin_registrar', autorizacion_fecha = null, autorizacion_alcance = '' where ruta = 'resenas/r1.webp';
+    raise exception 'volver a sin_registrar debió fallar';
+  exception when check_violation then null; end;
+  update public.resenas set autorizacion_canal = 'datos_tapados', autorizacion_fecha = null, autorizacion_alcance = '' where ruta = 'resenas/r3.webp';
+end $$;
 do $$ begin
   insert into storage.objects (bucket_id, name) values ('resenas', 'resenas/r1.webp');
   assert (select count(*) from public.resenas) = 12, 'el gestor ve las 12 aunque estén apagadas';
@@ -1025,6 +1062,11 @@ do $$ begin
   assert jsonb_array_length(public.datos_publicos() -> 'resenas') = 12, 'encendidas: datos_publicos las trae';
   assert (public.datos_publicos() -> 'resenas' -> 0 ->> 'texto') = 'Texto 1', 'en orden';
   assert not (public.datos_publicos() -> 'resenas' -> 0 ? 'autorizado'), 'sin datos internos';
+  assert not (public.datos_publicos() -> 'resenas' -> 0 ? 'autorizacion_canal'), 'sin la autorización (0034)';
+  begin
+    perform autorizacion_canal from public.resenas;
+    raise exception 'el público no debería leer la autorización';
+  exception when insufficient_privilege then null; end;
 end $$;
 reset role;
 delete from public.resenas;

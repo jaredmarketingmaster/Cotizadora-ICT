@@ -295,6 +295,10 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
       await p.setInputFiles("#r-archivo", archivo);
       await p.fill("#r-texto", texto);
       await p.check("#r-autorizado");
+      // 0034: cómo autorizó la persona (cambiado: antes no se pedía).
+      await p.selectOption("#r-canal", "correo");
+      await p.fill("#r-fecha", "2026-10-01");
+      await p.selectOption("#r-alcance", "sitio");
       await p.click("#r-agregar");
       await p.waitForFunction((n) => document.querySelectorAll(".resena-fila").length === n, texto === "Imagen" ? 1 : 2, { timeout: 15000 });
     };
@@ -306,6 +310,9 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
       return (await r.json()).length;
     };
     assert.equal(await anon(), 0, "apagadas: el público no las lee");
+    // 0034: el público no puede pedir las columnas de la autorización.
+    const privada = await fetch(`${ENTORNO.URL}/rest/v1/resenas?select=autorizacion_canal`, { headers: { apikey: ENTORNO.ANON } });
+    assert.ok(!privada.ok, `la autorización no es pública (HTTP ${privada.status})`);
     const s = await p.context().newPage();
     const pedidos = [];
     s.on("request", (r) => { if (/\/storage\/v1\/object\/public\/resenas\/.+\.mp4/.test(r.url())) pedidos.push(r.url()); });

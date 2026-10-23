@@ -10,7 +10,7 @@
 
 import { ENVIOS_INICIAL, errorEnvios } from "./envios.js";
 import { CATALOGO, COLORES, DEMO_EQUIPOS, HEX_APROXIMADOS, filasDeFuente, filasAppleQueFaltan } from "./semilla.js";
-import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MAX_LOTE, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, LEGAL_INICIAL, errorLegales, elegir } from "./comun.js";
+import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MAX_LOTE, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, CANALES_AUTORIZACION, ALCANCES_AUTORIZACION, CAMPOS_RESENA_PUBLICOS, LEGAL_INICIAL, errorLegales, elegir } from "./comun.js";
 import { hexValido, sesion, esperar } from "../utils.js";
 import { whatsappValido, CODIGOS_PAIS_TIENDA } from "./paises.js";
 import { CODIGOS_IDIOMA, t as tr } from "../i18n/i18n.js";
@@ -75,7 +75,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 26;
+const VERSION = 27;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -262,6 +262,11 @@ const MIGRACIONES = {
     delete descuentos["pasarela:dlocal"];
     t.pagos_descuentos = descuentos;
     t.pagos_pasarelas = t.pagos_pasarelas.filter((c) => c !== "dlocal");
+  },
+  // 0034_resenas_autorizacion.sql: las reseñas que ya había quedan con la
+  // autorización "sin registrar" (el panel pide completarla).
+  26(e) {
+    for (const r of e.resenas || []) Object.assign(r, { autorizacion_canal: "sin_registrar", autorizacion_fecha: null, autorizacion_alcance: "" });
   }
 };
 
@@ -516,14 +521,23 @@ async function publicarLegales(nueva, anterior) {
   };
 }
 
-// Como los checks de la tabla resenas (0014)
-function validarResena(r) {
+// Como los checks de la tabla resenas (0014) y la autorización (0034:
+// resenas_autorizacion_completa y validar_autorizacion_resena).
+function validarResena(r, anterior = null) {
+  if (r.autorizacion_canal === "sin_registrar" && (!anterior || anterior.autorizacion_canal !== "sin_registrar")) throw error("resena_autorizacion");
+  const conFecha = ["whatsapp", "correo", "presencial", "otro"].includes(r.autorizacion_canal);
+  const fechaBien = conFecha
+    ? /^\d{4}-\d{2}-\d{2}$/.test(r.autorizacion_fecha || "") && !Number.isNaN(Date.parse(r.autorizacion_fecha)) && ALCANCES_AUTORIZACION.includes(r.autorizacion_alcance)
+    : r.autorizacion_fecha == null && r.autorizacion_alcance === "";
   const bien = ["imagen", "video"].includes(r.tipo) && RUTA_RESENA[r.tipo].test(r.ruta) &&
     typeof r.texto === "string" && r.texto.length <= 300 &&
     (r.origen === "" || ORIGENES_RESENA.some((o) => o.clave === r.origen)) &&
     typeof r.origen_otro === "string" && r.origen_otro.length <= 40 && (r.origen === "otro" || r.origen_otro === "") &&
-    r.autorizado === true && Number.isInteger(r.orden);
+    r.autorizado === true && Number.isInteger(r.orden) &&
+    [...CANALES_AUTORIZACION, "sin_registrar"].includes(r.autorizacion_canal) && fechaBien;
   if (!bien) throw error("formato");
+  // La fecha no puede ser futura (un día de margen por las zonas horarias, como el SQL).
+  if (conFecha && Date.parse(r.autorizacion_fecha) > Date.now() + 86400000) throw error("resena_fecha");
 }
 
 // Como validar_color_equipo (0008): el color es del modelo y es obligatorio
@@ -798,7 +812,9 @@ export const demo = {
     const e = leer();
     // Como resenas_leer: el público, solo con el interruptor encendido
     if (!esGestor(e) && !e.tienda.mostrar_resenas) return [];
-    return copia([...e.resenas].sort((a, b) => a.orden - b.orden || a.creado_en.localeCompare(b.creado_en)));
+    const lista = [...e.resenas].sort((a, b) => a.orden - b.orden || a.creado_en.localeCompare(b.creado_en));
+    // Como el permiso por columna de 0034: el público no lee la autorización.
+    return copia(esGestor(e) ? lista : lista.map((r) => elegir(r, CAMPOS_RESENA_PUBLICOS)));
   },
 
   async agregarResena(datos) {
@@ -806,7 +822,8 @@ export const demo = {
     const e = leer();
     exigirGestor(e, "resenas");
     if (e.resenas.length >= MAX_RESENAS) throw error("max_resenas");
-    const r = { id: uuid(), texto: "", origen: "", origen_otro: "", orden: 0, ...elegir(datos, CAMPOS_RESENA), creado_en: ahora() };
+    const r = { id: uuid(), texto: "", origen: "", origen_otro: "", orden: 0, autorizacion_canal: "sin_registrar", autorizacion_fecha: null, autorizacion_alcance: "",
+      ...elegir(datos, CAMPOS_RESENA), creado_en: ahora() };
     validarResena(r);
     e.resenas.push(r);
     escribir(e);
@@ -820,7 +837,7 @@ export const demo = {
     const r = e.resenas.find((x) => x.id === id);
     if (!r) throw error("resena_no_existe");
     const nueva = { ...r, ...elegir(cambios, CAMPOS_RESENA) };
-    validarResena(nueva);
+    validarResena(nueva, r);
     Object.assign(r, nueva);
     escribir(e);
     return copia(r);
