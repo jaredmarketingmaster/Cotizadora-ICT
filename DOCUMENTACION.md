@@ -1537,6 +1537,12 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
 
+### 23/10/2026 · Traspaso al día: plan de 9 puntos en `AI_HANDOFF.md`
+
+- **Pedido de Jared:** cuando la sesión llegue al 90 % de su límite, terminar el punto en curso, documentarlo aquí y dejar `AI_HANDOFF.md` listo para que otro agente siga como si fuera el mismo.
+- **Hecho:** la sección 5 de `AI_HANDOFF.md` ahora es el plan de 9 puntos que aprobó Jared ("1. sí 2. borgoña 3. no lo sé"). Los puntos 1 y 2 están hechos y el 3 en curso. Cada punto pendiente lleva copiados los datos aceptados de los informes de Gemini, porque los informes no están en el repo. También quedan anotados la decisión del consentimiento expreso para la transferencia a EE. UU. en Argentina y la regla del 90 %. Se actualizaron el estado, las limitaciones y lo prohibido.
+- **Verificación:** `node tests/documentacion.mjs` OK. No cambia código.
+
 ### 23/10/2026 · Investigación con Gemini, punto 2: colores según Apple (`0028`)
 
 - **Pedido de Jared:** aplicar los nombres y colores que confirmaron los informes de Gemini (rondas 1 y 2), con "Borgoña" (no "Burdeos") para el 18 Pro.
