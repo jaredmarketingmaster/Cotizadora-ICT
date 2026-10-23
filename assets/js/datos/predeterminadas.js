@@ -62,6 +62,7 @@ export const IMAGENES_PREDETERMINADAS = {
   "iphone-17e": { "Rosa pálido": "rosa-palido", "Blanco": "blanco", "Negro": "negro" },
   "iphone-air": { "Blanco nube": "blanco-nube", "Oro claro": "oro-claro", "Azul cielo": "azul-cielo", "Negro espacial": "negro-espacial" },
   "iphone-duo": { "Cielo nocturno": "cielo-nocturno", "Blanco estrella": "blanco-estrella" },
+  "iphone-se-3": { "Medianoche": "medianoche", "(PRODUCT)RED": "product-red", "Blanco estelar": "blanco-estelar" },
   "iphone-se-2": { "Negro": "negro", "(PRODUCT)RED": "product-red", "Blanco": "blanco" },
   "iphone-8": { "Oro": "oro", "Gris espacial": "gris-espacial", "(PRODUCT)RED": "product-red", "Plata": "plata" },
   "iphone-8-plus": { "(PRODUCT)RED": "product-red", "Plata": "plata", "Gris espacial": "gris-espacial", "Oro": "oro" },
