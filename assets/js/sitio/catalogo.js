@@ -177,6 +177,9 @@ export function mensajeSinStock(busqueda, codigo, nombre) {
   return tr("sitio.wa.sin_stock", { busqueda, codigo, nombre: nombre.trim() });
 }
 
+// México (0033): en el enlace va un 1 después del 52 (521 + 10 dígitos); el
+// número guardado sigue siendo 52 + 10 dígitos.
 export function enlaceWhatsApp(numero, mensaje) {
-  return `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
+  const n = /^52\d{10}$/.test(String(numero)) ? `521${String(numero).slice(2)}` : numero;
+  return `https://wa.me/${n}?text=${encodeURIComponent(mensaje)}`;
 }

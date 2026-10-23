@@ -1584,6 +1584,29 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
+  await caso("México (0033): el enlace de WhatsApp lleva 521 y el número guardado sigue con 52", async () => {
+    const p = await nueva(390, 844);
+    await ir(p);
+    await editarDemo(p, (e) => { e.tienda.pais = "mx"; e.tienda.whatsapp = "525512345678"; });
+    await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=256-gb");
+    await p.click("#detalle-en-linea [data-comprar]");
+    await p.waitForSelector("#p-nombre");
+    await p.fill("#p-nombre", "Juan Pérez");
+    await p.fill("#p-correo", "juan@correo.mx");
+    await p.click("#p-telefono");
+    await p.keyboard.type("5512345678");
+    await p.check("#p-autorizacion");
+    await p.evaluate(() => { window.open = () => null; });
+    await p.click("[data-enviar]");
+    await p.waitForSelector("[data-abrir-wa]");
+    assert.match(await p.getAttribute("[data-abrir-wa]", "href"), /^https:\/\/wa\.me\/5215512345678\?text=/);
+    assert.equal(await p.evaluate((c) => JSON.parse(localStorage.getItem(c)).tienda.whatsapp, CLAVE_DEMO), "525512345678");
+    const lead = await p.evaluate(() => JSON.parse(sessionStorage.getItem("cotizadora-demo:ultimo-lead")));
+    assert.equal(lead.telefono, "+525512345678", "el del cliente, sin el 1");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   await caso("Argentina (0031): pie con el botón de arrepentimiento, Defensa del Consumidor y Data Fiscal; casilla de la transferencia a EE. UU. en el pop-up y en solicitudes", async () => {
     const p = await nueva(390, 844);
     await ir(p);
@@ -1881,10 +1904,10 @@ async function llenarPopup(p) {
     assert.match(await p.textContent("#pais-ayuda"), /^Moneda: COP \(\$\)\. Prefijo del celular: \+57\. Zona horaria: America\/Bogota\./);
     await p.selectOption("#pais", "ar");
     assert.match(await p.textContent("#pais-ayuda"), /^Moneda: ARS \(\$\)\. Prefijo del celular: \+549\. Zona horaria: America\/Argentina\/Buenos_Aires\./);
-    assert.equal(await p.textContent("#whatsapp-ayuda"), "Formato internacional sin «+»: 549 y el número. Ej. 5491123456789.");
+    assert.equal(await p.textContent("#whatsapp-ayuda"), "Formato internacional sin «+»: 549 y el número. Ej. 5491123456789. Si es un fijo con WhatsApp Business: 54 y el número."); // cambiado con 0033
     await p.fill("#whatsapp", "573001234567");
     await p.click("#guardar-tienda");
-    assert.equal(await p.textContent("#whatsapp-error"), "No tiene el formato de Argentina. Formato internacional sin «+»: 549 y el número. Ej. 5491123456789.");
+    assert.equal(await p.textContent("#whatsapp-error"), "No tiene el formato de Argentina. Formato internacional sin «+»: 549 y el número. Ej. 5491123456789. Si es un fijo con WhatsApp Business: 54 y el número.");
     await p.fill("#whatsapp", "5491123456789");
     await p.click("#guardar-tienda");
     await p.waitForSelector("text=Guardado");
@@ -2726,7 +2749,7 @@ async function llenarPopup(p) {
     await p.fill("#whatsapp", "3001234567");
     await p.fill("#color_primario", "azul");
     await p.click("#guardar-tienda");
-    assert.equal(await p.textContent("#whatsapp-error"), "No tiene el formato de Colombia. Formato internacional sin «+»: 57 y el número. Ej. 573001234567.");
+    assert.equal(await p.textContent("#whatsapp-error"), "No tiene el formato de Colombia. Formato internacional sin «+»: 57 y el número. Ej. 573001234567. Si es un fijo con WhatsApp Business: 57 y el número."); // cambiado con 0033
     assert.equal(await p.textContent("#color_primario-error"), "Use el formato #RRGGBB, ej. #1A73E8.");
     await p.goto(`${BASE}/admin/#/inventario/nuevo`);
     // Hay cambios sin guardar en Mi tienda: el panel pregunta antes de salir.

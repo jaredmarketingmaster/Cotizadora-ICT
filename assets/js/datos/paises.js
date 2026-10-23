@@ -15,7 +15,8 @@
 //     En Argentina es 54 9: el 9 va antes del código de área (sin el 0) y el
 //     número va sin el 15.
 //   - `grupos`: cómo se agrupan los dígitos al mostrarlos.
-// Debe coincidir con whatsapp_valido() de 0018_pais.sql (las pruebas lo comparan).
+// Debe coincidir con whatsapp_valido() del SQL (0018; desde 0033 con SV, BO, CR
+// y EC verificados y los fijos de la tienda). Las pruebas lo comparan.
 // - Nombre: `PAISES_TIENDA[c].nombre` es el nombre en español (dato fijo);
 //   datosPais(c).nombre es el que se muestra, en el idioma en uso (clave i18n
 //   "pais.<código>").
@@ -26,17 +27,21 @@ import { t } from "../i18n/i18n.js";
 export const PAISES_TIENDA = {
   ar: { nombre: "Argentina", moneda: "ARS", simbolo: "$", miles: ".", zona: "America/Argentina/Buenos_Aires", prefijo: "54",
     celular: { verificado: true, internacional: "549", visible: "+54 9", nacional: /^[1-9]\d{9}$/, grupos: [2, 4, 4], ejemplo: "11 2345 6789" } },
-  bo: { nombre: "Bolivia", moneda: "BOB", simbolo: "Bs", espacio: true, miles: ".", zona: "America/La_Paz", prefijo: "591" },
+  bo: { nombre: "Bolivia", moneda: "BOB", simbolo: "Bs", espacio: true, miles: ".", zona: "America/La_Paz", prefijo: "591",
+    celular: { verificado: true, internacional: "591", nacional: /^[67]\d{7}$/, grupos: [4, 4], ejemplo: "7123 4567" } },
   br: { nombre: "Brasil", moneda: "BRL", simbolo: "R$", espacio: true, miles: ".", zona: "America/Sao_Paulo", prefijo: "55",
     celular: { verificado: true, internacional: "55", nacional: /^[1-9]{2}9[1-9]\d{7}$/, grupos: [2, 5, 4], ejemplo: "11 91234 5678" } },
   cl: { nombre: "Chile", moneda: "CLP", simbolo: "$", miles: ".", zona: "America/Santiago", prefijo: "56",
     celular: { verificado: true, internacional: "56", nacional: /^9\d{8}$/, grupos: [1, 4, 4], ejemplo: "9 1234 5678" } },
   co: { nombre: "Colombia", moneda: "COP", simbolo: "$", miles: ".", zona: "America/Bogota", prefijo: "57",
     celular: { verificado: true, internacional: "57", nacional: /^3\d{9}$/, grupos: [3, 3, 4], ejemplo: "300 123 4567" } },
-  cr: { nombre: "Costa Rica", moneda: "CRC", simbolo: "₡", miles: " ", zona: "America/Costa_Rica", prefijo: "506" },
+  cr: { nombre: "Costa Rica", moneda: "CRC", simbolo: "₡", miles: " ", zona: "America/Costa_Rica", prefijo: "506",
+    celular: { verificado: true, internacional: "506", nacional: /^[5-8]\d{7}$/, grupos: [4, 4], ejemplo: "8312 3456" } },
   cu: { nombre: "Cuba", moneda: "CUP", simbolo: "$", miles: ".", zona: "America/Havana", prefijo: "53" },
-  ec: { nombre: "Ecuador", moneda: "USD", simbolo: "$", miles: ".", zona: "America/Guayaquil", prefijo: "593" },
-  sv: { nombre: "El Salvador", moneda: "USD", simbolo: "$", miles: ",", zona: "America/El_Salvador", prefijo: "503" },
+  ec: { nombre: "Ecuador", moneda: "USD", simbolo: "$", miles: ".", zona: "America/Guayaquil", prefijo: "593",
+    celular: { verificado: true, internacional: "593", nacional: /^9\d{8}$/, grupos: [2, 3, 4], ejemplo: "99 123 4567" } },
+  sv: { nombre: "El Salvador", moneda: "USD", simbolo: "$", miles: ",", zona: "America/El_Salvador", prefijo: "503",
+    celular: { verificado: true, internacional: "503", nacional: /^[67]\d{7}$/, grupos: [4, 4], ejemplo: "7012 3456" } },
   gt: { nombre: "Guatemala", moneda: "GTQ", simbolo: "Q", miles: ",", zona: "America/Guatemala", prefijo: "502" },
   hn: { nombre: "Honduras", moneda: "HNL", simbolo: "L", espacio: true, miles: ",", zona: "America/Tegucigalpa", prefijo: "504" },
   mx: { nombre: "México", moneda: "MXN", simbolo: "$", miles: ",", zona: "America/Mexico_City", prefijo: "52",
@@ -134,17 +139,29 @@ function partesFecha(d, zona) {
 }
 
 // --- Celular de un cliente (lo que escribe en el pop-up, sin el prefijo) ----------
-export function celularNacionalValido(digitos, codigo) {
-  const c = datosPais(codigo).celular;
+// Prefijo troncal (0033): en Ecuador, Paraguay, Uruguay y Venezuela el número
+// nacional se escribe con un 0 adelante ("099 123 4567"); se quita antes de
+// validar y de armar el internacional.
+export const PAISES_CERO_INICIAL = ["ec", "py", "uy", "ve"];
+export function sinCeroInicial(digitos, codigo) {
   const d = String(digitos ?? "");
+  return PAISES_CERO_INICIAL.includes(codigo) && d.startsWith("0") ? d.slice(1) : d;
+}
+
+function nacionalValido(d, codigo) {
+  const c = datosPais(codigo).celular;
   if (c.nacional) return c.nacional.test(d);
   const total = c.internacional.length + d.length;
   return /^\d+$/.test(d) && total >= 8 && total <= 15;
 }
 
+export function celularNacionalValido(digitos, codigo) {
+  return nacionalValido(sinCeroInicial(digitos, codigo), codigo);
+}
+
 // Número internacional (sin "+") para wa.me y para el lead.
 export function celularInternacional(digitos, codigo) {
-  return datosPais(codigo).celular.internacional + String(digitos ?? "");
+  return datosPais(codigo).celular.internacional + sinCeroInicial(digitos, codigo);
 }
 
 // "1123456789" → "11 2345 6789" (también a medio escribir). Lo que pase de los
@@ -163,9 +180,14 @@ export function agruparCelular(digitos, codigo) {
 }
 
 // --- WhatsApp de la tienda (formato internacional, sin "+") -----------------------
+// El celular del país o, desde 0033, un fijo con WhatsApp Business: el prefijo
+// del país y el número, de 8 a 15 dígitos en total, sin el 0 troncal. Como
+// whatsapp_valido() del SQL (tests/sql/comparar-paises.mjs lo compara).
 export function whatsappValido(numero, codigo) {
   const n = String(numero ?? "");
   const c = datosPais(codigo).celular;
-  if (!n.startsWith(c.internacional)) return false;
-  return celularNacionalValido(n.slice(c.internacional.length), codigo);
+  const prefijo = (PAISES_TIENDA[codigo] || PAISES_TIENDA.co).prefijo;
+  if (n[prefijo.length] === "0") return false; // el 0 troncal no va en el formato internacional
+  if (n.startsWith(c.internacional) && nacionalValido(n.slice(c.internacional.length), codigo)) return true;
+  return /^\d{8,15}$/.test(n) && n.startsWith(prefijo) && n.length > prefijo.length;
 }

@@ -53,8 +53,29 @@ caso("celular del cliente por país: prefijo, validación, agrupado y número in
   assert.equal(agruparCelular("11912345678", "br"), "11 91234 5678");
 });
 
-caso("WhatsApp de la tienda por país", () => {
-  assert.ok(whatsappValido("5491123456789", "ar") && !whatsappValido("541123456789", "ar"));
+caso("0033: celulares de El Salvador, Bolivia, Costa Rica y Ecuador; 0 inicial en EC, PY, UY y VE; enlace de México", async () => {
+  for (const [pais, bueno, malo] of [["sv", "70123456", "20123456"], ["bo", "71234567", "21234567"], ["cr", "83123456", "21234567"], ["ec", "991234567", "291234567"]]) {
+    assert.ok(datosPais(pais).celular.verificado, pais);
+    assert.ok(celularNacionalValido(bueno, pais) && !celularNacionalValido(malo, pais), pais);
+  }
+  assert.ok(celularNacionalValido("0991234567", "ec"), "Ecuador: con el 0 inicial");
+  assert.equal(celularInternacional("0991234567", "ec"), "593991234567");
+  assert.equal(celularInternacional("0981123456", "py"), "595981123456");
+  assert.equal(celularInternacional("099123456", "uy"), "59899123456");
+  assert.equal(celularInternacional("04121234567", "ve"), "584121234567");
+  assert.equal(celularInternacional("0991234567", "co"), "570991234567", "en otros países el 0 no se toca");
+  const { enlaceWhatsApp } = await import("../assets/js/sitio/catalogo.js");
+  assert.ok(enlaceWhatsApp("525512345678", "Hola").startsWith("https://wa.me/5215512345678?text="), "México: 521");
+  assert.ok(enlaceWhatsApp("573001234567", "Hola").startsWith("https://wa.me/573001234567?text="), "los demás, igual");
+});
+
+caso("WhatsApp de la tienda por país (cambiado con 0033: también acepta fijos)", () => {
+  assert.ok(whatsappValido("5491123456789", "ar"));
+  assert.ok(whatsappValido("541143214321", "ar"), "Argentina: un fijo (54 + 10 dígitos)");
+  assert.ok(!whatsappValido("5401143214321", "ar"), "sin el 0 troncal después del prefijo");
+  assert.ok(whatsappValido("5716012345", "co"), "Colombia: un fijo");
+  assert.ok(whatsappValido("50371234567", "sv") && whatsappValido("50322123456", "sv"), "El Salvador: celular y fijo");
+  assert.ok(!whatsappValido("5930991234567", "ec"), "Ecuador: el 0 no va en el internacional");
   assert.ok(whatsappValido("573001234567", "co") && !whatsappValido("573001234567", "ar"));
   assert.ok(whatsappValido("50212345678", "gt") && !whatsappValido("502", "gt"));
 });

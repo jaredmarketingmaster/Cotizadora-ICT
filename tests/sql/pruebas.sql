@@ -233,8 +233,9 @@ do $$
 begin
   assert (select column_default from information_schema.columns where table_name = 'tienda' and column_name = 'pais') = '''ar''::text', 'Argentina por defecto';
   assert (select pais from public.tienda) = 'co', 'la tienda con WhatsApp de Colombia queda en Colombia';
-  assert public.whatsapp_valido('ar', '5491123456789') and not public.whatsapp_valido('ar', '541123456789'), 'Argentina: 54 9 y el número';
-  assert public.whatsapp_valido('br', '5511912345678') and not public.whatsapp_valido('br', '551112345678'), 'Brasil: DDD y 9 dígitos';
+  -- Cambiado con 0033: los fijos de la tienda valen; lo que no vale es el 0 troncal.
+  assert public.whatsapp_valido('ar', '5491123456789') and not public.whatsapp_valido('ar', '54011234567'), 'Argentina: 54 9 y el número';
+  assert public.whatsapp_valido('br', '5511912345678') and not public.whatsapp_valido('br', '550112345678'), 'Brasil: DDD y 9 dígitos';
   assert public.whatsapp_valido('gt', '50212345678') and not public.whatsapp_valido('gt', '502'), 'general: prefijo y número';
   begin
     update public.tienda set pais = 'ar';
@@ -247,6 +248,19 @@ begin
   update public.tienda set pais = 'ar', whatsapp = '5491123456789';
   assert (select pais = 'ar' from public.tienda), 'Argentina con su WhatsApp';
   update public.tienda set pais = 'co', whatsapp = '573001234567';
+end $$;
+
+-- 0t. Migración 0033 (WhatsApp de la tienda): celulares verificados de SV,
+-- BO, CR y EC, fijos con WhatsApp Business y sin el 0 troncal.
+do $$
+begin
+  assert public.whatsapp_valido('sv', '50371234567') and public.whatsapp_valido('bo', '59171234567')
+     and public.whatsapp_valido('cr', '50683123456') and public.whatsapp_valido('ec', '593991234567'), 'celulares verificados';
+  assert public.whatsapp_valido('ar', '541143214321') and public.whatsapp_valido('co', '5716012345'), 'fijos de la tienda';
+  assert not public.whatsapp_valido('ec', '5930991234567') and not public.whatsapp_valido('py', '5950981123456'), 'sin el 0 troncal';
+  update public.tienda set whatsapp = '5716012345';
+  assert (select whatsapp = '5716012345' from public.tienda), 'la tienda guarda un fijo';
+  update public.tienda set whatsapp = '573001234567';
 end $$;
 
 -- 0l. Migración 0023 (Envíos): lo del asistente (antes_0023) pasó a Envíos,

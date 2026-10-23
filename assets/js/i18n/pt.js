@@ -950,7 +950,7 @@ export default {
   "panel.tienda.vista.limpiar": "Limpar filtros",
   "panel.tienda.vista.nombre": "Sua loja",
   "panel.tienda.vista.titulo": "Prévia",
-  "panel.tienda.whatsapp.ayuda": "Formato internacional sem «+»: {prefijo} e o número. Ex.: {ejemplo}.",
+  "panel.tienda.whatsapp.ayuda": "Formato internacional sem «+»: {prefijo} e o número. Ex.: {ejemplo}. Se for um fixo com WhatsApp Business: {fijo} e o número.",
   "panel.tienda.whatsapp.ayuda_sin_ejemplo": "Formato internacional sem «+»: {prefijo} e o número, de 8 a 15 dígitos no total.",
   "panel.usuarios.ayuda_invitar": "A pessoa recebe um e-mail com um link para criar a senha dela.",
   "panel.usuarios.ayuda_invitar_demo": "No modo demo nada é enviado: o usuário entra com a senha demo1234.",

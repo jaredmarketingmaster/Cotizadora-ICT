@@ -389,9 +389,10 @@ export async function dibujar(vista, ctx) {
 
 // El WhatsApp de la tienda, en formato internacional y sin "+".
 function ayudaWhatsapp(codigo) {
-  const c = datosPais(codigo).celular;
+  const p = datosPais(codigo);
+  const c = p.celular;
   return c.verificado
-    ? t_("panel.tienda.whatsapp.ayuda", { prefijo: c.internacional, ejemplo: `${c.internacional}${c.ejemplo.replace(/\s/g, "")}` })
+    ? t_("panel.tienda.whatsapp.ayuda", { prefijo: c.internacional, ejemplo: `${c.internacional}${c.ejemplo.replace(/\s/g, "")}`, fijo: p.prefijo })
     : t_("panel.tienda.whatsapp.ayuda_sin_ejemplo", { prefijo: c.internacional });
 }
 

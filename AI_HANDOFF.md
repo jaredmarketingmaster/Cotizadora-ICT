@@ -2,10 +2,10 @@
 > LECTURA OBLIGATORIA PARA EL AGENTE ENTRANTE (Codex, Claude u otro): Lee este documento antes de ejecutar comandos o proponer código.
 
 ## 1. 🚦 ESTADO ACTUAL (METADATA)
-- **Último Agente:** Claude Code 4. Quitó el archivo XML, preparó la investigación con Gemini y ejecutó el plan de 9 puntos de la sección 5: **puntos 1 a 7 hechos; quedan el 8 y el 9**. Cerró al 83 % del límite de la sesión, por la regla de Jared.
+- **Último Agente:** Claude Code 4. Quitó el archivo XML, preparó la investigación con Gemini y ejecutó el plan de 9 puntos de la sección 5: **puntos 1 a 8 hechos; queda el 9**. La sesión se cortó una vez al 83 % y siguió con tokens renovados.
 - **Timestamp:** 2026-10-23 (actualizado por Claude Code 4).
 - **Rama Actual:** `claude/gallant-euler-ezco6g` (último commit de esta tanda: ver `git log`; árbol limpio y sincronizado con `origin` al cerrar cada punto). `main` solo tiene el README inicial: **no** trabajar sobre `main` ni abrir PR sin que Jared lo pida.
-- **Estado del Build:** VERDE. No hay build ni `package.json`: es un sitio estático sin npm ni compilación, a propósito. "Verde" significa que pasan todas las suites del 23/10/2026 (después del punto 7): SQL OK, las 6 suites sin navegador OK (1157 claves), funciones Deno OK, `tests/verificar.cjs` 82/82 (83 con `ICT_CAPTURAS=1`), `tests/verificar-supabase.cjs` OK y `tests/documentacion.mjs` OK. Una corrida de `verificar.cjs` tuvo 1 falla intermitente que no se repitió ni se identificó: si aparece, mirar qué caso es antes de tocar nada. Lighthouse no se volvió a medir en esta tanda (la última medición, del 22/10: 99–100 / 100 / 100).
+- **Estado del Build:** VERDE. No hay build ni `package.json`: es un sitio estático sin npm ni compilación, a propósito. "Verde" significa que pasan todas las suites del 23/10/2026 (después del punto 8): SQL OK, las 6 suites sin navegador OK (1157 claves), funciones Deno OK, `tests/verificar.cjs` 83/83 (84 con `ICT_CAPTURAS=1`), `tests/verificar-supabase.cjs` OK y `tests/documentacion.mjs` OK. Una corrida de `verificar.cjs` tuvo 1 falla intermitente que no se repitió ni se identificó: si aparece, mirar qué caso es antes de tocar nada. Lighthouse no se volvió a medir en esta tanda (la última medición, del 22/10: 99–100 / 100 / 100).
 - **Comando de Verificación:**
   ```bash
   python3 -m http.server 8080 & \
@@ -20,9 +20,9 @@
 
 ## 2. 🧠 MEMORIA ARQUITECTÓNICA (INMUTABLE)
 1. **Sitio estático sin build.** HTML, CSS y JavaScript con ES modules y **rutas relativas** (funciona bajo `/Cotizadora-ICT/` en GitHub Pages). No agregar npm, `package.json`, bundlers, TypeScript en el front ni frameworks. Las únicas dependencias externas son Google Fonts (sitio) y supabase-js 2.117.2 desde jsDelivr (solo el panel).
-2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0033_…sql`**. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 26) con su `MIGRACIONES[n]`.
+2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0034_…sql`**. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 26) con su `MIGRACIONES[n]`.
 3. **Idioma y textos.** Español de Colombia con **"usted"** (nunca "tú" ni voseo) y portugués de Brasil con "você". **Ningún texto visible suelto en el código:** todo va en `assets/js/i18n/es.js` y `pt.js`, con las mismas claves y variables, y se usa con `t(clave)` / `tn(clave, n)`. `t()` se llama al usar el texto, nunca al cargar el módulo. Los textos literales del prompt (en `popup.js` y `catalogo.js`, ver `CLAUDE.md`) no se reescriben.
-4. **Reglas de producto que la suite hace cumplir** (la suite demo tiene hoy 82 casos):
+4. **Reglas de producto que la suite hace cumplir** (la suite demo tiene hoy 83 casos):
    - No inventar datos (especificaciones, colores, precios, plazos ni promesas): lo que la fuente no trae queda vacío.
    - Nada de la marca Apple: sin logo, imágenes ni tipografías; solo `apple.com/co` como referencia de texto.
    - Datos personales de clientes **solo a GHL** por `enviar-lead`: nunca en Supabase ni en el píxel. Nunca `Purchase`.
@@ -52,7 +52,7 @@
   - Página `/solicitudes/` (PQR con radicado en Colombia; botón de arrepentimiento en Argentina).
   - Usuarios: invitar, cambiar el rol, desactivar y reactivar.
 - **Base de datos**:
-  - Migraciones `0001` a `0031` (la `0027` quita la columna del archivo XML; la `0028`, colores según Apple; la `0029`, fichas según Apple; la `0030`, mínimo de garantía de usados en Colombia; la `0031`, módulo legal de Argentina; la `0032`, pasarelas por país), con RLS, disparadores, `datos_publicos()`, `borrar_datos_demo()`, `legal_faltantes()`, `crear_equipos_lote()` y `archivos_en_uso()`.
+  - Migraciones `0001` a `0031` (la `0027` quita la columna del archivo XML; la `0028`, colores según Apple; la `0029`, fichas según Apple; la `0030`, mínimo de garantía de usados en Colombia; la `0031`, módulo legal de Argentina; la `0032`, pasarelas por país; la `0033`, WhatsApp de la tienda), con RLS, disparadores, `datos_publicos()`, `borrar_datos_demo()`, `legal_faltantes()`, `crear_equipos_lote()` y `archivos_en_uso()`.
   - Funciones Deno: `enviar-lead` y `usuarios`.
 - **Pruebas e infraestructura de prueba:**
   - Suites SQL, unitarias, de funciones, demo (Playwright), Supabase local y Lighthouse (`tests/lighthouse/`), todas en verde.
@@ -68,7 +68,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
 - **Correos por tienda:** los de invitación y recuperación están en español (`supabase/correos/`) y en portugués (`supabase/correos/pt/`, punto 2 hecho); se pegan a mano en el proyecto de Supabase de cada tienda, en su idioma.
 - **CLS de 0,19 solo con la franja de modo demo** (rendimiento 91). Sin la franja, 0,045. Es una limitación aceptada: no hay que corregirla.
 - **Datos de catálogo que faltan:** la descripción de los modelos y los hexadecimales oficiales, que Apple no publica (`catalogo/FALTANTES.md`). **No se completan de memoria**.
-- **Sin verificar contra el original:** todo lo que vino de los informes de Gemini (fuentes legales de Colombia y Argentina, fichas, colores y pasarelas) se revisó por coherencia, no contra las páginas oficiales: el proxy del entorno bloquea infoleg, el Boletín Oficial, apple.com y las páginas de las pasarelas. Tampoco están verificados los formatos de celular de 13 países (los resuelve en parte el punto 8) ni las traducciones al portugués ("cotizador" quedó "cotador").
+- **Sin verificar contra el original:** todo lo que vino de los informes de Gemini (fuentes legales de Colombia y Argentina, fichas, colores y pasarelas) se revisó por coherencia, no contra las páginas oficiales: el proxy del entorno bloquea infoleg, el Boletín Oficial, el sitio de Apple y las páginas de las pasarelas. Tampoco están verificados los formatos de celular de 9 países (Cuba, Guatemala, Honduras, Nicaragua, Panamá, Paraguay, República Dominicana, Uruguay y Venezuela) ni las traducciones al portugués ("cotizador" quedó "cotador").
 - **Prueba intermitente:** una corrida de `tests/verificar.cjs` (durante el punto 5) tuvo 1 falla que no mostró qué caso era y no se repitió en las corridas completas que siguieron (todas las fallas posteriores fueron pruebas que había que ajustar por un cambio, y se ajustaron). Si vuelve a aparecer, guardar la salida completa y mirar el caso antes de tocar nada.
 - **Lighthouse:** no se volvió a medir después de los puntos 4 a 7, que agregaron enlaces al pie y la página `/solicitudes/`. La última medición es la del 22/10. Conviene medir de nuevo (`tests/lighthouse/medir.sh`).
 - **Fuera del código:** Supabase real, GHL real, SMTP y GitHub Pages no están conectados (los hace el equipo de Jared).
@@ -80,7 +80,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
 >
 > **Regla de cierre de Jared:** al llegar al 90 % del límite de la sesión (Claude Code 4 cerró al 83 %, cuando Jared avisó), terminar el punto en curso, documentarlo en `DOCUMENTACION.md` y dejar este archivo al día para que el siguiente agente siga como si fuera el mismo.
 >
-> **Antes de tocar nada:** ya hecho en esta tanda: el archivo XML se quitó (`aec4c38`), punto 1 (`9ba61be`), punto 2 (`6932c64`) punto 3 (`68b3421`) punto 4 (`1247ac2`) punto 5 (`55c3af7`), punto 6 (`f18ab69`) y punto 7 (ver `git log`: "punto 7"). **Siguen el punto 8 y el 9, en ese orden.** Antes de empezar, correr el comando de verificación para confirmar que todo sigue en verde.
+> **Antes de tocar nada:** ya hecho en esta tanda: el archivo XML se quitó (`aec4c38`), punto 1 (`9ba61be`), punto 2 (`6932c64`) punto 3 (`68b3421`) punto 4 (`1247ac2`) punto 5 (`55c3af7`), punto 6 (`f18ab69`) punto 7 (`81b3519`) y punto 8 (ver `git log`: "punto 8"). **Sigue el punto 9.** Antes de empezar, correr el comando de verificación para confirmar que todo sigue en verde.
 
 1. ✅ **HECHO (`9ba61be`).** `legal/FUENTES.md` corregido y completado: fuentes de Colombia 14 a 18 (transporte de la devolución, reversión del pago, enlace a la SIC, PQR con radicado, RNE) y estados al día.
 2. ✅ **HECHO (`6932c64`).** Colores según Apple: `0028_colores_apple.sql`, `semilla.js` y `demo.js` (`VERSION` 23).
@@ -139,7 +139,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
      - DO: tPago, Azul, CardNET.
      - UY: Prex, MiDinero, Paganza, Mercado Pago, Redpagos/Abitab.
      - VE: Pago Móvil, Zinli, Binance Pay, BiopagoBDV.
-8. ⏳ **PENDIENTE. WhatsApp: México, formatos verificados, 0 inicial y fijos de la tienda.** Datos aceptados de los informes (ronda 2, celulares): solo estos; el resto del informe se descartó por decir "CONFIRMADO" sin fuente.
+8. ✅ **HECHO (`0033_whatsapp.sql`; detalle en la sección 19 de `DOCUMENTACION.md`). Queda como registro. Se hizo con `whatsappValido()` como validación del WhatsApp de la tienda (celular o fijo) y `celularNacionalValido()` para el cliente (solo celular, con `sinCeroInicial()`).** **WhatsApp: México, formatos verificados, 0 inicial y fijos de la tienda.** Datos aceptados de los informes (ronda 2, celulares): solo estos; el resto del informe se descartó por decir "CONFIRMADO" sin fuente.
    - **Dónde está hoy:**
      - En `assets/js/datos/paises.js`: `PAISES_TIENDA[c].celular` (`internacional`, `visible`, `nacional`, `grupos`, `ejemplo`, `verificado`), `celularNacionalValido()`, `celularInternacional()`, `agruparCelular()` y `whatsappValido(numero, pais)`. `whatsappValido` valida el WhatsApp **de la tienda** (Mi tienda) y el del cliente pasa por `celularNacionalValido`.
      - En el SQL, `whatsapp_valido()` está en `supabase/migrations/0018_pais.sql`.
@@ -150,7 +150,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
      2. **Formatos verificados** (nacional, sin prefijo; marcar `verificado: true` con su `ejemplo` y sus `grupos`): El Salvador `^[67]\d{7}$` (prefijo 503), Bolivia `^[67]\d{7}$` (591), Costa Rica `^[5-8]\d{7}$` (506) y Ecuador `^9\d{8}$` (593).
      3. **0 inicial (prefijo troncal):** en Ecuador, Paraguay, Uruguay y Venezuela, si la persona escribe el número con un 0 adelante, quitarlo antes de validar y de armar el internacional (en `celularNacionalValido` / `celularInternacional`, y lo mismo en el SQL).
      4. **Fijos en el WhatsApp de la tienda** (WhatsApp Business admite fijos): el informe **no** da el formato de los fijos de cada país. No inventarlo. Lo prudente es que el WhatsApp de la tienda acepte, además del celular, el prefijo del país + un número de 8 a 15 dígitos en total (la regla general que ya usan los países sin verificar). El del cliente no cambia. Si se hace, es una función o un parámetro aparte (por ejemplo `whatsappTiendaValido`) y su par en el SQL, y el disparador de `tienda` que hoy llama a `whatsapp_valido()` pasa a usar la nueva.
-   - **Base de datos:** una migración nueva (`0033_…sql`) que redefina `whatsapp_valido()` y, si corresponde, la de la tienda. Una tienda ya guardada con un número que antes valía tiene que seguir valiendo: probarlo con un `tests/sql/antes_0033_….sql`.
+   - **Base de datos:** una migración nueva (`0033_whatsapp.sql`) que redefina `whatsapp_valido()` y, si corresponde, la de la tienda. Una tienda ya guardada con un número que antes valía tiene que seguir valiendo: probarlo con un `tests/sql/antes_0033_….sql`.
    - **Pruebas:** casos nuevos en `tests/paises.test.mjs`. Revisar `comparar-paises.mjs` (que sume los casos de los 4 países y del 0 inicial), `pruebas.sql` y el caso B1 de `verificar.cjs` si cambian las ayudas de Mi tienda. Un caso del enlace de México en `verificar.cjs`: crear la tienda con `pais: "mx"` y revisar el `href` de "Abrir WhatsApp".
    - **Documentar:** la sección 9.10 de `DOCUMENTACION.md` (formatos de celular), la 17 (quitar lo resuelto) y la 19.
 9. ⏳ **PENDIENTE. Reseñas: registrar la autorización** (opción "a" que aprobó Jared). Por reseña se guarda **cómo** el cliente autorizó su publicación, **sin ningún dato del cliente** (nada de nombre ni teléfono: regla 6).
@@ -163,7 +163,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
      - Columnas `autorizacion_fecha date not null` (no futura).
      - `autorizacion_canal text not null check (in ('whatsapp', 'correo', 'presencial', 'otro'))`.
      - `autorizacion_alcance text not null check (in ('sitio', 'sitio_y_redes'))`.
-     - Las reseñas ya cargadas: migración nueva (`0034_…sql`, o la que siga) con valores que el panel marque como "a completar". Por ejemplo, las columnas aceptan `null` solo en las viejas y el panel pide completarlas, o una fecha por defecto igual a `creado_en` y canal `otro`. Elegir una opción y documentarla en la sección 16.
+     - Las reseñas ya cargadas: migración nueva (`0034_…sql`) con valores que el panel marque como "a completar". Por ejemplo, las columnas aceptan `null` solo en las viejas y el panel pide completarlas, o una fecha por defecto igual a `creado_en` y canal `otro`. Elegir una opción y documentarla en la sección 16.
      - Con los mismos campos: el formulario del panel (con sus textos en `es.js` y `pt.js`), `CAMPOS_RESENA`, `demo.js` (`VERSION` siguiente) y `datos_publicos()`.
      - **Ojo con `datos_publicos()`:** hoy arma las reseñas con una lista explícita de campos. Las columnas nuevas **no** se publican: son del panel.
    - **Pruebas:** `pruebas.sql` (checks y que el público no vea las columnas), `verificar.cjs` (el panel pide los tres datos y la capa de datos los valida) y `verificar-supabase.cjs`, que tiene un caso de reseñas.
@@ -176,7 +176,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
     - Un commit por punto en español, con push a `claude/gallant-euler-ezco6g`.
 
 **Prohibido tocar:**
-- `supabase/migrations/0001` a `0032`: son inmutables; los cambios van en migraciones nuevas.
+- `supabase/migrations/0001` a `0033`: son inmutables; los cambios van en migraciones nuevas.
 - Los textos literales del prompt en `assets/js/sitio/popup.js` y `assets/js/sitio/catalogo.js`, y el mensaje de WhatsApp.
 - `config.js`: solo lleva la conexión y el script de GHL; nunca datos de la tienda ni claves.
 - Las pruebas existentes: no se debilitan ni se borran.
