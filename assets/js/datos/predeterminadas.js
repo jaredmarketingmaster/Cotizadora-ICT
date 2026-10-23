@@ -41,6 +41,9 @@ export const IMAGENES_PREDETERMINADAS = {
   // 17 Pro y 17 Pro Max: las mismas imágenes hasta que Jared pase un juego para cada uno.
   "iphone-17-pro": { "Naranja cósmico": "naranja-cosmico", "Azul profundo": "azul-profundo", "Plata": "plata" },
   "iphone-17-pro-max": { "Naranja cósmico": "naranja-cosmico", "Azul profundo": "azul-profundo", "Plata": "plata" },
+  // 14 y 14 Plus: las mismas imágenes hasta que Jared pase un juego para cada uno.
+  "iphone-14": { "Amarillo": "amarillo", "Azul": "azul", "Medianoche": "medianoche", "Morado": "morado", "(PRODUCT)RED": "product-red" },
+  "iphone-14-plus": { "Amarillo": "amarillo", "Azul": "azul", "Medianoche": "medianoche", "Morado": "morado", "(PRODUCT)RED": "product-red" },
   // 14 Pro y 14 Pro Max: las mismas imágenes hasta que Jared pase un juego para cada uno.
   "iphone-14-pro": { "Negro espacial": "negro-espacial", "Morado oscuro": "morado-oscuro", "Oro": "oro", "Plata": "plata" },
   "iphone-14-pro-max": { "Negro espacial": "negro-espacial", "Morado oscuro": "morado-oscuro", "Oro": "oro", "Plata": "plata" },
