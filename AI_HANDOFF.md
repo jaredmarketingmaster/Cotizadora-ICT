@@ -202,7 +202,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
       5. Correr el caso "v1.1: imágenes" y el 11 (sin marca) de `verificar.cjs`.
       6. Actualizar en `DOCUMENTACION.md` la cuenta de la sección 17 ("Van N de 182") y la entrada de la 19.
       7. Commit y push.
-    - **Cargadas hasta ahora (45 de 182):** completos el iPhone 7, 7 Plus, 8, 8 Plus, X, XR, 11, 11 Pro, 11 Pro Max y SE (2.ª generación). Faltan los demás. Criterio: si dos modelos se ven iguales y solo cambia el tamaño (Pro y Pro Max, por ejemplo), la misma imagen va en los dos y se le avisa a Jared.
+    - **Cargadas hasta ahora (49 de 182):** completos el iPhone 7, 7 Plus, 8, 8 Plus, X, XR, 11, 11 Pro, 11 Pro Max y SE (2.ª generación); XS y XS Max con Gris espacial y Oro (falta Plata: las que pasó Jared tenían la marca de agua "Swappie"; se le pidió otra). **No cargar imágenes con marcas de agua de terceros.** Criterio: si dos modelos se ven iguales y solo cambia el tamaño (Pro y Pro Max, por ejemplo), la misma imagen va en los dos y se le avisa a Jared.
     - **Mecanismo** (ya hecho; no cambia por tanda):
       - En `equipos.fotos` va la ruta `predeterminadas/<slug>/<archivo>.webp`.
       - `urlArchivo()` (demo y Supabase) la sirve desde el sitio y `borrarArchivos()` no la borra.

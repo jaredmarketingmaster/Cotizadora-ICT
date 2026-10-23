@@ -1514,7 +1514,7 @@ CORREOS_IDIOMA=pt BIN=… bash tests/supabase-local/levantar.sh   # con los corr
 - [ ] **Fuentes legales que no se pudieron abrir** desde el entorno: se verificaron con el buscador y, desde el 22/10/2026, con los informes de Gemini Deep Research que pasó Jared (citas revisadas por coherencia, no contra el original). Ver `legal/FUENTES.md`. Queda para el abogado: la Ley 2300 (franjas, con fuentes secundarias) y si el radicado de PQR con respuesta por WhatsApp o correo cumple con el "seguimiento" (fuente 17).
 - [ ] **Cookies del script de seguimiento externo de GHL:** no se verificaron; si se activa, agregarlo a la Política de cookies.
 - [ ] Probar en GHL los campos de consentimiento y la guía de la sección 12.3.
-- [ ] **Imágenes predeterminadas (v1.1):** Jared las pasa de a 5. Van 45 de 182 combinaciones de modelo y color. Completos: iPhone 7, 7 Plus, 8, 8 Plus, X, XR, 11, 11 Pro, 11 Pro Max y SE (2.ª generación). La lista exacta está en `IMAGENES_PREDETERMINADAS` (`assets/js/datos/predeterminadas.js`). El proceso para cada tanda está en la sección 5 de `AI_HANDOFF.md`.
+- [ ] **Imágenes predeterminadas (v1.1):** Jared las pasa de a 5. Van 49 de 182 combinaciones de modelo y color. Completos: iPhone 7, 7 Plus, 8, 8 Plus, X, XR, 11, 11 Pro, 11 Pro Max y SE (2.ª generación). XS y XS Max: Gris espacial y Oro (falta Plata: las imágenes que pasó Jared tenían la marca de agua de otra empresa). La lista exacta está en `IMAGENES_PREDETERMINADAS` (`assets/js/datos/predeterminadas.js`). El proceso para cada tanda está en la sección 5 de `AI_HANDOFF.md`.
 - [ ] Que el abogado confirme si publicar capturas de clientes (aun tapadas) necesita autorización por escrito, y si alcanza con lo que guarda el panel desde `0034` (canal, fecha y alcance de la autorización, sin datos de la persona; el mensaje o el documento lo guarda la tienda por fuera).
 - [ ] **Reseñas de antes de `0034`:** quedan "sin registrar" hasta que la tienda complete la autorización en su fila. Se siguen mostrando en el sitio mientras tanto.
 - [x] ~~Confirmar los nombres del catálogo~~: confirmados con las fichas de soporte de Apple en español (informes de Gemini, 22/10/2026). Apple anunció el 17e, 18 Pro, 18 Pro Max y Duo.
@@ -1578,6 +1578,16 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 23/10/2026 · v1.1: imágenes predeterminadas, décima tanda (49 de 182)
+
+- **Pedido de Jared:** 5 imágenes más, del XS o del XS Max.
+- **Hecho:**
+  - **50: Gris espacial.** Tiene el fondo de pantalla del XS. Se cargó en el XS y en el XS Max, que se ven iguales.
+  - **52: iPhone XS, Oro.**
+  - **53: iPhone XS Max, Oro.** Es casi igual a la 52, pero el equipo se ve más grande en el mismo encuadre.
+- **No se cargó:** las imágenes 49 y 51, en Plata. Son la misma foto y tienen la marca de agua "Swappie", de una empresa de reacondicionados. Se le pidió a Jared una versión sin marca y que confirme si eran para el XS y el XS Max.
+- **Verificación:** `node tests/documentacion.mjs` OK, todos los archivos del mapa existen, y en `tests/verificar.cjs` pasan el caso "v1.1: imágenes" y el 11 (sin marca).
 
 ### 23/10/2026 · v1.1: imágenes predeterminadas, novena tanda (45 de 182)
 
