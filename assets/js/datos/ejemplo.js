@@ -11,6 +11,9 @@
 // - LEGAL_PUBLICADO_EJEMPLO (legales-ejemplo.js): los documentos ya
 //   publicados con estos datos (generados con el motor; las pruebas revisan que
 //   el motor dé lo mismo).
+// - TIENDA_VITRINA (0041): lo que agrega la vitrina completa (vitrina.js):
+//   promos y dólar de ejemplo. tiendaNueva(fecha, { modo: "basica" }) no lo
+//   lleva (el restablecer básico).
 // - camposDeEjemplo(t): los datos que siguen siendo los de ejemplo. Mientras
 //   haya alguno, no se quita la demostración (como datos_de_ejemplo() del SQL)
 //   y el panel avisa.
@@ -58,8 +61,33 @@ export const TIENDA_EJEMPLO = {
   legal_garantia_usados_meses: 3,
   legal_retracto_canal: "correo",
   legal_homologados: "si",
+  // 0041: horario y formas de pago de ejemplo (también van a los términos).
+  horario_texto: "Lunes a viernes de 10 a 19 h. Sábados de 10 a 14 h.",
+  pagos_medios: ["transferencia", "efectivo", "debito", "credito"],
+  pagos_cuotas: true, pagos_cuotas_max: 12, pagos_sin_interes: true, pagos_sin_interes_max: 3,
+  pagos_pasarelas: ["mercado_pago"],
+  pagos_descuentos: { "medio:efectivo": 10, "medio:transferencia": 5 },
   // Un ID con formato válido que no es de nadie: el sitio no carga el píxel con él.
   meta_pixel_id: PIXEL_EJEMPLO
+};
+
+// Restablecer de fábrica (0041): "completa" (la vitrina) o "basica".
+export const MODOS_FABRICA = ["completa", "basica"];
+// La instalación nueva (tests/tienda-prueba-co.js lo cambia para las pruebas).
+export const MODO_INICIAL = "completa";
+
+// Lo que la vitrina completa cambia de la tienda de ejemplo (en el modo básico
+// quedan los valores iniciales de cada columna: USD_INICIAL y PROMOS_INICIAL).
+// La fecha de la cotización la pone el servidor (usd_actualizado_en).
+export const TIENDA_VITRINA = {
+  usd_modo: "apoyo",
+  usd_cotizacion: 1500,
+  usd_redondeo: "arriba",
+  promo_banner_activo: true,
+  promo_banner_texto: "Promoción de ejemplo: hasta 20 % off en modelos seleccionados",
+  promo_descuentos_activos: true,
+  promo_descuentos_modelo: { "iphone-15": 15, "iphone-15-plus": 15, "iphone-16e": 10 },
+  promo_combinar: "mayor"
 };
 
 // Los datos que la tienda tiene que cambiar por los suyos.
@@ -81,9 +109,10 @@ export const PAGOS_VACIOS = {
 };
 
 // La tienda de una instalación nueva (demo.js; en el SQL, los valores
-// iniciales de cada columna más 0037). conLegales = false: sin los documentos
-// publicados (para generarlos, tests/legal/ejemplo.mjs).
-export function tiendaNueva(fecha, { conLegales = true } = {}) {
+// iniciales de cada columna más 0037 y 0041). conLegales = false: sin los
+// documentos publicados (para generarlos, tests/legal/ejemplo.mjs). modo:
+// "completa" (la vitrina, con TIENDA_VITRINA) o "basica".
+export function tiendaNueva(fecha, { conLegales = true, modo = "completa" } = {}) {
   return structuredClone({
     id: 1, nombre: "", pais: "ar", idioma: "es", ciudad: "", direccion: "", horario_texto: "", whatsapp: "",
     correo_contacto: "", instagram_url: "", facebook_url: "", tiktok_url: "", logo: "", favicon: "",
@@ -94,6 +123,7 @@ export function tiendaNueva(fecha, { conLegales = true } = {}) {
     mostrar_ficha: true, ficha_ocultas: [], mostrar_resenas: false, titulo_resenas: TITULO_RESENAS, titulo_sitio: "",
     actualizado_en: fecha,
     ...TIENDA_EJEMPLO,
+    ...(modo === "completa" ? { ...TIENDA_VITRINA, usd_actualizado_en: fecha } : {}),
     legal_publicado: conLegales ? LEGAL_PUBLICADO_EJEMPLO : null
   });
 }

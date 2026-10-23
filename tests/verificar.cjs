@@ -560,8 +560,9 @@ async function llenarPopup(p) {
     await ir(p, "/?condicion=nuevo&modelo=iphone-17&capacidad=256-gb");
     assert.equal((await p.textContent("#detalle-en-linea [data-color-actual]")).trim(), "Lila");
     assert.match(await p.textContent("#detalle-en-linea .detalle-variante"), /256 GB · Lila/);
-    // Sin foto, la ilustración lleva el texto alternativo en aria-label.
-    assert.equal(await p.getAttribute('#detalle-en-linea .diapositiva [role="img"]', "aria-label"), "iPhone 17, 256 GB, color Lila");
+    // (cambiado en v1.1: el lote pone la imagen predeterminada del color) La
+    // imagen lleva el texto alternativo con el nombre a mostrar.
+    assert.equal(await p.getAttribute('#detalle-en-linea .diapositiva img', "alt"), "iPhone 17, 256 GB, color Lila");
     assert.equal(await p.getAttribute('.tarjeta:has-text("iPhone 17") .muestra', "style"), "--c:#C6BFE6");
     await p.click("#detalle-en-linea [data-comprar]");
     await llenarPopup(p);
@@ -1091,7 +1092,8 @@ async function llenarPopup(p) {
     const e = JSON.parse(localStorage.getItem(clave));
     const sin = (o, ...k) => Object.fromEntries(Object.entries(o).filter(([c]) => !k.includes(c)));
     return {
-      tienda: sin(e.tienda, "actualizado_en", "precios_actualizados_en"),
+      // (cambiado en 0041: la fecha de la cotización de la vitrina es la de cada instalación)
+      tienda: sin(e.tienda, "actualizado_en", "precios_actualizados_en", "usd_actualizado_en"),
       modelos: e.modelos.map((m) => sin(m, "creado_en")),
       colores: e.colores,
       fichas: e.fichas.map((f) => sin(f, "actualizado_en")),
@@ -1100,7 +1102,7 @@ async function llenarPopup(p) {
     };
   }, CLAVE_DEMO);
 
-  await caso("restablecer de fábrica (0036): solo el administrador, pide escribir RESTABLECER y deja todo como nuevo menos los usuarios", async () => {
+  await caso("restablecer de fábrica (0036; cambiado en 0041: vitrina completa o básica): solo el administrador, pide escribir RESTABLECER y deja todo como nuevo menos los usuarios", async () => {
     // (cambiado en 0037: la tienda nueva real, la de ejemplo de Argentina)
     const nuevo = await nueva(1280, 900, { legales: false, tienda: "nueva" });
     await nuevo.goto(BASE);
@@ -1136,6 +1138,8 @@ async function llenarPopup(p) {
     await p.evaluate(() => sessionStorage.removeItem("cotizadora-demo:sesion"));
     await entrarPanel(p, "administrador@demo.co");
     assert.match(await p.textContent("#t-fabrica + .ayuda"), /Los usuarios y sus accesos no cambian/);
+    // (nuevo en 0041) Los dos modos; la vitrina completa, elegida.
+    assert.deepEqual(await p.$$eval('input[name="fabrica_modo"]', (xs) => xs.map((x) => [x.value, x.checked])), [["completa", true], ["basica", false]]);
     // Cancelar no borra nada.
     await p.click("#restablecer-fabrica");
     await p.click('#confirmar [value="no"]');
@@ -1164,19 +1168,33 @@ async function llenarPopup(p) {
       pedido.onsuccess = () => { const r = pedido.result.transaction("archivos").objectStore("archivos").count(); r.onsuccess = () => ok(r.result); };
     }));
     assert.equal(archivos, 0, "sin archivos");
-    // El sitio vuelve a la demo (la tienda de ejemplo, con sus legales publicados).
+    // El sitio vuelve a la demo (la tienda de ejemplo, con sus legales publicados y la vitrina).
     p.legalesListos = true;
     await ir(p);
-    assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
+    assert.equal(await p.textContent("#contador"), "219 equipos disponibles");
     assert.equal(await p.locator(".galeria--carrusel").count(), 0, "vuelve la cuadrícula");
+    // (nuevo en 0041) El modo básico: los 6 equipos de demostración, sin promos ni dólar.
+    await p.goto(`${BASE}/admin/#/inicio`);
+    await p.waitForSelector("#restablecer-fabrica");
+    await p.check('input[name="fabrica_modo"][value="basica"]');
+    await p.click("#restablecer-fabrica");
+    await p.fill("#confirmar-palabra", "RESTABLECER");
+    await Promise.all([p.waitForEvent("load"), p.click('#confirmar [value="si"]')]);
+    await p.waitForSelector(".estadisticas");
+    const basica = await p.evaluate((clave) => JSON.parse(localStorage.getItem(clave)), CLAVE_DEMO);
+    assert.equal(basica.equipos.length, 6);
+    assert.deepEqual([basica.tienda.pais, basica.tienda.usd_modo, basica.tienda.promo_banner_activo, basica.tienda.legal_publicado.version], ["ar", "no", false, 1]);
+    await ir(p);
+    assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
+    assert.equal(await p.isVisible("#promo-banner"), false);
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
 
   // ------------------------------------------- 0037 a 0040 (pedido de Jared)
   // El mensaje de WhatsApp del iPhone 15 Pro usado, con el precio que se pase.
-  const comprarUsado = async (p, telefono = "3001234567") => {
-    await ir(p, "/?condicion=usado&modelo=iphone-15-pro&capacidad=128-gb");
+  const comprarUsado = async (p, telefono = "3001234567", ruta = "/?condicion=usado&modelo=iphone-15-pro&capacidad=128-gb") => {
+    await ir(p, ruta);
     await p.click("#detalle-en-linea [data-comprar]");
     await p.fill("#p-nombre", "Juan Pérez");
     await p.fill("#p-correo", "juan@correo.co");
@@ -1195,11 +1213,12 @@ async function llenarPopup(p) {
     await ir(p);
     assert.equal(await p.evaluate(async (base) => (await import(`${base}/assets/js/datos/paises.js`)).paisActual(), BASE), "ar");
     assert.ok(await p.isVisible("#franja-demo"));
-    assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
+    // (cambiado en 0041: la vitrina completa, sin usados)
+    assert.equal(await p.textContent("#contador"), "219 equipos disponibles");
     // Precios en pesos argentinos (mismo formato) y el pop-up funciona con el WhatsApp de ejemplo.
-    const url = await comprarUsado(p, "1123456789");
+    const url = await comprarUsado(p, "1123456789", "/?condicion=nuevo&modelo=iphone-15-pro&capacidad=128-gb");
     assert.equal(url.origin + url.pathname, "https://wa.me/5491100000000");
-    assert.match(url.searchParams.get("text"), /^Hola, quiero comprar este equipo:\niPhone 15 Pro Usado\n128 GB · Titanio natural\nPrecio: \$3\.000\.000\n/);
+    assert.match(url.searchParams.get("text"), /^Hola, quiero comprar este equipo:\niPhone 15 Pro Nuevo\n128 GB · Titanio [a-z]+\nPrecio: \$1\.650\.000/);
     for (const [ruta, texto] of [["/privacidad/", /Nombre y apellido de ejemplo[\s\S]*CUIT 20-12345678-6/], ["/terminos/", /Tienda de demostración/]]) {
       await p.goto(`${BASE}${ruta}`, { waitUntil: "networkidle" });
       await p.waitForFunction(() => !document.querySelector("#legal-texto[aria-busy]"));
@@ -1238,6 +1257,58 @@ async function llenarPopup(p) {
     assert.equal(borrar, "ok");
     assert.deepEqual(p.errores, []);
     await p.context().close();
+  });
+
+  await caso("vitrina (0041): la instalación nueva muestra los iPhone nuevos del 15 al Duo, cada uno con su imagen, con promos, dólar, pocas unidades, destacados y más vendidos; sin usados ni botón de arrepentimiento", async () => {
+    const p = await nueva(1440, 900, { legales: false, tienda: "nueva" });
+    await ir(p);
+    assert.equal(await p.textContent("#contador"), "219 equipos disponibles");
+    const e = await p.evaluate((c) => JSON.parse(localStorage.getItem(c)), CLAVE_DEMO);
+    assert.ok(e.equipos.every((q) => q.es_demo && q.condicion === "nuevo" && q.fotos.length === 1 && q.fotos[0].startsWith("predeterminadas/")), "nuevos, de demostración y con su imagen");
+    assert.equal(new Set(e.equipos.map((q) => q.modelo_id)).size, 17, "17 modelos");
+    // Una tarjeta por modelo y capacidad; primero los destacados (Duo y 18 Pro Max de 256 GB).
+    assert.equal(await p.locator(".tarjeta").count(), 57);
+    assert.deepEqual((await p.locator(".tarjeta-nombre").allTextContents()).slice(0, 2), ["iPhone Duo", "iPhone 18 Pro Max"]);
+    assert.equal(await p.locator(".tarjeta--mas-vendido").count(), 3);
+    assert.deepEqual(await p.locator(".stock-bajo").allTextContents(), ["¡Quedan 2!", "¡Quedan 4!", "¡Quedan 4!"]);
+    assert.ok(await p.isVisible("#promo-banner"));
+    assert.match(await p.textContent("#pie-cambio"), /^Cambio actualizado el \d{1,2}\/\d{1,2}\/\d{4} · U\$D 1 = \$1\.500$/);
+    assert.equal(await p.isVisible("#pie-solicitudes"), false, "sin botón de arrepentimiento");
+    // Las imágenes predeterminadas se ven (cargan) en las primeras tarjetas.
+    const srcs = await p.$$eval(".tarjeta img", (xs) => xs.slice(0, 4).map((x) => x.currentSrc || x.src));
+    assert.ok(srcs.length === 4 && srcs.every((s) => s.includes("/assets/img/predeterminadas/")), srcs.join(" "));
+    // Un iPhone 15 con el 15 % de la promo por modelo y el precio en dólares de apoyo.
+    await ir(p, "/?condicion=nuevo&modelo=iphone-15&capacidad=128-gb");
+    const detalle = await p.textContent("#detalle-en-linea");
+    assert.ok(detalle.includes("15 % off") && detalle.includes("$1.200.000") && detalle.includes("$1.020.000") && detalle.includes("U$D\u00A0680"), detalle);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("vitrina (0041): un navegador con la tienda de ejemplo sin tocar pasa a la vitrina; una tienda personalizada no cambia", async () => {
+    for (const [nombre, esperado] of [["Tienda de demostración", 219], ["Mi tienda", 6]]) {
+      const p = await nueva(390, 844, { legales: false, tienda: "nueva" });
+      await ir(p);
+      // Como quedaba con 0037 a 0040 (versión 28): sin horario, formas de pago, dólar ni promos y con 6 equipos de demostración.
+      await p.evaluate(async ([clave, base, nombre]) => {
+        const { PAGOS_VACIOS } = await import(`${base}/assets/js/datos/ejemplo.js`);
+        const { USD_INICIAL, PROMOS_INICIAL } = await import(`${base}/assets/js/datos/precios.js`);
+        const e = JSON.parse(localStorage.getItem(clave));
+        e.equipos = e.equipos.slice(0, 6);
+        Object.assign(e.tienda, USD_INICIAL, PROMOS_INICIAL, PAGOS_VACIOS, { horario_texto: "", nombre });
+        e.version = 28;
+        localStorage.setItem(clave, JSON.stringify(e));
+      }, [CLAVE_DEMO, BASE, nombre]);
+      await ir(p);
+      const e = await p.evaluate((c) => JSON.parse(localStorage.getItem(c)), CLAVE_DEMO);
+      assert.equal(e.version, 29);
+      assert.equal(e.equipos.length, esperado, nombre);
+      assert.equal(e.tienda.usd_modo, esperado === 219 ? "apoyo" : "no", nombre);
+      assert.equal(e.tienda.pagos_medios.length, esperado === 219 ? 4 : 0, nombre);
+      assert.equal(await p.textContent("#contador"), `${esperado} equipos disponibles`);
+      assert.deepEqual(p.errores, []);
+      await p.context().close();
+    }
   });
 
   await caso("dólar (0038): de apoyo y de reemplazo, con redondeo al 0 o al 5, precio propio del equipo, fecha del cambio y mensaje de WhatsApp", async () => {
@@ -1482,8 +1553,8 @@ async function llenarPopup(p) {
     assert.deepEqual(Object.fromEntries(Object.keys(LEGAL_INICIAL).map((k) => [k, e.tienda[k]])),
       { ...LEGAL_INICIAL, legal_clausula_privacidad: "Mi política propia.", legal_clausula_terminos: "Mi aviso de marca." });
     for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) assert.ok(!(k in e.tienda), k);
-    // (cambiado en 0037 a 0040: versión 28) El dólar, las promos y el stock contado, vacíos.
-    assert.equal(e.version, 28);
+    // (cambiado en 0037 a 0040: versión 28; en 0041: 29) El dólar, las promos y el stock contado, vacíos.
+    assert.equal(e.version, 29);
     assert.deepEqual([e.tienda.usd_modo, e.tienda.usd_cotizacion, e.tienda.promo_banner_activo, e.tienda.promo_descuentos_activos, e.tienda.promo_combinar],
       ["no", null, false, false, "mayor"]);
     assert.ok(e.equipos.every((q) => q.contar_stock === false && q.stock_cantidad === null && q.precio_usd === null && q.promo_descuento === null));
@@ -2009,7 +2080,7 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
-  await caso("Argentina (0031): pie con el botón de arrepentimiento, Defensa del Consumidor y Data Fiscal; casilla de la transferencia a EE. UU. en el pop-up y en solicitudes", async () => {
+  await caso("Argentina (0031; cambiado en 0041: sin botón de arrepentimiento): pie con Defensa del Consumidor y Data Fiscal; casilla de la transferencia a EE. UU. en el pop-up; sin página de solicitudes", async () => {
     const p = await nueva(390, 844);
     await ir(p);
     const fiscal = "https://servicios1.afip.gob.ar/clavefiscal/qr/response.aspx?qr=prueba";
@@ -2021,7 +2092,6 @@ async function llenarPopup(p) {
     await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=256-gb");
     assert.deepEqual(await p.$$eval(".pie-enlaces a:not([hidden])", (xs) => xs.map((x) => [x.textContent, x.getAttribute("href")])), [
       ["Política de privacidad", "privacidad/"], ["Términos y condiciones", "terminos/"], ["Política de cookies", "cookies/"],
-      ["BOTÓN DE ARREPENTIMIENTO", "solicitudes/"],
       ["Defensa de las y los consumidores. Para reclamos ingrese aquí", "https://www.argentina.gob.ar/iniciar-un-reclamo-ante-defensa-de-las-y-los-consumidores"],
       ["Data Fiscal (Formulario 960/NM)", fiscal]]);
     // Pop-up: la casilla aparte de la transferencia, sin marcar y obligatoria.
@@ -2041,12 +2111,11 @@ async function llenarPopup(p) {
     const lead = await p.evaluate(() => JSON.parse(sessionStorage.getItem("cotizadora-demo:ultimo-lead")));
     assert.equal(lead.consentimiento_transferencia, true);
     assert.equal(lead.telefono, "+5491123456789");
-    // Solicitudes: el arrepentimiento ya elegido, con la misma casilla; el pie de las páginas internas lleva Defensa del Consumidor.
+    assert.equal(await p.isVisible("#pie-solicitudes"), false, "sin botón de arrepentimiento");
+    // Solicitudes: Argentina no la ofrece; el pie de las páginas internas lleva Defensa del Consumidor.
     await p.goto(`${BASE}/solicitudes/`, { waitUntil: "networkidle" });
-    await p.waitForSelector("#form-solicitud");
-    assert.equal(await p.textContent("h1"), "Botón de arrepentimiento");
-    assert.equal(await p.isChecked("input[value=arrepentimiento]"), true);
-    assert.ok(await p.isVisible("#s-transferencia"));
+    await p.waitForFunction(() => !document.querySelector("#solicitudes[aria-busy]"));
+    assert.equal(await p.textContent("#solicitudes"), "Esta página no está disponible para esta tienda.");
     assert.ok((await p.textContent(".pie-enlaces")).includes("Defensa de las y los consumidores. Para reclamos ingrese aquí"));
     const priv = await textoLegal(p, "/privacidad/");
     assert.ok(priv.includes("Registro Nacional de Bases de Datos de la AAIP con el número 12345678"));
@@ -2744,15 +2813,18 @@ async function llenarPopup(p) {
     const lav = colores.find((c) => c.nombre_es === "Lavanda").id;
     const lavs = lista.filter((q) => q.color_id === lav);
     assert.equal(lavs.length, 2);
-    assert.equal(lavs[0].fotos.length, 1);
+    // (cambiado en v1.1: cada color empieza con su imagen predeterminada; la subida va después)
+    assert.equal(lavs[0].fotos.length, 2);
+    assert.equal(lavs[0].fotos[0], "predeterminadas/iphone-17/lavanda.webp");
     assert.deepEqual(lavs[0].fotos, lavs[1].fotos, "la misma foto en las dos capacidades");
     assert.ok(lavs[0].video && lavs[0].video === lavs[1].video, "el mismo video");
     assert.ok(lavs.every((q) => q.color_nombre_mostrar === "Lila"));
-    assert.ok(lista.filter((q) => q.color_id !== lav).every((q) => !q.fotos.length && !q.video), "los otros colores sin fotos");
+    assert.ok(lista.filter((q) => q.color_id !== lav).every((q) => q.fotos.length === 1 && q.fotos[0].startsWith("predeterminadas/iphone-17/") && !q.video),
+      "los otros colores, solo con su imagen predeterminada");
     assert.ok(lista.every((q) => q.precio === 4500000 && q.publicado && !q.mas_vendido));
     assert.deepEqual(lista.filter((q) => !q.en_stock).map((q) => [q.color_id, q.capacidad]), [[lav, "256 GB"]], "la excepción de stock");
     assert.ok(e.modelos.find((m) => m.slug === "iphone-17").activo, "activa el modelo");
-    assert.ok((await archivosDemo(p)).includes(lavs[0].fotos[0]));
+    assert.ok((await archivosDemo(p)).includes(lavs[0].fotos[1]));
     // En el sitio, el de 512 GB Lavender muestra la foto compartida
     await ir(p, "/?condicion=nuevo&modelo=iphone-17&capacidad=512-gb");
     assert.ok(await p.locator("#detalle-en-linea img").count() > 0);

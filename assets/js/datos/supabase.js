@@ -388,9 +388,10 @@ export const supabase = {
   // La base la restablece restablecer_fabrica() (solo el administrador).
   // Después se vacían los buckets: Supabase no deja borrar archivos desde SQL.
   // Si alguno no se pudo borrar, se avisa: tocar otra vez el botón termina.
-  async restablecerFabrica() {
+  // modo (0041): "completa" (la vitrina) o "basica".
+  async restablecerFabrica(modo = "completa") {
     const c = await cliente();
-    const { error } = await c.rpc("restablecer_fabrica");
+    const { error } = await c.rpc("restablecer_fabrica", { modo });
     fallo(error);
     let completo = true;
     for (const bucket of ["fotos", "videos", "marca", "resenas"]) {

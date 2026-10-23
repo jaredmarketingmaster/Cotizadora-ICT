@@ -101,9 +101,13 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.goto(`${BASE}/`, { waitUntil: "networkidle" });
     // 0018 y 0037: una tienda nueva es de Argentina
     assert.equal(await p.evaluate(async (base) => (await (await import(`${base}/assets/js/datos/paises.js`)).paisActual()), BASE), "ar");
-    assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
-    assert.equal(await p.locator(".galeria > .tarjeta").count(), 5);
+    // (cambiado en 0041: la vitrina completa, con promos y el dólar de apoyo)
+    assert.equal(await p.textContent("#contador"), "219 equipos disponibles");
+    assert.equal(await p.locator(".galeria > .tarjeta").count(), 57);
     assert.ok(await p.isVisible("#franja-demo"));
+    assert.ok(await p.isVisible("#promo-banner"));
+    assert.match(await p.textContent("#pie-cambio"), /^Cambio actualizado el \d{1,2}\/\d{1,2}\/\d{4} · U\$D 1 = \$1\.500$/);
+    assert.deepEqual(await p.locator(".stock-bajo").allTextContents(), ["¡Quedan 2!", "¡Quedan 4!", "¡Quedan 4!"]);
     await p.goto(`${BASE}/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb`, { waitUntil: "networkidle" });
     await p.click("#detalle-en-linea [data-comprar]");
     await p.waitForSelector("#p-nombre");
@@ -116,6 +120,26 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.goto(`${BASE}/privacidad/`, { waitUntil: "networkidle" });
     await p.waitForFunction(() => !document.querySelector("#legal-texto[aria-busy]"));
     assert.match(await p.textContent("#legal-texto"), /Nombre y apellido de ejemplo[\s\S]*CUIT 20-12345678-6/);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  // (nuevo en 0041) Las pruebas que siguen se escribieron para la tienda de
+  // ejemplo con los 6 equipos de demostración: el administrador la deja en el
+  // modo básico (como la tienda de prueba de tests/verificar.cjs). La última
+  // vuelve a la vitrina.
+  await caso("restablecer en modo básico (0041): la tienda de ejemplo con los 6 equipos de demostración, sin promos ni dólar", async () => {
+    const p = await pagina(1280);
+    await entrar(p, "administrador@local.co");
+    const r = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      try { await (await api()).restablecerFabrica("basica"); return "ok"; } catch (e) { return e.message; }
+    });
+    assert.equal(r, "ok");
+    await p.goto(`${BASE}/`, { waitUntil: "networkidle" });
+    assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
+    assert.equal(await p.locator(".galeria > .tarjeta").count(), 5);
+    assert.equal(await p.isVisible("#promo-banner"), false);
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
@@ -268,6 +292,12 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
   await caso("panel → sitio: ficha técnica precargada y formas de pago (0012 y 0013), con las reglas del servidor", async () => {
     const p = await pagina(1280);
     await entrar(p, "gestor@local.co");
+    // (cambiado en 0041: la tienda de ejemplo trae formas de pago; la prueba empieza sin ellas)
+    await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const { PAGOS_VACIOS } = await import(new URL("../assets/js/datos/ejemplo.js", location.href).href);
+      await (await api()).guardarTienda(PAGOS_VACIOS);
+    });
     await p.goto(`${BASE}/admin/#/catalogo/pagos`);
     await p.waitForSelector("#form-pagos");
     await p.check('input[name="medio"][value="credito"]');
@@ -331,7 +361,7 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     // Encendidas
     await p.click('label[for="r-mostrar"]');
     await p.waitForSelector("#aviso-flotante.visible");
-    assert.equal(await anon(), 2, "encendidas: el público las lee");
+    assert.equal(await anon(), 2, `encendidas: el público las lee (aviso: ${await p.textContent("#aviso-flotante")})`);
     await s.goto(`${BASE}/`, { waitUntil: "networkidle" });
     await s.waitForSelector("#resenas:not([hidden]) .resena-boton");
     const img = await s.getAttribute("#resenas .resena-boton img", "src");
@@ -404,9 +434,13 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await s.waitForFunction(() => document.querySelector("#detalle-en-linea video"));
     await s.waitForTimeout(800);
     assert.ok(pedidosVideo.length >= 1, "al tocarlo, el video se pide");
-    await s.click('#detalle-en-linea .miniatura[data-f="0"]');
     assert.match(await s.textContent("#detalle-en-linea .precio-valor"), /\$9\.000\.000/);
     assert.match(await s.textContent("#detalle-en-linea .detalle-variante"), /1 TB · Prueba/);
+    // (cambiado en v1.1: primero va la imagen predeterminada del color, que sirve el sitio; después, la subida)
+    await s.click('#detalle-en-linea .miniatura[data-f="0"]');
+    assert.match(await s.getAttribute("#detalle-en-linea .diapositiva img", "src"), /\/assets\/img\/predeterminadas\/iphone-17-pro\/plata\.webp$/);
+    await s.click('#detalle-en-linea .miniatura[data-f="1"]');
+    await s.waitForFunction(() => /\/storage\//.test(document.querySelector("#detalle-en-linea .diapositiva img")?.getAttribute("src") || ""));
     const src = await s.getAttribute("#detalle-en-linea .diapositiva img", "src");
     assert.match(src, /\/storage\/v1\/object\/public\/fotos\/equipos\//);
     const r = await s.request.get(src);
@@ -635,7 +669,7 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
   });
 
   // Al final: deja la base como recién instalada.
-  await caso("restablecer de fábrica (0036): el gestor no puede; el administrador deja la base como nueva, vacía los buckets y los usuarios siguen", async () => {
+  await caso("restablecer de fábrica (0036; cambiado en 0041: vitrina completa o básica): el gestor no puede; el administrador deja la base como nueva, vacía los buckets y los usuarios siguen", async () => {
     const usarApi = (p, fn, arg) => p.evaluate(async ([cuerpo, arg]) => {
       const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
       try { return await new Function("a", "arg", `return (${cuerpo})(a, arg)`)(await api(), arg); } catch (e) { return `error: ${e.message}`; }
@@ -684,7 +718,17 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     const s = await p.context().newPage();
     await s.goto(`${BASE}/`, { waitUntil: "networkidle" });
     assert.equal(await s.isVisible("#franja-demo"), true);
+    assert.equal(await s.locator(".galeria > .tarjeta").count(), 57);
+    // (nuevo en 0041) El modo básico: los 6 equipos de demostración, sin promos ni dólar.
+    assert.equal(await usarApi(p, (a) => a.restablecerFabrica("basica")), undefined);
+    await s.reload({ waitUntil: "networkidle" });
     assert.equal(await s.locator(".galeria > .tarjeta").count(), 5);
+    assert.equal(await s.isVisible("#promo-banner"), false);
+    assert.equal(await s.isVisible("#pie-cambio"), false);
+    // Y otra vez la vitrina, como queda una instalación nueva.
+    assert.equal(await usarApi(p, (a) => a.restablecerFabrica()), undefined);
+    await s.reload({ waitUntil: "networkidle" });
+    assert.equal(await s.locator(".galeria > .tarjeta").count(), 57);
     const g2 = await pagina(390);
     await entrar(g2, "gestor@local.co");
     assert.deepEqual(p.errores, []);

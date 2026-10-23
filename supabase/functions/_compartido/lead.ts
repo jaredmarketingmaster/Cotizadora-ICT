@@ -8,10 +8,11 @@ export const CAMPOS_OCULTOS = [
   "tipo_consulta", "codigo_cotizacion", ...CAMPOS_ATRIBUCION
 ];
 
-// Solicitudes de la página /solicitudes/ (PQR en Colombia; arrepentimiento en
-// Argentina): van por la misma función, con código SOL-XXXX (el radicado) y el
-// texto de la solicitud en "detalle". Los datos solo van a GHL.
-export const TIPOS_SOLICITUD = ["peticion", "queja", "reclamo", "arrepentimiento"];
+// Solicitudes de la página /solicitudes/ (PQR en Colombia): van por la misma
+// función, con código SOL-XXXX (el radicado) y el texto de la solicitud en
+// "detalle". Los datos solo van a GHL. Sin "arrepentimiento" desde 0041 (Jared
+// quitó el botón de arrepentimiento de Argentina).
+export const TIPOS_SOLICITUD = ["peticion", "queja", "reclamo"];
 
 const CODIGO = (prefijo: string) => new RegExp(`^${prefijo}-[ABCDEFGHJKLMNPQRSTUVWXYZ2-9]{4}$`);
 

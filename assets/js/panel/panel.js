@@ -9,7 +9,7 @@ import { fechaCorta, formatearMiles } from "../utils.js";
 import { whatsappValido, fijarPais } from "../datos/paises.js";
 import { frasesPagos } from "../datos/comun.js";
 import { tieneEnvios } from "../datos/envios.js";
-import { camposDeEjemplo, legalesDeEjemplo } from "../datos/ejemplo.js";
+import { camposDeEjemplo, legalesDeEjemplo, MODOS_FABRICA } from "../datos/ejemplo.js";
 import { $, $$, esc, avisar, confirmar, conBoton, campoTexto, marcarError, enfocarPrimerError, interruptor } from "./ui.js";
 import { republicarAlGuardar } from "./legales.js";
 import { faltantes } from "../legal/motor.js";
@@ -313,6 +313,15 @@ async function vistaInicio(vista) {
     <section class="bloque" aria-labelledby="t-fabrica">
       <h2 id="t-fabrica">${esc(t("panel.inicio.fabrica"))}</h2>
       <p class="ayuda">${esc(t("panel.inicio.fabrica_ayuda"))}</p>
+      <fieldset class="campo">
+        <legend>${esc(t("panel.inicio.fabrica_modo"))}</legend>
+        <div class="opciones-vista">
+          ${MODOS_FABRICA.map((m, i) => `<label class="opcion-vista"><input type="radio" name="fabrica_modo" value="${m}" aria-describedby="fabrica-${m}-ayuda" ${i === 0 ? "checked" : ""}>
+            <span class="opcion-vista-nombre">${esc(t(`panel.inicio.fabrica_${m}`))}</span>
+            <span class="ayuda" id="fabrica-${m}-ayuda">${esc(t(`panel.inicio.fabrica_${m}_ayuda`))}</span>
+          </label>`).join("")}
+        </div>
+      </fieldset>
       <button type="button" class="boton boton--peligro" id="restablecer-fabrica">${esc(t("panel.inicio.fabrica_boton"))}</button>
     </section>` : ""}`;
 
@@ -334,13 +343,15 @@ async function vistaInicio(vista) {
   });
   // Restablecer de fábrica (0036): se recarga el panel entero (cambian la
   // marca, el idioma y todo lo demás) y el aviso se muestra al volver.
+  // Modo (0041): la vitrina completa o la básica.
   $("#restablecer-fabrica")?.addEventListener("click", async (e) => {
     const ok = await confirmar({
       titulo: t("panel.inicio.fabrica_titulo"), texto: t("panel.inicio.fabrica_texto"),
       aceptar: t("panel.inicio.fabrica_boton"), peligro: true, palabra: t("panel.inicio.fabrica_palabra")
     });
     if (!ok) return;
-    try { await conBoton(e.currentTarget, () => ctx.api.restablecerFabrica(), { exito: "" }); } catch { return; }
+    const modo = $('input[name="fabrica_modo"]:checked')?.value || MODOS_FABRICA[0];
+    try { await conBoton(e.currentTarget, () => ctx.api.restablecerFabrica(modo), { exito: "" }); } catch { return; }
     try { sessionStorage.setItem(AVISO_AL_VOLVER, t("panel.inicio.fabrica_listo")); } catch { /* sin almacenamiento */ }
     location.reload();
   });

@@ -47,7 +47,36 @@ do $$ begin
   assert (select count(*) from public.resenas) = 1, 'sin permiso la reseña sigue';
 end $$;
 
--- El administrador: queda como nuevo y los usuarios no cambian.
+-- (nuevo en 0041) Un modo que no existe: no.
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+do $$ begin
+  perform public.restablecer_fabrica('otro');
+  raise exception 'un modo que no existe no debería pasar';
+exception when invalid_parameter_value then null; end $$;
+reset role;
+do $$ begin
+  assert (select nombre from public.tienda) = 'Tienda real', 'con un modo inválido no se borra nada';
+end $$;
+
+-- (nuevo en 0041) El modo básico: la tienda de ejemplo con los 6 equipos de
+-- demostración, sin promos ni dólar.
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+do $$ begin perform public.restablecer_fabrica('basica'); end $$;
+reset role;
+do $$ begin
+  assert (select pais = 'ar' and modo_demo and usd_modo = 'no' and usd_cotizacion is null and usd_actualizado_en is null
+          and not promo_banner_activo and not promo_descuentos_activos and promo_descuentos_modelo = '{}'::jsonb
+          and pagos_medios <> '{}' and (legal_publicado ->> 'version') = '1' from public.tienda), 'la tienda básica';
+  assert (select count(*) from public.equipos) = 6 and (select bool_and(es_demo) from public.equipos), 'los 6 equipos de demostración';
+  assert (select count(*) from public.equipos where condicion = 'usado') = 2, 'con los 2 usados';
+  assert (select array_agg(slug order by slug) from public.modelos where activo) = array['iphone-13', 'iphone-15-pro', 'iphone-18-pro', 'iphone-18-pro-max'],
+    'activos los modelos de esos equipos';
+end $$;
+
+-- El administrador: queda como nuevo y los usuarios no cambian (sin modo: la
+-- vitrina completa, como una instalación nueva).
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 do $$ begin perform public.restablecer_fabrica(); end $$;
@@ -63,7 +92,11 @@ do $$ begin
   assert (select nombre = 'Tienda de demostración' and modo_demo and pais = 'ar' and logo = '' and color_primario = '#1A73E8'
           and (legal_publicado ->> 'version') = '1' and cardinality(public.datos_de_ejemplo(t)) = 9
           and precios_actualizados_en is not null from public.tienda t), 'la tienda como nueva';
-  assert (select count(*) from public.equipos) = 6 and (select bool_and(es_demo) from public.equipos), 'solo los 6 equipos de demostración';
+  -- (cambiado en 0041: la vitrina completa, todos nuevos del 15 al Duo)
+  assert (select count(*) from public.equipos) = 219 and (select bool_and(es_demo and condicion = 'nuevo' and cardinality(fotos) = 1) from public.equipos),
+    'los 219 equipos de la vitrina, nuevos y con su imagen';
+  assert (select count(distinct modelo_id) from public.equipos) = 17, 'de 17 modelos';
+  assert (select usd_modo = 'apoyo' and usd_cotizacion = 1500 and usd_actualizado_en is not null and promo_banner_activo from public.tienda), 'con dólar y promos';
   assert (select count(*) from public.resenas) = 0, 'sin reseñas';
   -- Las secuencias siguen desde el mayor: un modelo nuevo no choca.
   insert into public.modelos (nombre, slug, generacion, orden) values ('Prueba', 'prueba-fabrica', 'x', 999);

@@ -1,8 +1,8 @@
 // =============================================================================
 // Página /solicitudes/: peticiones, quejas y reclamos con código de radicado
-// (Colombia, legal/FUENTES.md, fuente 17) y, cuando exista el módulo de
-// Argentina, el botón de arrepentimiento. Los tipos salen de SOLICITUDES
-// (paises.js) según el país de la tienda.
+// (Colombia, legal/FUENTES.md, fuente 17). Los tipos salen de SOLICITUDES
+// (paises.js) según el país de la tienda; los demás países no la ofrecen
+// (Argentina tuvo el botón de arrepentimiento hasta 0041).
 // - Los datos van SOLO a GHL por enviar-lead (api.enviarLead), como el pop-up:
 //   nunca a Supabase ni al píxel. Esta página no carga herramientas de
 //   medición.

@@ -77,3 +77,7 @@ node "$RAIZ/tests/sql/fabrica.mjs" demo "$DIR/instalacion.json"
 "${PSQL[@]}" -f "$RAIZ/tests/sql/restablecer.sql"
 "${PSQL[@]}" -At -f "$RAIZ/tests/sql/estado_fabrica.sql" > "$DIR/restablecida.json"
 node "$RAIZ/tests/sql/fabrica.mjs" comparar "$DIR/instalacion.json" "$DIR/restablecida.json"
+# El modo básico (0041): la tienda de ejemplo con los 6 equipos de demostración.
+"${PSQL[@]}" -c "set role authenticated; set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a'; select public.restablecer_fabrica('basica');" >/dev/null
+"${PSQL[@]}" -At -f "$RAIZ/tests/sql/estado_fabrica.sql" > "$DIR/basica.json"
+node "$RAIZ/tests/sql/fabrica.mjs" basica "$DIR/instalacion.json" "$DIR/basica.json"

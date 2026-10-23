@@ -60,7 +60,8 @@ export const AR = {
     plazoEntregaObligatorio: true
   },
 
-  // AR11 y AR12: lo que el sitio muestra (paises.js y solicitudes).
+  // AR11: lo que el sitio muestra (paises.js). AR12 (botón de arrepentimiento)
+  // se quitó en 0041 por decisión de Jared.
   reclamos: { url: RECLAMOS, leyenda: LEYENDA_RECLAMOS },
 
   homologacion: "inscriptos en el RAMATEL del ENACOM y con un IMEI que no figura en la Base Negativa, según la Resolución ENACOM 2459/2016",
@@ -105,7 +106,9 @@ export const AR = {
     retracto: (ctx) => [
       `Como la compra se hace a distancia, usted puede arrepentirse y revocarla dentro de los ${AR.consumo.arrepentimiento.diasCorridos} días corridos desde que recibe el equipo o desde la compra, lo que ocurra último, según el artículo 34 de la Ley 24.240 y los artículos 1110 a 1116 del Código Civil y Comercial.`,
       "",
-      `- **Cómo pedirlo:** con el [botón de arrepentimiento](../solicitudes/) de este sitio, que le da un código del trámite, o ${ctx.venta.retractoCanal}.`,
+      // Sin botón de arrepentimiento (decisión de Jared, 0041): la compra no se
+      // hace entera en este sitio. Se pide por el canal de Legales.
+      `- **Cómo pedirlo:** ${ctx.venta.retractoCanal}.`,
       "- **Devolución del equipo:** los gastos de la devolución los pagamos nosotros."
     ],
     // Con Argentina el plazo de entrega es obligatorio (AR3): no hay texto de respaldo.

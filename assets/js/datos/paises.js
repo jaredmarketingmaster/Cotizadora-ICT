@@ -72,11 +72,11 @@ export const AUTORIDAD_CONSUMIDOR = {
 // la tienda (textos: "solicitudes.tipo.<tipo>"; título y enlace del pie:
 // "solicitudes.titulo.<código>" y "sitio.pie.solicitudes.<código>"). Colombia:
 // peticiones, quejas y reclamos con radicado (legal/FUENTES.md, fuente 17).
-// Argentina: el botón de arrepentimiento (AR12). Sin tipos, no se ofrece.
+// Argentina: sin tipos desde 0041 (Jared quitó el botón de arrepentimiento:
+// la compra no se hace entera en el sitio). Sin tipos, no se ofrece.
 // Los mismos tipos acepta enviar-lead (TIPOS_SOLICITUD de lead.ts).
 export const SOLICITUDES = {
-  co: ["peticion", "queja", "reclamo"],
-  ar: ["arrepentimiento"]
+  co: ["peticion", "queja", "reclamo"]
 };
 export const PAIS_POR_DEFECTO = "ar";
 

@@ -231,8 +231,10 @@ caso("Argentina: faltantes propios (CUIT, garantías, plazo de entrega, RNBD y D
   const t = visible(docs.terminos);
   for (const x of ["pesos argentinos", "Equipos nuevos: 6 meses desde la entrega.", "Equipos usados: 3 meses desde la entrega.",
     "dentro de los 10 días corridos desde que recibe el equipo o desde la compra, lo que ocurra último", "artículo 34 de la Ley 24.240",
-    "botón de arrepentimiento", "los gastos de la devolución los pagamos nosotros", "RAMATEL del ENACOM",
+    "los gastos de la devolución los pagamos nosotros", "RAMATEL del ENACOM",
     "Defensa de las y los consumidores. Para reclamos ingrese aquí"]) assert.ok(t.includes(x), `términos: ${x}`);
+  // (cambiado en 0041: sin botón de arrepentimiento; se pide por el canal de Legales)
+  assert.ok(!t.includes("botón de arrepentimiento") && !docs.terminos.includes("../solicitudes/"), "sin botón de arrepentimiento");
   assert.ok(!t.includes("Reversión del pago") && !t.includes("Superintendencia"), "nada de Colombia");
   assert.ok(!t.includes("dentro de las 24 horas"), "con plazo de Envíos, sin texto de respaldo");
   // Colombia y Argentina juntas: las secciones de los dos y el mínimo mayor (12 meses).

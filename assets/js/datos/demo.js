@@ -14,7 +14,8 @@ import { esPredeterminada, urlPredeterminada } from "./predeterminadas.js";
 import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MAX_LOTE, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, CANALES_AUTORIZACION, ALCANCES_AUTORIZACION, CAMPOS_RESENA_PUBLICOS, LEGAL_INICIAL, errorLegales, elegir } from "./comun.js";
 import { hexValido, sesion, esperar } from "../utils.js";
 import { whatsappValido, CODIGOS_PAIS_TIENDA } from "./paises.js";
-import { tiendaNueva, TIENDA_EJEMPLO, PAGOS_VACIOS, tieneDatosDeEjemplo } from "./ejemplo.js";
+import { tiendaNueva, TIENDA_EJEMPLO, TIENDA_VITRINA, PAGOS_VACIOS, tieneDatosDeEjemplo, camposDeEjemplo, CAMPOS_EJEMPLO, MODOS_FABRICA, MODO_INICIAL } from "./ejemplo.js";
+import { equiposVitrina } from "./vitrina.js";
 import { USD_INICIAL, PROMOS_INICIAL, errorUsd, errorPromos, errorEquipoPrecios, aplicarStock, stockBajo } from "./precios.js";
 import { CODIGOS_IDIOMA, t as tr } from "../i18n/i18n.js";
 
@@ -39,27 +40,44 @@ function uuid() {
 
 function ahora() { return new Date().toISOString(); }
 
-function estadoInicial() {
+// Los equipos de demostración: los 6 de DEMO_EQUIPOS (modo "basica") o la
+// vitrina completa (0041, vitrina.js). Activa sus modelos (activo_por_demo).
+function equiposDemo(modelos, colores, modo, t) {
+  const porSlug = new Map(modelos.map((m) => [m.slug, m]));
+  const lista = modo === "completa" ? equiposVitrina() : DEMO_EQUIPOS;
+  for (const d of lista) {
+    const m = porSlug.get(d.slug);
+    if (!m.activo) Object.assign(m, { activo: true, activo_por_demo: true });
+  }
+  const colorDe = (modeloId, nombre) => colores.find((c) => c.modelo_id === modeloId && c.oficial && c.nombre_es === nombre).id;
+  return lista.map((d) => {
+    const q = {
+      id: uuid(), modelo_id: porSlug.get(d.slug).id, condicion: d.condicion, capacidad: d.capacidad,
+      color_id: colorDe(porSlug.get(d.slug).id, d.color), color_nombre_mostrar: d.color_nombre_mostrar,
+      precio: d.precio, en_stock: d.en_stock, fotos: d.fotos ?? [], video: "",
+      precio_usd: null, promo_descuento: d.promo_descuento ?? null, contar_stock: d.contar_stock ?? false, stock_cantidad: d.stock_cantidad ?? null,
+      publicado: true, destacado: d.destacado, mas_vendido: d.mas_vendido ?? false, descripcion_extra: "", es_demo: true,
+      bateria_porcentaje: d.bateria_porcentaje ?? null, estado_estetico: d.estado_estetico ?? null,
+      detalles: d.detalles ?? "", incluye: d.incluye ?? "", creado_en: t, actualizado_en: t
+    };
+    aplicarStock(q);
+    return q;
+  });
+}
+
+// modo (0041): "completa" (la vitrina, la instalación nueva) o "basica" (los 6
+// equipos de demostración, sin promos ni dólar).
+function estadoInicial(modo = MODO_INICIAL) {
   const t = ahora();
   const modelos = CATALOGO.map((m, i) => ({ id: i + 1, ...m, activo: false, activo_por_demo: false, creado_en: t }));
-  const porSlug = new Map(modelos.map((m) => [m.slug, m]));
-  for (const d of DEMO_EQUIPOS) Object.assign(porSlug.get(d.slug), { activo: true, activo_por_demo: true });
   const colores = coloresOficiales(modelos);
-  const colorDe = (modeloId, nombre) => colores.find((c) => c.modelo_id === modeloId && c.nombre_es === nombre).id;
-  const equipos = DEMO_EQUIPOS.map((d) => ({
-    id: uuid(), modelo_id: porSlug.get(d.slug).id, condicion: d.condicion, capacidad: d.capacidad,
-    color_id: colorDe(porSlug.get(d.slug).id, d.color), color_nombre_mostrar: d.color_nombre_mostrar,
-    precio: d.precio, en_stock: d.en_stock, fotos: [], video: "",
-    precio_usd: null, promo_descuento: null, contar_stock: false, stock_cantidad: null,
-    publicado: true, destacado: d.destacado, mas_vendido: false, descripcion_extra: "", es_demo: true,
-    bateria_porcentaje: d.bateria_porcentaje ?? null, estado_estetico: d.estado_estetico ?? null,
-    detalles: d.detalles ?? "", incluye: d.incluye ?? "", creado_en: t, actualizado_en: t
-  }));
+  const equipos = equiposDemo(modelos, colores, modo, t);
   return {
     version: VERSION,
     // Desde 0037: una tienda de Argentina con datos de ejemplo y los legales
-    // publicados (ejemplo.js), igual que la instalación nueva del SQL.
-    tienda: tiendaNueva(t),
+    // publicados (ejemplo.js), igual que la instalación nueva del SQL. Desde
+    // 0041, con la vitrina (promos y dólar de ejemplo) en el modo "completa".
+    tienda: tiendaNueva(t, { modo }),
     modelos,
     fichas: modelos.map((m) => ({ modelo_id: m.id, descripcion: "", especificaciones: filasDeFuente(m.slug), actualizado_en: t })),
     colores,
@@ -72,7 +90,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 28;
+const VERSION = 29;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -275,8 +293,36 @@ const MIGRACIONES = {
     }
     Object.assign(t, copia(USD_INICIAL), copia(PROMOS_INICIAL));
     for (const q of e.equipos) Object.assign(q, { precio_usd: null, promo_descuento: null, contar_stock: false, stock_cantidad: null });
+  },
+  // 0041_vitrina.sql: la tienda de ejemplo sin tocar pasa a la vitrina
+  // completa (con el horario, las formas de pago y los legales nuevos, sin el
+  // botón de arrepentimiento). Una tienda que ya se personalizó no cambia.
+  28(e) {
+    if (!tiendaIntacta(e)) return;
+    const t = ahora();
+    const nueva = tiendaNueva(t, { modo: "completa" });
+    for (const k of [...Object.keys(TIENDA_EJEMPLO), ...Object.keys(TIENDA_VITRINA), "usd_actualizado_en", "legal_publicado"]) e.tienda[k] = copia(nueva[k]);
+    for (const m of e.modelos) if (m.activo_por_demo) Object.assign(m, { activo: false, activo_por_demo: false });
+    e.equipos = equiposDemo(e.modelos, e.colores, "completa", t);
+    e.tienda.precios_actualizados_en = t;
   }
 };
+
+// La tienda de ejemplo como la dejó 0037 (la condición de 0041_vitrina.sql):
+// todos los datos de ejemplo, legales en su versión 1, sin marca, horario,
+// formas de pago, dólar ni promos, y solo los 6 equipos de demostración. (Aquí
+// el horario y las formas de pago pueden ser ya los de ejemplo: la migración
+// 27 de un navegador viejo usa la tienda de ejemplo de hoy.)
+const SIN_TOCAR_0041 = { horario_texto: "", ...PAGOS_VACIOS };
+function tiendaIntacta(e) {
+  const t = e.tienda;
+  const igual = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+  return t.nombre === "Tienda de demostración" && t.modo_demo && !t.logo && !t.correo_contacto
+    && camposDeEjemplo(t).length === CAMPOS_EJEMPLO.length && t.legal_publicado?.version === 1
+    && Object.entries(SIN_TOCAR_0041).every(([k, v]) => igual(t[k], v) || (k in TIENDA_EJEMPLO && igual(t[k], TIENDA_EJEMPLO[k])))
+    && t.usd_modo === "no" && !t.promo_banner_activo && !t.promo_descuentos_activos
+    && e.equipos.length === DEMO_EQUIPOS.length && e.equipos.every((q) => q.es_demo);
+}
 
 // Lo mismo que 0028_colores_apple.sql: renombres, la lista completa de
 // oficiales por modelo (COLORES) y los que salen del catálogo (de la tienda si
@@ -1006,13 +1052,15 @@ export const demo = {
   },
 
   // ---------------- Restablecer de fábrica ----------------
-  // Como restablecer_fabrica() (0036): solo el administrador. Todo vuelve a
-  // los datos iniciales menos los usuarios, y se borran los archivos.
-  async restablecerFabrica() {
+  // Como restablecer_fabrica() (0036 y 0041): solo el administrador. Todo
+  // vuelve a los datos iniciales menos los usuarios, y se borran los archivos.
+  // modo: "completa" (la vitrina) o "basica" (los 6 equipos de demostración).
+  async restablecerFabrica(modo = "completa") {
     await red();
     const e = leer();
     exigirAdministrador(e, "solo_administrador_fabrica");
-    const nuevo = estadoInicial();
+    if (!MODOS_FABRICA.includes(modo)) throw error("formato");
+    const nuevo = estadoInicial(modo);
     nuevo.perfiles = e.perfiles;
     escribir(nuevo);
     try { await idb("readwrite", (s) => s.clear()); } catch { /* sin IndexedDB */ }

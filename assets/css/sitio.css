@@ -240,6 +240,10 @@
   border-top: 1px solid var(--borde);
 }
 .contador { font-weight: 700; font-size: 1.0625rem; }
+/* Antes de que lleguen los datos (0041, CLS): el contador y la lista de
+   modelos ocupan ya su lugar, para que el resto no salte al dibujarlos. */
+.contador:empty::before { content: "\00a0"; }
+.desplegable:empty { min-height: 62px; }
 
 .limpiado { animation: limpiado 700ms var(--curva); }
 @keyframes limpiado {

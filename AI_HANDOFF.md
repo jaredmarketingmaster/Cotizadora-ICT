@@ -2,10 +2,10 @@
 > LECTURA OBLIGATORIA PARA EL AGENTE ENTRANTE (Codex, Claude u otro): Lee este documento antes de ejecutar comandos o proponer código.
 
 ## 1. 🚦 ESTADO ACTUAL (METADATA)
-- **Último Agente:** Claude Code 4. Quitó el archivo XML, preparó la investigación con Gemini y ejecutó el plan de 9 puntos de la sección 5: **los 9 puntos están hechos**. La sesión se cortó una vez al 83 % y siguió con tokens renovados. Después: roles corregidos (`0035`), restablecer de fábrica (`0036`), tienda de ejemplo de Argentina, dólar, promos y stock contado (`0037` a `0040`) y la v1.1 con las imágenes predeterminadas, completa (punto 11 de la sección 5). Lo demás que queda está en "Siguiente".
+- **Último Agente:** Claude Code 4. Quitó el archivo XML, preparó la investigación con Gemini y ejecutó el plan de 9 puntos de la sección 5: **los 9 puntos están hechos**. La sesión se cortó una vez al 83 % y siguió con tokens renovados. Después: roles corregidos (`0035`), restablecer de fábrica (`0036`), tienda de ejemplo de Argentina, dólar, promos y stock contado (`0037` a `0040`), la v1.1 con las imágenes predeterminadas, completa (punto 11 de la sección 5), y **la vitrina para la versión publicada (`0041`, punto 12)**: la instalación nueva muestra los 219 iPhone nuevos del 15 al Duo, el restablecer tiene dos modos (vitrina completa o básica) y se quitó el botón de arrepentimiento. Lo demás que queda está en "Siguiente".
 - **Timestamp:** 2026-10-23 (actualizado por Claude Code 4).
 - **Rama Actual:** `claude/gallant-euler-ezco6g` (último commit de esta tanda: ver `git log`; árbol limpio y sincronizado con `origin` al cerrar cada punto). `main` solo tiene el README inicial: **no** trabajar sobre `main` ni abrir PR sin que Jared lo pida.
-- **Estado del Build:** VERDE. No hay build ni `package.json`: es un sitio estático sin npm ni compilación, a propósito. "Verde" significa que pasan todas las suites del 23/10/2026 (después del punto 9): SQL OK, las 6 suites sin navegador OK (1178 claves), funciones Deno OK, `tests/verificar.cjs` 85/85 (86 con `ICT_CAPTURAS=1`), `tests/verificar-supabase.cjs` OK y `tests/documentacion.mjs` OK. Una corrida de `verificar.cjs` tuvo 1 falla intermitente que no se repitió ni se identificó: si aparece, mirar qué caso es antes de tocar nada. Lighthouse móvil del 23/10, después del plan: 100 / 100 / 100.
+- **Estado del Build:** VERDE. No hay build ni `package.json`: es un sitio estático sin npm ni compilación, a propósito. "Verde" significa que pasan todas las suites del 23/10/2026 (después de `0041`): SQL OK (instalación nueva = demo, restablecer completo y básico), las 6 suites sin navegador OK (1257 claves), funciones Deno OK, `tests/verificar.cjs` 92/92 (93 con `ICT_CAPTURAS=1`), `tests/verificar-supabase.cjs` 16/16 y `tests/documentacion.mjs` OK. Una corrida de `verificar.cjs` tuvo 1 falla intermitente que no se repitió ni se identificó: si aparece, mirar qué caso es antes de tocar nada. Lighthouse móvil del 23/10 sobre la vitrina (`0041`): 99 / 100 / 100 sin franja (CLS 0,073 por el banner de promos) y 90 con la franja de demo.
 - **Comando de Verificación:**
   ```bash
   python3 -m http.server 8080 & \
@@ -20,9 +20,9 @@
 
 ## 2. 🧠 MEMORIA ARQUITECTÓNICA (INMUTABLE)
 1. **Sitio estático sin build.** HTML, CSS y JavaScript con ES modules y **rutas relativas** (funciona bajo `/Cotizadora-ICT/` en GitHub Pages). No agregar npm, `package.json`, bundlers, TypeScript en el front ni frameworks. Las únicas dependencias externas son Google Fonts (sitio) y supabase-js 2.117.2 desde jsDelivr (solo el panel).
-2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0041_…sql`**. **Restablecer de fábrica (`0036`):** una migración que cambie la semilla (catálogo, colores, fichas, equipos demo) o los valores iniciales de la tienda tiene que volver a crear `datos_fabrica()` con `tests/sql/fabrica.mjs` (ver su encabezado); `probar.sh` falla si no. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 28) con su `MIGRACIONES[n]`.
+2. **Dos back-ends con la misma interfaz y las mismas reglas.** `assets/js/datos/api.js` elige `demo.js` (localStorage e IndexedDB) o `supabase.js` según `config.js`. Toda regla nueva va **en el SQL (migración nueva) y en `demo.js`**, con mensajes iguales. La seguridad real está en el SQL (RLS con `es_gestor()` / `es_administrador()` y disparadores). Las migraciones de `supabase/migrations/` son inmutables; la próxima libre es **`0042_…sql`**. **Restablecer de fábrica (`0036`):** una migración que cambie la semilla (catálogo, colores, fichas, equipos demo) o los valores iniciales de la tienda tiene que volver a crear `datos_fabrica()` con `tests/sql/fabrica.mjs` (ver su encabezado); `probar.sh` falla si no. Si cambia la forma de los datos del demo, se sube `VERSION` en `demo.js` (hoy 29) con su `MIGRACIONES[n]`. **Vitrina (`0041`):** si cambian los datos de ejemplo, la vitrina (`vitrina.js`) o las plantillas legales, hace falta una migración nueva con el bloque de `node tests/sql/vitrina.mjs sql` (con su condición de tienda sin tocar) y `datos_fabrica()` regenerado.
 3. **Idioma y textos.** Español de Colombia con **"usted"** (nunca "tú" ni voseo) y portugués de Brasil con "você". **Ningún texto visible suelto en el código:** todo va en `assets/js/i18n/es.js` y `pt.js`, con las mismas claves y variables, y se usa con `t(clave)` / `tn(clave, n)`. `t()` se llama al usar el texto, nunca al cargar el módulo. Los textos literales del prompt (en `popup.js` y `catalogo.js`, ver `CLAUDE.md`) no se reescriben.
-4. **Reglas de producto que la suite hace cumplir** (la suite demo tiene hoy 90 casos):
+4. **Reglas de producto que la suite hace cumplir** (la suite demo tiene hoy 92 casos):
    - No inventar datos (especificaciones, colores, precios, plazos ni promesas): lo que la fuente no trae queda vacío.
    - Nada de la marca Apple: sin logo, íconos ni tipografías; solo `apple.com/co` como referencia de texto. **Excepción v1.1:** las imágenes predeterminadas de `assets/img/predeterminadas/` (solo WebP, de Jared).
    - Datos personales de clientes **solo a GHL** por `enviar-lead`: nunca en Supabase ni en el píxel. Nunca `Purchase`.
@@ -49,10 +49,10 @@
   - Mi tienda (marca, logo, colores, título, país e idioma, reseñas).
   - Catálogo con cuatro pestañas: modelos y colores, ficha técnica, formas de pago y envíos. (El archivo XML de productos se quitó el 22/10/2026 a pedido de Jared: no se habilita por ahora.)
   - Asistente de Legales de 6 pasos que genera y publica los 4 documentos, con los módulos de Colombia y Argentina.
-  - Página `/solicitudes/` (PQR con radicado en Colombia; botón de arrepentimiento en Argentina).
+  - Página `/solicitudes/` (PQR con radicado en Colombia). El botón de arrepentimiento de Argentina se quitó en `0041` (decisión de Jared).
   - Usuarios: invitar, cambiar el rol, desactivar y reactivar.
 - **Base de datos**:
-  - Migraciones `0001` a `0031` (la `0027` quita la columna del archivo XML; la `0028`, colores según Apple; la `0029`, fichas según Apple; la `0030`, mínimo de garantía de usados en Colombia; la `0031`, módulo legal de Argentina; la `0032`, pasarelas por país; la `0033`, WhatsApp de la tienda; la `0034`, autorización de las reseñas; la `0035`, el administrador también gestiona la tienda; la `0036`, restablecer de fábrica; la `0037`, tienda de ejemplo de Argentina; la `0038`, dólar; la `0039`, promos; la `0040`, stock contado), con RLS, disparadores, `datos_publicos()`, `borrar_datos_demo()`, `legal_faltantes()`, `crear_equipos_lote()` y `archivos_en_uso()`.
+  - Migraciones `0001` a `0031` (la `0027` quita la columna del archivo XML; la `0028`, colores según Apple; la `0029`, fichas según Apple; la `0030`, mínimo de garantía de usados en Colombia; la `0031`, módulo legal de Argentina; la `0032`, pasarelas por país; la `0033`, WhatsApp de la tienda; la `0034`, autorización de las reseñas; la `0035`, el administrador también gestiona la tienda; la `0036`, restablecer de fábrica; la `0037`, tienda de ejemplo de Argentina; la `0038`, dólar; la `0039`, promos; la `0040`, stock contado; la `0041`, la vitrina y el restablecer con modo), con RLS, disparadores, `datos_publicos()`, `borrar_datos_demo()`, `legal_faltantes()`, `crear_equipos_lote()` y `archivos_en_uso()`.
   - Funciones Deno: `enviar-lead` y `usuarios`.
 - **Pruebas e infraestructura de prueba:**
   - Suites SQL, unitarias, de funciones, demo (Playwright), Supabase local y Lighthouse (`tests/lighthouse/`), todas en verde.
@@ -197,7 +197,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
     - ✅ **Tienda de ejemplo de Argentina, dólar, promos y stock contado (`0037` a `0040`), hechos a pedido de Jared** (ver la entrada de la sección 19 de `DOCUMENTACION.md`).
       - Lo que Jared eligió: la cotización de la tienda **y** el precio en U$D por equipo (gana el del equipo); redondeo al 0 o al 5 en pestañas; la combinación de descuentos la elige la tienda (mayor, más específico o suma); el cartel de stock con 1 unidad va rojo **con** resplandor; WhatsApp de ejemplo ficticio.
       - Pendiente si Jared lo pide (sección 17): el precio en U$D y las unidades en el asistente de carga en lote, la fecha de fin de las promos y medir el CLS con el banner.
-      - Si cambian las plantillas legales o los datos de ejemplo: `node tests/legal/ejemplo.mjs js` (y, para el SQL, una migración nueva con `node tests/legal/ejemplo.mjs sql` y `datos_fabrica()`).
+      - Si cambian las plantillas legales o los datos de ejemplo: `node tests/legal/ejemplo.mjs js` (y, para el SQL, una migración nueva con el bloque de `node tests/sql/vitrina.mjs sql` y `datos_fabrica()`; el modo `sql` de `ejemplo.mjs` ya no existe).
 11. ✅ **HECHO (v1.1): imágenes predeterminadas por modelo y color, 182 de 182 (23/10/2026).** Jared las pasó en tandas, sin nombre: el agente miró cada imagen y la ubicó (modelo y color). Si Jared pasa más (por ejemplo, una propia de un Plus o un Pro Max), se reemplaza con el mismo proceso:
     - **Cómo se hace una tanda:**
       1. Identificar cada imagen.
@@ -216,14 +216,19 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
       - `urlArchivo()` (demo y Supabase) la sirve desde el sitio y `borrarArchivos()` no la borra.
       - `panel/lote.js` la pone al empezar en cada color.
       - Sin migración.
-12. **Cierre de cada punto.**
+12. ✅ **HECHO (`0041_vitrina.sql`, demo `VERSION` 29): la vitrina para la versión publicada (23/10/2026).** Pedido de Jared: "el reset de fábrica siempre lo deje configurado como tienda de Argentina lleno de dummy data … con un inventario de todos los iPhone disponibles nuevos, ningún usado, a partir de la generación 15 hasta … iPhone 18 con iPhone Duo … complementalo como una segunda versión de hard reset", quitar el botón de arrepentimiento ("no hace falta … si la transacción no ocurre 100 % online") y libertad para sumar lo que falte.
+    - **Hecho:** `assets/js/datos/vitrina.js` (219 equipos: cada color y capacidad de la ficha de los 17 modelos, con su imagen predeterminada, precios de ejemplo, stock contado con 3 carteles, destacados, 3 más vendidos y un descuento por equipo); `TIENDA_VITRINA` en `ejemplo.js` (dólar de apoyo a 1.500, banner y descuentos de ejemplo); horario y formas de pago de ejemplo en `TIENDA_EJEMPLO` (también en los términos); `restablecer_fabrica(modo)` con `completa` (por defecto) y `basica` (los 6 equipos de antes); panel con el selector de modo; `/solicitudes/` solo para Colombia, términos de Argentina sin el botón y `enviar-lead` sin el tipo `arrepentimiento`.
+    - **Cómo se regenera** si cambian los datos: `node tests/sql/vitrina.mjs sql` da el bloque de la instalación (va en una migración nueva, nunca en `0041`); después `ICT_FABRICA=/tmp/i.json bash tests/sql/probar.sh` y `node tests/sql/fabrica.mjs sql /tmp/i.json` para `datos_fabrica()`.
+    - **Pruebas:** la tienda de prueba de Colombia y la suite de Supabase arrancan en el modo básico (las pruebas viejas se escribieron para 6 equipos); la vitrina tiene sus casos propios.
+    - **Pendiente con Jared** (sección 17 de `DOCUMENTACION.md`): revisar los precios de ejemplo; la lista de lo que hay que cambiar al vender (WhatsApp y Legales bloquean; Promos, Moneda, horario y formas de pago no); redes y correo de contacto de ejemplo quedaron vacíos a propósito.
+13. **Cierre de cada punto.**
     - Actualizar `DOCUMENTACION.md`: sección 5, sección temática, 16, 17 (quitar lo resuelto), entrada nueva en la 19 y la fecha.
     - Mantener al día los conteos de `README.md`, `CLAUDE.md` y este archivo (próxima migración, `VERSION` del demo, punto ✅ con su commit).
     - Correr el comando de verificación. Si se tocó el SQL o `supabase.js`, correr también `tests/verificar-supabase.cjs`.
     - Un commit por punto en español, con push a `claude/gallant-euler-ezco6g`.
 
 **Prohibido tocar:**
-- `supabase/migrations/0001` a `0040`: son inmutables; los cambios van en migraciones nuevas.
+- `supabase/migrations/0001` a `0041`: son inmutables; los cambios van en migraciones nuevas.
 - Los textos literales del prompt en `assets/js/sitio/popup.js` y `assets/js/sitio/catalogo.js`, y el mensaje de WhatsApp.
 - `config.js`: solo lleva la conexión y el script de GHL; nunca datos de la tienda ni claves.
 - Las pruebas existentes: no se debilitan ni se borran.
