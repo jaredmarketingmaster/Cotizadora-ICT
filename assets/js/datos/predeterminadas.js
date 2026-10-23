@@ -19,7 +19,10 @@ export const PREFIJO_PREDETERMINADA = "predeterminadas/";
 export const IMAGENES_PREDETERMINADAS = {
   "iphone-7": { "Negro": "negro", "Oro": "oro", "Negro brillante": "negro-brillante", "(PRODUCT)RED": "product-red" },
   "iphone-7-plus": { "Negro": "negro", "Oro": "oro", "(PRODUCT)RED": "product-red", "Oro rosa": "oro-rosa", "Plata": "plata", "Negro brillante": "negro-brillante" },
-  "iphone-11": { "Morado": "morado", "(PRODUCT)RED": "product-red", "Blanco": "blanco", "Negro": "negro", "Verde": "verde" }
+  "iphone-11": { "Morado": "morado", "(PRODUCT)RED": "product-red", "Blanco": "blanco", "Negro": "negro", "Verde": "verde", "Amarillo": "amarillo" },
+  // El 11 Pro y el 11 Pro Max se ven iguales (cambia el tamaño): la misma imagen en los dos.
+  "iphone-11-pro": { "Verde noche": "verde-noche", "Plata": "plata", "Gris espacial": "gris-espacial", "Oro": "oro" },
+  "iphone-11-pro-max": { "Verde noche": "verde-noche", "Plata": "plata", "Gris espacial": "gris-espacial", "Oro": "oro" }
 };
 
 export const esPredeterminada = (ruta) => String(ruta || "").startsWith(PREFIJO_PREDETERMINADA);
