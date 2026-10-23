@@ -1233,6 +1233,7 @@ Se publica con verificación de JWT. Usa `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE
   | Portugués guardado, estrangulamiento real (`LIGHTHOUSE="npx lighthouse --throttling-method=devtools"`) | 99–100 · LCP 1,3 s (en español) | 94 · LCP 2,5 s (en portugués); sin `primer-pintado.js`, es decir, esperando a `principal.js`, era 82–83 · LCP 3,7 s |
 
   En español no cambia nada. En portugués, el LCP es el `h1` ya traducido: tiene que esperar a `pt.js` (unos 20 KB con gzip) y `es.js`, que `i18n.js` importa siempre. El estrangulamiento simulado (el de siempre) cuenta como dependencia del LCP todo lo pedido antes, por eso no muestra la mejora de `primer-pintado.js`; el real sí.
+- **Después del plan de 9 puntos (23/10/2026)** — Lighthouse móvil, sin franja, el mismo escenario (`tests/lighthouse/medir.sh`): **100 / 100 / 100** en las tres corridas, LCP 1,2–1,4 s, CLS 0,045, TBT 0 ms. Los enlaces nuevos del pie y la página `/solicitudes/` no cambiaron nada.
 - **Peso del sitio público:** unos 170 KB sin comprimir y unos 56 KB con gzip (suma de cada archivo comprimido por separado, sin `demo.js` ni `semilla.js`, sin fuentes ni fotos). La fase C sumó unos 4 KB con gzip (el límite era 30 KB). La ronda 2 lo llevó a unos 198 KB sin comprimir y 65 KB con gzip (+8 KB); de eso, `resenas.js` (2 KB con gzip) solo se descarga si la tienda muestra reseñas. El módulo legal suma en el sitio unos 10 KB con gzip (`consentimiento.js` 4,8 KB, `herramientas.js` 1,4 KB, `vigencia.js` 0,4 KB y lo agregado a `popup.js`, `comun.js`, `utils.js`, `principal.js`, `pixel.js` y `sitio.css`); el motor y las plantillas solo los carga el panel.
 
 ---
@@ -1379,7 +1380,7 @@ CORREOS_IDIOMA=pt BIN=… bash tests/supabase-local/levantar.sh   # con los corr
 ### 15.2 Producción, una tienda
 
 1. **Proyecto de Supabase.** Conviene la región São Paulo.
-2. **Migraciones:** correr **todas** las de `supabase/migrations/`, en orden de número, de `0001` a la última (hoy `0026`): `0001` esquema, `0002` catálogo, `0003` demo, `0004` stock sí/no, `0005` tamaño del texto, `0006` catálogo y colores, `0007` roles, `0008` color oficial, `0009` video, `0010` más vendido, `0011` vista de equipos, `0012` fichas, `0013` formas de pago, `0014` reseñas, `0015` legales (textos base, reemplazados por la siguiente), `0016` asistente de legales, `0017` bloqueo hasta publicar, `0018` país de la tienda, `0019` legales según el país de la tienda, `0020` idioma, `0021` título del sitio, `0022` hexadecimal aproximado, `0023` envíos, `0024` pasarelas y descuentos y `0025` dirección del sitio y `0026` carga en lote. Saltarse una rompe las siguientes (con la CLI, `supabase db push` las corre en orden). Crean también los buckets (`fotos` y `marca` en `0001`, `videos` en `0009`, `resenas` en `0014`) con sus reglas. Para actualizar una tienda ya publicada se corren solo las nuevas, en orden; nunca se edita una ya corrida. (El comentario de `0001_esquema.sql` que dice "0001 → 0002 → 0003" es de cuando eran tres; no se edita porque esa migración ya corrió.)
+2. **Migraciones:** correr **todas** las de `supabase/migrations/`, en orden de número, de `0001` a la última (hoy `0034`): `0001` esquema, `0002` catálogo, `0003` demo, `0004` stock sí/no, `0005` tamaño del texto, `0006` catálogo y colores, `0007` roles, `0008` color oficial, `0009` video, `0010` más vendido, `0011` vista de equipos, `0012` fichas, `0013` formas de pago, `0014` reseñas, `0015` legales (textos base, reemplazados por la siguiente), `0016` asistente de legales, `0017` bloqueo hasta publicar, `0018` país de la tienda, `0019` legales según el país de la tienda, `0020` idioma, `0021` título del sitio, `0022` hexadecimal aproximado, `0023` envíos, `0024` pasarelas y descuentos, `0025` dirección del sitio, `0026` carga en lote, `0027` quita la dirección del sitio (sin archivo XML), `0028` colores según Apple, `0029` fichas según Apple, `0030` garantía de usados en Colombia, `0031` módulo legal de Argentina, `0032` pasarelas por país, `0033` WhatsApp de la tienda y `0034` autorización de las reseñas. Saltarse una rompe las siguientes (con la CLI, `supabase db push` las corre en orden). Crean también los buckets (`fotos` y `marca` en `0001`, `videos` en `0009`, `resenas` en `0014`) con sus reglas. Para actualizar una tienda ya publicada se corren solo las nuevas, en orden; nunca se edita una ya corrida. (El comentario de `0001_esquema.sql` que dice "0001 → 0002 → 0003" es de cuando eran tres; no se edita porque esa migración ya corrió.)
 3. **Registro:** apagar "Allow new users to sign up".
 4. **Direcciones:** Site URL y Redirect URLs apuntando a `/admin/`.
 5. **Correo:** SMTP propio y las plantillas de `supabase/correos/`.
@@ -1507,7 +1508,6 @@ CORREOS_IDIOMA=pt BIN=… bash tests/supabase-local/levantar.sh   # con los corr
 - [ ] **Fuentes legales que no se pudieron abrir** desde el entorno: se verificaron con el buscador y, desde el 22/10/2026, con los informes de Gemini Deep Research que pasó Jared (citas revisadas por coherencia, no contra el original). Ver `legal/FUENTES.md`. Queda para el abogado: la Ley 2300 (franjas, con fuentes secundarias) y si el radicado de PQR con respuesta por WhatsApp o correo cumple con el "seguimiento" (fuente 17).
 - [ ] **Cookies del script de seguimiento externo de GHL:** no se verificaron; si se activa, agregarlo a la Política de cookies.
 - [ ] Probar en GHL los campos de consentimiento y la guía de la sección 12.3.
-- [ ] **Lighthouse:** volver a medir (`tests/lighthouse/medir.sh`) después de los puntos 4 a 7, que agregaron enlaces al pie y la página `/solicitudes/`.
 - [ ] Que el abogado confirme si publicar capturas de clientes (aun tapadas) necesita autorización por escrito, y si alcanza con lo que guarda el panel desde `0034` (canal, fecha y alcance de la autorización, sin datos de la persona; el mensaje o el documento lo guarda la tienda por fuera).
 - [ ] **Reseñas de antes de `0034`:** quedan "sin registrar" hasta que la tienda complete la autorización en su fila. Se siguen mostrando en el sitio mientras tanto.
 - [x] ~~Confirmar los nombres del catálogo~~: confirmados con las fichas de soporte de Apple en español (informes de Gemini, 22/10/2026). Apple anunció el 17e, 18 Pro, 18 Pro Max y Duo.
@@ -1571,6 +1571,15 @@ Otros LLM o herramientas que no ejecuten hooks deben seguir la misma regla a man
 ## 19. Registro de cambios
 
 > La entrada más nueva va arriba. Formato: **fecha · título** — pedido → qué se hizo → archivos → verificación.
+
+### 23/10/2026 · Lighthouse después del plan y lista de migraciones al día
+
+- **Pedido:** el único pendiente que se podía hacer sin nadie, según `AI_HANDOFF.md`, era volver a medir.
+- **Hecho:**
+  - Lighthouse móvil con 3 corridas: 100 / 100 / 100, LCP 1,2–1,4 s, CLS 0,045 (sección 13).
+  - Se quitó el pendiente de la sección 17.
+  - En la sección de despliegue, la lista de migraciones decía "hoy `0026`": ahora llega a `0034`, con lo que hace cada una.
+- **Verificación:** `node tests/documentacion.mjs` OK. El código no cambia.
 
 ### 23/10/2026 · Investigación con Gemini, punto 9: autorización de las reseñas (`0034`). Plan de 9 puntos terminado
 

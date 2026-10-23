@@ -5,7 +5,7 @@
 - **Último Agente:** Claude Code 4. Quitó el archivo XML, preparó la investigación con Gemini y ejecutó el plan de 9 puntos de la sección 5: **los 9 puntos están hechos**. La sesión se cortó una vez al 83 % y siguió con tokens renovados. Lo que queda está en "Siguiente", al final de la sección 5.
 - **Timestamp:** 2026-10-23 (actualizado por Claude Code 4).
 - **Rama Actual:** `claude/gallant-euler-ezco6g` (último commit de esta tanda: ver `git log`; árbol limpio y sincronizado con `origin` al cerrar cada punto). `main` solo tiene el README inicial: **no** trabajar sobre `main` ni abrir PR sin que Jared lo pida.
-- **Estado del Build:** VERDE. No hay build ni `package.json`: es un sitio estático sin npm ni compilación, a propósito. "Verde" significa que pasan todas las suites del 23/10/2026 (después del punto 9): SQL OK, las 6 suites sin navegador OK (1178 claves), funciones Deno OK, `tests/verificar.cjs` 84/84 (85 con `ICT_CAPTURAS=1`), `tests/verificar-supabase.cjs` OK y `tests/documentacion.mjs` OK. Una corrida de `verificar.cjs` tuvo 1 falla intermitente que no se repitió ni se identificó: si aparece, mirar qué caso es antes de tocar nada. Lighthouse no se volvió a medir en esta tanda (la última medición, del 22/10: 99–100 / 100 / 100).
+- **Estado del Build:** VERDE. No hay build ni `package.json`: es un sitio estático sin npm ni compilación, a propósito. "Verde" significa que pasan todas las suites del 23/10/2026 (después del punto 9): SQL OK, las 6 suites sin navegador OK (1178 claves), funciones Deno OK, `tests/verificar.cjs` 84/84 (85 con `ICT_CAPTURAS=1`), `tests/verificar-supabase.cjs` OK y `tests/documentacion.mjs` OK. Una corrida de `verificar.cjs` tuvo 1 falla intermitente que no se repitió ni se identificó: si aparece, mirar qué caso es antes de tocar nada. Lighthouse móvil del 23/10, después del plan: 100 / 100 / 100.
 - **Comando de Verificación:**
   ```bash
   python3 -m http.server 8080 & \
@@ -70,7 +70,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
 - **Datos de catálogo que faltan:** la descripción de los modelos y los hexadecimales oficiales, que Apple no publica (`catalogo/FALTANTES.md`). **No se completan de memoria**.
 - **Sin verificar contra el original:** todo lo que vino de los informes de Gemini (fuentes legales de Colombia y Argentina, fichas, colores y pasarelas) se revisó por coherencia, no contra las páginas oficiales: el proxy del entorno bloquea infoleg, el Boletín Oficial, el sitio de Apple y las páginas de las pasarelas. Tampoco están verificados los formatos de celular de 9 países (Cuba, Guatemala, Honduras, Nicaragua, Panamá, Paraguay, República Dominicana, Uruguay y Venezuela) ni las traducciones al portugués ("cotizador" quedó "cotador").
 - **Prueba intermitente:** una corrida de `tests/verificar.cjs` (durante el punto 5) tuvo 1 falla que no mostró qué caso era y no se repitió en las corridas completas que siguieron (todas las fallas posteriores fueron pruebas que había que ajustar por un cambio, y se ajustaron). Si vuelve a aparecer, guardar la salida completa y mirar el caso antes de tocar nada.
-- **Lighthouse:** no se volvió a medir después de los puntos 4 a 7, que agregaron enlaces al pie y la página `/solicitudes/`. La última medición es la del 22/10. Conviene medir de nuevo (`tests/lighthouse/medir.sh`).
+- **Lighthouse:** medido el 23/10/2026, después del plan: 100 / 100 / 100, LCP 1,2–1,4 s, CLS 0,045 (sección 13 de `DOCUMENTACION.md`).
 - **Fuera del código:** Supabase real, GHL real, SMTP y GitHub Pages no están conectados (los hace el equipo de Jared).
 - **Entorno:** en este contenedor el proxy bloquea jsDelivr, unpkg y esm.sh. Para la suite de Supabase local se usa un supabase-js armado con esbuild (`ICT_SUPABASE_JS`). **Nunca** usar `pkill -f` con un texto que aparezca en el mismo comando: mata la propia shell.
 
@@ -170,7 +170,7 @@ No hay tests fallando ni configuraciones a medias. El código actual funciona y 
    - **Nunca** crear reseñas de ejemplo, tampoco en el demo.
    - **Al terminar:** quitar de la sección 17 de `DOCUMENTACION.md` el pendiente "el panel pide la casilla en cada reseña, pero no guarda la autorización". Que el abogado confirme si alcanza.
 10. **Siguiente (después del plan).** No hay tareas de código aprobadas pendientes. Lo que falta, todo en la sección 17 de `DOCUMENTACION.md`, necesita a Jared o a terceros:
-    - **Lighthouse:** medir de nuevo (`npx serve -l 8090 . &` y `NODE_PATH="$(npm root -g)" bash tests/lighthouse/medir.sh corrida1`). Es lo único que se puede hacer sin nadie. Si baja de 90 en algo, investigar antes de cambiar.
+    - **Lighthouse:** medido después del plan: 100 / 100 / 100, LCP 1,2–1,4 s, CLS 0,045. Volver a medir si cambia algo del sitio público.
     - **Revisión de abogados:**
       - Colombia: PQR con radicado y la Ley 2300.
       - Argentina: todo el módulo `ar.js`.
