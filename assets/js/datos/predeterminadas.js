@@ -29,9 +29,10 @@ export const IMAGENES_PREDETERMINADAS = {
   "iphone-8": { "Oro": "oro", "Gris espacial": "gris-espacial", "(PRODUCT)RED": "product-red", "Plata": "plata" },
   "iphone-8-plus": { "(PRODUCT)RED": "product-red", "Plata": "plata", "Gris espacial": "gris-espacial", "Oro": "oro" },
   "iphone-x": { "Plata": "plata", "Gris espacial": "gris-espacial" },
-  // XS y XS Max: Oro con la misma imagen (se ven iguales; cambia el tamaño). Gris espacial: cada uno la suya.
-  "iphone-xs": { "Gris espacial": "gris-espacial", "Oro": "oro" },
-  "iphone-xs-max": { "Gris espacial": "gris-espacial", "Oro": "oro" },
+  // XS y XS Max: Oro y Plata con la misma imagen (se ven iguales; cambia el tamaño). Gris espacial: cada uno la suya.
+  // Plata lleva la marca de agua de otra empresa: Jared decidió dejarla así (23/10/2026).
+  "iphone-xs": { "Gris espacial": "gris-espacial", "Oro": "oro", "Plata": "plata" },
+  "iphone-xs-max": { "Gris espacial": "gris-espacial", "Oro": "oro", "Plata": "plata" },
   "iphone-xr": { "Negro": "negro", "Azul": "azul", "Coral": "coral", "Amarillo": "amarillo", "(PRODUCT)RED": "product-red", "Blanco": "blanco" }
 };
 
