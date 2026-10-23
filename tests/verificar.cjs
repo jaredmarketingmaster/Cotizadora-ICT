@@ -34,8 +34,14 @@ async function caso(nombre, fn) {
 // panel. cookies: la elección guardada al empezar (null = sin elegir: aparece
 // el banner); por defecto, todo rechazado.
 const COOKIES_RECHAZADAS = { medicion: false, publicidad: false };
-async function nueva(ancho = 1280, alto = 900, { legales = true, cookies = COOKIES_RECHAZADAS, ...opciones } = {}) {
+// La tienda de prueba de Colombia (tests/tienda-prueba-co.js) en lugar de la
+// tienda nueva de Argentina (0037), salvo con { tienda: "nueva" }. (cambiado en 0037)
+const TIENDA_PRUEBA_CO = fs.readFileSync(path.join(__dirname, "tienda-prueba-co.js"), "utf8");
+async function nueva(ancho = 1280, alto = 900, { legales = true, cookies = COOKIES_RECHAZADAS, tienda = "prueba", ...opciones } = {}) {
   const ctx = await navegador.newContext({ viewport: { width: ancho, height: alto }, ...opciones });
+  if (tienda !== "nueva") {
+    await ctx.route("**/assets/js/datos/ejemplo.js", (r) => r.fulfill({ contentType: "text/javascript", body: TIENDA_PRUEBA_CO }));
+  }
   const p = await ctx.newPage();
   p.legales = legales;
   if (cookies) {
@@ -1050,7 +1056,8 @@ async function llenarPopup(p) {
     assert.equal(await p.textContent("#barra-usuario"), "administrador@demo.co · Administrador");
     assert.equal(new URL(p.url()).hash, "#/inicio", "entra a Inicio");
     const visibles = await p.locator(".navegacion a:visible").allTextContents();
-    assert.deepEqual(visibles, ["Inicio", "Inventario", "Mi tienda", "Catálogo", "Legales", "Usuarios"]);
+    // (cambiado en 0039: Promos)
+    assert.deepEqual(visibles, ["Inicio", "Inventario", "Mi tienda", "Catálogo", "Promos", "Legales", "Usuarios"]);
     for (const [r, sel] of [["inventario", ".fila-equipo"], ["tienda", "#form-tienda"], ["catalogo", "#pestana-modelos"], ["legales", "#l-titulo"], ["usuarios", "#form-invitar"]]) {
       await p.goto(`${BASE}/admin/#/${r}`);
       await p.waitForSelector(sel);
@@ -1094,13 +1101,14 @@ async function llenarPopup(p) {
   }, CLAVE_DEMO);
 
   await caso("restablecer de fábrica (0036): solo el administrador, pide escribir RESTABLECER y deja todo como nuevo menos los usuarios", async () => {
-    const nuevo = await nueva(1280, 900, { legales: false });
+    // (cambiado en 0037: la tienda nueva real, la de ejemplo de Argentina)
+    const nuevo = await nueva(1280, 900, { legales: false, tienda: "nueva" });
     await nuevo.goto(BASE);
     await nuevo.waitForFunction((clave) => localStorage.getItem(clave), CLAVE_DEMO);
     const instalacion = await estadoFabrica(nuevo);
     await nuevo.context().close();
 
-    const p = await nueva(390, 844);
+    const p = await nueva(390, 844, { tienda: "nueva" });
     await entrarPanel(p, "gestor@demo.co");
     // Una tienda en uso: marca, legales publicados, inventario, foto, reseña, catálogo y un usuario más.
     await editarDemo(p, (e) => {
@@ -1156,11 +1164,249 @@ async function llenarPopup(p) {
       pedido.onsuccess = () => { const r = pedido.result.transaction("archivos").objectStore("archivos").count(); r.onsuccess = () => ok(r.result); };
     }));
     assert.equal(archivos, 0, "sin archivos");
-    // El sitio vuelve a la demo, sin legales publicados.
+    // El sitio vuelve a la demo (la tienda de ejemplo, con sus legales publicados).
     p.legalesListos = true;
     await ir(p);
     assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
     assert.equal(await p.locator(".galeria--carrusel").count(), 0, "vuelve la cuadrícula");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  // ------------------------------------------- 0037 a 0040 (pedido de Jared)
+  // El mensaje de WhatsApp del iPhone 15 Pro usado, con el precio que se pase.
+  const comprarUsado = async (p, telefono = "3001234567") => {
+    await ir(p, "/?condicion=usado&modelo=iphone-15-pro&capacidad=128-gb");
+    await p.click("#detalle-en-linea [data-comprar]");
+    await p.fill("#p-nombre", "Juan Pérez");
+    await p.fill("#p-correo", "juan@correo.co");
+    await p.click("#p-telefono");
+    await p.keyboard.type(telefono);
+    await p.check("#p-autorizacion");
+    // Argentina (0031): la casilla de la transferencia.
+    if (await p.locator("#p-transferencia").count()) await p.check("#p-transferencia");
+    await p.click("[data-enviar]");
+    await p.waitForSelector("text=Su pedido está listo");
+    return new URL((await p.evaluate(() => window.__abiertos)).at(-1));
+  };
+
+  await caso("tienda nueva (0037): Argentina con datos de ejemplo; el pop-up envía y las páginas legales los muestran; Inicio y Legales avisan; la demo no se quita hasta cambiarlos", async () => {
+    const p = await nueva(390, 844, { legales: false, tienda: "nueva" });
+    await ir(p);
+    assert.equal(await p.evaluate(async (base) => (await import(`${base}/assets/js/datos/paises.js`)).paisActual(), BASE), "ar");
+    assert.ok(await p.isVisible("#franja-demo"));
+    assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
+    // Precios en pesos argentinos (mismo formato) y el pop-up funciona con el WhatsApp de ejemplo.
+    const url = await comprarUsado(p, "1123456789");
+    assert.equal(url.origin + url.pathname, "https://wa.me/5491100000000");
+    assert.match(url.searchParams.get("text"), /^Hola, quiero comprar este equipo:\niPhone 15 Pro Usado\n128 GB · Titanio natural\nPrecio: \$3\.000\.000\n/);
+    for (const [ruta, texto] of [["/privacidad/", /Nombre y apellido de ejemplo[\s\S]*CUIT 20-12345678-6/], ["/terminos/", /Tienda de demostración/]]) {
+      await p.goto(`${BASE}${ruta}`, { waitUntil: "networkidle" });
+      await p.waitForFunction(() => !document.querySelector("#legal-texto[aria-busy]"));
+      assert.match(await p.textContent("#legal-texto"), texto, ruta);
+    }
+    // Panel: los avisos y la demo bloqueada.
+    await entrarPanel(p, "gestor@demo.co");
+    const avisos = await p.locator(".avisos li span").allTextContents();
+    assert.deepEqual(avisos.slice(0, 2), ["El WhatsApp es de ejemplo: cargue el de la tienda.", "Los textos legales tienen datos de ejemplo: cámbielos por los de la tienda."]);
+    assert.ok(await p.isDisabled("#borrar-demo"));
+    assert.ok(await p.isDisabled("#i-modo-demo"));
+    assert.match(await p.textContent("#demo-sin-legales"), /primero cambie los datos de ejemplo/);
+    const intentos = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      const r = [];
+      for (const fn of [() => a.borrarDatosDemo(), () => a.guardarTienda({ modo_demo: false })]) {
+        try { await fn(); r.push("pasó"); } catch (e) { r.push(e.message); }
+      }
+      return r;
+    });
+    assert.deepEqual(intentos, Array(2).fill("Cambie los datos de ejemplo (el WhatsApp y los de Legales) antes de quitar la demostración."));
+    await p.goto(`${BASE}/admin/#/legales/2`);
+    await p.waitForSelector("#l-titulo");
+    assert.ok(await p.isVisible("#l-ejemplo"));
+    // Con los datos propios (WhatsApp y Legales) la demo ya se puede borrar.
+    await editarDemo(p, (e) => Object.assign(e.tienda, {
+      whatsapp: "5491123456789", legal_nombre: "Ana García", legal_doc_numero: "27-30123456-8", legal_direccion: "Av. Siempreviva 742",
+      legal_correo: "ana@tienda.com.ar", legal_telefono: "5491123456789", legal_rnbd_numero: "123", legal_data_fiscal_url: "https://qr.afip.gob.ar/x",
+      meta_pixel_id: "123456789012345"
+    }));
+    const borrar = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      try { await (await api()).borrarDatosDemo(); return "ok"; } catch (e) { return e.message; }
+    });
+    assert.equal(borrar, "ok");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("dólar (0038): de apoyo y de reemplazo, con redondeo al 0 o al 5, precio propio del equipo, fecha del cambio y mensaje de WhatsApp", async () => {
+    const p = await nueva(390, 844);
+    await entrarPanel(p, "gestor@demo.co");
+    await p.goto(`${BASE}/admin/#/tienda`);
+    await p.waitForSelector("#form-tienda");
+    assert.ok(await p.isHidden("#usd_cotizacion"), "sin dólar no se pide la cotización");
+    await p.check('input[name="usd_modo"][value="apoyo"]', { force: true });
+    await p.click("#guardar-tienda");
+    assert.equal(await p.textContent("#usd_cotizacion-error"), "Cargue la cotización del dólar: cuánto vale 1 U$D en la moneda de su país.");
+    await p.fill("#usd_cotizacion", "4.000,50");
+    await p.check('input[name="usd_redondeo"][value="arriba"]', { force: true });
+    assert.equal(await p.textContent("#usd-ejemplo"), "Ejemplo: $1.234.567 se ve como U$D\u00A0310.");
+    // Las pestañas del redondeo: 44 px o más.
+    const caja = await p.locator(".segmento-opcion").first().boundingBox();
+    assert.ok(caja.height >= 44, `pestaña de ${caja.height}px`);
+    await p.click("#guardar-tienda");
+    await p.waitForSelector("text=Guardado");
+    const t = await p.evaluate((c) => JSON.parse(localStorage.getItem(c)).tienda, CLAVE_DEMO);
+    assert.deepEqual([t.usd_modo, t.usd_cotizacion, t.usd_redondeo, Boolean(t.usd_actualizado_en)], ["apoyo", 4000.5, "arriba", true]);
+    // 3.000.000 / 4.000,50 = 749,9 → 750 (arriba); con "abajo", 745.
+    await editarDemo(p, (e) => { e.tienda.whatsapp = "573001234567"; });
+    let url = await comprarUsado(p);
+    assert.match(url.searchParams.get("text"), /\nPrecio: \$3\.000\.000 \(U\$D\s750\)\n/);
+    await editarDemo(p, (e) => { e.tienda.usd_redondeo = "abajo"; });
+    await ir(p, "/?condicion=usado&modelo=iphone-15-pro&capacidad=128-gb");
+    assert.match(await p.textContent("#detalle-en-linea .precio-bloque"), /\$3\.000\.000[\s\S]*U\$D\s745[\s\S]*Cambio actualizado el \d+\/\d+\/\d{4} · U\$D 1 = \$4\.000,50/);
+    assert.match(await p.textContent("#pie-cambio"), /^Cambio actualizado el /);
+    // Reemplazo: solo U$D; el precio propio del equipo gana (sin redondeo).
+    await editarDemo(p, (e) => { e.tienda.usd_modo = "reemplazo"; e.equipos.find((q) => q.capacidad === "128 GB" && q.bateria_porcentaje === 88).precio_usd = 777; });
+    url = await comprarUsado(p);
+    assert.match(url.searchParams.get("text"), /\nPrecio: U\$D\s777\n/);
+    await ir(p, "/?condicion=usado");
+    assert.ok(!/\$3\.000\.000/.test(await p.textContent(".galeria")), "en reemplazo no se ve el precio en pesos");
+    // Un país con dólar no lo ofrece y la capa de datos lo rechaza.
+    const ec = await p.evaluate(async () => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      try { await (await api()).guardarTienda({ pais: "ec", whatsapp: "" }); return "pasó"; } catch (e) { return e.message; }
+    });
+    assert.equal(ec, "La moneda de su país ya es el dólar: no hace falta mostrarlo aparte.");
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("promos (0039): banner fijo que corre (pausa y quieto con reduced-motion); descuentos por tienda, modelo y equipo combinados como se elija; tachado y mensaje", async () => {
+    const p = await nueva(1280, 900);
+    await entrarPanel(p, "gestor@demo.co");
+    await p.goto(`${BASE}/admin/#/promos`);
+    await p.waitForSelector("#form-promos");
+    await p.check("#promo_banner_activo", { force: true });
+    await p.click("#guardar-promos");
+    assert.equal(await p.textContent("#promo_banner_texto-error"), "Escriba el texto del banner para activarlo.");
+    await p.fill("#promo_banner_texto", "Cyber Sale · hasta el 30/10 · 15 % off");
+    await p.check("#promo_descuentos_activos", { force: true });
+    await p.fill("#promo_descuento_tienda", "95");
+    await p.click("#guardar-promos");
+    assert.equal(await p.textContent("#promo_descuento_tienda-error"), "Cada descuento debe ser un número entero de 1 a 90.");
+    await p.fill("#promo_descuento_tienda", "15");
+    const iphone15 = await p.evaluate((c) => JSON.parse(localStorage.getItem(c)).modelos.find((m) => m.slug === "iphone-15-pro").id, CLAVE_DEMO);
+    await p.fill(`#pm-${iphone15}`, "20");
+    const usado = await p.evaluate((c) => JSON.parse(localStorage.getItem(c)).equipos.find((q) => q.bateria_porcentaje === 88).id, CLAVE_DEMO);
+    await p.fill(`#pe-${usado}`, "5");
+    await p.click("#guardar-promos");
+    await p.waitForSelector("text=Guardado");
+    const e = await p.evaluate((c) => JSON.parse(localStorage.getItem(c)), CLAVE_DEMO);
+    assert.deepEqual([e.tienda.promo_banner_activo, e.tienda.promo_descuento_tienda, e.tienda.promo_descuentos_modelo, e.equipos.find((q) => q.id === usado).promo_descuento],
+      [true, 15, { "iphone-15-pro": 20 }, 5]);
+    // El mayor (20 %), el más específico (5 %) y la suma (40 %) sobre $3.000.000.
+    await editarDemo(p, (x) => { x.tienda.whatsapp = "573001234567"; });
+    for (const [modo, precio, n] of [["mayor", "2\\.400\\.000", 20], ["especifico", "2\\.850\\.000", 5], ["suma", "1\\.800\\.000", 40]]) {
+      await editarDemo(p, (x, m) => { x.tienda.promo_combinar = m; }, modo);
+      const url = await comprarUsado(p);
+      assert.match(url.searchParams.get("text"), new RegExp(`\\nPrecio: \\$${precio}\\nDescuento: ${n} % \\(precio de lista: \\$3\\.000\\.000\\)\\n`), modo);
+    }
+    // Tarjeta: etiqueta, tachado con "Antes:" para lectores de pantalla.
+    await ir(p, "/?condicion=usado&modelo=iphone-15-pro");
+    const tarjeta = p.locator(".galeria > .tarjeta").first();
+    assert.equal(await tarjeta.locator(".etiqueta-pildora--descuento").textContent(), "40 % off");
+    assert.equal(await tarjeta.locator(".precio-tachado").textContent(), "Antes: $3.000.000");
+    // Banner: fijo arriba, corre, se pausa con el botón (44 px) y no tapa el contenido al desplazarse.
+    assert.ok(await p.isVisible("#promo-banner"));
+    assert.equal(await p.textContent("#promo-texto"), "Cyber Sale · hasta el 30/10 · 15 % off");
+    assert.equal(await p.getAttribute(".promo-ventana", "aria-hidden"), "true");
+    assert.notEqual(await p.$eval(".promo-pista", (el) => getComputedStyle(el).animationName), "none");
+    const pausa = await p.locator("#promo-pausa").boundingBox();
+    assert.ok(pausa.width >= 44 && pausa.height >= 44);
+    await p.click("#promo-pausa");
+    assert.equal(await p.getAttribute("#promo-pausa", "aria-pressed"), "true");
+    assert.equal(await p.$eval(".promo-pista", (el) => getComputedStyle(el).animationPlayState), "paused");
+    await p.mouse.wheel(0, 1500);
+    await p.waitForTimeout(300);
+    assert.equal(Math.round((await p.locator("#promo-banner").boundingBox()).y), 0, "queda fijo arriba");
+    // Apagadas las promos, precio de lista y sin banner.
+    await editarDemo(p, (x) => { x.tienda.promo_descuentos_activos = false; x.tienda.promo_banner_activo = false; });
+    await ir(p, "/?condicion=usado&modelo=iphone-15-pro");
+    assert.equal(await p.locator(".precio-tachado, .etiqueta-pildora--descuento").count(), 0);
+    assert.ok(await p.isHidden("#promo-banner"));
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+    // Con reduced-motion el texto queda quieto y sin botón.
+    const q = await nueva(390, 844, { reducedMotion: "reduce" });
+    await ir(q);
+    await editarDemo(q, (x) => { x.tienda.promo_banner_activo = true; x.tienda.promo_banner_texto = "Cyber Sale"; });
+    await ir(q);
+    assert.equal(await q.$eval(".promo-pista", (el) => getComputedStyle(el).animationName), "none");
+    assert.ok(await q.isHidden("#promo-pausa"));
+    assert.equal(await q.locator(".promo-item").count(), 1);
+    await q.context().close();
+  });
+
+  await caso("stock contado (0040): el panel carga las unidades; el cliente ve el cartel solo con 5 o menos, de naranja a rojo con resplandor; 0 = sin stock; la cantidad no llega al público", async () => {
+    const p = await nueva(390, 844);
+    await entrarPanel(p, "gestor@demo.co");
+    const usado = await p.evaluate((c) => JSON.parse(localStorage.getItem(c)).equipos.find((q) => q.bateria_porcentaje === 88).id, CLAVE_DEMO);
+    await p.goto(`${BASE}/admin/#/inventario/${usado}`);
+    await p.waitForSelector("#form-equipo, #e-contar");
+    assert.ok(await p.isHidden("#e-unidades"));
+    await p.check("#e-contar", { force: true });
+    assert.ok(await p.isHidden("#e-stock"));
+    await p.fill("#e-unidades", "");
+    await p.click("#guardar");
+    assert.equal(await p.textContent("#e-unidades-error"), "Escriba cuántas unidades tiene (0 o más).");
+    await p.fill("#e-unidades", "7");
+    await p.click("#guardar");
+    await p.waitForFunction(() => location.hash === "#/inventario");
+    // Edición rápida de la cantidad en la lista.
+    await p.fill(`#u-${usado}`, "1");
+    await p.press(`#u-${usado}`, "Enter");
+    await p.waitForFunction(([c, id]) => JSON.parse(localStorage.getItem(c)).equipos.find((x) => x.id === id).stock_cantidad === 1, [CLAVE_DEMO, usado]);
+    let q = await p.evaluate(([c, id]) => JSON.parse(localStorage.getItem(c)).equipos.find((x) => x.id === id), [CLAVE_DEMO, usado]);
+    assert.deepEqual([q.contar_stock, q.stock_cantidad, q.en_stock], [true, 1, true]);
+    // El público: sin la cantidad, con stock_bajo.
+    const publico = await p.evaluate(async (id) => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      return (await (await api()).cargarPublico()).equipos.find((x) => x.id === id);
+    }, usado);
+    assert.ok(!("stock_cantidad" in publico));
+    assert.equal(publico.stock_bajo, 1);
+    // Los colores del cartel: de naranja (5) a rojo con resplandor (1).
+    const estilos = [];
+    for (const n of [5, 3, 1]) {
+      await editarDemo(p, (x, a) => { x.equipos.find((e) => e.id === a.id).stock_cantidad = a.n; }, { id: usado, n });
+      await ir(p, "/?condicion=usado&modelo=iphone-15-pro");
+      const cartel = p.locator(".galeria > .tarjeta .stock-bajo").first();
+      estilos.push([await cartel.textContent(), await cartel.evaluate((el) => [getComputedStyle(el).backgroundColor, getComputedStyle(el).boxShadow !== "none", parseFloat(getComputedStyle(el).fontSize)])]);
+    }
+    assert.deepEqual(estilos.map(([t]) => t), ["¡Quedan 5!", "¡Quedan 3!", "¡Queda 1!"]);
+    assert.equal(estilos[0][1][0], "rgb(194, 65, 12)");
+    assert.equal(estilos[2][1][0], "rgb(185, 28, 28)");
+    assert.deepEqual(estilos.map(([, e]) => e[1]), [false, false, true]);
+    assert.ok(estilos.every(([, e]) => e[2] >= 16));
+    // 6 o más: sin cartel. 0: sin stock (sale del sitio).
+    await editarDemo(p, (x, id) => { x.equipos.find((e) => e.id === id).stock_cantidad = 6; }, usado);
+    await ir(p, "/?condicion=usado&modelo=iphone-15-pro");
+    assert.equal(await p.locator(".stock-bajo").count(), 0);
+    const cero = await p.evaluate(async (id) => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      const a = await api();
+      const q = await a.actualizarEquipo(id, { stock_cantidad: 0 });
+      return [q.en_stock, (await a.cargarPublico()).equipos.some((x) => x.id === id)];
+    }, usado);
+    assert.deepEqual(cero, [false, false]);
+    // Sin contar: vuelve el interruptor y la cantidad no se guarda.
+    q = await p.evaluate(async (id) => {
+      const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
+      return (await api()).actualizarEquipo(id, { contar_stock: false, en_stock: true });
+    }, usado);
+    assert.deepEqual([q.contar_stock, q.stock_cantidad, q.en_stock], [false, null, true]);
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
@@ -1236,7 +1482,11 @@ async function llenarPopup(p) {
     assert.deepEqual(Object.fromEntries(Object.keys(LEGAL_INICIAL).map((k) => [k, e.tienda[k]])),
       { ...LEGAL_INICIAL, legal_clausula_privacidad: "Mi política propia.", legal_clausula_terminos: "Mi aviso de marca." });
     for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) assert.ok(!(k in e.tienda), k);
-    assert.equal(e.version, 27);
+    // (cambiado en 0037 a 0040: versión 28) El dólar, las promos y el stock contado, vacíos.
+    assert.equal(e.version, 28);
+    assert.deepEqual([e.tienda.usd_modo, e.tienda.usd_cotizacion, e.tienda.promo_banner_activo, e.tienda.promo_descuentos_activos, e.tienda.promo_combinar],
+      ["no", null, false, false, "mayor"]);
+    assert.ok(e.equipos.every((q) => q.contar_stock === false && q.stock_cantidad === null && q.precio_usd === null && q.promo_descuento === null));
     assert.deepEqual([e.tienda.legal_rnbd_numero, e.tienda.legal_data_fiscal_url], ["", ""], "0031: campos de Argentina vacíos");
     assert.ok(!("url_sitio" in e.tienda), "0025 la agregó y 0027 la quitó (sin archivo XML)");
     assert.ok(!("pagos_pasarela_otra" in e.tienda) && Array.isArray(e.tienda.pagos_pasarelas_otras) && !e.tienda.pagos_pasarelas.includes("otra") && typeof e.tienda.pagos_descuentos === "object", "0024: otras pasarelas con nombre");

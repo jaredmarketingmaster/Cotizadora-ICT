@@ -68,7 +68,9 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
 - Reseñas (`0014`): bucket `resenas`; imágenes comprimidas como las fotos y videos de hasta 30 s (`validarVideo(archivo, {maxSegundos: 30})`). Nunca crear reseñas de ejemplo, tampoco en demo. Desde `0034` cada reseña guarda cómo autorizó la persona (canal, fecha y alcance), sin datos de ella; el público no lee esas columnas.
 - Legales (`0016` y `0017`): el asistente del panel llena los datos y `assets/js/legal/motor.js` genera los cuatro documentos desde las plantillas y los módulos por país (`legal/paises/`; Colombia y, desde `0031`, Argentina). Si el país de la tienda no tiene módulo, falta `pais` y no se publica (`0019`). `legal_faltantes()` del SQL = `faltantes()` del motor (`tests/sql/comparar-faltantes.mjs`); la versión y la fecha las pone el disparador `publicar_legales`. Sin publicar: el pop-up no envía, las páginas dicen "Página en preparación." y la demo no se quita. Los valores iniciales están en `LEGAL_INICIAL` (`comun.js`) y en el SQL.
 - Restablecer de fábrica (`0036`, solo el administrador): deja todo como recién instalado menos los usuarios. El estado de fábrica está en `datos_fabrica()`, **generado**. Una migración que cambie la semilla o los valores iniciales de la tienda tiene que volver a crearla (`ICT_FABRICA=/tmp/i.json bash tests/sql/probar.sh` y `node tests/sql/fabrica.mjs sql /tmp/i.json`); `probar.sh` falla si no.
-- Cambios a la base: siempre una migración nueva (la próxima es `0037_…sql`). Nunca editar una ya corrida en producción. En producción se corren todas, en orden.
+- Tienda nueva (`0037`): de Argentina, con datos de ejemplo (WhatsApp ficticio y Legales completo y publicado) en `assets/js/datos/ejemplo.js` y `legales-ejemplo.js` (generado con `node tests/legal/ejemplo.mjs js`). Mientras quede un dato de ejemplo (`camposDeEjemplo` = `datos_de_ejemplo()` del SQL) no se quita la demostración. `tests/verificar.cjs` usa por defecto la tienda de prueba de Colombia (`tests/tienda-prueba-co.js`); `nueva(..., { tienda: "nueva" })` da la real.
+- Precios (`assets/js/datos/precios.js`): dólar de apoyo o de reemplazo (`0038`), promos con descuentos por tienda, modelo y equipo (`0039`) y stock contado (`0040`; la cantidad nunca llega al público: `datos_publicos()` manda `stock_bajo` de 1 a 5). En la base se guarda siempre el precio de lista en la moneda del país; el sitio calcula el resto.
+- Cambios a la base: siempre una migración nueva (la próxima es `0041_…sql`). Nunca editar una ya corrida en producción. En producción se corren todas, en orden.
 
 ## Cómo verificar antes de cada commit
 
@@ -81,7 +83,7 @@ node tests/paises.test.mjs                                 # datos de país
 node tests/i18n.test.mjs                                   # diccionarios es/pt
 node tests/envios.test.mjs                                 # envíos
 node tests/pagos.test.mjs                                  # formas de pago
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 86 casos, modo demo
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 90 casos, modo demo
 npx serve -l 8090 . & NODE_PATH="$(npm root -g)" bash tests/lighthouse/medir.sh corrida1   # Lighthouse móvil
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 ```

@@ -72,6 +72,8 @@ for f in "$RAIZ"/supabase/migrations/*.sql; do "${PSQL_NUEVA[@]}" -f "$f"; done
 # ICT_FABRICA=/ruta/instalacion.json guarda ese estado, para volver a generar
 # datos_fabrica() en una migración nueva (ver tests/sql/fabrica.mjs).
 if [ -n "${ICT_FABRICA:-}" ]; then cp "$DIR/instalacion.json" "$ICT_FABRICA"; fi
+# La tienda nueva (0037) es la misma en el SQL y en el modo demo.
+node "$RAIZ/tests/sql/fabrica.mjs" demo "$DIR/instalacion.json"
 "${PSQL[@]}" -f "$RAIZ/tests/sql/restablecer.sql"
 "${PSQL[@]}" -At -f "$RAIZ/tests/sql/estado_fabrica.sql" > "$DIR/restablecida.json"
 node "$RAIZ/tests/sql/fabrica.mjs" comparar "$DIR/instalacion.json" "$DIR/restablecida.json"

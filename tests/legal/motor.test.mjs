@@ -259,4 +259,18 @@ caso("C2: los términos arman la entrega desde Envíos; con plazo, sin el máxim
   assert.deepEqual(claves({ ...base(), envio_costo: "" }), ["envio_costo"]);
 });
 
+const { tiendaNueva, camposDeEjemplo, CAMPOS_EJEMPLO } = await import("../../assets/js/datos/ejemplo.js");
+const { LEGAL_PUBLICADO_EJEMPLO } = await import("../../assets/js/datos/legales-ejemplo.js");
+const { publicadoEjemplo } = await import("./ejemplo.mjs");
+caso("tienda de ejemplo (0037): Argentina completa, sin faltantes, y legales-ejemplo.js es lo que da el motor", () => {
+  const t = tiendaNueva(null);
+  assert.equal(t.pais, "ar");
+  assert.deepEqual(faltantes(t), []);
+  assert.deepEqual(publicadoEjemplo(), LEGAL_PUBLICADO_EJEMPLO, "volver a generar con: node tests/legal/ejemplo.mjs js");
+  assert.deepEqual(camposDeEjemplo(t), CAMPOS_EJEMPLO);
+  // Cambiar un dato lo saca de la lista; los documentos dicen los datos de ejemplo.
+  assert.deepEqual(camposDeEjemplo({ ...t, whatsapp: "5491123456789" }), CAMPOS_EJEMPLO.filter((k) => k !== "whatsapp"));
+  assert.match(LEGAL_PUBLICADO_EJEMPLO.documentos.privacidad, /Nombre y apellido de ejemplo/);
+});
+
 console.log(`\nOK: ${casos} casos del motor legal`);

@@ -26,6 +26,7 @@ import { $, $$, esc, avisar, conBoton } from "./ui.js";
 import { t as tr, idiomaActual } from "../i18n/i18n.js";
 import { whatsappValido } from "../datos/paises.js";
 import { frasesEnvio } from "../datos/envios.js";
+import { legalesDeEjemplo } from "../datos/ejemplo.js";
 
 const META = HERRAMIENTAS[0];
 const ESPERA_TEXTO = 700;
@@ -346,6 +347,10 @@ export async function dibujar(vista, ctx, resto = [], params = new URLSearchPara
         fecha: `<strong class="cifras">${esc(fechaDMA(pub.vigente_desde))}</strong>`
       })
       : esc(tr("panel.legales.estado.sin_publicar"));
+    // La tienda nueva (0037) trae datos de ejemplo: se avisa hasta cambiarlos.
+    if (legalesDeEjemplo(t) && !$("#l-ejemplo")) {
+      $("#l-estado").insertAdjacentHTML("afterend", `<p class="aviso-datos" id="l-ejemplo" role="note">${esc(tr("panel.legales.ejemplo"))}</p>`);
+    } else if (!legalesDeEjemplo(t)) $("#l-ejemplo")?.remove();
     $("#l-progreso").value = completos.length;
     $("#l-progreso-texto").textContent = tr("panel.legales.progreso.texto", { n: completos.length });
     $("#l-pasos").innerHTML = PASOS.map((clave, i) => {

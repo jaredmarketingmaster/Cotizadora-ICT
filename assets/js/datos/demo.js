@@ -14,6 +14,8 @@ import { esPredeterminada, urlPredeterminada } from "./predeterminadas.js";
 import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA_VIDEO, MAX_MAS_VENDIDOS, MAX_LOTE, VISTAS_EQUIPOS, CAMPOS_TIENDA, CAMPOS_EQUIPO, CAMPOS_COLOR, ESTADOS_ESTETICOS, TAMANOS_TEXTO, CATEGORIAS_FICHA, especificacionesValidas, errorPagos, CAMPOS_RESENA, MAX_RESENAS, TITULO_RESENAS, ORIGENES_RESENA, RUTA_RESENA, CANALES_AUTORIZACION, ALCANCES_AUTORIZACION, CAMPOS_RESENA_PUBLICOS, LEGAL_INICIAL, errorLegales, elegir } from "./comun.js";
 import { hexValido, sesion, esperar } from "../utils.js";
 import { whatsappValido, CODIGOS_PAIS_TIENDA } from "./paises.js";
+import { tiendaNueva, TIENDA_EJEMPLO, PAGOS_VACIOS, tieneDatosDeEjemplo } from "./ejemplo.js";
+import { USD_INICIAL, PROMOS_INICIAL, errorUsd, errorPromos, errorEquipoPrecios, aplicarStock, stockBajo } from "./precios.js";
 import { CODIGOS_IDIOMA, t as tr } from "../i18n/i18n.js";
 
 // Los mensajes de error se traducen al lanzarlos (claves datos.error.*): son
@@ -48,22 +50,16 @@ function estadoInicial() {
     id: uuid(), modelo_id: porSlug.get(d.slug).id, condicion: d.condicion, capacidad: d.capacidad,
     color_id: colorDe(porSlug.get(d.slug).id, d.color), color_nombre_mostrar: d.color_nombre_mostrar,
     precio: d.precio, en_stock: d.en_stock, fotos: [], video: "",
+    precio_usd: null, promo_descuento: null, contar_stock: false, stock_cantidad: null,
     publicado: true, destacado: d.destacado, mas_vendido: false, descripcion_extra: "", es_demo: true,
     bateria_porcentaje: d.bateria_porcentaje ?? null, estado_estetico: d.estado_estetico ?? null,
     detalles: d.detalles ?? "", incluye: d.incluye ?? "", creado_en: t, actualizado_en: t
   }));
   return {
     version: VERSION,
-    tienda: {
-      // El demo es una tienda de Colombia (sus precios de ejemplo están en pesos colombianos)
-      id: 1, nombre: "Tienda de demostración", pais: "co", idioma: "es", ciudad: "", direccion: "", horario_texto: "", whatsapp: "",
-      correo_contacto: "", instagram_url: "", facebook_url: "", tiktok_url: "", logo: "", favicon: "",
-      color_primario: "#1A73E8", color_secundario: "#0F172A", tema: "claro", texto_entrega: "",
-      pagos_otras: [], ...PAGOS_VACIOS, texto_garantia_nuevos: "", texto_garantia_usados: "", etiqueta_precio: "Precio",
-      ...copia(LEGAL_INICIAL), ...copia(ENVIOS_INICIAL),
-      precios_actualizados_en: t, modo_demo: true, tamano_texto: "normal", vista_equipos: "cuadricula",
-      mostrar_ficha: true, ficha_ocultas: [], mostrar_resenas: false, titulo_resenas: TITULO_RESENAS, titulo_sitio: "", actualizado_en: t
-    },
+    // Desde 0037: una tienda de Argentina con datos de ejemplo y los legales
+    // publicados (ejemplo.js), igual que la instalación nueva del SQL.
+    tienda: tiendaNueva(t),
     modelos,
     fichas: modelos.map((m) => ({ modelo_id: m.id, descripcion: "", especificaciones: filasDeFuente(m.slug), actualizado_en: t })),
     colores,
@@ -76,7 +72,7 @@ function estadoInicial() {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 27;
+const VERSION = 28;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -268,6 +264,17 @@ const MIGRACIONES = {
   // autorización "sin registrar" (el panel pide completarla).
   26(e) {
     for (const r of e.resenas || []) Object.assign(r, { autorizacion_canal: "sin_registrar", autorizacion_fecha: null, autorizacion_alcance: "" });
+  },
+  // 0037 a 0040: la tienda de ejemplo de Argentina (solo si no se tocó, como
+  // el SQL), el dólar, las promos y el stock contado (vacíos).
+  27(e) {
+    const t = e.tienda;
+    if (t.nombre === "Tienda de demostración" && t.modo_demo && !t.legal_publicado && !t.whatsapp && !t.logo && !t.correo_contacto) {
+      const nueva = tiendaNueva(ahora());
+      for (const k of [...Object.keys(TIENDA_EJEMPLO), "legal_publicado"]) t[k] = nueva[k];
+    }
+    Object.assign(t, copia(USD_INICIAL), copia(PROMOS_INICIAL));
+    for (const q of e.equipos) Object.assign(q, { precio_usd: null, promo_descuento: null, contar_stock: false, stock_cantidad: null });
   }
 };
 
@@ -327,11 +334,7 @@ function huellaTexto(s) {
 const SIN_LEGALES_DEMO = () => error("sin_legales_demo");
 const SIN_LEGALES_BORRAR = () => error("sin_legales_borrar");
 
-// Valores por defecto de las formas de pago estructuradas (0013).
-const PAGOS_VACIOS = {
-  pagos_medios: [], pagos_cuotas: false, pagos_cuotas_max: null, pagos_sin_interes: false, pagos_sin_interes_max: null,
-  pagos_cripto: false, pagos_cripto_cuales: "", pagos_pasarelas: [], pagos_pasarelas_otras: [], pagos_descuentos: {}
-};
+const DATOS_EJEMPLO = () => error("datos_ejemplo");
 
 // El hexadecimal de la fuente o, si no trae, el aproximado del modelo (0028)
 // o el aproximado por nombre (0022).
@@ -503,6 +506,11 @@ function validarTienda(t) {
   // Como los checks de 0016
   const legales = errorLegales(t);
   if (legales) throw new ErrorDatos(legales);
+  // Como validar_usd (0038) y validar_promos (0039)
+  const usd = errorUsd(t);
+  if (usd) throw new ErrorDatos(usd);
+  const promos = errorPromos(t);
+  if (promos) throw new ErrorDatos(promos);
 }
 
 // Como publicar_legales (0016): solo completa, con los cuatro documentos sin
@@ -576,6 +584,10 @@ function validarEquipo(q, e) {
     throw error("bateria");
   }
   if (q.estado_estetico != null && !ESTADOS_ESTETICOS.includes(q.estado_estetico)) throw error("estado_estetico");
+  // 0038 a 0040: precio en U$D, descuento y stock contado.
+  const precios = errorEquipoPrecios(q);
+  if (precios) throw new ErrorDatos(precios);
+  aplicarStock(q);
 }
 
 function validarColor(c, e) {
@@ -609,7 +621,8 @@ export const demo = {
       modelos: modelosActivos,
       fichas: e.fichas.filter((f) => ids.has(f.modelo_id)),
       colores: e.colores.filter((c) => ids.has(c.modelo_id)).sort((a, b) => a.modelo_id - b.modelo_id || a.orden - b.orden),
-      equipos: e.equipos.filter((q) => equipoEsPublico(q, porId)),
+      // Como datos_publicos (0040): sin la cantidad; stock_bajo de 1 a 5.
+      equipos: e.equipos.filter((q) => equipoEsPublico(q, porId)).map(({ stock_cantidad: _s, ...q }) => ({ ...q, stock_bajo: stockBajo({ ...q, stock_cantidad: _s }) })),
       // Como datos_publicos (0014): solo con el interruptor encendido
       resenas: e.tienda.mostrar_resenas
         ? [...e.resenas].sort((a, b) => a.orden - b.orden || a.creado_en.localeCompare(b.creado_en))
@@ -694,8 +707,11 @@ export const demo = {
     const nueva = copia({ ...e.tienda, ...datos, actualizado_en: ahora() });
     validarTienda(nueva);
     if ("legal_publicado" in datos) await publicarLegales(nueva, e.tienda);
-    // Como proteger_tienda (0017)
+    // Como tienda_usd (0038): la fecha de la cotización la pone el servidor.
+    if (nueva.usd_cotizacion !== e.tienda.usd_cotizacion) nueva.usd_actualizado_en = nueva.usd_cotizacion == null ? null : ahora();
+    // Como proteger_tienda (0017 y 0037)
     if (e.tienda.modo_demo && !nueva.modo_demo && !nueva.legal_publicado) throw SIN_LEGALES_DEMO();
+    if (e.tienda.modo_demo && !nueva.modo_demo && tieneDatosDeEjemplo(nueva)) throw DATOS_EJEMPLO();
     e.tienda = nueva;
     escribir(e);
     return copia(nueva);
@@ -873,6 +889,7 @@ export const demo = {
     const q = {
       id: uuid(), color_id: null, color_nombre_mostrar: "", en_stock: true, fotos: [], video: "", publicado: false, destacado: false, mas_vendido: false,
       descripcion_extra: "", es_demo: false, bateria_porcentaje: null, estado_estetico: null, detalles: "", incluye: "",
+      precio_usd: null, promo_descuento: null, contar_stock: false, stock_cantidad: null,
       ...elegir(datos, CAMPOS_EQUIPO), creado_en: ahora(), actualizado_en: ahora()
     };
     validarEquipo(q, e);
@@ -902,6 +919,7 @@ export const demo = {
         const q = {
           id: uuid(), color_id: null, color_nombre_mostrar: "", en_stock: true, fotos: [], video: "", publicado: false, destacado: false, mas_vendido: false,
           descripcion_extra: "", bateria_porcentaje: null, estado_estetico: null, detalles: "", incluye: "",
+          precio_usd: null, promo_descuento: null, contar_stock: false, stock_cantidad: null,
           ...elegir(datos, CAMPOS_EQUIPO), es_demo: false, creado_en: t, actualizado_en: t
         };
         validarEquipo(q, e);
@@ -935,7 +953,8 @@ export const demo = {
     validarEquipo(nuevo, e);
     if (["modelo_id", "color_id", "color_nombre_mostrar"].some((k) => k in cambios)) validarColorEquipo(nuevo, e, q);
     if ("mas_vendido" in cambios) validarMasVendido(nuevo, e, q);
-    if (nuevo.precio !== q.precio) e.tienda.precios_actualizados_en = ahora();
+    // Como marcar_precios_actualizados (0001 y 0038): el precio o el de U$D.
+    if (nuevo.precio !== q.precio || nuevo.precio_usd !== q.precio_usd) e.tienda.precios_actualizados_en = ahora();
     Object.assign(q, nuevo);
     escribir(e);
     return copia(q);
@@ -979,6 +998,7 @@ export const demo = {
     const e = leer();
     exigirGestor(e, "borrar_demo");
     if (!e.tienda.legal_publicado) throw SIN_LEGALES_BORRAR();
+    if (tieneDatosDeEjemplo(e.tienda)) throw DATOS_EJEMPLO();
     e.equipos = e.equipos.filter((q) => !q.es_demo);
     for (const m of e.modelos) if (m.activo_por_demo) Object.assign(m, { activo: false, activo_por_demo: false });
     e.tienda.modo_demo = false;

@@ -1028,3 +1028,69 @@
 .ayuda-video { display: block; border-radius: 12px; background: #000; }
 .ayuda-video--celular { width: auto; max-width: 100%; height: min(60dvh, 520px); aspect-ratio: 9 / 16; margin: 0 auto; }
 .ayuda-video--computadora { width: 100%; aspect-ratio: 16 / 9; }
+
+/* --- Banner de promos (0039) -------------------------------------------------
+   Fijo arriba, con los colores invertidos del sitio (contraste AA en los dos
+   temas). La pista tiene dos mitades iguales y se mueve media pista
+   (promo.js pone la duración). Se detiene con el botón, con el mouse encima
+   o con el foco adentro; con reduced-motion queda quieto. */
+:root { --alto-promo: 0px; }
+:root.con-promo { --alto-promo: 48px; }
+.promo-banner {
+  position: sticky; top: 0; z-index: 60;
+  display: flex; align-items: center;
+  min-height: 48px;
+  background: var(--texto); color: var(--fondo);
+  font-weight: 700;
+}
+.promo-ventana { flex: 1; min-width: 0; overflow: hidden; overflow: clip; }
+.promo-pista { display: flex; width: max-content; animation: promo-correr 20s linear infinite; }
+.promo-mitad { display: flex; flex: none; }
+.promo-item { padding: 0 28px; white-space: nowrap; line-height: 48px; }
+.promo-item::after { content: "•"; position: relative; left: 28px; opacity: .7; }
+.promo-banner:hover .promo-pista, .promo-banner:focus-within .promo-pista, .promo-pausado .promo-pista { animation-play-state: paused; }
+@keyframes promo-correr { to { transform: translateX(-50%); } }
+.promo-quieto .promo-pista { width: auto; animation: none; justify-content: center; }
+.promo-quieto .promo-item { white-space: normal; text-align: center; line-height: 1.4; padding: 12px var(--gutter); }
+.promo-quieto .promo-item::after { content: none; }
+.promo-pausa {
+  flex: none; display: grid; place-items: center;
+  width: 44px; height: 44px; margin-right: 4px; padding: 0;
+  border: 0; border-radius: 50%;
+  background: transparent; color: inherit;
+}
+.promo-pausa svg { width: 20px; height: 20px; }
+.promo-pausa .icono-seguir { display: none; }
+.promo-pausado .promo-pausa .icono-pausa { display: none; }
+.promo-pausado .promo-pausa .icono-seguir { display: inline; }
+.promo-pausa:focus-visible { outline: 3px solid var(--fondo); outline-offset: -3px; }
+@media (min-width: 900px) { .con-promo .detalle-medios { top: calc(16px + var(--alto-promo)); } }
+@media (prefers-reduced-motion: reduce) { .promo-pista { animation: none; } }
+
+/* --- Precios: promos (0039) y dólar (0038) ------------------------------------ */
+.tarjeta-cuerpo > .precio-tachado { display: block; margin-top: 2px; }
+.precio-tachado { color: var(--texto-suave); font-weight: 600; font-size: 1rem; letter-spacing: 0; text-decoration-thickness: 2px; }
+.precio-apoyo, .barra-apoyo { display: block; color: var(--texto-suave); font-weight: 700; font-size: 1rem; letter-spacing: 0; }
+.precio-cambio { color: var(--texto-suave); font-size: 1rem; margin-top: 4px; }
+.etiqueta-pildora--descuento { background: #B42318; color: #FFFFFF; }
+
+/* --- Stock bajo (0040): de 5 (naranja) a 1 (rojo con resplandor) ------------------
+   Texto blanco con contraste AA en todos los tonos. */
+.stock-bajo {
+  display: inline-flex; align-items: center; justify-self: start; width: fit-content;
+  margin-top: 6px; padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--stock, #C2410C); color: #FFFFFF;
+  font-weight: 800; font-size: 1rem; letter-spacing: 0;
+}
+.stock-bajo[data-n="5"] { --stock: #C2410C; }
+.stock-bajo[data-n="4"] { --stock: #C1350F; }
+.stock-bajo[data-n="3"] { --stock: #BE2A14; }
+.stock-bajo[data-n="2"] { --stock: #BB2016; box-shadow: 0 0 10px rgba(220, 38, 38, .35); }
+.stock-bajo[data-n="1"] {
+  --stock: #B91C1C;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, .35), 0 0 18px 2px rgba(220, 38, 38, .7);
+  animation: stock-latido 1.6s ease-in-out infinite;
+}
+@keyframes stock-latido { 50% { box-shadow: 0 0 0 3px rgba(220, 38, 38, .45), 0 0 26px 6px rgba(220, 38, 38, .85); } }
+@media (prefers-reduced-motion: reduce) { .stock-bajo[data-n="1"] { animation: none; } }

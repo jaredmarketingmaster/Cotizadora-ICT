@@ -64,6 +64,11 @@ export function activas(tienda) {
   return HERRAMIENTAS.filter((h) => h.siempre || tienda?.[h.activo]);
 }
 
+// El ID del píxel de la tienda de ejemplo (0037, datos/ejemplo.js): tiene
+// formato válido pero no es de nadie, así que el sitio no lo carga.
+export const PIXEL_EJEMPLO = "000000000000000";
+export const esPixelDeEjemplo = (id) => String(id ?? "").trim() === PIXEL_EJEMPLO;
+
 export function idValido(h, valor) {
   return h.patron.test(String(valor || "").trim());
 }

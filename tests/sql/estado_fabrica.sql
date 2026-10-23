@@ -10,5 +10,7 @@ select jsonb_build_object(
   'fichas', (select jsonb_agg(to_jsonb(f) - 'actualizado_en' order by f.modelo_id) from public.fichas f),
   'equipos', (select coalesce(jsonb_agg(to_jsonb(e) - '{id,creado_en,actualizado_en}'::text[]
                 order by e.modelo_id, e.condicion, e.capacidad, e.color_id), '[]') from public.equipos e),
-  'resenas', (select coalesce(jsonb_agg(to_jsonb(r) - '{id,creado_en}'::text[] order by r.orden, r.ruta), '[]') from public.resenas r)
+  'resenas', (select coalesce(jsonb_agg(to_jsonb(r) - '{id,creado_en}'::text[] order by r.orden, r.ruta), '[]') from public.resenas r),
+  -- 0037: los datos que siguen siendo de ejemplo.
+  'ejemplo', (select to_jsonb(public.datos_de_ejemplo(t)) from public.tienda t)
 );

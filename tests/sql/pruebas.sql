@@ -1046,4 +1046,145 @@ delete from public.resenas;
 delete from storage.objects where bucket_id = 'resenas';
 update public.tienda set mostrar_resenas = false;
 
+-- 8. Datos de ejemplo (0037): con alguno, no se quita la demostración.
+reset role;
+update public.tienda set modo_demo = true, pais = 'ar', whatsapp = '5491100000000' where id = 1;
+do $$ begin
+  assert public.datos_de_ejemplo((select t from public.tienda t)) = array['whatsapp'], 'el WhatsApp de ejemplo';
+  begin
+    update public.tienda set modo_demo = false where id = 1;
+    raise exception 'no debería quitar el modo demo con datos de ejemplo';
+  exception when check_violation then
+    assert sqlerrm like 'Cambie los datos de ejemplo%', sqlerrm;
+  end;
+end $$;
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+do $$ begin
+  perform public.borrar_datos_demo();
+  raise exception 'no debería borrar la demo con datos de ejemplo';
+exception when check_violation then
+  assert sqlerrm like 'Cambie los datos de ejemplo%', sqlerrm;
+end $$;
+reset role;
+update public.tienda set pais = 'co', whatsapp = '573001234567', modo_demo = false where id = 1;
+
+-- 9. Dólar (0038): cotización obligatoria, no en países con dólar, fecha del servidor.
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+do $$
+declare f timestamptz;
+begin
+  begin
+    update public.tienda set usd_modo = 'apoyo' where id = 1;
+    raise exception 'debería pedir la cotización';
+  exception when check_violation then assert sqlerrm like 'Cargue la cotización del dólar%', sqlerrm; end;
+  update public.tienda set usd_modo = 'apoyo', usd_cotizacion = 1234.5, usd_redondeo = 'arriba', usd_actualizado_en = '2000-01-01' where id = 1;
+  f := (select usd_actualizado_en from public.tienda);
+  assert f > now() - interval '1 minute', 'la fecha la pone el servidor';
+  update public.tienda set usd_actualizado_en = '2000-01-01', nombre = nombre where id = 1;
+  assert (select usd_actualizado_en from public.tienda) = f, 'sin cambiar la cotización, la fecha no cambia';
+  begin
+    update public.tienda set pais = 'ec', whatsapp = '' where id = 1;
+    raise exception 'Ecuador ya usa dólar';
+  exception when check_violation then assert sqlerrm like 'La moneda de su país ya es el dólar%', sqlerrm; end;
+  begin
+    update public.tienda set usd_cotizacion = 0 where id = 1;
+    raise exception 'cotización 0';
+  exception when check_violation then null; end;
+  update public.equipos set precio_usd = 999 where id = (select id from public.equipos limit 1);
+  begin
+    update public.equipos set precio_usd = 0 where id = (select id from public.equipos limit 1);
+    raise exception 'precio en U$D 0';
+  exception when check_violation then null; end;
+  update public.tienda set usd_modo = 'no', usd_cotizacion = null where id = 1;
+  assert (select usd_actualizado_en is null from public.tienda), 'sin cotización, sin fecha';
+end $$;
+
+-- 10. Promos (0039): banner con texto y descuentos de 1 a 90.
+do $$ begin
+  begin
+    update public.tienda set promo_banner_activo = true where id = 1;
+    raise exception 'banner sin texto';
+  exception when check_violation then assert sqlerrm like 'Escriba el texto del banner%', sqlerrm; end;
+  update public.tienda set promo_banner_activo = true, promo_banner_texto = 'Cyber Sale · hasta el 30/10 · 15 % off',
+    promo_descuentos_activos = true, promo_descuento_tienda = 15, promo_descuentos_modelo = '{"iphone-13": 20}', promo_combinar = 'suma' where id = 1;
+  begin
+    update public.tienda set promo_descuentos_modelo = '{"iphone-13": 95}' where id = 1;
+    raise exception 'descuento de 95';
+  exception when check_violation then assert sqlerrm like 'Cada descuento%', sqlerrm; end;
+  begin
+    update public.tienda set promo_descuentos_modelo = '{"iphone-13": 10.5}' where id = 1;
+    raise exception 'descuento con decimales';
+  exception when check_violation then null; end;
+  begin
+    update public.tienda set promo_banner_texto = E'dos\nlíneas' where id = 1;
+    raise exception 'banner de dos líneas';
+  exception when check_violation then null; end;
+  begin
+    update public.equipos set promo_descuento = 91 where id = (select id from public.equipos limit 1);
+    raise exception 'descuento de equipo 91';
+  exception when check_violation then null; end;
+end $$;
+reset role;
+update public.tienda set promo_banner_activo = false, promo_banner_texto = '', promo_descuentos_activos = false,
+  promo_descuento_tienda = null, promo_descuentos_modelo = '{}', promo_combinar = 'mayor' where id = 1;
+update public.equipos set precio_usd = null;
+
+-- 11. Stock contado (0040): con stock = al menos una unidad; el público no lee
+-- la cantidad y datos_publicos() manda stock_bajo solo de 1 a 5.
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+do $$
+declare q uuid := (select e.id from public.equipos e join public.modelos m on m.id = e.modelo_id
+                   where e.publicado and e.en_stock and m.activo limit 1);
+begin
+  begin
+    update public.equipos set contar_stock = true where id = q;
+    raise exception 'debería pedir la cantidad';
+  exception when check_violation then assert sqlerrm like 'Escriba cuántas unidades%', sqlerrm; end;
+  update public.equipos set contar_stock = true, stock_cantidad = 0, en_stock = true where id = q;
+  assert not (select en_stock from public.equipos where id = q), '0 unidades = sin stock';
+  update public.equipos set stock_cantidad = 3 where id = q;
+  assert (select en_stock from public.equipos where id = q), '3 unidades = con stock';
+  update public.equipos set stock_cantidad = 9 where id = q;
+  update public.equipos set contar_stock = false where id = q;
+  assert (select stock_cantidad is null and en_stock from public.equipos where id = q), 'sin contar, la cantidad no se guarda';
+  update public.equipos set contar_stock = true, stock_cantidad = 4 where id = q;
+end $$;
+reset role;
+set role anon;
+set request.jwt.claim.sub = '';
+do $$ begin
+  begin
+    perform stock_cantidad from public.equipos;
+    raise exception 'el público no debería leer la cantidad';
+  exception when insufficient_privilege then null; end;
+  assert (select count(*) from public.equipos) > 0, 'el resto de las columnas se lee';
+  assert (select count(*) from jsonb_array_elements(public.datos_publicos() -> 'equipos') e where e ? 'stock_cantidad') = 0, 'sin la cantidad';
+  assert (select count(*) from jsonb_array_elements(public.datos_publicos() -> 'equipos') e where (e ->> 'stock_bajo')::int = 4) = 1, 'stock_bajo 4';
+end $$;
+reset role;
+update public.equipos set stock_cantidad = 6 where contar_stock;
+set role anon;
+do $$ begin
+  assert (select count(*) from jsonb_array_elements(public.datos_publicos() -> 'equipos') e where e ->> 'stock_bajo' is not null) = 0, 'con 6 no hay cartel';
+end $$;
+reset role;
+update public.equipos set contar_stock = false where contar_stock;
+-- El lote acepta el stock contado.
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+do $$
+declare r public.equipos;
+begin
+  select * into r from public.crear_equipos_lote(jsonb_build_array(jsonb_build_object(
+    'modelo_id', (select id from public.modelos where slug = 'iphone-13'), 'condicion', 'nuevo', 'capacidad', '128 GB',
+    'color_id', (select c.id from public.colores c join public.modelos m on m.id = c.modelo_id where m.slug = 'iphone-13' order by c.orden limit 1),
+    'precio', 1000, 'precio_usd', 800, 'promo_descuento', 10, 'contar_stock', true, 'stock_cantidad', 2)));
+  assert r.contar_stock and r.stock_cantidad = 2 and r.en_stock and r.precio_usd = 800 and r.promo_descuento = 10, 'lote con stock, U$D y descuento';
+  delete from public.equipos where id = r.id;
+end $$;
+reset role;
+
 \echo 'OK: todas las pruebas SQL pasaron'

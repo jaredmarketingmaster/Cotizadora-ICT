@@ -7,6 +7,7 @@
 import { formatearMiles, leerPrecio, CAPACIDADES_SUGERIDAS, capacidadEnGB } from "../utils.js";
 import { datosPais, paisActual } from "../datos/paises.js";
 import { rutaMiniatura, ESTADOS_ESTETICOS, nombreColor, MAX_MAS_VENDIDOS } from "../datos/comun.js";
+import { MAX_STOCK } from "../datos/precios.js";
 import { telefonoSVG } from "../ilustracion.js";
 import { etiquetaGeneracion } from "../sitio/catalogo.js";
 import { $, esc, avisar, confirmar, conBoton, campoTexto, interruptor, marcarError, enfocarPrimerError } from "./ui.js";
@@ -21,6 +22,14 @@ export const nombreCondicion = (c) => tr(c === "usado" ? "panel.inventario.usado
 const mensajeMasVendidos = () => tr("panel.inventario.max_mas_vendidos", { n: MAX_MAS_VENDIDOS });
 
 const MAX_FOTOS = 6;
+
+// Unidades del stock contado (0040): entero de 0 a MAX_STOCK (null si no).
+export function leerUnidades(texto) {
+  const s = String(texto ?? "").replace(/[\s.,]/g, "");
+  if (!/^\d{1,5}$/.test(s)) return null;
+  const n = Number(s);
+  return n <= MAX_STOCK ? n : null;
+}
 
 function nombreModelo(modelos, id) {
   return modelos.find((m) => m.id === id)?.nombre || tr("panel.inventario.modelo_borrado");
@@ -122,7 +131,9 @@ async function lista(vista, ctx, params) {
       </div>
       <div class="fila-edicion">
         <div class="campo"><label for="p-${q.id}">${esc(tr("panel.inventario.precio"))}</label><input class="entrada cifras" id="p-${q.id}" data-campo="precio" inputmode="numeric" value="${formatearMiles(q.precio)}"></div>
-        ${interruptor({ id: `s-${q.id}`, etiqueta: tr("panel.inventario.stock"), marcado: q.en_stock, atributos: 'data-campo="en_stock"', estados: [tr("panel.inventario.con_stock"), tr("panel.inventario.sin_stock")] })}
+        ${q.contar_stock
+          ? `<div class="campo"><label for="u-${q.id}">${esc(tr("panel.inventario.unidades"))}</label><input class="entrada cifras" id="u-${q.id}" data-campo="stock_cantidad" inputmode="numeric" maxlength="5" value="${q.stock_cantidad ?? ""}"></div>`
+          : interruptor({ id: `s-${q.id}`, etiqueta: tr("panel.inventario.stock"), marcado: q.en_stock, atributos: 'data-campo="en_stock"', estados: [tr("panel.inventario.con_stock"), tr("panel.inventario.sin_stock")] })}
         ${interruptor({ id: `v-${q.id}`, etiqueta: tr("panel.inventario.publicado"), marcado: q.publicado, atributos: 'data-campo="publicado"' })}
         ${interruptor({ id: `mv-${q.id}`, etiqueta: tr("panel.inventario.mas_vendido"), marcado: q.mas_vendido, atributos: 'data-campo="mas_vendido"' })}
       </div>
@@ -165,6 +176,11 @@ async function lista(vista, ctx, params) {
       valor = leerPrecio(input.value);
       if (valor == null) { error.textContent = tr("panel.inventario.precio_invalido"); input.setAttribute("aria-invalid", "true"); return; }
       if (valor === q.precio) { input.value = formatearMiles(q.precio); return; }
+    } else if (campo === "stock_cantidad") {
+      // Stock contado (0040): la base pone "con stock" o "sin stock".
+      valor = leerUnidades(input.value);
+      if (valor == null) { error.textContent = tr("datos.error.stock_cantidad"); input.setAttribute("aria-invalid", "true"); return; }
+      if (valor === q.stock_cantidad) return;
     } else {
       valor = input.checked;
       // Hasta 3 "más vendidos": se avisa antes de ir a la base (que igual lo exige).
@@ -226,10 +242,14 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     return;
   }
   const fuente = modo === "duplicar" ? equipos.find((q) => q.id === desde) : original;
+  const usdActivo = (ctx.tienda?.usd_modo || "no") !== "no";
   const q = {
     modelo_id: fuente?.modelo_id ?? "", condicion: fuente?.condicion ?? "", capacidad: fuente?.capacidad ?? "",
     color_id: fuente?.color_id ?? null, color_nombre_mostrar: fuente?.color_nombre_mostrar ?? "",
     precio: fuente?.precio ?? null, en_stock: fuente?.en_stock ?? true,
+    // 0038 y 0040: precio en U$D y stock contado (duplicar no copia la cantidad).
+    precio_usd: fuente?.precio_usd ?? null, contar_stock: Boolean(fuente?.contar_stock),
+    stock_cantidad: modo === "editar" ? fuente?.stock_cantidad ?? null : null,
     fotos: modo === "editar" ? [...(fuente?.fotos || [])] : [],
     video: modo === "editar" ? fuente?.video || "" : "",
     publicado: modo === "editar" ? fuente.publicado : false,
@@ -309,8 +329,16 @@ async function formulario(vista, ctx, { modo, id, desde }) {
       <fieldset class="bloque" data-paso="precio">
         <legend>${esc(tr("panel.inventario.paso.precio"))}</legend>
         ${campoTexto({ id: "e-precio", etiqueta: tr("panel.inventario.precio_moneda", { moneda: datosPais(paisActual()).moneda }), valor: q.precio ? formatearMiles(q.precio) : "", ayuda: esc(tr("panel.inventario.precio_ayuda")), atributos: 'inputmode="numeric" autocomplete="off"' })}
-        ${interruptor({ id: "e-stock", etiqueta: tr("panel.inventario.stock"), marcado: q.en_stock, estados: [tr("panel.inventario.con_stock"), tr("panel.inventario.sin_stock")] })}
-        <p class="ayuda">${esc(tr("panel.inventario.stock_ayuda"))}</p>
+        ${usdActivo ? campoTexto({ id: "e-precio-usd", etiqueta: tr("panel.inventario.precio_usd"), valor: q.precio_usd ? formatearMiles(q.precio_usd) : "", ayuda: esc(tr("panel.inventario.precio_usd_ayuda")), atributos: 'inputmode="numeric" autocomplete="off"' }) : ""}
+        ${interruptor({ id: "e-contar", etiqueta: tr("panel.inventario.contar_stock"), marcado: q.contar_stock, atributos: 'aria-describedby="e-contar-ayuda"' })}
+        <p class="ayuda" id="e-contar-ayuda">${esc(tr("panel.inventario.contar_stock_ayuda"))}</p>
+        <div id="e-stock-sino"${q.contar_stock ? " hidden" : ""}>
+          ${interruptor({ id: "e-stock", etiqueta: tr("panel.inventario.stock"), marcado: q.en_stock, estados: [tr("panel.inventario.con_stock"), tr("panel.inventario.sin_stock")] })}
+          <p class="ayuda">${esc(tr("panel.inventario.stock_ayuda"))}</p>
+        </div>
+        <div id="e-stock-cuenta"${q.contar_stock ? "" : " hidden"}>
+          ${campoTexto({ id: "e-unidades", etiqueta: tr("panel.inventario.unidades"), valor: q.stock_cantidad ?? "", ayuda: esc(tr("panel.inventario.unidades_ayuda")), atributos: 'inputmode="numeric" autocomplete="off" maxlength="5"' })}
+        </div>
       </fieldset>
 
       <fieldset class="bloque" data-paso="fotos">
@@ -427,7 +455,10 @@ async function formulario(vista, ctx, { modo, id, desde }) {
       return errorGrupo("e-color", hay && !colorSel() ? tr("panel.inventario.error_color") : "");
     },
     precio: () => {
-      return marcarError(form, "e-precio", leerPrecio(valor("#e-precio")) ? "" : tr("panel.inventario.precio_invalido"));
+      const a = marcarError(form, "e-precio", leerPrecio(valor("#e-precio")) ? "" : tr("panel.inventario.precio_invalido"));
+      const b = !usdActivo || marcarError(form, "e-precio-usd", !valor("#e-precio-usd") || leerPrecio(valor("#e-precio-usd")) ? "" : tr("datos.error.precio_usd"));
+      const c = !$("#e-contar").checked || marcarError(form, "e-unidades", leerUnidades(valor("#e-unidades")) != null ? "" : tr("datos.error.stock_cantidad"));
+      return a && b && c;
     },
     fotos: () => !subiendo && !subiendoVideo,
     usado: () => {
@@ -593,6 +624,12 @@ async function formulario(vista, ctx, { modo, id, desde }) {
     if (e.target.name === "e-color") { q.color_id = colorSel(); errorGrupo("e-color", ""); }
   });
   $("#e-precio").addEventListener("blur", (e) => { const p = leerPrecio(e.target.value); if (p) e.target.value = formatearMiles(p); });
+  // Stock contado (0040): con la cuenta, la cantidad; sin ella, el interruptor.
+  $("#e-contar").addEventListener("change", (e) => {
+    $("#e-stock-sino").hidden = e.target.checked;
+    $("#e-stock-cuenta").hidden = !e.target.checked;
+    if (e.target.checked) $("#e-unidades").focus();
+  });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -611,6 +648,10 @@ async function formulario(vista, ctx, { modo, id, desde }) {
       color_nombre_mostrar: valor("#e-color-mostrar"),
       precio: leerPrecio(valor("#e-precio")),
       en_stock: $("#e-stock").checked,
+      contar_stock: $("#e-contar").checked,
+      stock_cantidad: $("#e-contar").checked ? leerUnidades(valor("#e-unidades")) : null,
+      // Con el dólar apagado, el precio en U$D guardado no se toca.
+      ...(usdActivo ? { precio_usd: valor("#e-precio-usd") ? leerPrecio(valor("#e-precio-usd")) : null } : {}),
       fotos,
       video,
       publicado: $("#e-publicado").checked,

@@ -59,8 +59,10 @@ reset role;
 do $$ begin
   assert (select count(*) from public.perfiles) = (select count(*) from perfiles_antes)
      and not exists (select * from public.perfiles except select * from perfiles_antes), 'los usuarios no se tocan';
-  assert (select nombre = 'Tienda de demostración' and modo_demo and legal_publicado is null and logo = '' and meta_pixel_id = ''
-          and precios_actualizados_en is not null from public.tienda), 'la tienda como nueva';
+  -- (cambiado en 0037: la tienda nueva es la de ejemplo de Argentina, con los legales publicados)
+  assert (select nombre = 'Tienda de demostración' and modo_demo and pais = 'ar' and logo = '' and color_primario = '#1A73E8'
+          and (legal_publicado ->> 'version') = '1' and cardinality(public.datos_de_ejemplo(t)) = 9
+          and precios_actualizados_en is not null from public.tienda t), 'la tienda como nueva';
   assert (select count(*) from public.equipos) = 6 and (select bool_and(es_demo) from public.equipos), 'solo los 6 equipos de demostración';
   assert (select count(*) from public.resenas) = 0, 'sin reseñas';
   -- Las secuencias siguen desde el mayor: un modelo nuevo no choca.

@@ -13,6 +13,7 @@ import { variablesTema, aplicarTema, FONDOS } from "../tema.js";
 import { logoGenericoSVG } from "../ilustracion.js";
 import { $, $$, esc, avisar, conBoton, campoTexto, marcarError, enfocarPrimerError } from "./ui.js";
 import { cargarImagen, codificar } from "./imagenes.js";
+import { htmlMoneda, iniciarMoneda } from "./moneda.js";
 
 const TAMANOS = ["compacto", "normal", "grande"];
 const VISTAS = ["cuadricula", "carrusel"];
@@ -50,6 +51,8 @@ export async function dibujar(vista, ctx) {
           <p class="ayuda" id="idioma-ayuda">${esc(t_("panel.tienda.idioma.ayuda"))}</p>
         </div>
       </section>
+
+      ${htmlMoneda(t)}
 
       <section class="bloque" aria-labelledby="t-datos">
         <h2 id="t-datos">${esc(t_("panel.tienda.datos.titulo"))}</h2>
@@ -150,6 +153,8 @@ export async function dibujar(vista, ctx) {
   }
   $("#pais").addEventListener("change", () => { ctx.sucio = true; pintarPais(); });
   pintarPais();
+  // --- Moneda: el dólar de apoyo o de reemplazo (0038) ---
+  const moneda = iniciarMoneda(form, () => $("#pais").value);
 
   // --- Vista previa de colores ---
   function datosColores() {
@@ -350,7 +355,8 @@ export async function dibujar(vista, ctx) {
     for (const id of ["color_primario", "color_secundario"]) {
       marcarError(form, id, hexValido(v(id)) ? "" : t_("panel.tienda.error.color"));
     }
-    if (enfocarPrimerError(form)) return;
+    const datosMoneda = moneda.leer();
+    if (enfocarPrimerError(form) || !datosMoneda) return;
     const cambios = {
       nombre: v("nombre"), titulo_sitio: v("titulo_sitio"), pais, idioma: $("#idioma").value, ciudad: v("ciudad"), direccion: v("direccion"), horario_texto: v("horario_texto"),
       whatsapp, correo_contacto: v("correo_contacto"),
@@ -359,7 +365,8 @@ export async function dibujar(vista, ctx) {
       vista_equipos: $('input[name="vista_equipos"]:checked').value,
       // Vacío o igual al texto por defecto mostrado: se guarda el valor por defecto.
       etiqueta_precio: !v("etiqueta_precio") || v("etiqueta_precio") === t_("panel.tienda.precio.defecto") ? PRECIO_POR_DEFECTO : v("etiqueta_precio"),
-      texto_entrega: v("texto_entrega"), texto_garantia_nuevos: v("texto_garantia_nuevos"), texto_garantia_usados: v("texto_garantia_usados")
+      texto_entrega: v("texto_entrega"), texto_garantia_nuevos: v("texto_garantia_nuevos"), texto_garantia_usados: v("texto_garantia_usados"),
+      ...datosMoneda
     };
     try {
       await conBoton($("#guardar-tienda"), () => api.guardarTienda(cambios));

@@ -9,6 +9,7 @@ import { fechaCorta, formatearMiles } from "../utils.js";
 import { whatsappValido, fijarPais } from "../datos/paises.js";
 import { frasesPagos } from "../datos/comun.js";
 import { tieneEnvios } from "../datos/envios.js";
+import { camposDeEjemplo, legalesDeEjemplo } from "../datos/ejemplo.js";
 import { $, $$, esc, avisar, confirmar, conBoton, campoTexto, marcarError, enfocarPrimerError, interruptor } from "./ui.js";
 import { republicarAlGuardar } from "./legales.js";
 import { faltantes } from "../legal/motor.js";
@@ -19,6 +20,7 @@ const RUTAS = {
   inventario: () => import("./inventario.js"),
   tienda: () => import("./tienda.js"),
   catalogo: () => import("./catalogo.js"),
+  promos: () => import("./promos.js"),
   legales: () => import("./legales.js"),
   usuarios: () => import("./usuarios.js")
 };
@@ -249,7 +251,11 @@ async function vistaInicio(vista) {
   // Legales primero: sin publicar, el pop-up no envía pedidos (0017).
   const legales = faltantes(tienda);
   const pasoLegal = legales.find((f) => f.paso > 0)?.paso || 6;
+  // Datos de ejemplo (0037): primero, porque con ellos no se quita la demostración.
+  const ejemplo = camposDeEjemplo(tienda);
   const avisos = [
+    ejemplo.includes("whatsapp") && [t("panel.inicio.whatsapp_ejemplo"), "#/tienda"],
+    legalesDeEjemplo(tienda) && [t("panel.inicio.legales_ejemplo"), "#/legales/2"],
     !tienda.legal_publicado && [t("panel.inicio.falta_legales"), `#/legales/${pasoLegal}`],
     tienda.legal_publicado && legales.length && [t("panel.inicio.faltan_datos_legales"), `#/legales/${pasoLegal}`],
     !tienda.nombre.trim() && [t("panel.inicio.falta_nombre"), "#/tienda"],
@@ -298,9 +304,10 @@ async function vistaInicio(vista) {
     <section class="bloque" aria-labelledby="t-demo">
       <h2 id="t-demo">${esc(t("panel.inicio.modo_demo"))}</h2>
       <p class="ayuda">${esc(tn("panel.inicio.demo_ayuda", demo, { n: formatearMiles(demo) }))}</p>
-      ${!tienda.legal_publicado ? `<p class="aviso-datos" id="demo-sin-legales">${esc(t("panel.inicio.demo_sin_legales")).replace("{enlace}", `<a href="#/legales/${pasoLegal}">${esc(t("panel.inicio.publique_legales"))}</a>`)}</p>` : ""}
-      ${interruptor({ id: "i-modo-demo", etiqueta: t("panel.inicio.mostrar_franja"), marcado: tienda.modo_demo, atributos: !tienda.legal_publicado && tienda.modo_demo ? 'disabled aria-describedby="demo-sin-legales"' : "" })}
-      <button type="button" class="boton boton--peligro" id="borrar-demo" ${(!demo && !tienda.modo_demo) || !tienda.legal_publicado ? "disabled" : ""} ${!tienda.legal_publicado ? 'aria-describedby="demo-sin-legales"' : ""}>${esc(t("panel.inicio.borrar_demo"))}</button>
+      ${!tienda.legal_publicado ? `<p class="aviso-datos" id="demo-sin-legales">${esc(t("panel.inicio.demo_sin_legales")).replace("{enlace}", `<a href="#/legales/${pasoLegal}">${esc(t("panel.inicio.publique_legales"))}</a>`)}</p>`
+        : ejemplo.length ? `<p class="aviso-datos" id="demo-sin-legales">${esc(t("panel.inicio.demo_con_ejemplo"))}</p>` : ""}
+      ${interruptor({ id: "i-modo-demo", etiqueta: t("panel.inicio.mostrar_franja"), marcado: tienda.modo_demo, atributos: (!tienda.legal_publicado || ejemplo.length) && tienda.modo_demo ? 'disabled aria-describedby="demo-sin-legales"' : "" })}
+      <button type="button" class="boton boton--peligro" id="borrar-demo" ${(!demo && !tienda.modo_demo) || !tienda.legal_publicado || ejemplo.length ? "disabled" : ""} ${!tienda.legal_publicado || ejemplo.length ? 'aria-describedby="demo-sin-legales"' : ""}>${esc(t("panel.inicio.borrar_demo"))}</button>
     </section>` : ""}
     ${ctx.esAdministrador() ? `
     <section class="bloque" aria-labelledby="t-fabrica">

@@ -27,7 +27,8 @@ const CONFIG = `export const CONFIG = {
 let navegador;
 let fallas = 0;
 async function caso(nombre, fn) {
-  try { await fn(); console.log(`ok   ${nombre}`); } catch (e) { fallas++; console.log(`FALLA ${nombre}\n     ${e.message.split("\n")[0]}`); }
+  // ICT_LINEAS muestra más líneas de cada falla (como tests/verificar.cjs).
+  try { await fn(); console.log(`ok   ${nombre}`); } catch (e) { fallas++; console.log(`FALLA ${nombre}\n     ${e.message.split("\n").slice(0, +(process.env.ICT_LINEAS || 1)).join("\n     ")}`); }
 }
 
 async function pagina(ancho = 1280) {
@@ -93,22 +94,28 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
   if (process.env.HTTPS_PROXY) args.push(`--proxy-server=${process.env.HTTPS_PROXY}`, "--proxy-bypass-list=127.0.0.1;localhost");
   navegador = await chromium.launch({ args });
 
-  await caso("sitio: carga los datos públicos con la RPC; sin legales publicados, \"Página en preparación.\" y el pop-up no envía", async () => {
+  // (cambiado en 0037: la tienda nueva es la de ejemplo de Argentina, con los
+  // legales publicados; "sin legales" lo sigue probando tests/verificar.cjs)
+  await caso("sitio: carga los datos públicos con la RPC; la tienda nueva (0037) es la de ejemplo de Argentina, con los legales de ejemplo publicados y el pop-up listo", async () => {
     const p = await pagina();
     await p.goto(`${BASE}/`, { waitUntil: "networkidle" });
-    // 0018: una tienda nueva es de Argentina
+    // 0018 y 0037: una tienda nueva es de Argentina
     assert.equal(await p.evaluate(async (base) => (await (await import(`${base}/assets/js/datos/paises.js`)).paisActual()), BASE), "ar");
     assert.equal(await p.textContent("#contador"), "6 equipos disponibles");
     assert.equal(await p.locator(".galeria > .tarjeta").count(), 5);
     assert.ok(await p.isVisible("#franja-demo"));
     await p.goto(`${BASE}/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb`, { waitUntil: "networkidle" });
     await p.click("#detalle-en-linea [data-comprar]");
-    assert.equal(await p.textContent("#popup .popup-alerta"), "Esta tienda todavía no completó su información legal.");
+    await p.waitForSelector("#p-nombre");
     for (const ruta of ["/privacidad/", "/terminos/", "/cookies/"]) {
       await p.goto(`${BASE}${ruta}`, { waitUntil: "networkidle" });
       await p.waitForFunction(() => !document.querySelector("#legal-texto[aria-busy]"));
-      assert.equal((await p.textContent("#legal-texto")).trim(), "Página en preparación.", ruta);
+      // Los documentos publicados (las cookies no nombran a la tienda).
+      assert.notEqual((await p.textContent("#legal-texto")).trim(), "Página en preparación.", ruta);
     }
+    await p.goto(`${BASE}/privacidad/`, { waitUntil: "networkidle" });
+    await p.waitForFunction(() => !document.querySelector("#legal-texto[aria-busy]"));
+    assert.match(await p.textContent("#legal-texto"), /Nombre y apellido de ejemplo[\s\S]*CUIT 20-12345678-6/);
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
@@ -129,7 +136,7 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
       const legales = Object.fromEntries(Object.entries(TIENDA_LEGAL_PRUEBA).filter(([k]) => /^(legal_|meta_pixel_id|ga4_|gtm_|clarity_|tiktok_|gads_|capi_|plataforma_|envio_)/.test(k)));
       legales.envio_retiro = false; // C2: solo el envío a domicilio (el retiro pide la dirección de Mi tienda)
       // La tienda local nace en Argentina (0018); la de prueba es de Colombia.
-      let t = await a.guardarTienda({ ...legales, pais: "co", meta_pixel_id: "" });
+      let t = await a.guardarTienda({ ...legales, pais: "co", whatsapp: "573001234567", meta_pixel_id: "" });
       r.push(await intentar(() => a.guardarTienda({ legal_publicado: { version: 9, vigente_desde: "2020-01-01", huella: "x", documentos: generar({ ...t, meta_pixel_id: "123456789012345" }) } })));
       r.push(await intentar(() => a.guardarTienda({ legal_perfil: "distribuidor" })));
       t = await a.guardarTienda({ meta_pixel_id: "123456789012345" });
@@ -141,11 +148,13 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
       return r;
     }, BASE);
     const hoy = new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10);
-    assert.deepEqual(r, ["Publique los textos legales antes de borrar los datos de demostración.", "Publique los textos legales antes de quitar el modo demo.",
-      "Faltan datos para publicar los textos legales.", "Algún dato no tiene el formato correcto. Revise los campos.", 1, hoy, 2]);
+    // (cambiado en 0037: la tienda nueva trae datos de ejemplo y la versión 1 publicada)
+    const ejemplo = "Cambie los datos de ejemplo (el WhatsApp y los de Legales) antes de quitar la demostración.";
+    assert.deepEqual(r, [ejemplo, ejemplo,
+      "Faltan datos para publicar los textos legales.", "Algún dato no tiene el formato correcto. Revise los campos.", 2, hoy, 3]);
     await p.goto(`${BASE}/terminos/`, { waitUntil: "networkidle" });
     await p.waitForFunction(() => !document.querySelector("#legal-texto[aria-busy]"));
-    assert.match(await p.textContent("#legal-texto"), /24 meses desde la entrega[\s\S]*versión 2\./);
+    assert.match(await p.textContent("#legal-texto"), /24 meses desde la entrega[\s\S]*versión 3\./);
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });
@@ -166,7 +175,8 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.waitForSelector("text=Su pedido está listo", { timeout: 15000 });
     const lead = JSON.parse(fs.readFileSync(ENTORNO.LEAD, "utf8"));
     assert.deepEqual([lead.consentimiento_datos, lead.consentimiento_promociones, lead.consentimiento_medicion, lead.consentimiento_publicidad, lead.version_politica],
-      [true, true, false, false, 2]);
+      // (cambiado en 0037: la versión 1 es la de ejemplo; el caso de Legales publicó la 2 y la 3)
+      [true, true, false, false, 3]);
     assert.match(lead.fecha_consentimiento, /-05:00$/);
     const codigo = (await p.textContent(".popup-estado .codigo")).trim();
     assert.equal(lead.name, "Ana Gómez");
@@ -472,7 +482,7 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await entrar(p, "administrador@local.co");
     // Cambiado con 0035: el administrador ve todo (también Usuarios) y el servidor
     // lo deja gestionar la tienda.
-    assert.deepEqual(await p.locator(".navegacion a:visible").allTextContents(), ["Inicio", "Inventario", "Mi tienda", "Catálogo", "Legales", "Usuarios"]);
+    assert.deepEqual(await p.locator(".navegacion a:visible").allTextContents(), ["Inicio", "Inventario", "Mi tienda", "Catálogo", "Promos", "Legales", "Usuarios"]);  // (cambiado en 0039: Promos)
     const guardado = await p.evaluate(async () => {
       const { api } = await import(new URL("../assets/js/datos/api.js", location.href).href);
       const a = await api();
@@ -585,6 +595,45 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await q.context().close();
   });
 
+  await caso("precios (0038 a 0040): dólar, promos y stock contado con las reglas del servidor; el público no lee la cantidad y ve el cartel", async () => {
+    const p = await pagina(390);
+    await entrar(p, "gestor@local.co");
+    const r = await p.evaluate(async (base) => {
+      const a = await (await import(`${base}/assets/js/datos/api.js`)).api();
+      const intentar = async (fn) => { try { await fn(); return "ok"; } catch (e) { return e.message; } };
+      const out = [];
+      out.push(await intentar(() => a.guardarTienda({ usd_modo: "apoyo" })));
+      out.push(await intentar(() => a.guardarTienda({ promo_banner_activo: true })));
+      const t = await a.guardarTienda({ usd_modo: "apoyo", usd_cotizacion: 1000, usd_redondeo: "abajo", promo_banner_activo: true,
+        promo_banner_texto: "Cyber Sale", promo_descuentos_activos: true, promo_descuento_tienda: 10 });
+      out.push(Boolean(t.usd_actualizado_en), Number(t.usd_cotizacion));
+      const q = (await a.listarEquipos())[0];
+      await a.actualizarEquipo(q.id, { publicado: true, en_stock: true });
+      out.push(await intentar(() => a.actualizarEquipo(q.id, { contar_stock: true })));
+      const q2 = await a.actualizarEquipo(q.id, { contar_stock: true, stock_cantidad: 2 });
+      out.push(q2.en_stock, q2.stock_cantidad);
+      const publico = (await a.cargarPublico()).equipos.find((x) => x.id === q.id);
+      out.push("stock_cantidad" in publico, publico.stock_bajo);
+      return { out, id: q.id, precio: q.precio, modelo: q.modelo_id };
+    }, BASE);
+    assert.deepEqual(r.out, ["Cargue la cotización del dólar: cuánto vale 1 U$D en la moneda de su país.", "Escriba el texto del banner para activarlo.",
+      true, 1000, "Escriba cuántas unidades tiene (0 o más).", true, 2, false, 2]);
+    // El público no puede leer la cantidad por REST.
+    const rest = await fetch(`${ENTORNO.URL}/rest/v1/equipos?select=stock_cantidad&limit=1`, { headers: { apikey: ENTORNO.ANON, authorization: `Bearer ${ENTORNO.ANON}` } });
+    assert.ok(!rest.ok, `REST respondió ${rest.status}`);
+    // El sitio: banner, precio con 10 % y el de U$D, y el cartel.
+    const s = await p.context().newPage();
+    await s.goto(`${BASE}/?equipo=${r.id}`, { waitUntil: "networkidle" });
+    assert.ok(await s.isVisible("#promo-banner"));
+    const bloque = s.locator("#detalle-en-linea .precio-bloque");
+    assert.equal(await bloque.locator(".stock-bajo").textContent(), "¡Quedan 2!");
+    assert.match(await bloque.locator(".precio-tachado").textContent(), /^Antes: /);
+    assert.match(await bloque.textContent(), /U\$D\s\d/);
+    assert.match(await s.textContent("#pie-cambio"), /^Cambio actualizado el \d+\/\d+\/\d{4} · U\$D 1 = \$1\.000$/);
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
   // Al final: deja la base como recién instalada.
   await caso("restablecer de fábrica (0036): el gestor no puede; el administrador deja la base como nueva, vacía los buckets y los usuarios siguen", async () => {
     const usarApi = (p, fn, arg) => p.evaluate(async ([cuerpo, arg]) => {
@@ -615,7 +664,9 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.waitForSelector(".estadisticas", { timeout: 15000 });
     assert.equal(await p.textContent("#aviso-flotante"), "Listo: el cotizador quedó como recién instalado.");
     const tienda = await usarApi(p, (a) => a.leerTienda());
-    assert.deepEqual([tienda.nombre, tienda.vista_equipos, tienda.modo_demo, tienda.legal_publicado], ["Tienda de demostración", "cuadricula", true, null]);
+    // (cambiado en 0037: la tienda nueva es la de ejemplo de Argentina, con la versión 1 de los legales de ejemplo)
+    assert.deepEqual([tienda.nombre, tienda.pais, tienda.vista_equipos, tienda.modo_demo, tienda.legal_publicado?.version, tienda.whatsapp],
+      ["Tienda de demostración", "ar", "cuadricula", true, 1, "5491100000000"]);
     for (const [bucket, ruta] of [["fotos", "equipos/fabrica.webp"], ["marca", "logo-fabrica.png"]]) {
       assert.equal(await publico(bucket, ruta), 404, `${bucket}/${ruta} borrado`);
     }

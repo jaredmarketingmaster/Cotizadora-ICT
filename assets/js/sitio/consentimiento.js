@@ -15,7 +15,7 @@
 //   espera a que la persona baje); tres botones iguales; región accesible.
 // =============================================================================
 
-import { HERRAMIENTAS, activas } from "../legal/herramientas.js";
+import { HERRAMIENTAS, activas, esPixelDeEjemplo } from "../legal/herramientas.js";
 import { iniciarPixel, retirarPixel } from "./pixel.js";
 import { escaparHTML } from "../utils.js";
 import { t } from "../i18n/i18n.js";
@@ -157,7 +157,8 @@ function aplicar() {
   if (!tienda?.cargar) return;
   for (const h of activas(tienda.datos)) {
     const id = String(tienda.datos[h.campo] || "").trim();
-    if (!h.patron.test(id)) continue;
+    // El ID de ejemplo de la tienda nueva (0037) no es de nadie: no se carga.
+    if (!h.patron.test(id) || (h.campo === "meta_pixel_id" && esPixelDeEjemplo(id))) continue;
     if (permitido(h.categoria) && !cargadas.has(h.clave)) {
       cargadas.add(h.clave);
       try { CARGAR[h.clave](id); } catch (e) { console.error(h.nombre, e); }

@@ -30,6 +30,12 @@
 <body>
   <a class="salto" href="#galeria" data-t="sitio.saltar">Ir a los equipos</a>
 
+  <!-- Banner de promos (0039, Promos en el panel): fijo arriba, con el texto que corre. La pista es decorativa; el texto lo leen los lectores de pantalla en #promo-texto. Lo arma assets/js/sitio/promo.js. -->
+  <div class="promo-banner" id="promo-banner" role="region" aria-label="Promoción" data-t-aria-label="sitio.promo.region" hidden>
+    <div class="promo-ventana" aria-hidden="true"><div class="promo-pista" id="promo-pista"></div></div>
+    <p class="oculto-visual" id="promo-texto"></p>
+    <button type="button" class="promo-pausa" id="promo-pausa" aria-pressed="false" aria-label="Pausar el texto de la promoción" data-t-aria-label="sitio.promo.pausar"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="icono-pausa" d="M8 5v14M16 5v14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path class="icono-seguir" d="M8 5l11 7-11 7z" fill="currentColor"/></svg></button>
+  </div>
   <div class="franja-demo" id="franja-demo" role="status" data-t="sitio.franja_demo" hidden>Sitio en preparación: los equipos y precios son de demostración.</div>
 
   <header class="encabezado">
@@ -118,6 +124,7 @@
     <div class="contenedor pie-grilla">
       <p class="pie-tienda" id="pie-tienda"></p>
       <p class="pie-precios cifras" id="pie-precios"></p>
+      <p class="pie-precios cifras" id="pie-cambio" hidden></p>
       <nav class="pie-enlaces" aria-label="Legales" data-t-aria-label="sitio.pie.legales">
         <a href="privacidad/" data-t="sitio.pie.privacidad">Política de privacidad</a>
         <a href="terminos/" data-t="sitio.pie.terminos">Términos y condiciones</a>

@@ -4,10 +4,11 @@
 // Con prefers-reduced-motion el cambio es directo.
 // =============================================================================
 
-import { escaparHTML, formatearPrecio, reducirMovimiento } from "../utils.js";
+import { escaparHTML, reducirMovimiento } from "../utils.js";
 import { textoCondicion, textoMasVendido } from "./catalogo.js";
 import { t as tr } from "../i18n/i18n.js";
 import { htmlMedio } from "./fotos.js";
+import { htmlTachado, htmlApoyo, htmlDescuento, htmlStockBajo } from "./precio-html.js";
 
 const SIZES = "(min-width: 1200px) 280px, (min-width: 960px) 30vw, (min-width: 640px) 45vw, 112px";
 
@@ -38,11 +39,14 @@ function htmlTarjeta(api, t, i) {
     <button type="button" class="tarjeta-boton" data-clave="${escaparHTML(t.clave)}">
       <span class="tarjeta-medio">${htmlMedio(api, q, alt, { sizes: SIZES, cargaInmediata: i < 2 })}</span>
       <span class="tarjeta-cuerpo">
-        <span class="tarjeta-etiquetas"><span class="etiqueta-pildora${t.condicion === "usado" ? " etiqueta-pildora--usado" : ""}">${textoCondicion(t.condicion)}</span>${t.masVendido ? `<span class="etiqueta-pildora etiqueta-pildora--mas-vendido">${textoMasVendido()}</span>` : ""}</span>
+        <span class="tarjeta-etiquetas"><span class="etiqueta-pildora${t.condicion === "usado" ? " etiqueta-pildora--usado" : ""}">${textoCondicion(t.condicion)}</span>${t.masVendido ? `<span class="etiqueta-pildora etiqueta-pildora--mas-vendido">${textoMasVendido()}</span>` : ""}${htmlDescuento(t.equipoMin?.descuento)}</span>
         <span class="tarjeta-nombre">${escaparHTML(nombre)}</span>
         <span class="tarjeta-sub cifras">${sub}</span>
         ${muestras}
-        <span class="tarjeta-precio cifras">${t.desde ? `<span class="desde">${tr("sitio.tarjeta.desde")}</span>` : ""}${formatearPrecio(t.precioMin)}${t.esDemo ? ` <span class="etiqueta-demo">${tr("sitio.demo")}</span>` : ""}</span>
+        ${htmlTachado(t.equipoMin?.textos)}
+        <span class="tarjeta-precio cifras">${t.desde ? `<span class="desde">${tr("sitio.tarjeta.desde")}</span>` : ""}${escaparHTML(t.equipoMin?.textos?.principal ?? "")}${t.esDemo ? ` <span class="etiqueta-demo">${tr("sitio.demo")}</span>` : ""}</span>
+        ${htmlApoyo(t.equipoMin?.textos)}
+        ${htmlStockBajo(t.stockBajo)}
       </span>
     </button>
   </li>`;

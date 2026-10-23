@@ -4,8 +4,10 @@
 // Funciones puras (sin DOM), para poder probarlas solas.
 // =============================================================================
 
-import { capacidadEnGB, formatearPrecio } from "../utils.js";
+import { capacidadEnGB, formatearPrecio, fechaCorta } from "../utils.js";
+import { datosPais, paisActual } from "../datos/paises.js";
 import { nombreColor } from "../datos/comun.js";
+import { preciosEquipo, textosPrecio, valorPrincipal } from "../datos/precios.js";
 import { t as tr } from "../i18n/i18n.js";
 
 // Recencia de cada generación = el mayor "orden" de sus modelos en el catálogo.
@@ -22,13 +24,25 @@ export function prepararCatalogo(datos) {
   // El color de cada equipo sale del color oficial: color_nombre es el nombre
   // que ve el cliente (el que eligió la tienda o el oficial) y color_hex la
   // muestra oficial ("" si la fuente no la tiene: muestra neutra).
+  // Precios (0038 y 0039): precio queda con el descuento de las promos;
+  // precio_lista es el cargado. usd y usd_lista, en U$D (null sin dólar).
+  // valor ordena y compara en la moneda que se muestra; textos, lo que se ve.
+  const tienda = datos.tienda || {};
   const equipos = (datos.equipos || [])
     .filter((q) => porId.has(q.modelo_id) && q.publicado && q.en_stock)
     .map((q) => {
       const color = colores.get(q.color_id) || null;
-      return { ...q, modelo: porId.get(q.modelo_id), color, color_nombre: nombreColor(color, q.color_nombre_mostrar), color_hex: color?.hex || "" };
+      const modelo = porId.get(q.modelo_id);
+      const p = preciosEquipo(q, tienda, modelo.slug);
+      const e = {
+        ...q, modelo, color, color_nombre: nombreColor(color, q.color_nombre_mostrar), color_hex: color?.hex || "",
+        precio_lista: p.lista, precio: p.precio, descuento: p.descuento, usd_lista: p.usdLista, usd: p.usd
+      };
+      e.valor = valorPrincipal(e, tienda);
+      e.textos = textosPrecio(e, tienda);
+      return e;
     });
-  return { tienda: datos.tienda || {}, porId, porSlug, fichas, colores, equipos, resenas: datos.resenas || [] };
+  return { tienda, porId, porSlug, fichas, colores, equipos, resenas: datos.resenas || [] };
 }
 
 export function filtrar(equipos, { condicion = "", modelo = "", capacidad = "" } = {}) {
@@ -86,7 +100,7 @@ export function encadenar(cat, filtros) {
 }
 
 function ordenarEquipos(a, b) {
-  return (b.destacado - a.destacado) || (a.precio - b.precio) || a.color_nombre.localeCompare(b.color_nombre);
+  return (b.destacado - a.destacado) || (a.valor - b.valor) || a.color_nombre.localeCompare(b.color_nombre);
 }
 
 // Nuevos: una tarjeta por modelo + capacidad (los colores van como muestras).
@@ -110,8 +124,14 @@ export function tarjetas(equipos) {
   for (const t of lista) {
     t.equipos.sort(ordenarEquipos);
     t.destacado = t.equipos.some((q) => q.destacado);
-    t.precioMin = Math.min(...t.equipos.map((q) => q.precio));
-    t.desde = new Set(t.equipos.map((q) => q.precio)).size > 1;
+    t.precioMin = Math.min(...t.equipos.map((q) => q.valor));
+    t.desde = new Set(t.equipos.map((q) => q.valor)).size > 1;
+    // El equipo del precio que se muestra (el más barato) y su descuento.
+    t.equipoMin = t.equipos.find((q) => q.valor === t.precioMin);
+    // Stock contado (0040): el cartel, si todos sus equipos lo cuentan y entre
+    // todos quedan 5 o menos.
+    const bajos = t.equipos.map((q) => q.stock_bajo);
+    t.stockBajo = bajos.every((n) => Number.isInteger(n)) && bajos.reduce((s, n) => s + n, 0) <= 5 ? bajos.reduce((s, n) => s + n, 0) : null;
     t.esDemo = t.equipos.some((q) => q.es_demo);
     // "Más vendido": si cualquiera de sus equipos lo es. No cambia el orden.
     t.masVendido = t.equipos.some((q) => q.mas_vendido);
@@ -134,6 +154,21 @@ export function diapositivas(cat, tarjeta) {
     .filter((q) => q.condicion === "usado" && q.modelo_id === tarjeta.modelo.id && q.capacidad === tarjeta.capacidad)
     .sort(ordenarEquipos);
   return { lista, inicial: Math.max(0, lista.findIndex((q) => q.id === tarjeta.equipos[0].id)) };
+}
+
+// "Cambio actualizado el 23/10/2026 · U$D 1 = $1.234,50" (0038), si la tienda
+// muestra dólares con cotización.
+export function textoCambio(tienda) {
+  const c = Number(tienda?.usd_cotizacion);
+  if (!tienda?.usd_modo || tienda.usd_modo === "no" || !(c > 0) || !tienda.usd_actualizado_en) return "";
+  return tr("sitio.precio.cambio", { fecha: fechaCorta(tienda.usd_actualizado_en), cotizacion: formatearCotizacion(c) });
+}
+
+// La cotización con hasta 2 decimales, con los separadores del país.
+export function formatearCotizacion(c) {
+  const [entero, dec] = Number(c).toFixed(2).split(".");
+  const conMiles = formatearPrecio(Number(entero));
+  return dec === "00" ? conMiles : `${conMiles}${datosPais(paisActual()).miles === "," ? "." : ","}${dec}`;
 }
 
 // Textos en el idioma de la tienda (i18n): se piden al usarlos, no al cargar.
@@ -160,8 +195,10 @@ export function mensajeCompra(q, codigo, nombre) {
     tr("sitio.wa.saludo_compra"),
     `${q.modelo.nombre} ${textoCondicion(q.condicion)}`,
     [q.capacidad, q.color_nombre].filter(Boolean).join(" · "),
-    tr("sitio.wa.precio", { precio: formatearPrecio(q.precio) })
+    tr("sitio.wa.precio", { precio: textoPrecioMensaje(q) })
   ];
+  // Promos (0039): el descuento y el precio de lista.
+  if (q.descuento) lineas.push(tr("sitio.wa.descuento", { n: q.descuento, lista: q.textos?.tachado || formatearPrecio(q.precio_lista ?? q.precio) }));
   if (q.condicion === "usado") {
     const usado = [
       q.bateria_porcentaje != null && tr("sitio.wa.bateria", { n: q.bateria_porcentaje }),
@@ -171,6 +208,13 @@ export function mensajeCompra(q, codigo, nombre) {
   }
   lineas.push(tr("sitio.wa.codigo", { codigo }), tr("sitio.wa.soy", { nombre: nombre.trim() }));
   return lineas.join("\n");
+}
+
+// El precio del mensaje: el que se ve, con el de U$D entre paréntesis si es de
+// apoyo (0038). Sin dólar ni promos, el mismo de siempre.
+function textoPrecioMensaje(q) {
+  if (!q.textos) return formatearPrecio(q.precio);
+  return q.textos.apoyo ? `${q.textos.principal} (${q.textos.apoyo})` : q.textos.principal;
 }
 
 export function mensajeSinStock(busqueda, codigo, nombre) {

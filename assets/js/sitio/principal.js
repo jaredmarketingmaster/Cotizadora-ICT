@@ -10,7 +10,7 @@ import { logoGenericoSVG } from "../ilustracion.js";
 import { escaparHTML, fechaCorta, formatearMiles, seguro, slugCapacidad, capacidadDeSlug, reducirMovimiento } from "../utils.js";
 import {
   prepararCatalogo, filtrar, contarEquipos, opcionesModelo, opcionesCapacidad, encadenar,
-  tarjetas as armarTarjetas, diapositivas, describirBusqueda
+  tarjetas as armarTarjetas, diapositivas, describirBusqueda, textoCambio
 } from "./catalogo.js";
 import { iniciarSegmentado, iniciarChips, iniciarDesplegable, marcarLimpiado } from "./filtros.js";
 import { crearGaleria } from "./galeria.js";
@@ -78,6 +78,14 @@ function dibujarMarca(t) {
   $("#franja-demo").hidden = !t.modo_demo;
 }
 
+// Banner de promos (0039): el módulo se carga solo si está encendido.
+async function dibujarPromo(t) {
+  const activo = Boolean(t.promo_banner_activo && String(t.promo_banner_texto || "").trim());
+  if (!activo) { $("#promo-banner").hidden = true; document.documentElement.classList.remove("con-promo"); return; }
+  const { mostrarBanner } = await import("./promo.js");
+  mostrarBanner($("#promo-banner"), t.promo_banner_texto);
+}
+
 function urlMapa(t) {
   const q = [t.direccion, t.ciudad].filter(Boolean).join(", ");
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
@@ -115,6 +123,10 @@ function dibujarPie(t) {
   $("#pie-tienda").textContent = [t.nombre, t.ciudad].filter(Boolean).join(" · ");
   const fecha = fechaCorta(t.precios_actualizados_en);
   $("#pie-precios").textContent = fecha ? tr("sitio.pie.precios_actualizados", { fecha }) : "";
+  // Dólar (0038): "Cambio actualizado el …".
+  const cambio = textoCambio(t);
+  $("#pie-cambio").hidden = !cambio;
+  $("#pie-cambio").textContent = cambio;
   // Página de solicitudes (Colombia: peticiones, quejas y reclamos).
   const solicitudes = $("#pie-solicitudes");
   solicitudes.hidden = !SOLICITUDES[t.pais];
@@ -351,6 +363,7 @@ async function iniciar() {
   const t = cat.tienda;
   seguro(() => aplicarTema(t), "tema");
   seguro(() => dibujarMarca(t), "marca");
+  dibujarPromo(t).catch((e) => console.error("promo", e));
   seguro(() => dibujarInfo(t), "info");
   seguro(() => dibujarPie(t), "pie");
   dibujarResenasSiHay().catch((e) => console.error("reseñas", e));
@@ -423,6 +436,7 @@ async function iniciar() {
       if ((nuevos.tienda?.idioma || "es") !== idiomaActual()) { location.reload(); return; }
       cat = prepararCatalogo(nuevos);
       aplicarTema(cat.tienda); dibujarMarca(cat.tienda); dibujarInfo(cat.tienda); dibujarPie(cat.tienda);
+      dibujarPromo(cat.tienda).catch((e) => console.error("promo", e));
       dibujarResenasSiHay().catch((e) => console.error("reseñas", e));
       aplicarVista(cat.tienda);
       quitarEnLinea();

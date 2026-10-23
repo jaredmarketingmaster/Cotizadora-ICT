@@ -4,8 +4,9 @@
 // dedo) y se mueve también con flechas, puntos, muestras y teclado.
 // =============================================================================
 
-import { escaparHTML, formatearPrecio, reducirMovimiento } from "../utils.js";
-import { textoCondicion, textoAlternativo, textoMasVendido } from "./catalogo.js";
+import { escaparHTML, reducirMovimiento } from "../utils.js";
+import { htmlTachado, htmlApoyo, htmlDescuento, htmlStockBajo } from "./precio-html.js";
+import { textoCondicion, textoAlternativo, textoMasVendido, textoCambio } from "./catalogo.js";
 import { htmlFoto, htmlMedio } from "./fotos.js";
 import { filasVisiblesFicha, frasesPagos, etiquetaCategoriaFicha } from "../datos/comun.js";
 import { frasesEnvio } from "../datos/envios.js";
@@ -107,13 +108,16 @@ export function crearDetalle({ api, cat, tarjeta, lista, inicial, alComprar, alC
 
     fichaEl.innerHTML = `
       <div class="detalle-encabezado">
-        <div class="tarjeta-etiquetas"><span class="etiqueta-pildora${usado ? " etiqueta-pildora--usado" : ""}">${textoCondicion(condicion)}</span>${masVendido ? `<span class="etiqueta-pildora etiqueta-pildora--mas-vendido">${textoMasVendido()}</span>` : ""}</div>
+        <div class="tarjeta-etiquetas"><span class="etiqueta-pildora${usado ? " etiqueta-pildora--usado" : ""}">${textoCondicion(condicion)}</span>${masVendido ? `<span class="etiqueta-pildora etiqueta-pildora--mas-vendido">${textoMasVendido()}</span>` : ""}${htmlDescuento(q.descuento)}</div>
         <h2 class="detalle-nombre" id="${idTitulo}">${escaparHTML(modelo.nombre)}</h2>
         <p class="detalle-variante cifras">${[q.capacidad, q.color_nombre].filter(Boolean).map(escaparHTML).join(" · ")}</p>
       </div>
       <div class="precio-bloque">
         <span class="precio-etiqueta">${escaparHTML(etiquetaPrecio(tienda))}</span>
-        <p class="precio-valor cifras">${formatearPrecio(q.precio)}${q.es_demo ? `<span class="etiqueta-demo">${tr("sitio.demo")}</span>` : ""}</p>
+        <p class="precio-valor cifras">${htmlTachado(q.textos)}${escaparHTML(q.textos.principal)}${q.es_demo ? `<span class="etiqueta-demo">${tr("sitio.demo")}</span>` : ""}</p>
+        ${htmlApoyo(q.textos)}
+        ${htmlStockBajo(q.stock_bajo)}
+        ${q.usd != null && textoCambio(tienda) ? `<p class="precio-cambio">${escaparHTML(textoCambio(tienda))}</p>` : ""}
       </div>
       ${datosUsado.length ? `<dl class="datos-usado">${datosUsado.map(([k, v, c]) => `<div${c ? ` class="${c}"` : ""}><dt>${k}</dt><dd>${escaparHTML(v)}</dd></div>`).join("")}</dl>` : ""}
       ${descripcion.map((t) => `<p class="detalle-texto">${escaparHTML(t)}</p>`).join("")}
@@ -253,6 +257,6 @@ export function crearDetalle({ api, cat, tarjeta, lista, inicial, alComprar, alC
 
 // Barra de compra (precio + botón) para celular.
 export function htmlBarraCompra(tienda, q) {
-  return `<div class="barra-precio cifras"><span>${escaparHTML(etiquetaPrecio(tienda))}</span><strong>${formatearPrecio(q.precio)}${q.es_demo ? ` <span class="etiqueta-demo">${tr("sitio.demo")}</span>` : ""}</strong></div>
+  return `<div class="barra-precio cifras"><span>${escaparHTML(etiquetaPrecio(tienda))}</span><strong>${escaparHTML(q.textos.principal)}${q.es_demo ? ` <span class="etiqueta-demo">${tr("sitio.demo")}</span>` : ""}</strong>${htmlApoyo(q.textos, "barra-apoyo")}</div>
     <button type="button" class="boton boton--primario boton--grande" data-comprar>${ICONO_WA}${tr("sitio.detalle.comprar")}</button>`;
 }

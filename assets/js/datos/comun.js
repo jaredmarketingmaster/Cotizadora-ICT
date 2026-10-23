@@ -10,6 +10,7 @@
 import { t, idiomaActual } from "../i18n/i18n.js";
 import { CAMPOS_ENVIO } from "./envios.js";
 import { PASARELAS, CLAVES_PASARELAS } from "./pasarelas.js";
+import { USD_INICIAL, PROMOS_INICIAL } from "./precios.js";
 
 // Un texto que se traduce cada vez que se usa como texto (para las constantes
 // exportadas, que se leen antes de cargar el idioma).
@@ -69,7 +70,11 @@ export const CAMPOS_TIENDA = [
   "pagos_cripto", "pagos_cripto_cuales", "pagos_pasarelas", "pagos_pasarelas_otras", "pagos_descuentos",
   "mostrar_resenas", "titulo_resenas", "titulo_sitio",
   // Envíos (0023, assets/js/datos/envios.js)
-  ...CAMPOS_ENVIO
+  ...CAMPOS_ENVIO,
+  // Dólar (0038) y promos (0039), assets/js/datos/precios.js. La fecha de la
+  // cotización (usd_actualizado_en) la pone el servidor.
+  ...Object.keys(USD_INICIAL).filter((k) => k !== "usd_actualizado_en"),
+  ...Object.keys(PROMOS_INICIAL)
 ];
 
 // Legales (0016): los datos del asistente, con sus valores iniciales (los
@@ -257,7 +262,9 @@ export function frasesPagos(tienda, idioma = idiomaActual()) {
 export const CAMPOS_EQUIPO = [
   "modelo_id", "condicion", "capacidad", "color_id", "color_nombre_mostrar", "precio", "en_stock",
   "fotos", "video", "publicado", "destacado", "mas_vendido", "descripcion_extra", "es_demo",
-  "bateria_porcentaje", "estado_estetico", "detalles", "incluye"
+  "bateria_porcentaje", "estado_estetico", "detalles", "incluye",
+  // Dólar (0038), promos (0039) y stock contado (0040)
+  "precio_usd", "promo_descuento", "contar_stock", "stock_cantidad"
 ];
 
 // Colores del catálogo: la tienda completa el hexadecimal que falta y, solo en
@@ -352,7 +359,9 @@ const ERRORES_SERVIDOR = [
   "envio_costo_zona", "envio_gratis_ya", "envio_gratis_condicion", "envio_gratis_zonas", "envio_plazo", "color_oficial_nombre", "color_hex_fuente", "colores_oficiales",
   "colores_fuente", "color_oficial_borrar", "borrar_color_en_uso", "sin_legales_demo", "sin_legales_borrar",
   "legales_quitar", "legales_faltan", "whatsapp_pais", "correo", "metodo", "pedido_invalido", "invitacion_perfil",
-  "cambiar_usuario", "accion_desconocida", "precio", "lote_vacio", "lote_grande"
+  "cambiar_usuario", "accion_desconocida", "precio", "lote_vacio", "lote_grande",
+  "datos_ejemplo", "usd_cotizacion", "usd_pais", "precio_usd", "promo_banner_texto", "promo_banner_vacio",
+  "promo_descuento", "stock_cantidad"
 ];
 
 // Un mensaje del servidor en español → el mismo mensaje en el idioma en uso.

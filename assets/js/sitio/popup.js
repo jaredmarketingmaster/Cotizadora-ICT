@@ -13,6 +13,7 @@
 import {
   escaparHTML, formatearPrecio, soloDigitos, correoValido, generarCodigo, formatoBasico
 } from "../utils.js";
+import { htmlTachado, htmlApoyo } from "./precio-html.js";
 import { datosPais, paisActual, celularNacionalValido, celularInternacional, agruparCelular, whatsappValido, fechaConZona } from "../datos/paises.js";
 import { textoAlternativo, textoCondicion, mensajeCompra, mensajeSinStock, enlaceWhatsApp } from "./catalogo.js";
 import { leerAtribucion, CLAVES_ATRIBUCION } from "./atribucion.js";
@@ -44,7 +45,8 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
         <div>
           <p class="resumen-nombre">${escaparHTML(q.modelo.nombre)} · ${textoCondicion(q.condicion)}</p>
           <p class="resumen-sub cifras">${[q.capacidad, q.color_nombre].filter(Boolean).map(escaparHTML).join(" · ")}</p>
-          <p class="resumen-precio cifras">${formatearPrecio(q.precio)}${q.es_demo ? ` <span class="etiqueta-demo">${t("popup.demo")}</span>` : ""}</p>
+          <p class="resumen-precio cifras">${htmlTachado(q.textos)}${escaparHTML(q.textos?.principal ?? formatearPrecio(q.precio))}${q.es_demo ? ` <span class="etiqueta-demo">${t("popup.demo")}</span>` : ""}</p>
+          ${htmlApoyo(q.textos)}
         </div>
       </div>`;
     }
