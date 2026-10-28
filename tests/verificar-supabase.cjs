@@ -193,14 +193,15 @@ const contarCorreos = () => (fs.existsSync(ENTORNO.CORREOS) ? fs.readdirSync(ENT
     await p.fill("#p-nombre", "Ana Gómez");
     await p.fill("#p-correo", "ana@correo.co");
     await p.fill("#p-telefono", "3109876543");
+    // (cambiado en 0042: una sola casilla, sin la de promociones)
     await p.check("#p-autorizacion");
-    await p.check("#p-promociones");
     await p.click("[data-enviar]");
     await p.waitForSelector("text=Su pedido está listo", { timeout: 15000 });
     const lead = JSON.parse(fs.readFileSync(ENTORNO.LEAD, "utf8"));
     assert.deepEqual([lead.consentimiento_datos, lead.consentimiento_promociones, lead.consentimiento_medicion, lead.consentimiento_publicidad, lead.version_politica],
-      // (cambiado en 0037: la versión 1 es la de ejemplo; el caso de Legales publicó la 2 y la 3)
-      [true, true, false, false, 3]);
+      // (cambiado en 0037: la versión 1 es la de ejemplo; el caso de Legales publicó la 2 y la 3;
+      // en 0042: sin casilla de promociones, siempre false)
+      [true, false, false, false, 3]);
     assert.match(lead.fecha_consentimiento, /-05:00$/);
     const codigo = (await p.textContent(".popup-estado .codigo")).trim();
     assert.equal(lead.name, "Ana Gómez");

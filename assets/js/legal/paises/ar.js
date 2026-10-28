@@ -80,9 +80,10 @@ export const AR = {
       `- **Rectificación, actualización o supresión:** la hacemos en máximo ${AR.datos.rectificacion.diasHabiles} días hábiles (artículo 16 de la Ley 25.326).`
     ],
     // AR9: HighLevel está en Estados Unidos; decisión: consentimiento expreso
-    // en una casilla aparte del pop-up (popup.js, solo con Argentina).
+    // nombrado en la única casilla del pop-up (desde el 28/10/2026; antes, en
+    // una casilla aparte).
     transmision: () => [
-      "HighLevel está en Estados Unidos. Para enviarle sus datos le pedimos su consentimiento expreso en una casilla aparte del formulario, según el artículo 12 de la Ley 25.326. Nuestro proveedor tecnológico está en Argentina."
+      "HighLevel está en Estados Unidos. Para enviarle sus datos le pedimos su consentimiento expreso en la casilla del formulario, que nombra ese envío, según el artículo 12 de la Ley 25.326. Nuestro proveedor tecnológico está en Argentina."
     ],
     seccion: (ctx) => [
       `En Argentina, el tratamiento de sus datos se rige por ${AR.datos.leyes}. La autoridad de control es la ${AAIP}: [${SITIO_AAIP.replace("https://www.", "")}](${SITIO_AAIP}).`,

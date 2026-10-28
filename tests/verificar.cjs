@@ -1200,9 +1200,8 @@ async function llenarPopup(p) {
     await p.fill("#p-correo", "juan@correo.co");
     await p.click("#p-telefono");
     await p.keyboard.type(telefono);
+    // Una sola casilla (0042): con Argentina, también nombra el envío a EE. UU.
     await p.check("#p-autorizacion");
-    // Argentina (0031): la casilla de la transferencia.
-    if (await p.locator("#p-transferencia").count()) await p.check("#p-transferencia");
     await p.click("[data-enviar]");
     await p.waitForSelector("text=Su pedido está listo");
     return new URL((await p.evaluate(() => window.__abiertos)).at(-1));
@@ -1301,7 +1300,7 @@ async function llenarPopup(p) {
       }, [CLAVE_DEMO, BASE, nombre]);
       await ir(p);
       const e = await p.evaluate((c) => JSON.parse(localStorage.getItem(c)), CLAVE_DEMO);
-      assert.equal(e.version, 29);
+      assert.equal(e.version, 30);
       assert.equal(e.equipos.length, esperado, nombre);
       assert.equal(e.tienda.usd_modo, esperado === 219 ? "apoyo" : "no", nombre);
       assert.equal(e.tienda.pagos_medios.length, esperado === 219 ? 4 : 0, nombre);
@@ -1553,8 +1552,8 @@ async function llenarPopup(p) {
     assert.deepEqual(Object.fromEntries(Object.keys(LEGAL_INICIAL).map((k) => [k, e.tienda[k]])),
       { ...LEGAL_INICIAL, legal_clausula_privacidad: "Mi política propia.", legal_clausula_terminos: "Mi aviso de marca." });
     for (const k of ["texto_privacidad", "texto_terminos", "texto_autorizacion_datos", "aviso_marca", "legales_revisados", "legales_herramientas"]) assert.ok(!(k in e.tienda), k);
-    // (cambiado en 0037 a 0040: versión 28; en 0041: 29) El dólar, las promos y el stock contado, vacíos.
-    assert.equal(e.version, 29);
+    // (cambiado en 0037 a 0040: versión 28; en 0041: 29; en 0042: 30) El dólar, las promos y el stock contado, vacíos.
+    assert.equal(e.version, 30);
     assert.deepEqual([e.tienda.usd_modo, e.tienda.usd_cotizacion, e.tienda.promo_banner_activo, e.tienda.promo_descuentos_activos, e.tienda.promo_combinar],
       ["no", null, false, false, "mayor"]);
     assert.ok(e.equipos.every((q) => q.contar_stock === false && q.stock_cantidad === null && q.precio_usd === null && q.promo_descuento === null));
@@ -2080,7 +2079,7 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
-  await caso("Argentina (0031; cambiado en 0041: sin botón de arrepentimiento): pie con Defensa del Consumidor y Data Fiscal; casilla de la transferencia a EE. UU. en el pop-up; sin página de solicitudes", async () => {
+  await caso("Argentina (0031; cambiado en 0041: sin botón de arrepentimiento): pie con Defensa del Consumidor y Data Fiscal; la única casilla del pop-up nombra el envío a EE. UU. (cambiado en 0042: antes era una casilla aparte); sin página de solicitudes", async () => {
     const p = await nueva(390, 844);
     await ir(p);
     const fiscal = "https://servicios1.afip.gob.ar/clavefiscal/qr/response.aspx?qr=prueba";
@@ -2094,22 +2093,25 @@ async function llenarPopup(p) {
       ["Política de privacidad", "privacidad/"], ["Términos y condiciones", "terminos/"], ["Política de cookies", "cookies/"],
       ["Defensa de las y los consumidores. Para reclamos ingrese aquí", "https://www.argentina.gob.ar/iniciar-un-reclamo-ante-defensa-de-las-y-los-consumidores"],
       ["Data Fiscal (Formulario 960/NM)", fiscal]]);
-    // Pop-up: la casilla aparte de la transferencia, sin marcar y obligatoria.
+    // Pop-up (cambiado en 0042): una sola casilla, sin marcar y obligatoria, que
+    // nombra el envío a HighLevel (EE. UU.); ya no hay casilla aparte.
     await p.click("#detalle-en-linea [data-comprar]");
-    await p.waitForSelector("#p-transferencia");
-    assert.equal(await p.isChecked("#p-transferencia"), false);
+    await p.waitForSelector("#p-autorizacion");
+    assert.equal(await p.locator("#form-cotizacion input[type=checkbox]").count(), 1, "una sola casilla");
+    assert.equal(await p.isChecked("#p-autorizacion"), false);
+    assert.equal((await p.textContent('label[for="p-autorizacion"]')).replace(/\s+/g, " ").trim(),
+      "Soy mayor de 18 años y autorizo el uso de mis datos para mi cotización y su envío a HighLevel (EE. UU.), según la Política de privacidad.");
     await p.fill("#p-nombre", "Juan Pérez");
     await p.fill("#p-correo", "juan@correo.com.ar");
     await p.click("#p-telefono");
     await p.keyboard.type("1123456789");
-    await p.check("#p-autorizacion");
     await p.click("[data-enviar]");
-    assert.equal(await p.textContent("#p-transferencia-error"), "Para continuar, acepte el envío de sus datos a Estados Unidos.");
-    await p.check("#p-transferencia");
+    assert.equal(await p.textContent("#p-autorizacion-error"), "Para continuar, acepte la autorización de datos.");
+    await p.check("#p-autorizacion");
     await p.click("[data-enviar]");
     await p.waitForSelector("#popup-titulo:has-text('Su pedido está listo')");
     const lead = await p.evaluate(() => JSON.parse(sessionStorage.getItem("cotizadora-demo:ultimo-lead")));
-    assert.equal(lead.consentimiento_transferencia, true);
+    assert.deepEqual([lead.consentimiento_datos, lead.consentimiento_transferencia, lead.consentimiento_promociones], [true, true, false]);
     assert.equal(lead.telefono, "+5491123456789");
     assert.equal(await p.isVisible("#pie-solicitudes"), false, "sin botón de arrepentimiento");
     // Solicitudes: Argentina no la ofrece; el pie de las páginas internas lleva Defensa del Consumidor.
@@ -2119,6 +2121,7 @@ async function llenarPopup(p) {
     assert.ok((await p.textContent(".pie-enlaces")).includes("Defensa de las y los consumidores. Para reclamos ingrese aquí"));
     const priv = await textoLegal(p, "/privacidad/");
     assert.ok(priv.includes("Registro Nacional de Bases de Datos de la AAIP con el número 12345678"));
+    assert.ok(priv.includes("le pedimos su consentimiento expreso en la casilla del formulario, que nombra ese envío"));
     assert.ok((await p.textContent(".pie-enlaces")).includes("Defensa de las y los consumidores"));
     // Panel, paso 4: la sección de Argentina con el RNBD y el Data Fiscal.
     await entrarPanel(p, "gestor@demo.co");
@@ -2322,7 +2325,7 @@ async function llenarPopup(p) {
     await p.context().close();
   });
 
-  await caso("pop-up: aviso corto y dos casillas sin marcar; la obligatoria bloquea y la opcional no; el lead lleva el consentimiento; Lead del píxel solo con publicidad", async () => {
+  await caso("pop-up: aviso corto y una sola casilla sin marcar (cambiado en 0042: antes eran dos, con la de promociones), que bloquea; el lead lleva el consentimiento; Lead del píxel solo con publicidad", async () => {
     const p = await nueva(390, 844, { cookies: { medicion: true, publicidad: false } });
     await ir(p, "/?condicion=nuevo&modelo=iphone-18-pro-max&capacidad=512-gb");
     await p.click("#detalle-en-linea [data-comprar]");
@@ -2331,10 +2334,13 @@ async function llenarPopup(p) {
     assert.match(aviso, /^Tienda de demostración \(Celulares La 70 S\.A\.S\., NIT 900123456-7\) es responsable de sus datos\./);
     assert.ok(aviso.endsWith("Ver la Política de privacidad."));
     assert.equal(await p.getAttribute("#p-aviso a", "target"), "_blank");
+    assert.ok(!/promociones/.test(aviso), "el aviso no habla de promociones");
     assert.equal((await p.textContent('label[for="p-autorizacion"]')).replace(/\s+/g, " ").trim(),
-      "Soy mayor de 18 años y autorizo el tratamiento de mis datos para recibir mi cotización y ser contactado sobre ella por WhatsApp y correo, según la Política de privacidad.");
-    assert.equal((await p.textContent('label[for="p-promociones"]')).replace(/\s+/g, " ").trim(), "Quiero recibir promociones y novedades de Tienda de demostración por WhatsApp y correo.");
-    assert.deepEqual([await p.isChecked("#p-autorizacion"), await p.isChecked("#p-promociones")], [false, false], "las dos sin marcar");
+      "Soy mayor de 18 años y autorizo el uso de mis datos para mi cotización, según la Política de privacidad.");
+    assert.equal(await p.locator("#form-cotizacion input[type=checkbox]").count(), 1, "una sola casilla");
+    assert.equal(await p.locator("#p-promociones, #p-transferencia").count(), 0, "sin promociones ni casilla aparte");
+    assert.equal(await p.isChecked("#p-autorizacion"), false, "sin marcar");
+    assert.equal(await p.getAttribute('label[for="p-autorizacion"] a', "href"), "privacidad/");
     assert.equal(await p.getAttribute("#form-cotizacion", "data-clarity-mask"), "true");
     assert.equal(await p.getAttribute("#popup .resumen", "data-clarity-mask"), "true");
     await p.fill("#p-nombre", "Juan Pérez");
@@ -2353,14 +2359,45 @@ async function llenarPopup(p) {
       [true, false, true, false, 1]);
     assert.match(lead.fecha_consentimiento, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}-05:00$/);
     assert.equal(await p.evaluate(() => typeof window.fbq), "undefined", "sin publicidad no hay píxel ni Lead");
-    // Con promociones marcadas
-    await p.click("[data-cerrar]");
-    await p.click("#detalle-en-linea [data-comprar]");
-    await llenarPopup(p);
-    await p.check("#p-promociones");
-    await p.click("[data-enviar]");
-    await p.waitForSelector("text=Su pedido está listo");
-    assert.equal(JSON.parse(await p.evaluate(() => sessionStorage.getItem("cotizadora-demo:ultimo-lead"))).consentimiento_promociones, true);
+    assert.equal(lead.consentimiento_transferencia, false, "sin Argentina, no hay envío que autorizar");
+    // La política ya no ofrece promociones.
+    const priv = await textoLegal(p, "/privacidad/");
+    assert.ok(priv.includes("No los usamos para enviarle promociones.") && !priv.includes("casilla opcional"));
+    assert.deepEqual(p.errores, []);
+    await p.context().close();
+  });
+
+  await caso("0042: los legales de ejemplo de antes pasan a los nuevos (demo, migración 29); con lo publicado viejo, Inicio avisa y el paso 6 lo publica", async () => {
+    const p = await nueva(1280, 900);
+    await ir(p);
+    // Una tienda con los legales de ejemplo de antes (huella 7fcf0f89) y otra con los suyos.
+    const { LEGAL_PUBLICADO_EJEMPLO } = await p.evaluate(async (base) => ({ ...(await import(`${base}/assets/js/datos/legales-ejemplo.js`)) }), BASE);
+    await editarDemo(p, (e, viejo) => { e.version = 29; e.tienda.legal_publicado = viejo; }, { ...LEGAL_PUBLICADO_EJEMPLO, huella: "7fcf0f89" });
+    await ir(p);
+    let t = await p.evaluate((c) => JSON.parse(localStorage.getItem(c)), CLAVE_DEMO);
+    assert.equal(t.version, 30);
+    assert.deepEqual(t.tienda.legal_publicado, LEGAL_PUBLICADO_EJEMPLO, "los de ejemplo, al día");
+    // Lo publicado por la tienda queda como está, e Inicio avisa que hay una versión nueva.
+    await publicarLegales(p);
+    await editarDemo(p, (e) => {
+      const d = e.tienda.legal_publicado.documentos;
+      d.privacidad = d.privacidad.replace("No los usamos para enviarle promociones.", "Texto de una plantilla vieja.");
+      e.tienda.legal_publicado.huella = "00000000";
+      e.version = 29;
+    });
+    await entrarPanel(p, "gestor@demo.co");
+    t = await p.evaluate((c) => JSON.parse(localStorage.getItem(c)), CLAVE_DEMO);
+    assert.equal(t.tienda.legal_publicado.huella, "00000000", "lo de la tienda no se toca");
+    const avisos = await p.$$eval(".avisos li", (xs) => xs.map((x) => [x.querySelector("span").textContent, x.querySelector("a").getAttribute("href")]));
+    assert.ok(avisos.some(([x, h]) => x === "Sus textos legales tienen una versión nueva sin publicar." && h === "#/legales/6"), JSON.stringify(avisos));
+    await p.goto(`${BASE}/admin/#/legales/6`);
+    await p.waitForSelector("#l-publicar:not([disabled])");
+    await p.click("#l-publicar");
+    await p.waitForFunction((c) => JSON.parse(localStorage.getItem(c)).tienda.legal_publicado.huella !== "00000000", CLAVE_DEMO);
+    await p.goto(`${BASE}/admin/#/inicio`);
+    await p.reload();
+    await p.waitForSelector(".estadisticas");
+    assert.ok(!(await p.$$eval(".avisos li span", (xs) => xs.map((x) => x.textContent))).includes("Sus textos legales tienen una versión nueva sin publicar."));
     assert.deepEqual(p.errores, []);
     await p.context().close();
   });

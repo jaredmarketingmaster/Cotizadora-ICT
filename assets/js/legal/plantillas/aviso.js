@@ -1,6 +1,6 @@
 // =============================================================================
 // Plantilla: aviso de privacidad corto (dentro del pop-up, arriba de las
-// casillas). Dos o tres líneas, con el enlace a la política completa.
+// casilla). Dos o tres líneas, con el enlace a la política completa.
 // =============================================================================
 
 export function secciones(ctx) {
@@ -9,7 +9,7 @@ export function secciones(ctx) {
   return [{
     titulo: "",
     lineas: [
-      `${quien} es responsable de sus datos. Los usamos para atender su cotización y contactarlo por WhatsApp y correo y, solo si lo autoriza, para enviarle promociones. Usted puede conocer, actualizar, rectificar y suprimir sus datos. [Ver la Política de privacidad](privacidad/).`
+      `${quien} es responsable de sus datos. Los usamos para atender su cotización y contactarlo sobre ella por WhatsApp y correo. Usted puede conocer, actualizar, rectificar y suprimir sus datos. [Ver la Política de privacidad](privacidad/).`
     ]
   }];
 }

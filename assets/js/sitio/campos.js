@@ -20,24 +20,15 @@ export const ERRORES = {
       ? t("popup.error.telefono.ejemplo", { prefijo: cel.visible, ejemplo: cel.ejemplo })
       : t("popup.error.telefono", { prefijo: cel.visible });
   },
-  autorizacion: () => t("popup.error.autorizacion"),
-  transferencia: () => t("popup.error.transferencia")
+  autorizacion: () => t("popup.error.autorizacion")
 };
 
 // Argentina (0031, legal/FUENTES.md AR9): si la tienda vende a Argentina, el
-// formulario pide en una casilla aparte, obligatoria y sin marcar, el
-// consentimiento expreso para enviar los datos a HighLevel (Estados Unidos).
+// consentimiento expreso para enviar los datos a HighLevel (Estados Unidos) va
+// nombrado en la única casilla del formulario (desde el 28/10/2026, decisión de
+// Jared; antes era una casilla aparte). claveAutorizacion() elige ese texto.
 export const pideTransferencia = (tienda) => (tienda?.legal_paises || []).includes("ar");
-
-export function htmlTransferencia(prefijo) {
-  return `<div class="campo">
-            <label class="casilla" for="${prefijo}-transferencia">
-              <input id="${prefijo}-transferencia" name="autorizacion_transferencia" type="checkbox" required aria-describedby="${prefijo}-transferencia-error">
-              <span>${t("popup.transferencia")}</span>
-            </label>
-            <p class="error-campo" id="${prefijo}-transferencia-error"></p>
-          </div>`;
-}
+export const claveAutorizacion = (base, tienda) => (pideTransferencia(tienda) ? `${base}.ar` : base);
 
 // Mantiene el cursor en el mismo dígito al reformatear "300 123 4567".
 export function formatearConCursor(input) {

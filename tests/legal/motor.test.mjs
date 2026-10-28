@@ -225,9 +225,11 @@ caso("Argentina: faltantes propios (CUIT, garantías, plazo de entrega, RNBD y D
   const docs = generar(baseAr());
   const p = visible(docs.privacidad);
   for (const x of ["CUIT 20-30123456-3", "+54 9 11 2345 6789", "Ley 25.326", "máximo 10 días corridos (artículo 14", "máximo 5 días hábiles (artículo 16",
-    "consentimiento expreso en una casilla aparte", "con el número 12345678",
+    // Cambiado (28/10/2026): una sola casilla, que nombra el envío a EE. UU. (antes, "en una casilla aparte").
+    "consentimiento expreso en la casilla del formulario, que nombra ese envío", "con el número 12345678",
     "LA AGENCIA DE ACCESO A LA INFORMACIÓN PÚBLICA, en su carácter de Órgano de Control de la Ley N° 25.326, tiene la atribución de atender las denuncias y reclamos que interpongan quienes resulten afectados en sus derechos por incumplimiento de las normas vigentes en materia de protección de datos personales."
   ]) assert.ok(p.includes(x), `privacidad: ${x}`);
+  assert.ok(!p.includes("casilla aparte"), "sin casilla aparte");
   const t = visible(docs.terminos);
   for (const x of ["pesos argentinos", "Equipos nuevos: 6 meses desde la entrega.", "Equipos usados: 3 meses desde la entrega.",
     "dentro de los 10 días corridos desde que recibe el equipo o desde la compra, lo que ocurra último", "artículo 34 de la Ley 24.240",
@@ -273,6 +275,19 @@ caso("tienda de ejemplo (0037): Argentina completa, sin faltantes, y legales-eje
   // Cambiar un dato lo saca de la lista; los documentos dicen los datos de ejemplo.
   assert.deepEqual(camposDeEjemplo({ ...t, whatsapp: "5491123456789" }), CAMPOS_EJEMPLO.filter((k) => k !== "whatsapp"));
   assert.match(LEGAL_PUBLICADO_EJEMPLO.documentos.privacidad, /Nombre y apellido de ejemplo/);
+});
+
+caso("una sola casilla (28/10/2026): sin promociones en la política ni en el aviso del pop-up", () => {
+  for (const t of [base(), baseAr()]) {
+    const docs = generar(t);
+    const p = visible(docs.privacidad);
+    assert.ok(p.includes("Con la casilla del formulario, usted nos autoriza a usar sus datos para:"));
+    assert.ok(p.includes("No los usamos para enviarle promociones."));
+    assert.ok(!/casilla (opcional|obligatoria)|promociones y novedades/.test(p), "sin casilla opcional de promociones");
+    const a = visible(docs.aviso);
+    assert.ok(a.includes("Los usamos para atender su cotización y contactarlo sobre ella por WhatsApp y correo."));
+    assert.ok(!/promociones/.test(a));
+  }
 });
 
 console.log(`\nOK: ${casos} casos del motor legal`);

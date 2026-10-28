@@ -44,13 +44,13 @@ export function secciones(ctx) {
     {
       titulo: "Para qué usamos sus datos",
       lineas: [
-        "Con la casilla obligatoria del formulario, usted nos autoriza a usar sus datos para:",
+        "Con la casilla del formulario, usted nos autoriza a usar sus datos para:",
         "",
         "- Atender su cotización y contactarlo sobre ella por WhatsApp y por correo.",
         "- Hacer el seguimiento comercial de esa compra.",
         "- Medir qué anuncios generan ventas.",
         "",
-        `Solo si marca la casilla opcional de promociones, también los usamos para enviarle promociones y novedades de ${ctx.tienda} por WhatsApp y por correo. Puede pedirnos que dejemos de enviarlas en cualquier momento.`
+        "No los usamos para enviarle promociones."
       ]
     },
     {

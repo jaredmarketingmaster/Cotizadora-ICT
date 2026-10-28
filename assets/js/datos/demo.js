@@ -15,6 +15,7 @@ import { ErrorDatos, equipoEsPublico, nombreColor, BUCKETS, mensajeArchivo, RUTA
 import { hexValido, sesion, esperar } from "../utils.js";
 import { whatsappValido, CODIGOS_PAIS_TIENDA } from "./paises.js";
 import { tiendaNueva, TIENDA_EJEMPLO, TIENDA_VITRINA, PAGOS_VACIOS, tieneDatosDeEjemplo, camposDeEjemplo, CAMPOS_EJEMPLO, MODOS_FABRICA, MODO_INICIAL } from "./ejemplo.js";
+import { LEGAL_PUBLICADO_EJEMPLO } from "./legales-ejemplo.js";
 import { equiposVitrina } from "./vitrina.js";
 import { USD_INICIAL, PROMOS_INICIAL, errorUsd, errorPromos, errorEquipoPrecios, aplicarStock, stockBajo } from "./precios.js";
 import { CODIGOS_IDIOMA, t as tr } from "../i18n/i18n.js";
@@ -90,7 +91,7 @@ function estadoInicial(modo = MODO_INICIAL) {
 
 // Versión de los datos guardados en el navegador. Cada cambio de forma repite
 // la migración SQL del mismo número, para no perder lo que el usuario cargó.
-const VERSION = 29;
+const VERSION = 30;
 const MIGRACIONES = {
   // 0004_en_stock.sql: stock numérico → en_stock (sí/no).
   1(e) {
@@ -305,6 +306,13 @@ const MIGRACIONES = {
     for (const m of e.modelos) if (m.activo_por_demo) Object.assign(m, { activo: false, activo_por_demo: false });
     e.equipos = equiposDemo(e.modelos, e.colores, "completa", t);
     e.tienda.precios_actualizados_en = t;
+  },
+  // 0042_casilla_unica.sql: una sola casilla en el pop-up y sin promociones.
+  // La tienda de ejemplo con los legales de antes sin tocar (huella 7fcf0f89)
+  // recibe los nuevos; una que publicó los suyos los vuelve a publicar desde el
+  // panel (Inicio lo avisa).
+  29(e) {
+    if (e.tienda.legal_publicado?.huella === "7fcf0f89") e.tienda.legal_publicado = copia(LEGAL_PUBLICADO_EJEMPLO);
   }
 };
 

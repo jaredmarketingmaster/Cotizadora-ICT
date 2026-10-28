@@ -71,7 +71,7 @@ Están en `popup.js` y `catalogo.js`, y la suite compara el mensaje de WhatsApp 
 - Vitrina (`0041`, la instalación nueva): la tienda de ejemplo con los 219 iPhone nuevos del 15 al Duo (`assets/js/datos/vitrina.js`, cada color y capacidad, imagen predeterminada, precios de ejemplo), promos y dólar de ejemplo (`TIENDA_VITRINA` de `ejemplo.js`). `restablecer_fabrica(modo)`: `completa` (la vitrina, por defecto) o `basica` (los 6 equipos de demostración). El bloque SQL de la vitrina sale de `node tests/sql/vitrina.mjs sql`. Sin botón de arrepentimiento (decisión de Jared): `/solicitudes/` es solo de Colombia.
 - Tienda nueva (`0037`): de Argentina, con datos de ejemplo (WhatsApp ficticio y Legales completo y publicado) en `assets/js/datos/ejemplo.js` y `legales-ejemplo.js` (generado con `node tests/legal/ejemplo.mjs js`). Mientras quede un dato de ejemplo (`camposDeEjemplo` = `datos_de_ejemplo()` del SQL) no se quita la demostración. `tests/verificar.cjs` usa por defecto la tienda de prueba de Colombia (`tests/tienda-prueba-co.js`, con los 6 equipos del modo básico); `nueva(..., { tienda: "nueva" })` da la real (la vitrina).
 - Precios (`assets/js/datos/precios.js`): dólar de apoyo o de reemplazo (`0038`), promos con descuentos por tienda, modelo y equipo (`0039`) y stock contado (`0040`; la cantidad nunca llega al público: `datos_publicos()` manda `stock_bajo` de 1 a 5). En la base se guarda siempre el precio de lista en la moneda del país; el sitio calcula el resto.
-- Cambios a la base: siempre una migración nueva (la próxima es `0042_…sql`). Nunca editar una ya corrida en producción. En producción se corren todas, en orden.
+- Cambios a la base: siempre una migración nueva (la próxima es `0043_…sql`). Nunca editar una ya corrida en producción. En producción se corren todas, en orden.
 
 ## Cómo verificar antes de cada commit
 
@@ -84,7 +84,7 @@ node tests/paises.test.mjs                                 # datos de país
 node tests/i18n.test.mjs                                   # diccionarios es/pt
 node tests/envios.test.mjs                                 # envíos
 node tests/pagos.test.mjs                                  # formas de pago
-NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 92 casos, modo demo
+NODE_PATH="$(npm root -g)" node tests/verificar.cjs        # 93 casos, modo demo
 npx serve -l 8090 . & NODE_PATH="$(npm root -g)" bash tests/lighthouse/medir.sh corrida1   # Lighthouse móvil
 ICT_CAPTURAS=1 NODE_PATH="$(npm root -g)" node tests/verificar.cjs   # + capturas en tests/capturas/
 ```

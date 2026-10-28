@@ -4,9 +4,11 @@
 // confirmación, c) evento Lead, d) WhatsApp con el mensaje escrito.
 // El formulario es un <form> real con campos con nombre (también los ocultos),
 // para que el script de seguimiento externo de GHL, si se instala, lo reconozca.
-// Legales (0016): arriba de las casillas va el aviso corto publicado; la
-// casilla de datos es obligatoria y la de promociones, opcional (las dos sin
-// marcar). Sin textos legales publicados no se envía nada. Los campos y el
+// Legales (0016): arriba de la casilla va el aviso corto publicado. Desde el
+// 28/10/2026 (decisión de Jared) hay una sola casilla, obligatoria y sin
+// marcar, con un texto corto y el enlace a la Política de privacidad; con
+// Argentina nombra el envío a HighLevel (EE. UU.). Sin casilla de promociones.
+// Sin textos legales publicados no se envía nada. Los campos y el
 // resumen llevan data-clarity-mask para que Clarity no los grabe.
 // =============================================================================
 
@@ -23,7 +25,7 @@ import { ICONO_WA } from "./detalle.js";
 import { cerrarConTransicion, cerrarConEscape } from "./transiciones.js";
 import { estado as estadoCookies, permitido } from "./consentimiento.js";
 import { t } from "../i18n/i18n.js";
-import { ERRORES, formatearConCursor, pideTransferencia, htmlTransferencia } from "./campos.js";
+import { ERRORES, formatearConCursor, pideTransferencia, claveAutorizacion } from "./campos.js";
 
 const CERRAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 const OK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -100,16 +102,9 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
           <div class="campo">
             <label class="casilla" for="p-autorizacion">
               <input id="p-autorizacion" name="autorizacion_datos" type="checkbox" required aria-describedby="p-autorizacion-error">
-              <span>${t("popup.autorizacion", { enlace: `<a href="privacidad/" target="_blank" rel="noopener">${t("popup.autorizacion.enlace")}</a>` })}</span>
+              <span>${t(claveAutorizacion("popup.autorizacion", tienda), { enlace: `<a href="privacidad/" target="_blank" rel="noopener">${t("popup.autorizacion.enlace")}</a>` })}</span>
             </label>
             <p class="error-campo" id="p-autorizacion-error"></p>
-          </div>
-          ${pideTransferencia(tienda) ? htmlTransferencia("p") : ""}
-          <div class="campo">
-            <label class="casilla" for="p-promociones">
-              <input id="p-promociones" name="promociones" type="checkbox">
-              <span>${tienda.nombre ? t("popup.promociones", { tienda: escaparHTML(tienda.nombre) }) : t("popup.promociones.sin_nombre")}</span>
-            </label>
           </div>
           <div class="popup-alerta" data-alerta role="alert" hidden></div>
           <button type="button" class="boton boton--primario boton--grande boton--bloque" data-enviar>${ICONO_WA}${t("popup.continuar")}</button>
@@ -123,7 +118,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
     form.querySelectorAll("#p-aviso a").forEach((a) => { a.target = "_blank"; a.rel = "noopener"; });
     const tel = form.querySelector("#p-telefono");
     tel.addEventListener("input", () => formatearConCursor(tel));
-    form.querySelectorAll(".entrada, #p-autorizacion, #p-transferencia").forEach((el) => {
+    form.querySelectorAll(".entrada, #p-autorizacion").forEach((el) => {
       el.addEventListener("blur", () => { if (el.value || el.type === "checkbox") validarCampo(el.id); });
       el.addEventListener("input", () => { if (el.getAttribute("aria-invalid") === "true") validarCampo(el.id); });
       el.addEventListener("change", () => { if (el.type === "checkbox") validarCampo(el.id); });
@@ -157,7 +152,6 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
     if (id === "p-correo" && !correoValido(el.value)) error = ERRORES.correo();
     if (id === "p-telefono" && !celularNacionalValido(soloDigitos(el.value), paisActual())) error = ERRORES.telefono();
     if (id === "p-autorizacion" && !el.checked) error = ERRORES.autorizacion();
-    if (id === "p-transferencia" && !el.checked) error = ERRORES.transferencia();
     el.setAttribute("aria-invalid", String(Boolean(error)));
     f.querySelector(`#${id}-error`).textContent = error;
     return !error;
@@ -165,7 +159,7 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
 
   function intentarEnviar() {
     const f = dialogo.querySelector("form");
-    const ids = ["p-nombre", "p-correo", "p-telefono", "p-autorizacion", ...(f.querySelector("#p-transferencia") ? ["p-transferencia"] : [])];
+    const ids = ["p-nombre", "p-correo", "p-telefono", "p-autorizacion"];
     const malos = ids.filter((id) => !validarCampo(id));
     if (malos.length) { f.querySelector(`#${malos[0]}`).focus(); return; }
     if (f.querySelector("#p-sitio").value) return; // trampa para bots
@@ -197,12 +191,14 @@ export function crearPopup({ dialogo, api, obtenerTienda }) {
       codigo_cotizacion: codigo,
       ...atrib,
       event_id: codigo,
-      // Consentimiento (0016): la casilla obligatoria, la opcional, el banner
-      // de cookies y la versión de los textos que aceptó.
+      // Consentimiento (0016 y 0042): la única casilla, el banner de cookies y
+      // la versión de los textos que aceptó.
       consentimiento_datos: f.querySelector("#p-autorizacion").checked,
-      // Argentina (0031): la casilla de la transferencia a Estados Unidos.
-      consentimiento_transferencia: Boolean(f.querySelector("#p-transferencia")?.checked),
-      consentimiento_promociones: f.querySelector("#p-promociones").checked,
+      // Argentina (0031): la única casilla nombra el envío a Estados Unidos.
+      consentimiento_transferencia: pideTransferencia(obtenerTienda()) && f.querySelector("#p-autorizacion").checked,
+      // Sin casilla de promociones (28/10/2026): siempre false, para no romper
+      // los workflows de GHL que leen el campo.
+      consentimiento_promociones: false,
       consentimiento_medicion: cookies.medicion,
       consentimiento_publicidad: cookies.publicidad,
       version_politica: obtenerTienda().legal_publicado.version,

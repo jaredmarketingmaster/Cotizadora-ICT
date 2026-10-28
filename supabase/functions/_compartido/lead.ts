@@ -16,8 +16,11 @@ export const TIPOS_SOLICITUD = ["peticion", "queja", "reclamo"];
 
 const CODIGO = (prefijo: string) => new RegExp(`^${prefijo}-[ABCDEFGHJKLMNPQRSTUVWXYZ2-9]{4}$`);
 
-// consentimiento_transferencia: Argentina (0031), la casilla de la transferencia
-// a Estados Unidos (false si la tienda no vende a Argentina).
+// consentimiento_transferencia: Argentina (0031), el envío a Estados Unidos,
+// nombrado en la única casilla del formulario desde 0042 (false si la tienda no
+// vende a Argentina). consentimiento_promociones: desde 0042 no hay casilla de
+// promociones y llega siempre false (sigue en el pedido para no romper los
+// workflows de GHL que leen el campo).
 export const CAMPOS_CONSENTIMIENTO = ["consentimiento_datos", "consentimiento_promociones", "consentimiento_medicion", "consentimiento_publicidad", "consentimiento_transferencia"];
 
 type Datos = Record<string, unknown>;
@@ -74,7 +77,8 @@ export function armarLead(datos: Datos): { lead?: Datos; error?: string } {
   };
   for (const c of CAMPOS_ATRIBUCION) lead[c] = texto(datos[c], 500);
   // Consentimiento: GHL debe revisar consentimiento_publicidad antes de la API
-  // de Conversiones y consentimiento_promociones antes de enviar promociones.
+  // de Conversiones. consentimiento_promociones llega siempre false (0042): con
+  // estos datos no se envían promociones.
   for (const c of CAMPOS_CONSENTIMIENTO) lead[c] = datos[c] === true;
   lead.version_politica = version;
   lead.fecha_consentimiento = fecha;

@@ -12,7 +12,7 @@ import { tieneEnvios } from "../datos/envios.js";
 import { camposDeEjemplo, legalesDeEjemplo, MODOS_FABRICA } from "../datos/ejemplo.js";
 import { $, $$, esc, avisar, confirmar, conBoton, campoTexto, marcarError, enfocarPrimerError, interruptor } from "./ui.js";
 import { republicarAlGuardar } from "./legales.js";
-import { faltantes } from "../legal/motor.js";
+import { faltantes, publicar } from "../legal/motor.js";
 import { t, tn, cargarIdioma, traducirDom, idiomaActual, idiomaGuardado } from "../i18n/i18n.js";
 
 const RUTAS = {
@@ -258,6 +258,8 @@ async function vistaInicio(vista) {
     legalesDeEjemplo(tienda) && [t("panel.inicio.legales_ejemplo"), "#/legales/2"],
     !tienda.legal_publicado && [t("panel.inicio.falta_legales"), `#/legales/${pasoLegal}`],
     tienda.legal_publicado && legales.length && [t("panel.inicio.faltan_datos_legales"), `#/legales/${pasoLegal}`],
+    // Lo publicado quedó viejo (por ejemplo, porque cambiaron las plantillas): se publica de nuevo en el paso 6.
+    tienda.legal_publicado && !legales.length && publicar(tienda, tienda.legal_publicado) !== tienda.legal_publicado && [t("panel.inicio.legales_desactualizados"), "#/legales/6"],
     !tienda.nombre.trim() && [t("panel.inicio.falta_nombre"), "#/tienda"],
     !tienda.ciudad.trim() && [t("panel.inicio.falta_ciudad"), "#/tienda"],
     !tienda.correo_contacto.trim() && [t("panel.inicio.falta_correo"), "#/tienda"],
